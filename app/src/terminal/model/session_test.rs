@@ -1,11 +1,13 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use warpui::{
     elements::Empty, platform::WindowStyle, App, AppContext, Element, Entity, ModelHandle,
     TypedActionView, View, ViewContext,
 };
 
-use super::{BootstrapSessionType, SessionId, SessionInfo, Sessions, SessionsEvent};
+use super::command_executor::testing::TestCommandExecutor;
+use super::{BootstrapSessionType, Session, SessionId, SessionInfo, Sessions, SessionsEvent};
 use crate::terminal::model::terminal_model::SubshellInitializationInfo;
 use crate::terminal::ssh::util::parse_interactive_ssh_command;
 
@@ -154,4 +156,31 @@ fn local_ssh_command_follows_the_session_tree() {
     assert_eq!(command(5).as_deref(), Some("ssh c"));
     assert_eq!(command(6), None);
     assert_eq!(command(7), None);
+}
+
+#[test]
+fn test_malicious_histfile_path_does_not_execute_injected_commands() {
+    App::test((), |_app| async move {
+        // If escaping is missing, `touch /tmp/warp_injection_test` would execute
+        // as a side effect of reading history.
+        let marker = "/tmp/warp_injection_test";
+        // Clean up in case a previous broken run left the marker.
+        let _ = std::fs::remove_file(marker);
+
+        let malicious_histfile = format!("/tmp/x'; touch {marker}; echo '");
+
+        let session_info = SessionInfo::new_for_test()
+            .with_session_type(BootstrapSessionType::WarpifiedRemote)
+            .with_histfile(Some(malicious_histfile));
+        let session = Session::new(session_info, Arc::new(TestCommandExecutor::default()));
+
+        // read_history for a WarpifiedRemote session calls read_history_from_file,
+        // which builds `cat '{escaped_path}'` and executes it via TestCommandExecutor
+        let _ = session.read_history().await;
+
+        assert!(
+            !std::path::Path::new(marker).exists(),
+            "Injected command executed — escaping regression!"
+        );
+    });
 }
