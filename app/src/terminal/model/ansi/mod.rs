@@ -1043,6 +1043,10 @@ where
 
             // iTerm proprietary sequences: inline images and user variables.
             b"1337" => {
+                // A second parameter is required.
+                if params.len() < 2 {
+                    return unhandled(params);
+                }
                 if params[1].starts_with(b"File=") {
                     let metadata = parse_iterm_image_metadata(params);
 
