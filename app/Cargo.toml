@@ -57,7 +57,6 @@ chrono.workspace = true
 clap.workspace = true
 command = { workspace = true }
 command-corrections.workspace = true
-command-signatures-v2 = { workspace = true, optional = true }
 computer_use.workspace = true
 crc.workspace = true
 content_inspector = "0.2.4"
@@ -204,7 +203,6 @@ warp-workflows.workspace = true
 zap_ng_completer.workspace = true
 zap_ng_core.workspace = true
 zap_ng_editor.workspace = true
-zap_ng_js = { workspace = true, optional = true }
 zap_ng_ssh_manager.workspace = true
 zap_ng_sftp = { path = "../crates/zap_ng_sftp" }
 zap_ng_util.workspace = true
@@ -284,7 +282,6 @@ rmcp = { workspace = true, features = [
     "transport-child-process",
 ] }
 notify-debouncer-full.workspace = true
-rquickjs = { workspace = true, optional = true }
 rustls.workspace = true
 syntect = "5.0"
 sysinfo.workspace = true
@@ -394,11 +391,6 @@ changelog = []
 clear_autosuggestion_on_escape = []
 command_predictor = []
 context_line_review_comments = []
-completions_v2 = [
-    "plugin_host",
-    "zap_ng_completer/v2",
-    "dep:command-signatures-v2",
-]
 crash_reporting = [
     "dep:minidumper",
     "dep:crash-handler",
@@ -634,10 +626,6 @@ resize_fix = []
 pluggable_notifications = []
 # This enables `read_files` to support images.
 read_image_files = []
-# This feature enables plugin support in ZapNG. Note that its typically checked
-# directly, rather than via the `FeatureFlag` enum, because its value is
-# required early in the app lifecycle prior to `FeatureFlag` initialization.
-plugin_host = ["dep:rquickjs", "dep:zap_ng_js", "zap_ng_cli/plugin_host"]
 # Enable this feature to automatically perform CPU profiling via pprof.  The
 # generated profile will be written to profile.pb in the current directory.
 # NOTE: This may slow down program execution.
