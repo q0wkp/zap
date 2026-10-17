@@ -14,7 +14,9 @@ use {
     warpui::platform::linux::windowing_system_is_customizable,
 };
 
-use super::keybindings::KeyBindingModifyingState;
+use super::keybindings::{
+    KeyBindingModifyingState, KeybindingChangedEvent, KeybindingChangedNotifier,
+};
 #[cfg(feature = "local_tty")]
 use super::settings_page::render_sub_sub_header;
 use super::settings_page::{
@@ -2212,6 +2214,23 @@ impl FeaturesPageView {
 
         // The state for this dropdown is initialized by `refresh_tab_behavior_state`.
         let tab_behavior_dropdown = ctx.add_typed_action_view(Dropdown::new);
+
+        // Keep the tab behavior dropdown in sync when the completions/autosuggestion bindings
+        // change elsewhere (e.g. the inline autosuggestion keybinding menu or the keybindings page).
+        ctx.subscribe_to_model(
+            &KeybindingChangedNotifier::handle(ctx),
+            |me, _, event, ctx| match event {
+                KeybindingChangedEvent::BindingChanged { binding_name, .. } => {
+                    if binding_name == OPEN_COMPLETIONS_KEYBINDING_NAME
+                        || binding_name == ACCEPT_AUTOSUGGESTION_KEYBINDING_NAME
+                    {
+                        me.refresh_tab_behavior_state(ctx);
+                        me.refresh_tab_behavior_dropdown(ctx);
+                        ctx.notify();
+                    }
+                }
+            },
+        );
 
         let ctrl_tab_behavior_dropdown = ctx.add_typed_action_view(Dropdown::new);
         Self::update_ctrl_tab_behavior_dropdown(ctrl_tab_behavior_dropdown.clone(), ctx);
