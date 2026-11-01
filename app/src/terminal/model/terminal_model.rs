@@ -59,6 +59,7 @@ use crate::terminal::model::ansi::{
 use crate::terminal::model::grid::IndexRegion;
 use crate::terminal::model::session::SessionInfo;
 use crate::terminal::shell::{ShellName, ShellType};
+use crate::terminal::zmx;
 
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::shared_session::protocol::SessionSourceType;
@@ -556,6 +557,9 @@ pub struct TerminalModel {
 
     /// Whether or not the underlying shell process has terminated.
     handled_exit: bool,
+
+    /// The foreground process a zmx session reported for the active block, if any.
+    zmx_foreground: Option<String>,
 
     /// The shell type of the login shell for this session.
     shell_launch_state: ShellLaunchState,
@@ -1151,6 +1155,7 @@ impl TerminalModel {
             is_receiving_kitty_image_data: IsReceivingKittyActionData::No,
             did_receive_rc_file_dcs: None,
             handled_exit: false,
+            zmx_foreground: None,
             env_var_collection_name: None,
             shell_launch_state: shell_state,
             obfuscate_secrets,
@@ -1889,6 +1894,11 @@ impl TerminalModel {
 
     pub fn alt_screen_mut(&mut self) -> &mut AltScreen {
         &mut self.alt_screen
+    }
+
+    /// The foreground process a zmx session reported for the active block, if any.
+    pub fn zmx_foreground(&self) -> Option<&str> {
+        self.zmx_foreground.as_deref()
     }
 
     pub fn is_alt_screen_active(&self) -> bool {
@@ -2773,6 +2783,8 @@ impl ansi::Handler for TerminalModel {
     }
 
     fn command_finished(&mut self, data: CommandFinishedValue) {
+        self.zmx_foreground = None;
+
         // If we ssh from a doesn't-understand-bracketed-paste shell into one
         // that enables it, then get disconnected, we'll be stuck in a state
         // of bracketed paste being enabled, but the local shell doesn't know
@@ -3546,6 +3558,14 @@ impl ansi::Handler for TerminalModel {
         _metadata: &mut HashMap<u32, StoredImageMetadata>,
     ) -> Option<KittyResponse> {
         delegate!(self.handle_completed_kitty_action(action, &mut self.image_id_to_metadata))
+    }
+
+    fn set_user_var(&mut self, name: String, value: String) {
+        if name == zmx::FOREGROUND_USER_VAR {
+            self.zmx_foreground = Some(value);
+            self.event_proxy
+                .send_terminal_event(Event::ZmxForegroundReported);
+        }
     }
 
     fn pluggable_notification(&mut self, title: Option<String>, body: String) {

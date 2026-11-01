@@ -82,6 +82,7 @@ mod waterfall_gap_element;
 mod writeable_pty;
 #[cfg(windows)]
 pub mod wsl;
+pub mod zmx;
 
 pub mod cli_agent;
 pub use cli_agent::CLIAgent;

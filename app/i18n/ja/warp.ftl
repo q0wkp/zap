@@ -2706,6 +2706,8 @@ workspace-left-panel-ssh-manager-root-password = Root パスワード
 workspace-left-panel-ssh-manager-root-password-placeholder = root 切り替え時のパスワード
 workspace-left-panel-ssh-manager-startup-command = 起動コマンド
 workspace-left-panel-ssh-manager-startup-command-placeholder = 接続成功後に自動実行するコマンド
+workspace-left-panel-ssh-manager-zmx-session = zmx セッション
+workspace-left-panel-ssh-manager-zmx-session-placeholder = 接続成功後にこのセッションへアタッチします(サーバーに zmx が必要)
 workspace-left-panel-ssh-manager-notes = メモ
 workspace-left-panel-ssh-manager-notes-placeholder = メモ情報
 # TODO: review

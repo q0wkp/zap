@@ -106,6 +106,8 @@ pub struct SshServerInfo {
     pub key_path: Option<String>,
     pub credential_id: Option<String>,
     pub startup_command: Option<String>,
+    /// 连接成功后自动 attach 的 zmx session 名。
+    pub zmx_session: Option<String>,
     pub notes: Option<String>,
     pub last_connected_at: Option<NaiveDateTime>,
 }
@@ -121,6 +123,7 @@ impl SshServerInfo {
             key_path: None,
             credential_id: None,
             startup_command: None,
+            zmx_session: None,
             notes: None,
             last_connected_at: None,
         }
@@ -137,6 +140,7 @@ impl SshServerInfo {
             key_path: source.key_path.clone(),
             credential_id: source.credential_id.clone(),
             startup_command: source.startup_command.clone(),
+            zmx_session: source.zmx_session.clone(),
             notes: source.notes.clone(),
             last_connected_at: None,
         }

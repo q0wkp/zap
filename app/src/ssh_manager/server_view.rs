@@ -109,6 +109,7 @@ pub struct SshServerView {
     onekey_key_path_editor: ViewHandle<EditorView>,
     root_password_editor: ViewHandle<EditorView>,
     startup_command_editor: ViewHandle<EditorView>,
+    zmx_session_editor: ViewHandle<EditorView>,
     notes_editor: ViewHandle<EditorView>,
 
     /// 当前选中的认证方式。Save 按钮提交此值到 DB。
@@ -178,6 +179,11 @@ impl SshServerView {
             &crate::t!("workspace-left-panel-ssh-manager-startup-command-placeholder"),
             ctx,
         );
+        let zmx_session_editor = make_editor(
+            false,
+            &crate::t!("workspace-left-panel-ssh-manager-zmx-session-placeholder"),
+            ctx,
+        );
         let notes_editor = make_editor(
             false,
             &crate::t!("workspace-left-panel-ssh-manager-notes-placeholder"),
@@ -214,6 +220,7 @@ impl SshServerView {
             onekey_key_path_editor,
             root_password_editor,
             startup_command_editor,
+            zmx_session_editor,
             notes_editor,
             auth_type: AuthType::Password,
             save_btn_state: MouseStateHandle::default(),
@@ -264,6 +271,7 @@ impl SshServerView {
             me.onekey_key_path_editor.clone(),
             me.root_password_editor.clone(),
             me.startup_command_editor.clone(),
+            me.zmx_session_editor.clone(),
             me.notes_editor.clone(),
         ];
         for editor in editors {
@@ -310,6 +318,7 @@ impl SshServerView {
             self.onekey_key_path_editor.clone(),
             self.root_password_editor.clone(),
             self.startup_command_editor.clone(),
+            self.zmx_session_editor.clone(),
             self.notes_editor.clone(),
         ];
         for editor in all {
@@ -414,6 +423,9 @@ impl SshServerView {
             let startup_command = srv.startup_command.clone().unwrap_or_default();
             self.startup_command_editor
                 .update(ctx, |e, ctx| e.set_buffer_text(&startup_command, ctx));
+            let zmx_session = srv.zmx_session.clone().unwrap_or_default();
+            self.zmx_session_editor
+                .update(ctx, |e, ctx| e.set_buffer_text(&zmx_session, ctx));
             let notes = srv.notes.clone().unwrap_or_default();
             self.notes_editor
                 .update(ctx, |e, ctx| e.set_buffer_text(&notes, ctx));
@@ -449,6 +461,7 @@ impl SshServerView {
             self.onekey_key_path_editor.clone(),
             self.root_password_editor.clone(),
             self.startup_command_editor.clone(),
+            self.zmx_session_editor.clone(),
             self.notes_editor.clone(),
         ];
         for editor in editors {
@@ -633,6 +646,7 @@ impl SshServerView {
         let key_path_text = self.current_text(&self.key_path_editor.clone(), ctx);
         let root_password = self.current_text(&self.root_password_editor.clone(), ctx);
         let startup_command_text = self.current_text(&self.startup_command_editor.clone(), ctx);
+        let zmx_session_text = self.current_text(&self.zmx_session_editor.clone(), ctx);
         let notes_text = self.current_text(&self.notes_editor.clone(), ctx);
 
         let name = name.trim().to_string();
@@ -685,6 +699,11 @@ impl SshServerView {
                 None
             } else {
                 Some(startup_command_text.trim().to_string())
+            },
+            zmx_session: if zmx_session_text.trim().is_empty() {
+                None
+            } else {
+                Some(zmx_session_text.trim().to_string())
             },
             notes: if notes_text.trim().is_empty() {
                 None
@@ -778,6 +797,7 @@ impl SshServerView {
             return;
         }
         let startup_command_text = self.current_text(&self.startup_command_editor.clone(), ctx);
+        let zmx_session_text = self.current_text(&self.zmx_session_editor.clone(), ctx);
         let notes_text = self.current_text(&self.notes_editor.clone(), ctx);
 
         let port: u16 = port_str.trim().parse().unwrap_or(22);
@@ -806,6 +826,11 @@ impl SshServerView {
                 None
             } else {
                 Some(startup_command_text.trim().to_string())
+            },
+            zmx_session: if zmx_session_text.trim().is_empty() {
+                None
+            } else {
+                Some(zmx_session_text.trim().to_string())
             },
             notes: if notes_text.trim().is_empty() {
                 None
@@ -852,6 +877,7 @@ impl SshServerView {
             },
             credential_id,
             startup_command: None,
+            zmx_session: None,
             notes: None,
             last_connected_at: None,
         };
@@ -2183,6 +2209,12 @@ impl View for SshServerView {
         col.add_child(self.render_text_field(
             &crate::t!("workspace-left-panel-ssh-manager-startup-command"),
             &self.startup_command_editor,
+            appearance,
+        ));
+        // zmx session
+        col.add_child(self.render_text_field(
+            &crate::t!("workspace-left-panel-ssh-manager-zmx-session"),
+            &self.zmx_session_editor,
             appearance,
         ));
         // Root 密码
