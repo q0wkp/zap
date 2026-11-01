@@ -102,6 +102,7 @@ impl SshRepository {
                     startup_command: info.startup_command.as_deref(),
                     notes: info.notes.as_deref(),
                     credential_id: info.credential_id.as_deref(),
+                    zmx_session: info.zmx_session.as_deref(),
                 })
                 .execute(conn)?;
             Ok(())
@@ -140,6 +141,7 @@ impl SshRepository {
                 ssh_servers::auth_type.eq(info.auth_type.as_db_str()),
                 ssh_servers::key_path.eq(info.key_path.as_deref()),
                 ssh_servers::startup_command.eq(info.startup_command.as_deref()),
+                ssh_servers::zmx_session.eq(info.zmx_session.as_deref()),
                 ssh_servers::notes.eq(info.notes.as_deref()),
                 ssh_servers::credential_id.eq(info.credential_id.as_deref()),
             ))
@@ -450,6 +452,7 @@ fn server_from_row(r: SshServerRow) -> Result<SshServerInfo, SshRepositoryError>
         auth_type: auth,
         key_path: r.key_path,
         startup_command: r.startup_command,
+        zmx_session: r.zmx_session,
         notes: r.notes,
         last_connected_at: r.last_connected_at,
         credential_id: r.credential_id,
@@ -581,6 +584,7 @@ pub(crate) fn setup_in_memory() -> SqliteConnection {
         include_str!(
             "../../persistence/migrations/2026-06-09-160000_add_ssh_onekey_key_type/up.sql"
         ),
+        include_str!("../../persistence/migrations/2026-11-01-000000_add_ssh_zmx_session/up.sql"),
     ] {
         conn.batch_execute(up).unwrap();
     }
@@ -601,6 +605,7 @@ mod tests {
             key_path: None,
             credential_id: None,
             startup_command: None,
+            zmx_session: None,
             notes: None,
             last_connected_at: None,
         }

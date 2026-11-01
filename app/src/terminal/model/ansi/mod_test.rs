@@ -19,6 +19,7 @@ struct MockHandler {
     identity_reported: bool,
     d_proto_hooks: Vec<DProtoHook>,
     pluggable_notifications: Vec<(Option<String>, String)>,
+    user_vars: Vec<(String, String)>,
 }
 
 impl Handler for MockHandler {
@@ -221,6 +222,10 @@ impl Handler for MockHandler {
         self.pluggable_notifications.push((title, body));
     }
 
+    fn set_user_var(&mut self, name: String, value: String) {
+        self.user_vars.push((name, value));
+    }
+
     fn set_keyboard_enhancement_flags(
         &mut self,
         _mode: KeyboardModes,
@@ -244,6 +249,7 @@ impl Default for MockHandler {
             identity_reported: false,
             d_proto_hooks: Vec::new(),
             pluggable_notifications: Vec::new(),
+            user_vars: Vec::new(),
         }
     }
 }
@@ -884,4 +890,25 @@ fn tmux_pane_writer_returns_original_byte_count() {
     let output_str = String::from_utf8(output).unwrap();
     assert!(output_str.starts_with("send-keys -Ht %42"));
     assert!(output_str.ends_with('\n'));
+}
+
+#[test]
+fn parse_osc_1337_set_user_var() {
+    let (_, handler) = parse_bytes(b"\x1b]1337;SetUserVar=zmx_foreground=Y2xhdWRl\x07");
+    assert_eq!(
+        handler.user_vars,
+        vec![("zmx_foreground".to_owned(), "claude".to_owned())]
+    );
+}
+
+#[test]
+fn parse_osc_1337_set_user_var_ignores_malformed_payloads() {
+    for sequence in [
+        &b"\x1b]1337;SetUserVar=no_separator\x07"[..],
+        b"\x1b]1337;SetUserVar=name=not base64!\x07",
+        b"\x1b]1337;SetUserVar=name=/w==\x07", // Decodes to invalid UTF-8.
+    ] {
+        let (_, handler) = parse_bytes(sequence);
+        assert!(handler.user_vars.is_empty());
+    }
 }

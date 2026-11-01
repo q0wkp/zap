@@ -149,6 +149,8 @@ pub enum Event {
         title: Option<String>,
         body: String,
     },
+    /// A zmx session reported its foreground process on attach.
+    ZmxForegroundReported,
 }
 
 #[derive(Debug, Clone)]
@@ -481,6 +483,7 @@ impl Debug for Event {
                 write!(f, "ImageReceived(image_id: {image_id})")
             }
             Event::BootstrapPrecmdDone => write!(f, "BootstrapPrecmdDone"),
+            Event::ZmxForegroundReported => write!(f, "ZmxForegroundReported"),
             Event::PluggableNotification { title, body } => {
                 write!(f, "PluggableNotification(title: {title:?}, body: {body})")
             }
