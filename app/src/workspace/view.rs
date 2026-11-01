@@ -5519,15 +5519,13 @@ impl Workspace {
         );
 
         // 启动命令注入器 — 等待 shell ready 后自动执行 startup_command
-        if let Some(ref startup_cmd) = server.startup_command {
-            if !startup_cmd.is_empty() {
-                crate::ssh_manager::startup_command_injector::spawn_startup_command_injector(
-                    terminal_view.read(ctx, |v, c| v.inactive_pty_reads_rx(c)),
-                    terminal_view.downgrade(),
-                    startup_cmd.clone(),
-                    ctx,
-                );
-            }
+        if let Some(startup_cmd) = warp_ssh_manager::build_startup_command_line(&server) {
+            crate::ssh_manager::startup_command_injector::spawn_startup_command_injector(
+                terminal_view.read(ctx, |v, c| v.inactive_pty_reads_rx(c)),
+                terminal_view.downgrade(),
+                startup_cmd,
+                ctx,
+            );
         }
 
         // su 密码注入器 — 监听 su 密码提示,自动输入 root 密码
