@@ -114,7 +114,7 @@ if ("$CHANNEL" -eq 'local') {
     $BINARY_NAME = 'zap-oss.exe'
     $APP_NAME = 'Zap'
     # OSS channel 使用本地 crash reporting,不启用 release 默认特性集合。
-    # autoupdate 走 GitHub Release(zerx-lab/warp),仅下载到 Downloads,不调 Inno Setup。
+    # autoupdate 走 GitHub Release(q0wkp/zap),仅下载到 Downloads,不调 Inno Setup。
     $FEATURES = 'release_bundle,gui,nld_improvements,autoupdate'
 }
 

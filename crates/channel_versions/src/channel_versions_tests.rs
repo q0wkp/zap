@@ -141,3 +141,19 @@ fn test_oss_version_newer_date_wins() {
     let newer: ParsedVersion = "v2026.05.27.0".try_into().unwrap();
     assert!(newer > older);
 }
+
+#[test]
+fn oss_version_parses_a_mod_suffix() {
+    let parsed: ParsedVersion = "v2026.07.09.2-mod.1".try_into().unwrap();
+    let base: ParsedVersion = "v2026.07.09.2".try_into().unwrap();
+
+    assert!(parsed > base);
+}
+
+#[test]
+fn oss_versions_order_by_mod_revision() {
+    let older: ParsedVersion = "v2026.07.09.2-mod.1".try_into().unwrap();
+    let newer: ParsedVersion = "v2026.07.09.2-mod.10".try_into().unwrap();
+
+    assert!(older < newer);
+}

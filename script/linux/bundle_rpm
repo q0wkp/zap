@@ -79,6 +79,8 @@ mkdir -p "$RPMBUILD_DIR"/{SPEC,RPMS,BUILD,BUILDROOT,SOURCES,SRPMS}
 # 去掉标签的前导 `v`,与 deb 保持一致;RPM 的 Version 字段按惯例不带 `v` 前缀,
 # 同时也避免下游 `RPM_NAME` 拼接时混入 `v` 让文件名不规范。
 VERSION="${GIT_RELEASE_TAG#v}"
+# RPM 的 Version 不允许 `-`,`-mod.N` 这类后缀要换掉。
+VERSION="${VERSION//-/_}"
 RELEASE="1"
 sed \
     "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; \
