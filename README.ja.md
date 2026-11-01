@@ -30,6 +30,12 @@ Zap はオープンでローカルファーストなターミナルで、AI と 
 [docs/migrate-from-warp.ja.md](docs/migrate-from-warp.ja.md) を参照して設定を
 引き継いでください。
 
+## フォークのリリース
+
+このフォークは独自のリリースを公開し、自動更新もアップストリームではなくこちらを確認します。タグはアップストリームの
+次のバージョンに `-mod.N` を付けた形式で、`v2026.07.09.1` なら `v2026.07.09.2-mod.1` になります。`v*` タグをプッシュ
+すると `.github/workflows/release.yml` が実行されます。
+
 ## ロードマップ
 
 [docs/roadmap.ja.md](docs/roadmap.ja.md) を参照してください。
