@@ -9999,78 +9999,7 @@ impl TerminalView {
                                 Timer::after(Duration::from_millis(
                                     LONG_RUNNING_COMMAND_DURATION_MS,
                                 )),
-                                move |me, _, ctx| {
-                                    // Detect CLI agent and create session before
-                                    // showing the footer, so the session drives
-                                    // the footer rather than the other way around.
-                                    let detection = {
-                                        let model = me.model.lock();
-                                        me.detect_cli_agent_from_model(&model, ctx)
-                                    };
-                                    let view_id = me.view_id;
-                                    CLIAgentSessionsModel::handle(ctx).update(
-                                        ctx,
-                                        |sessions_model, ctx| match detection {
-                                            Some((agent, ref custom_command_prefix))
-                                                if !sessions_model
-                                                    .session(view_id)
-                                                    .is_some_and(|s| s.agent == agent) =>
-                                            {
-                                                let remote_host =
-                                                    me.active_session_remote_host(ctx);
-                                                sessions_model.set_session(
-                                                    view_id,
-                                                    CLIAgentSession {
-                                                        agent,
-                                                        status: CLIAgentSessionStatus::InProgress,
-                                                        session_context:
-                                                            CLIAgentSessionContext::default(),
-                                                        input_state: CLIAgentInputState::Closed,
-                                                        should_auto_toggle_input: *AISettings::as_ref(
-                                                            ctx,
-                                                        )
-                                                        .auto_open_rich_input_on_cli_agent_start,
-                                                        listener: None,
-                                                        plugin_version: None,
-                                                        remote_host,
-                                                        draft_text: None,
-                                                        custom_command_prefix: custom_command_prefix.clone(),
-                                                    },
-                                                    ctx,
-                                                );
-                                            }
-                                            _ => {}
-                                        },
-                                    );
-
-                                    // 使用 OSC 9 通知的 agent 不会发结构化 SessionStart 事件，
-                                    // 因此在命令检测时主动创建监听器。
-                                    if let Some((agent @ (CLIAgent::Codex | CLIAgent::DeepSeek), _)) =
-                                        detection
-                                    {
-                                        me.register_cli_agent_listener_without_session_start_event(
-                                            agent, ctx,
-                                        );
-                                    }
-
-                                    me.maybe_show_use_agent_footer_in_blocklist(ctx);
-                                    me.maybe_auto_open_cli_agent_rich_input(ctx);
-                                    me.input.update(ctx, |input, ctx| {
-                                        input.universal_developer_input_button_bar().update(
-                                            ctx,
-                                            |bar, ctx| {
-                                                bar.update_segmented_control_disabled_state(ctx);
-                                            },
-                                        )
-                                    });
-                                    // Update agent view back button state when command becomes long-running
-                                    if FeatureFlag::AgentView.is_enabled()
-                                        && me.agent_view_controller.as_ref(ctx).is_fullscreen()
-                                    {
-                                        me.update_agent_view_back_button_state(ctx);
-                                        me.update_agent_view_pane_header(ctx);
-                                    }
-                                },
+                                |me, _, ctx| me.update_for_long_running_block(ctx),
                             );
                         }
                     }
@@ -10864,6 +10793,19 @@ impl TerminalView {
                 };
                 ctx.emit(Event::LongRunningCommandAgentInteractionStateChanged { state });
             }
+            ModelEvent::ZmxForegroundReported => {
+                // A slow connection can deliver this after the long-running timer has fired, so
+                // detect again. An earlier report is picked up by the timer itself.
+                let is_long_running = self
+                    .model
+                    .lock()
+                    .block_list()
+                    .active_block()
+                    .is_active_and_long_running();
+                if is_long_running {
+                    self.update_for_long_running_block(ctx);
+                }
+            }
             ModelEvent::PluggableNotification { title, body } => {
                 // Intercept structured CLI agent notifications (e.g. from Claude Code plugin).
                 // The listener's own subscription handles subsequent events; we just
@@ -11179,6 +11121,69 @@ impl TerminalView {
     /// Handles an OSC 777 event with the `warp://cli-agent` sentinel title.
     /// On `session_start`, creates a `CLIAgentSessionListener` that subscribes
     /// to subsequent events from this terminal's PTY.
+    /// Runs once a block has been running long enough to count as long-running: starts a CLI
+    /// agent session if one is detected, then refreshes the UI that depends on it.
+    fn update_for_long_running_block(&mut self, ctx: &mut ViewContext<Self>) {
+        // Detect CLI agent and create session before
+        // showing the footer, so the session drives
+        // the footer rather than the other way around.
+        let detection = {
+            let model = self.model.lock();
+            self.detect_cli_agent_from_model(&model, ctx)
+        };
+        let view_id = self.view_id;
+        CLIAgentSessionsModel::handle(ctx).update(ctx, |sessions_model, ctx| match detection {
+            Some((agent, ref custom_command_prefix))
+                if !sessions_model
+                    .session(view_id)
+                    .is_some_and(|s| s.agent == agent) =>
+            {
+                let remote_host = self.active_session_remote_host(ctx);
+                sessions_model.set_session(
+                    view_id,
+                    CLIAgentSession {
+                        agent,
+                        status: CLIAgentSessionStatus::InProgress,
+                        session_context: CLIAgentSessionContext::default(),
+                        input_state: CLIAgentInputState::Closed,
+                        should_auto_toggle_input: *AISettings::as_ref(ctx)
+                            .auto_open_rich_input_on_cli_agent_start,
+                        listener: None,
+                        plugin_version: None,
+                        remote_host,
+                        draft_text: None,
+                        custom_command_prefix: custom_command_prefix.clone(),
+                    },
+                    ctx,
+                );
+            }
+            _ => {}
+        });
+
+        // 使用 OSC 9 通知的 agent 不会发结构化 SessionStart 事件，
+        // 因此在命令检测时主动创建监听器。
+        if let Some((agent @ (CLIAgent::Codex | CLIAgent::DeepSeek), _)) = detection {
+            self.register_cli_agent_listener_without_session_start_event(agent, ctx);
+        }
+
+        self.maybe_show_use_agent_footer_in_blocklist(ctx);
+        self.maybe_auto_open_cli_agent_rich_input(ctx);
+        self.input.update(ctx, |input, ctx| {
+            input
+                .universal_developer_input_button_bar()
+                .update(ctx, |bar, ctx| {
+                    bar.update_segmented_control_disabled_state(ctx);
+                })
+        });
+        // Update agent view back button state when command becomes long-running
+        if FeatureFlag::AgentView.is_enabled()
+            && self.agent_view_controller.as_ref(ctx).is_fullscreen()
+        {
+            self.update_agent_view_back_button_state(ctx);
+            self.update_agent_view_pane_header(ctx);
+        }
+    }
+
     fn handle_cli_agent_notification(
         &mut self,
         title: Option<&str>,

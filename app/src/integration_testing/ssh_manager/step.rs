@@ -65,6 +65,7 @@ pub fn create_server_via_db(name: &str, parent_id: Option<&str>) -> String {
             key_path: None,
             credential_id: None,
             startup_command: None,
+            zmx_session: None,
             notes: None,
             last_connected_at: None,
         };
