@@ -50,6 +50,28 @@ pub fn build_ssh_args(server: &SshServerInfo) -> Vec<String> {
     args
 }
 
+/// 连接成功后写入 PTY 的命令:先跑启动命令,再 attach 到 zmx session。
+pub fn build_startup_command_line(server: &SshServerInfo) -> Option<String> {
+    let non_empty = |value: &Option<String>| {
+        value
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    };
+    let attach = non_empty(&server.zmx_session).map(|name| {
+        format!(
+            "zmx attach {}",
+            shell_escape::unix::escape(Cow::Owned(name))
+        )
+    });
+    match (non_empty(&server.startup_command), attach) {
+        (Some(startup), Some(attach)) => Some(format!("{startup}; {attach}")),
+        (Some(command), None) | (None, Some(command)) => Some(command),
+        (None, None) => None,
+    }
+}
+
 pub fn build_ssh_command_line(server: &SshServerInfo) -> String {
     let args = build_ssh_args(server);
     args.iter()

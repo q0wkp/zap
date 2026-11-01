@@ -38,6 +38,7 @@ use crate::terminal::model::tmux::{
 
 use crate::terminal::model::tmux::ControlModeEvent;
 use crate::{safe_debug, safe_error};
+use base64::Engine as _;
 use byte_unit::{Byte, Unit as ByteUnit};
 use hex;
 use lazy_static::lazy_static;
@@ -1040,7 +1041,7 @@ where
                 unhandled(params);
             }
 
-            // iTerm inline image protocol.
+            // iTerm proprietary sequences: inline images and user variables.
             b"1337" => {
                 if params[1].starts_with(b"File=") {
                     let metadata = parse_iterm_image_metadata(params);
@@ -1069,6 +1070,11 @@ where
                     self.handler.on_iterm_image_data_received(image_data);
                 } else if params[1].starts_with(b"FileEnd") {
                     self.handler.end_iterm_image_receiving();
+                } else if let Some(user_var) = params[1].strip_prefix(b"SetUserVar=") {
+                    match parse_user_var(user_var) {
+                        Some((name, value)) => self.handler.set_user_var(name, value),
+                        None => unhandled(params),
+                    }
                 } else {
                     unhandled(params)
                 }
@@ -1793,6 +1799,19 @@ where
 // Tests for parsing escape sequences.
 //
 // Byte sequences used in these tests are recording of pty stdout.
+/// Parses the `name=base64-value` payload of an iTerm2 `SetUserVar` sequence.
+fn parse_user_var(payload: &[u8]) -> Option<(String, String)> {
+    let separator = payload.iter().position(|&byte| byte == b'=')?;
+    let (name, encoded_value) = (&payload[..separator], &payload[separator + 1..]);
+    let value = base64::engine::general_purpose::STANDARD
+        .decode(encoded_value)
+        .ok()?;
+    Some((
+        String::from_utf8(name.to_vec()).ok()?,
+        String::from_utf8(value).ok()?,
+    ))
+}
+
 #[cfg(test)]
 #[path = "mod_test.rs"]
 mod tests;

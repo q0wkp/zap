@@ -1,0 +1,1 @@
+ALTER TABLE ssh_servers ADD COLUMN zmx_session TEXT DEFAULT NULL;

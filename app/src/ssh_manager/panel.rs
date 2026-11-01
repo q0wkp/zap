@@ -389,6 +389,7 @@ impl SshManagerPanel {
                 .map(|p| p.to_string_lossy().into_owned()),
             credential_id: None,
             startup_command: None,
+            zmx_session: None,
             notes: Some(format!("Imported from {path_display}")),
             last_connected_at: None,
         };
