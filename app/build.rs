@@ -351,6 +351,8 @@ fn copy_windows_assets(target_dir: &Path) {
 #[cfg(windows)]
 fn parse_file_version_quad(tag: &str) -> (u16, u16, u16, u16) {
     let stripped = tag.strip_prefix('v').unwrap_or(tag);
+    // `-mod.N` 后缀不进数值版本,否则 `.N` 会被当成第 4 段。
+    let stripped = stripped.split('-').next().unwrap_or(stripped);
     let mut parts = stripped
         .split('.')
         .filter_map(|s| s.parse::<u32>().ok())

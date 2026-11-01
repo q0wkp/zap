@@ -29,6 +29,11 @@ Zap 是一个开放、本地优先的终端,带一等公民的 AI 与 Agent 体�
 或者你是从上游 **Warp** 切过来的,参见
 [docs/migrate-from-warp.zh-CN.md](docs/migrate-from-warp.zh-CN.md) 把设置带过来。
 
+## Fork 的发布版本
+
+这个 fork 发布自己的版本，自动更新也检查这里，不再检查上游。tag 格式是上游下一个版本号加 `-mod.N`，比如上游的
+`v2026.07.09.1` 对应 `v2026.07.09.2-mod.1`。推送 `v*` tag 会运行 `.github/workflows/release.yml`。
+
 ## 后续计划
 
 见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)。

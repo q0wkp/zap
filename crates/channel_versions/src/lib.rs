@@ -39,7 +39,7 @@ lazy_static! {
     // 让 is_current_version_ahead_of_latest_version / is_incoming_version_past_current
     // 能正确比较大小,从而识别回滚或本地构建超前 release 的场景。
     static ref OSS_VERSION_RE: Regex =
-        Regex::new(r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})(?:\.(\d+))?$").unwrap();
+        Regex::new(r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})(?:\.(\d+))?(?:-mod\.(\d+))?$").unwrap();
 
     // Cached mapping of version strings to semantic versions.
     static ref PARSED_VERSIONS_CACHE: MemoMap<String, ParsedVersion> = Default::default();
@@ -50,6 +50,8 @@ pub struct ParsedVersion {
     major: usize,
     date: NaiveDateTime,
     patch: usize,
+    /// N from a fork release tagged `-mod.N`, 0 otherwise.
+    mod_revision: usize,
 }
 
 impl TryFrom<&str> for ParsedVersion {
@@ -77,6 +79,7 @@ fn parse_official(value: &str) -> Option<ParsedVersion> {
         major: captures.get(1)?.as_str().parse().ok()?,
         date,
         patch: captures.get(4)?.as_str().parse().ok()?,
+        mod_revision: 0,
     })
 }
 
@@ -91,18 +94,28 @@ fn parse_oss(value: &str) -> Option<ParsedVersion> {
         .get(4)
         .and_then(|m| m.as_str().parse::<usize>().ok())
         .unwrap_or(0);
+    let mod_revision: usize = captures
+        .get(5)
+        .and_then(|m| m.as_str().parse::<usize>().ok())
+        .unwrap_or(0);
     // OSS 没有 major 段;统一记为 0,这样和官方 tag(major>=0)用同一个 Ord 比较时
     // 不会发生 OSS 版本被错误判定"大于"官方版本的情况。
     Some(ParsedVersion {
         major: 0,
         date,
         patch,
+        mod_revision,
     })
 }
 
 impl Ord for ParsedVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (self.major, self.date, self.patch).cmp(&(other.major, other.date, other.patch))
+        (self.major, self.date, self.patch, self.mod_revision).cmp(&(
+            other.major,
+            other.date,
+            other.patch,
+            other.mod_revision,
+        ))
     }
 }
 

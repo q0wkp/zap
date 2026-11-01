@@ -365,7 +365,7 @@ fn download_url() -> String {
         Some(tag) => format!("download/{tag}"),
         None => "latest/download".to_string(),
     };
-    format!("https://github.com/zerx-lab/warp/releases/{release_path}")
+    format!("https://github.com/q0wkp/zap/releases/{release_path}")
 }
 
 fn version_suffix() -> String {

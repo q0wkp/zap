@@ -315,7 +315,7 @@ elif [[ $RELEASE_CHANNEL = "oss" ]]; then
     BUNDLE_ID="dev.zap.Zap"
     WARP_APP_NAME="Zap"
     WARP_SCHEME_NAME="zap"
-    # autoupdate 走 GitHub Release(zerx-lab/warp),仅下载 DMG 到 Downloads,不自动覆盖 .app。
+    # autoupdate 走 GitHub Release(q0wkp/zap),仅下载 DMG 到 Downloads,不自动覆盖 .app。
     FEATURES="release_bundle,extern_plist,autoupdate"
 fi
 

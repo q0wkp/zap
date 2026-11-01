@@ -2,7 +2,7 @@
 # 在远端主机安装 Zap CLI 二进制,用于 remote-server-proxy。
 #
 # setup.rs 会在运行时替换这些占位符:
-#   {download_base_url}     - 例如 https://github.com/zerx-lab/warp/releases/latest/download
+#   {download_base_url}     - 例如 https://github.com/q0wkp/zap/releases/latest/download
 #   {install_dir}           - 例如 ~/.zap/remote-server
 #   {binary_name}           - 例如 zap-oss
 #   {version_suffix}        - 例如 -v0.2026...,没有 release tag 时为空

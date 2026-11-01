@@ -30,6 +30,12 @@ or are coming from upstream **Warp**, see
 [docs/migrate-from-warp.md](docs/migrate-from-warp.md) to bring your settings
 across.
 
+## Fork releases
+
+This fork publishes its own releases, and auto-update checks them instead of upstream's. Tags use the next upstream
+version plus `-mod.N`, so upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`. Pushing a `v*` tag runs
+`.github/workflows/release.yml`.
+
 ## Roadmap
 
 See [docs/roadmap.md](docs/roadmap.md).
