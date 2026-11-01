@@ -1523,6 +1523,7 @@ pub struct SshServerRow {
     pub notes: Option<String>,
     pub last_connected_at: Option<NaiveDateTime>,
     pub credential_id: Option<String>,
+    pub zmx_session: Option<String>,
 }
 
 #[derive(Insertable, AsChangeset, Clone, Debug)]
@@ -1537,6 +1538,7 @@ pub struct NewSshServer<'a> {
     pub startup_command: Option<&'a str>,
     pub notes: Option<&'a str>,
     pub credential_id: Option<&'a str>,
+    pub zmx_session: Option<&'a str>,
 }
 
 // --- Sync Meta ---------------------------------------------------------

@@ -305,6 +305,10 @@ app/  (主二进制:装配、入口、平台粘合、持久化迁移、UI 视图
   ```
 
 - 集成测试用 `crates/integration` 的框架,样例在 `app/src/integration_testing/`。
+- 仓库并非全量 rustfmt 干净。rustfmt 1.8.0(工具链 1.92.0)会顺着 `mod.rs` 与 `#[path]` 递归格式化子模块,
+  在 `app/src/terminal/mod.rs`、`view.rs` 上直接运行会改动大量无关代码;格式化后要检查 diff,把无关改动还原。
+- `main`(`8954864e`)上已有失败的测试:`terminal::`、`ssh_manager`、`i18n` 过滤下共 23 个。判断回归时要与 `main` 对比
+  失败集合,不能只看退出码。
 
 ### 5.7 跨进程命令
 - 不要直接 `std::process::Command::new(...)`(尤其在 Windows 上会弹窗),统一走 `crates/command`。

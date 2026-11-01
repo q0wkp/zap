@@ -186,6 +186,7 @@ fn onekey_test_connection_uses_shared_password_credential() {
         key_path: None,
         credential_id: Some("cred-1".to_string()),
         startup_command: None,
+        zmx_session: None,
         notes: None,
         last_connected_at: None,
     };
@@ -216,6 +217,7 @@ fn onekey_test_connection_prefers_editor_password() {
         key_path: None,
         credential_id: Some("cred-1".to_string()),
         startup_command: None,
+        zmx_session: None,
         notes: None,
         last_connected_at: None,
     };
@@ -244,6 +246,7 @@ fn onekey_key_credential_resolves_test_connection_to_key_auth() {
         key_path: None,
         credential_id: Some("cred-1".to_string()),
         startup_command: None,
+        zmx_session: None,
         notes: None,
         last_connected_at: None,
     };

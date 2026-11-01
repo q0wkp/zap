@@ -17,7 +17,7 @@ Zap is an open, local-first terminal with first-class AI and agent support. Plug
 - **No mandatory cloud** — no account, login, Drive sync or cloud agent history required.
 - **BYOP AI providers** — any OpenAI-compatible endpoint, plus native OpenAI / Anthropic / Gemini / DeepSeek / Ollama protocols. Keys stay local.
 - **Third-party CLI agents** — DeepSeek-TUI / Codex CLI / Claude Code / Google Antigravity (`agy`) wired into Blocks and the notification center.
-- **Built-in SSH host manager** — manage hosts, configs and sessions inside the terminal, with tmux integration.
+- **Built-in SSH host manager** — manage hosts, configs and sessions inside the terminal, with tmux and zmx integration.
 - **Editable system prompts** — minijinja templates rendered on the client.
 - **Rendering fixes** — tuned Markdown pipeline; CJK soft-wrap caret and bold subpixel fixes.
 - **Localized UI** — English / Simplified Chinese / Japanese / Russian out of the box, community-extensible.

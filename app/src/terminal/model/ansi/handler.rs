@@ -399,4 +399,7 @@ pub trait Handler {
     /// - OSC 9: Simple notification with just a body (iTerm2/Windows Terminal style)
     /// - OSC 777: Notification with title and body (urxvt style)
     fn pluggable_notification(&mut self, _title: Option<String>, _body: String) {}
+
+    /// Callback for a user variable set by a program via OSC 1337 `SetUserVar`.
+    fn set_user_var(&mut self, _name: String, _value: String) {}
 }

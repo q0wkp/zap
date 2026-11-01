@@ -25,6 +25,7 @@ fn server() -> SshServerInfo {
         key_path: None,
         credential_id: None,
         startup_command: None,
+        zmx_session: None,
         notes: None,
         last_connected_at: None,
     }
@@ -414,5 +415,36 @@ fn windows_askpass_script_is_spawnable() {
     assert!(
         stdout.trim() == "dummy-pw-for-spawn-test",
         "askpass output mismatch: got {stdout:?}"
+    );
+}
+
+#[test]
+fn startup_command_line_attaches_after_the_startup_command() {
+    let mut s = server();
+    assert_eq!(build_startup_command_line(&s), None);
+
+    s.startup_command = Some("cd /srv".into());
+    assert_eq!(build_startup_command_line(&s).as_deref(), Some("cd /srv"));
+
+    s.zmx_session = Some("dev".into());
+    assert_eq!(
+        build_startup_command_line(&s).as_deref(),
+        Some("cd /srv; zmx attach dev")
+    );
+
+    s.startup_command = Some("   ".into());
+    assert_eq!(
+        build_startup_command_line(&s).as_deref(),
+        Some("zmx attach dev")
+    );
+}
+
+#[test]
+fn startup_command_line_quotes_the_session_name() {
+    let mut s = server();
+    s.zmx_session = Some("my session; rm -rf ~".into());
+    assert_eq!(
+        build_startup_command_line(&s).as_deref(),
+        Some("zmx attach 'my session; rm -rf ~'")
     );
 }

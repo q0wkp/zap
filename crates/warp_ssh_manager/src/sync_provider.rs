@@ -44,6 +44,8 @@ pub struct SyncServer {
     pub auth_type: String,
     pub key_path: Option<String>,
     pub startup_command: Option<String>,
+    #[serde(default)]
+    pub zmx_session: Option<String>,
     pub notes: Option<String>,
     #[serde(default)]
     pub credential_id: Option<String>,
@@ -150,6 +152,7 @@ impl SyncDataProvider for SshSyncProvider {
                         auth_type: server.auth_type.as_db_str().to_string(),
                         key_path: server.key_path.clone(),
                         startup_command: server.startup_command.clone(),
+                        zmx_session: server.zmx_session.clone(),
                         notes: server.notes.clone(),
                         credential_id: server.credential_id.clone(),
                         password_encrypted: encrypt_optional(token, password.as_deref())?,
@@ -333,6 +336,7 @@ impl SyncDataProvider for SshSyncProvider {
                             auth_type: &server.auth_type,
                             key_path: server.key_path.as_deref(),
                             startup_command: server.startup_command.as_deref(),
+                            zmx_session: server.zmx_session.as_deref(),
                             notes: server.notes.as_deref(),
                             credential_id: server.credential_id.as_deref(),
                         })
@@ -605,6 +609,7 @@ mod tests {
             auth_type: "password".to_string(),
             key_path: Some("/key".to_string()),
             startup_command: None,
+            zmx_session: None,
             notes: Some("test".to_string()),
             credential_id: None,
             password_encrypted: Some("enc123".to_string()),
@@ -630,6 +635,7 @@ mod tests {
             auth_type: "key".to_string(),
             key_path: None,
             startup_command: None,
+            zmx_session: None,
             notes: None,
             credential_id: None,
             password_encrypted: None,
@@ -662,6 +668,7 @@ mod tests {
                 auth_type: "password".to_string(),
                 key_path: None,
                 startup_command: None,
+                zmx_session: None,
                 notes: None,
                 credential_id: None,
                 password_encrypted: Some("enc".to_string()),
