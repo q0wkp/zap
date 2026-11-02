@@ -236,7 +236,7 @@ sign "$pkgs/keys/fingerprint"
 rm "$pkgs/keys/fingerprint.sig"
 
 version=${tag#v}
-declare -A values=([TAG]=$tag [VERSION]=$version [PKGVER]=${version//-/.})
+declare -A values=([TAG]=$tag [VERSION]=$version [PKGVER]=${version//[^0-9A-Za-z._]/.})
 declare -a downloads=()
 release_assets=$(gh api "repos/$SOURCE_REPO/releases/tags/$tag" --jq '.assets[].name')
 mkdir -p "$work/assets"
