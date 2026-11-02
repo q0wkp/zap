@@ -34,7 +34,8 @@ across.
 
 This fork publishes its own releases, and auto-update checks them instead of upstream's. Tags use the next upstream
 version plus `-mod.N`, so upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`. Pushing a `v*` tag runs
-`.github/workflows/release.yml`.
+`.github/workflows/release.yml`. Each platform uploads to a prerelease as soon as it builds, and the release becomes the
+latest one, which is what auto-update sees, only when every platform is there.
 
 ## Roadmap
 
