@@ -295,7 +295,7 @@ jobs:
     needs: prepare_metadata
     # 用 22.04 (glibc 2.35) 而不是 ubuntu-latest (24.04, glibc 2.39),
     # AppImage 用 host glibc 链接,22.04 产物能在更多旧发行版上跑
-    # (Debian 11 / Ubuntu 20.04 + 等)。
+    # (需要 glibc >= 2.35,与 deb 的 libc6 依赖一致:Ubuntu 22.04 / Debian 12 起)。
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
