@@ -6,6 +6,7 @@ arch=('@@ARCH@@')
 url="https://github.com/zerx-lab/warp"
 license=('custom')
 depends=(
+	'alsa-lib'
 	'curl'
 	'default-cursors'
 	'fontconfig'
@@ -16,7 +17,9 @@ depends=(
 	'libxi'
 	'libxkbcommon-x11'
 	'opengl-driver'
+	'wayland'
 	'xdg-utils'
+	'xz'
 	'zlib'
 )
 optdepends=(
