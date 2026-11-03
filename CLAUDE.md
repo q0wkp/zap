@@ -22,7 +22,8 @@ there get these notes too. Drafts of issues and PRs for other people's projects 
 - zap's `origin`, The-Lu-Group/zap, returns 404, so `git fetch origin` fails there. Fetch `q0wkp` and `upstream`.
 - The active gh account (`lutianyu2001`) can't push to q0wkp/zap. Push with
   `GH_TOKEN=$(gh auth token -u q0wkp) git push q0wkp ...` instead of switching accounts.
-- zmx and q0wkp/zap use the gh-fork-layout branches (`upstream`, own `main`, feature branches kept after merging).
+- zmx and q0wkp/zap use the gh-fork-layout branches (`upstream`, own `main`, feature branches kept after merging),
+  except that fork-only changes to q0wkp/zap go straight to main (see the decisions below).
   ZZZ_FORKED.warp keeps the default layout with Actions off. In the user's words: "我自己不编译warp用, 我直接用zap".
 
 ### How the user runs this
@@ -34,8 +35,12 @@ un-warpified bash running `claude --resume`. Never disturb a live zmx session: t
 ### The user's decisions
 
 - zap's upstream is unmaintained, and the user maintains q0wkp/zap alone (2026-11-03): "zap官方已经躺尸好久了,
-  我也不打算去指望他, 我自己维护着自己的仓库就完了." Don't prepare PRs for zerx-lab/zap. zap changes go into
-  q0wkp/zap's main through PRs.
+  我也不打算去指望他, 我自己维护着自己的仓库就完了." But in case it revives: "我还是希望某一天上游复活了还能接着向上游
+  贡献的, 所以还是能准备的接着准备." So:
+  - A change upstream could take: branch from `upstream` and PR it into our main as before ("能往上游同步的还是照常开
+    pr"), keeping the branch so it can still be PRed to zerx-lab/zap.
+  - A change only for this fork: commit it straight to main, no branch or PR ("不往上游同步的我们自己的修改都可以直接
+    往main开"). This file is one of those.
 - Changes to a feature Warp provides belong in warp: "你肯定要在warp上改啊, 如果是warp提供的功能". Bugs too:
   "warp 导致的bug优先在 warp 修". Fix them in warp first, then port to zap. A bug zap introduced itself is fixed in zap.
   Decide which project owns a feature or caused a bug by comparing with Warp's current code, not only zap's.
