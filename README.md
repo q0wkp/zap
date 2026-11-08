@@ -1,47 +1,36 @@
-<div align="center">
-
-<img src="assets/zap-logo.svg" alt="Zap" width="128" />
+<p align="center">
+  <img src="./assets/zap-logo.svg" alt="Zap logo" width="96">
+</p>
 
 # Zap
 
-[简体中文](./README.zh-CN.md) · [日本語](./README.ja.md)
+[![License](https://img.shields.io/badge/License-AGPL--3.0--only%20AND%20MIT-blue.svg)](#license)
+[![Release](https://img.shields.io/github/v/release/q0wkp/zap)](https://github.com/q0wkp/zap/releases/latest)
 
-<sub><i>Currently based on <a href="https://github.com/warpdotdev/warp">Warp</a>; evolving independently going forward.</i></sub>
+My own build of [Zap](https://github.com/zerx-lab/zap), the terminal forked from
+[Warp](https://github.com/warpdotdev/warp), kept for my personal use. It is not affiliated with or supported by the
+maintainers of Zap or Warp.
 
-</div>
+## Changes from Upstream
 
-Zap is an open, local-first terminal with first-class AI and agent support. Plug in any AI provider, bring in any CLI agent, manage SSH hosts inside the terminal — with keys, history and agent state staying on your machine by default.
+- **zmx sessions**: CLI agents running inside a [zmx](https://github.com/lutianyu2001/zmx) session are detected, from
+  the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
+  zmx session to attach to after connecting. ([#1](https://github.com/q0wkp/zap/pull/1))
+- **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
+  refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap)
+- **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
+  remote server download point here, so a build of this fork never replaces itself with an upstream one. Tags are the
+  next upstream version plus `-mod.N` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`). Each platform is
+  uploaded as soon as it builds, and the release becomes the latest one only when every platform is there.
+- **Linux packages**: the release builds the Arch package, which a wrong makepkg option had kept from ever being built,
+  and both it and the `.deb` declare the libraries the binary links against (ALSA, liblzma), so they start on systems
+  without them.
+- **Package managers**: `zap` for pacman, `zap-deb` for Pacstall and the cask `zap-terminal` for Homebrew, from
+  [q0wkp/pkgs](https://github.com/q0wkp/pkgs), which says how to add them.
+- **Workflows**: upstream's website deploy and stale pull request workflows are gone.
 
-## What Zap adds over upstream Warp
+## License
 
-- **No mandatory cloud** — no account, login, Drive sync or cloud agent history required.
-- **BYOP AI providers** — any OpenAI-compatible endpoint, plus native OpenAI / Anthropic / Gemini / DeepSeek / Ollama protocols. Keys stay local.
-- **Third-party CLI agents** — DeepSeek-TUI / Codex CLI / Claude Code / Google Antigravity (`agy`) wired into Blocks and the notification center.
-- **Built-in SSH host manager** — manage hosts, configs and sessions inside the terminal, with tmux and zmx integration.
-- **Editable system prompts** — minijinja templates rendered on the client.
-- **Rendering fixes** — tuned Markdown pipeline; CJK soft-wrap caret and bold subpixel fixes.
-- **Localized UI** — English / Simplified Chinese / Japanese / Russian out of the box, community-extensible.
-- **Privacy defaults** — Cloud Agent / Computer Use / Referral / telemetry off by default.
+The UI framework (the `warpui_core` and `warpui` crates) is licensed under the [MIT license](LICENSE-MIT).
 
-## Migrating from OpenWarp or Warp
-
-If you used the project before it was renamed to Zap (formerly **OpenWarp**),
-or are coming from upstream **Warp**, see
-[docs/migrate-from-warp.md](docs/migrate-from-warp.md) to bring your settings
-across.
-
-## Fork releases
-
-This fork publishes its own releases, and auto-update checks them instead of upstream's. Tags use the next upstream
-version plus `-mod.N`, so upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`. Pushing a `v*` tag runs
-`.github/workflows/release.yml`. Each platform uploads to a prerelease as soon as it builds, and the release becomes the
-latest one, which is what auto-update sees, only when every platform is there.
-
-## Roadmap
-
-See [docs/roadmap.md](docs/roadmap.md).
-
-## Acknowledgements
-
-- [Warp](https://github.com/warpdotdev/warp) — the upstream terminal Zap is built on.
-- [DeepSeek-TUI](https://github.com/Hmbown/DeepSeek-TUI) — first-class CLI agent partner.
+The rest of the code in this repository is licensed under the [AGPL v3](LICENSE-AGPL).
