@@ -58,5 +58,7 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
 
 ### Packages
 
-zap publishes to q0wkp/pkgs through `packaging/pkgs/sync.sh`, run from a checkout of main. The pkgs README says how
-publishing works. Packages are signed with the user's personal GPG key, the one that signs their commits.
+zap's recipe lives in q0wkp/pkgs (`recipes/zap/`), whose Sync workflow publishes each release daily: `zap` for pacman,
+`zap-deb` for Pacstall, and the cask `zap-terminal` in q0wkp/homebrew-tap. Each goes out once the release has its own
+files (the `.pkg.tar.zst`, the `.deb`, the two DMGs), so a release missing one still reaches the others. The pkgs README
+says how publishing works.
