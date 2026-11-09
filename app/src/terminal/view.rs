@@ -10654,6 +10654,11 @@ impl TerminalView {
             }
             ModelEvent::Handler(_) => {}
             ModelEvent::FinishUpdate(data) => {
+                // A package manager's upgrade, run in this tab, succeeded. The tab stays open with
+                // its output, and Zap offers to restart.
+                if autoupdate::finish_update_command(&data.update_id, ctx) {
+                    return;
+                }
                 let AutoupdateStage::UpdateReady {
                     update_id: expected_update_id,
                     ..

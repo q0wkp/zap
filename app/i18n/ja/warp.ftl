@@ -563,6 +563,11 @@ settings-about-export-logs = ログをエクスポート…
 settings-about-export-logs-description = 最近のアプリログ（および存在する場合は MCP / 自動更新ログ）と診断サマリーを zip にまとめ、保存場所を選択できます。トラブルシューティングのために共有してください。
 settings-about-export-logs-success = ログを { $path } にエクスポートしました
 settings-about-export-logs-failure = ログのエクスポートに失敗しました：{ $error }
+settings-about-update-installed = { $version } がインストールされました。
+settings-about-update-restart-now = 今すぐ再起動
+settings-about-update-install-hint-command = 新しいタブで { $command } を実行します。成功すると Zap が再起動を提案します。
+settings-about-update-install-hint-restart = Zap は新しいバージョンで再起動します。
+settings-about-update-manual-hint = インストールするには：{ $command }
 
 # Zap: main_page.rs 関連の文字列は Account 設定ページとともに削除された。
 
@@ -3386,6 +3391,10 @@ workspace-sampling-process-toast = プロセスを 3 秒間サンプリング中
 workspace-version-deprecation-banner = アプリが古く、一部機能が想定どおり動作しない可能性があります。直ちに更新してください。
 workspace-version-deprecation-without-permissions-banner = 直ちに更新しないと一部の Zap 機能が想定どおり動作しない可能性がありますが、Zap は更新を実行できません。
 workspace-new-version-unable-to-update-banner = 新しいバージョンが利用可能ですが、Zap は更新を実行できません。
+workspace-new-version-manual-upgrade-banner = Zap { $version } が利用可能です。インストールするには：{ $command }
+workspace-update-via-command-banner = Zap { $version } が利用可能です。更新すると新しいタブで `{ $command }` を実行します。
+workspace-update-installed-banner = Zap { $version } がインストールされました。使用するには Zap を再起動してください。
+workspace-restart-to-update = Zap を再起動
 workspace-unable-to-launch-new-installed-version = Zap はインストール済みの新バージョンを起動できませんでした。
 tab-config-session-type = セッションタイプ
 terminal-copy-error = エラーをコピー

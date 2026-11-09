@@ -331,13 +331,27 @@ impl AboutPageWidget {
                 crate::t!("settings-about-update-up-to-date"),
                 UpdateAction::Check,
             ),
-            AutoupdateStage::UpdateReady { new_version, .. }
-            | AutoupdateStage::UpdatedPendingRestart { new_version } => {
+            AutoupdateStage::UpdateReady { new_version, .. } => {
                 let text = crate::t!(
                     "settings-about-update-ready",
                     version = new_version.version.as_str()
                 );
                 (text, UpdateAction::Install)
+            }
+            // 由包管理器安装:"立即安装"在新标签页里运行升级命令。
+            AutoupdateStage::UpdateViaCommand { new_version, .. } => {
+                let text = crate::t!(
+                    "settings-about-update-available",
+                    version = new_version.version.as_str()
+                );
+                (text, UpdateAction::Install)
+            }
+            AutoupdateStage::UpdatedPendingRestart { new_version } => {
+                let text = crate::t!(
+                    "settings-about-update-installed",
+                    version = new_version.version.as_str()
+                );
+                (text, UpdateAction::Restart)
             }
             stage if stage.available_new_version().is_some() => {
                 // UnableToUpdateToNewVersion / UnableToLaunchNewVersion / Updating(残留):
@@ -411,12 +425,17 @@ impl AboutPageWidget {
                     .finish(),
                 );
             }
-            UpdateAction::Install => {
+            UpdateAction::Install | UpdateAction::Restart => {
+                let label = if matches!(action, UpdateAction::Restart) {
+                    crate::t!("settings-about-update-restart-now")
+                } else {
+                    crate::t!("settings-about-update-install-now")
+                };
                 row.add_child(
                     Container::new(
                         ui_builder
                             .link(
-                                crate::t!("settings-about-update-install-now"),
+                                label,
                                 None,
                                 Some(Box::new(|ctx| {
                                     ctx.dispatch_typed_action(AboutPageAction::InstallUpdate);
@@ -433,18 +452,39 @@ impl AboutPageWidget {
             }
         }
 
-        // 安装提示:仅在 UpdateReady/UpdatedPendingRestart 状态(Install 操作)显示,
-        // 让用户在点击前预知接下来会看到什么(打开 dmg / 启动安装向导 / 重启 AppImage)。
-        if matches!(
-            autoupdate::get_update_state(app),
-            AutoupdateStage::UpdateReady { .. } | AutoupdateStage::UpdatedPendingRestart { .. }
-        ) {
-            // t! 是宏,必须传 literal,不能用变量。按 cfg 分支挑选具体 key。
-            #[cfg(target_os = "macos")]
-            let hint = crate::t!("settings-about-update-install-hint-macos");
-            #[cfg(not(target_os = "macos"))]
-            let hint = crate::t!("settings-about-update-install-hint-linux");
-
+        // 安装提示:在可以安装/重启时显示,让用户在点击前预知接下来会看到什么
+        // (打开 dmg / 重启 AppImage / 在新标签页里运行包管理器的升级命令);
+        // 包管理器不能由 Zap 运行时,显示用户要自己运行的命令。
+        let hint = match &stage {
+            AutoupdateStage::UpdateReady { .. } => {
+                // t! 是宏,必须传 literal,不能用变量。按 cfg 分支挑选具体 key。
+                #[cfg(target_os = "macos")]
+                let hint = crate::t!("settings-about-update-install-hint-macos");
+                #[cfg(not(target_os = "macos"))]
+                let hint = crate::t!("settings-about-update-install-hint-linux");
+                Some(hint)
+            }
+            AutoupdateStage::UpdateViaCommand { command, .. } => Some(crate::t!(
+                "settings-about-update-install-hint-command",
+                command = command.as_str()
+            )),
+            AutoupdateStage::UpdatedPendingRestart { .. } => {
+                Some(crate::t!("settings-about-update-install-hint-restart"))
+            }
+            AutoupdateStage::UnableToUpdateToNewVersion { .. } => {
+                autoupdate::AutoupdateState::as_ref(app)
+                    .manual_upgrade_hint()
+                    .map(|command| {
+                        crate::t!("settings-about-update-manual-hint", command = command)
+                    })
+            }
+            AutoupdateStage::NoUpdateAvailable
+            | AutoupdateStage::CheckingForUpdate
+            | AutoupdateStage::DownloadingUpdate
+            | AutoupdateStage::Updating { .. }
+            | AutoupdateStage::UnableToLaunchNewVersion { .. } => None,
+        };
+        if let Some(hint) = hint {
             return Flex::column()
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_child(row.finish())
@@ -495,6 +535,8 @@ enum UpdateAction {
     Check,
     OpenReleasePage(String),
     Install,
+    /// 新版本已由包管理器安装,重启即可使用。
+    Restart,
 }
 
 impl SettingsPageMeta for AboutPageView {

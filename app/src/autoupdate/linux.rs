@@ -1,13 +1,14 @@
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context as _, Result};
 use channel_versions::VersionInfo;
 use instant::Duration;
 use warp_core::channel::{Channel, ChannelState};
 
+use super::command_update::{self, PkgsRelease, PkgsTarget};
 use super::release_assets_directory_url;
-use super::{DownloadProgress, DownloadReady, ProgressCallback, ReadyForRelaunch};
+use super::{github, DownloadProgress, DownloadReady, ProgressCallback, ReadyForRelaunch};
 
 lazy_static::lazy_static! {
     /// Stores the path to the current executable.
@@ -32,9 +33,32 @@ pub(super) async fn download_update_and_cleanup(
         }
         UpdateMethod::PackageManager(package_manager) => {
             log::info!("Detected that Zap was installed using {package_manager:?}");
-            Ok(DownloadReady::NeedsAuthorization)
+            let manual_upgrade = || DownloadReady::ManualUpgrade {
+                hint: package_manager.upgrade_hint(),
+            };
+            let Some(target) = package_manager.pkgs_target() else {
+                return Ok(manual_upgrade());
+            };
+            // Until q0wkp/pkgs has published the release for this package manager, which would
+            // otherwise install the running version again, there is no update; the next poll
+            // checks again.
+            let tag = github::release_tag(&version_info.version);
+            let Some(published) = command_update::pkgs_published(client, target, &tag).await?
+            else {
+                return Ok(DownloadReady::No);
+            };
+            Ok(match package_manager.upgrade_command(&published) {
+                Some(command) => DownloadReady::RunCommand(command),
+                None => manual_upgrade(),
+            })
         }
     }
+}
+
+/// Caches the path of the running executable, which [`relaunch`] starts again. Call it before a
+/// package manager can replace the executable, after which the path would end in " (deleted)".
+pub(super) fn cache_current_exe() {
+    let _ = CURRENT_EXE.as_ref();
 }
 
 pub(super) fn apply_update() -> Result<ReadyForRelaunch> {
@@ -282,11 +306,11 @@ impl UpdateMethod {
     }
 }
 
-/// Package managers that we understand and can assist with auto-update
-/// for. `Pacman` 区分两种情形:`PacmanOfficial` 表示包来自 archlinux.org 的
-/// 官方仓库(可以直接 `sudo pacman -Syu`),`PacmanAur` 表示包来自 AUR 或者
-/// 本地手工 `makepkg -si`,这时应该走 AUR helper(`paru -Syu` / `yay -Syu`),
-/// 不应该让用户 `pacman -U` 一个不存在的 release 资产。
+/// Package managers that we understand and can assist with auto-update for. A pacman package is
+/// `PacmanQ0wkp` when q0wkp/pkgs' repository `[q0wkp]` has it, which Zap upgrades alone with
+/// `pacman -U`; `PacmanRepo` when another sync repository has it, upgraded with `pacman -Syu`; and
+/// `PacmanAur` when no sync repository has it, as for the AUR or a package built by hand, upgraded
+/// with an AUR helper.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageManager {
     Apt {
@@ -301,8 +325,18 @@ pub enum PackageManager {
     Zypper {
         package_name: String,
     },
-    /// 走 archlinux.org 官方仓库的 pacman 包(`pacman -Si <pkg>` 命中)。
-    PacmanOfficial {
+    /// The deb was installed by Pacstall (from q0wkp/pkgs, as `zap-deb`), which upgrades it.
+    Pacstall {
+        /// The Pacstall package, whose pacscript `gives` the dpkg package `package_name`.
+        pacstall_name: String,
+        package_name: String,
+    },
+    /// A pacman package that q0wkp/pkgs' repository `[q0wkp]` has (`pacman -Si q0wkp/<pkg>`).
+    PacmanQ0wkp {
+        package_name: String,
+    },
+    /// A pacman package that another sync repository has (`pacman -Si <pkg>`).
+    PacmanRepo {
         package_name: String,
     },
     /// AUR / 本地手工安装(`pacman -Qi <pkg>` 命中但 `pacman -Si <pkg>` 不命中)。
@@ -355,7 +389,9 @@ impl PackageManager {
             if [ $? -eq 0 ]; then
               # 区分官方仓库 vs AUR/手工。-Si 查 sync database,AUR/手工
               # 安装的包不会被 sync 出来。
-              if command -p pacman -Si "$PACKAGE_NAME" >/dev/null 2>/dev/null; then
+              if command -p pacman -Si "q0wkp/$PACKAGE_NAME" >/dev/null 2>/dev/null; then
+                echo "pacman-q0wkp"
+              elif command -p pacman -Si "$PACKAGE_NAME" >/dev/null 2>/dev/null; then
                 echo "pacman-official"
               else
                 echo "pacman-aur"
@@ -408,49 +444,126 @@ impl PackageManager {
             .map_err(|_| anyhow::anyhow!("non-UTF-8 detect script output"))?;
         let name = package_name.to_string();
         let pm = match stdout.trim() {
-            "pacman-official" => Self::PacmanOfficial { package_name: name },
+            "pacman-q0wkp" => Self::PacmanQ0wkp { package_name: name },
+            "pacman-official" => Self::PacmanRepo { package_name: name },
             "pacman-aur" => Self::PacmanAur { package_name: name },
             "zypper" => Self::Zypper { package_name: name },
             "dnf" => Self::Dnf { package_name: name },
             "yum" => Self::Yum { package_name: name },
-            "apt" => Self::Apt { package_name: name },
+            "apt" => match pacstall_package_for(&name, Path::new(PACSTALL_METADATA_DIR)) {
+                Some(pacstall_name) => Self::Pacstall {
+                    pacstall_name,
+                    package_name: name,
+                },
+                None => Self::Apt { package_name: name },
+            },
             other => bail!("Unexpected detection output: {other}"),
         };
         Ok(Some(pm))
     }
 
-    /// 把"用户应该跑的升级命令"写到日志里。OSS 用户翻 ~/.local/share/dev.zap.Zap/
-    /// 下面的日志能找到精确指令;UI 仍然走"前往 GitHub 下载"兜底,不区分到包管理器。
-    fn log_upgrade_hint(&self) {
-        let hint = match self {
-            Self::Apt { package_name } => {
-                format!(
-                    "Run: download the .deb from the GitHub Release, then `sudo apt install ./{package_name}_*.deb`, \
-                     or add the release as an apt source and run `sudo apt update && sudo apt install {package_name}`"
-                )
+    /// The target that q0wkp/pkgs publishes Zap's releases to for this package manager, when Zap
+    /// can run the package manager to upgrade itself.
+    pub(super) fn pkgs_target(&self) -> Option<PkgsTarget> {
+        match self {
+            Self::PacmanQ0wkp { .. } => Some(PkgsTarget::Pacman),
+            Self::Pacstall { .. } => Some(PkgsTarget::Pacstall),
+            Self::Apt { .. }
+            | Self::Yum { .. }
+            | Self::Dnf { .. }
+            | Self::Zypper { .. }
+            | Self::PacmanRepo { .. }
+            | Self::PacmanAur { .. } => None,
+        }
+    }
+
+    /// The command that upgrades Zap alone to the release that q0wkp/pkgs has `published`, which
+    /// Zap runs for the user in a terminal tab. The others need a package downloaded by hand, a
+    /// full upgrade or an AUR helper, see [`Self::upgrade_hint`].
+    pub(super) fn upgrade_command(&self, published: &PkgsRelease) -> Option<String> {
+        match self {
+            // The package file of the release, which pacman checks against its signature next to
+            // it, with the keys trusted for [q0wkp]. Unlike `pacman -Sy zap`, a partial upgrade
+            // that Arch doesn't support, it leaves the sync databases alone; the package's
+            // `glibc>=` dependency keeps it off a system too old to run it.
+            Self::PacmanQ0wkp { .. } => published
+                .pacman_package_url
+                .as_deref()
+                .map(|url| format!("sudo pacman -U {}", shell_escape::escape(url.into()))),
+            // `pacstall -Up` upgrades every Pacstall package and takes no package names; `-I` of an
+            // installed package installs its pacscript from the repository over it, whatever the
+            // version, which is why the update waits for q0wkp/pkgs.
+            Self::Pacstall { pacstall_name, .. } => Some(format!(
+                "pacstall -I {}",
+                shell_escape::escape(pacstall_name.into())
+            )),
+            Self::Apt { .. }
+            | Self::Yum { .. }
+            | Self::Dnf { .. }
+            | Self::Zypper { .. }
+            | Self::PacmanRepo { .. }
+            | Self::PacmanAur { .. } => None,
+        }
+    }
+
+    /// What the user runs to upgrade Zap, shown when Zap can't run it itself.
+    pub(crate) fn upgrade_hint(&self) -> String {
+        match self {
+            Self::PacmanQ0wkp { .. } | Self::PacmanRepo { .. } => "sudo pacman -Syu".to_owned(),
+            Self::Pacstall { pacstall_name, .. } => {
+                format!("pacstall -I {}", shell_escape::escape(pacstall_name.into()))
             }
-            Self::Yum { package_name } => {
-                format!("Run: download the .rpm, then `sudo yum install ./{package_name}-*.rpm`")
-            }
-            Self::Dnf { package_name } => {
-                format!("Run: download the .rpm, then `sudo dnf install ./{package_name}-*.rpm`")
-            }
+            Self::Apt { package_name } => format!("sudo apt install ./{package_name}_*.deb"),
+            Self::Yum { package_name } => format!("sudo yum install ./{package_name}-*.rpm"),
+            Self::Dnf { package_name } => format!("sudo dnf install ./{package_name}-*.rpm"),
             Self::Zypper { package_name } => {
-                format!("Run: download the .rpm, then `sudo zypper install ./{package_name}-*.rpm`")
-            }
-            Self::PacmanOfficial { package_name } => {
-                format!("Run: `sudo pacman -Syu {package_name}`")
+                format!("sudo zypper install ./{package_name}-*.rpm")
             }
             Self::PacmanAur { package_name } => {
-                format!(
-                    "It looks like {package_name} was installed from the AUR. Upgrade with an AUR helper, \
-                     for example: `paru -Syu {package_name}` or `yay -Syu {package_name}`. \
-                     Do not run pacman -U by hand — the GitHub Release ships no .pkg.tar.zst asset."
-                )
+                format!("paru -Syu {package_name} / yay -Syu {package_name}")
             }
-        };
-        log::info!("openWarp upgrade hint: {hint}");
+        }
     }
+
+    /// 把"用户应该跑的升级命令"写到日志里,方便从日志查问题。
+    fn log_upgrade_hint(&self) {
+        let hint = self.upgrade_hint();
+        log::info!("openWarp upgrade hint ({self}): {hint}");
+    }
+}
+
+/// Where Pacstall keeps a file of metadata for each package it installed (`METADIR` in
+/// `/usr/bin/pacstall`).
+const PACSTALL_METADATA_DIR: &str = "/var/lib/pacstall/metadata";
+
+/// Returns the Pacstall package that installed the dpkg package `package_name`, if Pacstall did.
+fn pacstall_package_for(package_name: &str, metadata_dir: &Path) -> Option<String> {
+    std::fs::read_dir(metadata_dir)
+        .ok()?
+        .flatten()
+        .find_map(|entry| {
+            let contents = std::fs::read_to_string(entry.path()).ok()?;
+            let file_name = entry.file_name().to_string_lossy().into_owned();
+            let (pacstall_name, dpkg_name) = parse_pacstall_metadata(&contents, file_name);
+            (dpkg_name == package_name).then_some(pacstall_name)
+        })
+}
+
+/// Reads a Pacstall metadata file, whose lines are shell assignments such as `_name="zap-deb"` and
+/// `_gives="zap"`, and returns the Pacstall package's name and the dpkg package it installed. Like
+/// Pacstall itself, takes the dpkg package to be `${_gives:-$_name}`; `file_name`, which Pacstall
+/// names after the package, stands in for a missing `_name`.
+fn parse_pacstall_metadata(contents: &str, file_name: String) -> (String, String) {
+    let value = |key: &str| {
+        contents.lines().find_map(|line| {
+            let value = line.trim().strip_prefix(key)?.strip_prefix('=')?;
+            let value = value.trim_matches(|c| c == '"' || c == '\'');
+            (!value.is_empty()).then(|| value.to_owned())
+        })
+    };
+    let name = value("_name").unwrap_or(file_name);
+    let gives = value("_gives").unwrap_or_else(|| name.clone());
+    (name, gives)
 }
 
 impl std::fmt::Display for PackageManager {
@@ -460,8 +573,14 @@ impl std::fmt::Display for PackageManager {
             PackageManager::Yum { .. } => write!(f, "yum"),
             PackageManager::Dnf { .. } => write!(f, "dnf"),
             PackageManager::Zypper { .. } => write!(f, "zypper"),
-            PackageManager::PacmanOfficial { .. } => write!(f, "pacman (official)"),
+            PackageManager::Pacstall { .. } => write!(f, "Pacstall"),
+            PackageManager::PacmanQ0wkp { .. } => write!(f, "pacman ([q0wkp])"),
+            PackageManager::PacmanRepo { .. } => write!(f, "pacman"),
             PackageManager::PacmanAur { .. } => write!(f, "pacman (AUR)"),
         }
     }
 }
+
+#[cfg(test)]
+#[path = "linux_test.rs"]
+mod tests;

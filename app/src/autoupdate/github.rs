@@ -13,11 +13,11 @@ const REPO_OWNER: &str = "q0wkp";
 const REPO_NAME: &str = "zap";
 
 // GitHub 强制要求 User-Agent;同时显式声明 API 版本避免未来 default 漂移。
-const USER_AGENT: &str = "Zap-Autoupdate";
+pub(super) const USER_AGENT: &str = "Zap-Autoupdate";
 const ACCEPT: &str = "application/vnd.github+json";
 const API_VERSION: &str = "2022-11-28";
 
-const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+pub(super) const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct GithubRelease {
@@ -72,6 +72,23 @@ pub fn cached_release() -> Option<GithubRelease> {
     LATEST_RELEASE.lock().ok().and_then(|g| g.clone())
 }
 
+/// The page of the latest release, which lists its packages.
+#[cfg(target_os = "linux")]
+pub(crate) fn release_page_url() -> String {
+    cached_release()
+        .map(|release| release.html_url)
+        .unwrap_or_else(|| format!("https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest"))
+}
+
+/// The tag of the release `version` (a version without its `v`), as it was published.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) fn release_tag(version: &str) -> String {
+    cached_release()
+        .filter(|release| release.version() == version)
+        .map(|release| release.tag_name)
+        .unwrap_or_else(|| format!("v{version}"))
+}
+
 fn store_cached(release: GithubRelease) {
     if let Ok(mut guard) = LATEST_RELEASE.lock() {
         *guard = Some(release);
@@ -102,4 +119,28 @@ pub async fn fetch_latest_release(client: &http_client::Client) -> Result<Github
     );
     store_cached(release.clone());
     Ok(release)
+}
+
+/// Fetches a release from its `url` in the GitHub Releases API,
+/// `https://api.github.com/repos/<owner>/<name>/releases/tags/<tag>`.
+#[cfg(target_os = "linux")]
+pub(crate) async fn fetch_release(
+    client: &http_client::Client,
+    url: &str,
+) -> Result<GithubRelease> {
+    log::info!("Fetching release from {url}");
+    client
+        .get(url)
+        .header("User-Agent", USER_AGENT)
+        .header("Accept", ACCEPT)
+        .header("X-GitHub-Api-Version", API_VERSION)
+        .timeout(FETCH_TIMEOUT)
+        .send()
+        .await
+        .context("Failed to call the GitHub Releases API")?
+        .error_for_status()
+        .context("The GitHub Releases API returned a non-2xx status code")?
+        .json()
+        .await
+        .context("Failed to parse the GitHub Releases JSON")
 }

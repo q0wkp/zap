@@ -1,5 +1,7 @@
 mod changelog;
 mod channel_versions;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod command_update;
 pub(crate) mod github;
 #[cfg(target_os = "linux")]
 pub mod linux;
@@ -107,6 +109,13 @@ pub enum AutoupdateStage {
     DownloadingUpdate,
     /// An update exists but the user does not have authorization to install it.
     UnableToUpdateToNewVersion { new_version: VersionInfo },
+    /// An update exists, and the package manager that installed Zap installs it when it runs
+    /// `command`, which applying the update does in a new terminal tab.
+    UpdateViaCommand {
+        new_version: VersionInfo,
+        update_id: String,
+        command: String,
+    },
     /// An update has been downloaded and is ready for relaunch.
     UpdateReady {
         new_version: VersionInfo,
@@ -121,9 +130,8 @@ pub enum AutoupdateStage {
     UnableToLaunchNewVersion { new_version: VersionInfo },
     /// A new version was installed, but Zap hasn't restarted yet.
     ///
-    /// This state is only used on macOS, where the update isn't fully applied until right before
-    /// restarting.
-    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    /// This state is used on macOS, where the update isn't fully applied until right before
+    /// restarting, and once a package manager has installed the new version.
     UpdatedPendingRestart { new_version: VersionInfo },
 }
 
@@ -143,7 +151,8 @@ impl AutoupdateStage {
             | AutoupdateStage::Updating { new_version, .. }
             | AutoupdateStage::UpdatedPendingRestart { new_version }
             | AutoupdateStage::UnableToLaunchNewVersion { new_version }
-            | AutoupdateStage::UnableToUpdateToNewVersion { new_version } => Some(new_version),
+            | AutoupdateStage::UnableToUpdateToNewVersion { new_version }
+            | AutoupdateStage::UpdateViaCommand { new_version, .. } => Some(new_version),
             _ => None,
         }
     }
@@ -177,6 +186,12 @@ pub struct AutoupdateState {
     /// but to queue them instead.
     request_queue: VecDeque<RequestType>,
     http_client: Arc<http_client::Client>,
+    /// What the user runs to install the update, when Zap was installed by a package manager that
+    /// Zap can't run itself (stage [`AutoupdateStage::UnableToUpdateToNewVersion`]).
+    manual_upgrade_hint: Option<String>,
+    /// The update id and version of the last tab opened to run an update command, which reports
+    /// back with that id when the command succeeds.
+    update_command_tab: Option<(String, VersionInfo)>,
 }
 
 impl AutoupdateState {
@@ -188,7 +203,14 @@ impl AutoupdateState {
             downloaded_update: None,
             download_progress: None,
             request_queue: VecDeque::new(),
+            manual_upgrade_hint: None,
+            update_command_tab: None,
         }
+    }
+
+    /// What the user runs to install the update, when Zap can't install it itself.
+    pub fn manual_upgrade_hint(&self) -> Option<&str> {
+        self.manual_upgrade_hint.as_deref()
     }
 
     /// 当前下载进度;只在 stage 处于 DownloadingUpdate 时有意义。
@@ -203,6 +225,11 @@ impl AutoupdateState {
             if FeatureFlag::Autoupdate.is_enabled()
                 && AppExecutionMode::as_ref(ctx).can_autoupdate()
             {
+                // Record the executable before a package manager can replace it.
+                #[cfg(any(target_os = "linux", target_os = "macos"))]
+                command_update::record_running_executable();
+                #[cfg(target_os = "linux")]
+                linux::cache_current_exe();
                 // 启动轮询循环;是否真的发起后台检查由用户设置控制。
                 me.poll_for_update(ctx);
                 // 应用被激活时入队一次可能的每日检查,执行前同样会读取用户设置。
@@ -630,8 +657,35 @@ impl AutoupdateState {
             }
             Ok(DownloadReady::NeedsAuthorization) => {
                 send_telemetry_from_ctx!(TelemetryEvent::UnableToAutoUpdateToNewVersion, ctx);
+                self.manual_upgrade_hint = None;
                 self.stage = AutoupdateStage::UnableToUpdateToNewVersion { new_version };
                 Ok(UpdateReady::No)
+            }
+            Ok(DownloadReady::ManualUpgrade { hint }) => {
+                send_telemetry_from_ctx!(TelemetryEvent::UnableToAutoUpdateToNewVersion, ctx);
+                self.manual_upgrade_hint = Some(hint);
+                self.stage = AutoupdateStage::UnableToUpdateToNewVersion { new_version };
+                Ok(UpdateReady::No)
+            }
+            Ok(DownloadReady::RunCommand(command)) => {
+                self.stage = if running_executable_replaced() {
+                    // The package manager has already installed a new version, e.g. from a
+                    // terminal of the user's own, so all that's left is to restart.
+                    log::info!("Zap's executable was replaced; restarting runs the new version");
+                    AutoupdateStage::UpdatedPendingRestart {
+                        new_version: new_version.clone(),
+                    }
+                } else {
+                    AutoupdateStage::UpdateViaCommand {
+                        new_version: new_version.clone(),
+                        update_id: update_id.clone(),
+                        command,
+                    }
+                };
+                Ok(UpdateReady::Yes {
+                    new_version,
+                    update_id,
+                })
             }
             Ok(DownloadReady::No) => {
                 log::info!("Could not download a newer version");
@@ -736,6 +790,30 @@ impl AutoupdateState {
         }
     }
 
+    /// Handles the report of the tab that ran an update command, which only reports once the
+    /// command succeeded. Returns `false` if `update_id` isn't that tab's.
+    fn on_update_command_finished(
+        &mut self,
+        update_id: &str,
+        ctx: &mut ModelContext<Self>,
+    ) -> bool {
+        let new_version = match &self.update_command_tab {
+            Some((tab_update_id, new_version)) if tab_update_id == update_id => new_version.clone(),
+            _ => return false,
+        };
+        if running_executable_replaced() {
+            log::info!("The update command installed a new version; restarting runs it");
+            self.update_command_tab = None;
+            self.set_autoupdate_stage(AutoupdateStage::UpdatedPendingRestart { new_version }, ctx);
+            ctx.emit(AutoupdateStateEvent::UpdateAvailable);
+        } else {
+            // E.g. the package repository doesn't have the new version yet. The update stays
+            // available, to try again later.
+            log::warn!("The update command succeeded, but Zap's executable wasn't replaced");
+        }
+        true
+    }
+
     /// Mark both the autoupdate stage and the relaunch status as failed.
     fn relaunch_failed(&mut self, ctx: &mut ModelContext<Self>) {
         self.set_unable_to_launch_state(
@@ -799,6 +877,11 @@ pub enum DownloadReady {
     NeedsAuthorization,
     /// A newer version could not be downloaded.
     No,
+    /// Zap was installed by a package manager that installs the update when this command runs.
+    RunCommand(String),
+    /// Zap was installed by a package manager that Zap can't run to install the update, so the user
+    /// has to, as `hint` says.
+    ManualUpgrade { hint: String },
 }
 
 /// Whether or not we're ready to relaunch the app after the user requests that
@@ -954,16 +1037,37 @@ pub fn apply_update(
     // 内部针对 OSS 分支选择了不同的"安装动作"(mac: open dmg / Linux AppImage:
     // in-place 覆盖+重启)。
 
+    // Installed by a package manager: run its upgrade in a new tab, and wait for the tab to report
+    // that it succeeded before offering to relaunch.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    if let AutoupdateStage::UpdateViaCommand {
+        new_version,
+        update_id,
+        command,
+    } = get_update_state(_ctx)
+    {
+        AutoupdateState::handle(_ctx).update(_ctx, |autoupdate_state, _| {
+            autoupdate_state.update_command_tab = Some((update_id.clone(), new_version));
+        });
+        _initiating_workspace.add_tab_for_update_command(
+            move |shell_type| command_update::tab_command(&command, shell_type, &update_id),
+            _ctx,
+        );
+        return Ok(ReadyForRelaunch::No);
+    }
+
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
             // macOS applies the update during the download step, so simply continue relaunching
             // the app.
             Ok(ReadyForRelaunch::Yes)
         } else if #[cfg(target_os = "linux")] {
-            let AutoupdateStage::UpdateReady { .. } = &AutoupdateState::handle(_ctx).as_ref(_ctx).stage else {
-                anyhow::bail!("Trying to apply an update without AutoupdateState being UpdateReady!");
-            };
-            linux::apply_update()
+            match &AutoupdateState::handle(_ctx).as_ref(_ctx).stage {
+                AutoupdateStage::UpdateReady { .. } => linux::apply_update(),
+                // A package manager installed the update; relaunching runs it.
+                AutoupdateStage::UpdatedPendingRestart { .. } => Ok(ReadyForRelaunch::Yes),
+                _ => anyhow::bail!("Trying to apply an update without AutoupdateState being UpdateReady!"),
+            }
         } else {
             anyhow::bail!("Not implemented")
         }
@@ -1163,6 +1267,25 @@ pub fn spawn_child_if_necessary(app: &mut AppContext) {
     }
 }
 
+/// Called when a terminal reports through the FinishUpdate hook that an update command succeeded.
+/// Returns `false` if the report isn't from the tab that [`apply_update`] opened to run one.
+pub fn finish_update_command(update_id: &str, ctx: &mut AppContext) -> bool {
+    AutoupdateState::handle(ctx).update(ctx, |autoupdate_state, ctx| {
+        autoupdate_state.on_update_command_finished(update_id, ctx)
+    })
+}
+
+/// Returns `true` if a package manager has replaced the executable this process started from.
+fn running_executable_replaced() -> bool {
+    cfg_if::cfg_if! {
+        if #[cfg(any(target_os = "linux", target_os = "macos"))] {
+            command_update::running_executable_replaced()
+        } else {
+            false
+        }
+    }
+}
+
 pub fn manually_download_new_version(ctx: &mut AppContext) {
     match get_update_state(ctx) {
         AutoupdateStage::UnableToUpdateToNewVersion { new_version }
@@ -1181,6 +1304,9 @@ pub fn manually_download_new_version(ctx: &mut AppContext) {
 fn manually_download_version(channel: &Channel, version: &VersionInfo, ctx: &mut AppContext) {
     #[cfg(target_os = "macos")]
     mac::manually_download_version(channel, version, ctx);
+    // Linux packages are installed by hand from the release page.
+    #[cfg(target_os = "linux")]
+    ctx.open_url(&github::release_page_url());
 }
 
 pub(crate) fn check_and_report_update_errors(_ctx: &mut AppContext) {}

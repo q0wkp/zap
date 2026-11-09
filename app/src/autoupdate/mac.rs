@@ -144,7 +144,10 @@ pub(super) fn relaunch() -> Result<()> {
     // Applications 目录完成安装。这里不调用 `open -n bundle` 重启自己,因为
     // 当前进程在 apply_update 阶段已请求 terminate,UI 已经知道要等用户手动
     // 关闭+重开。dmg 同样在当前进程退出后再启动 Finder。
-    if matches!(channel, Channel::Oss) {
+    // Installed with Homebrew, which has already put the new version in place: start it below.
+    if matches!(channel, Channel::Oss)
+        && super::command_update::homebrew_upgrade_command().is_none()
+    {
         return oss_open_installer();
     }
 
@@ -414,6 +417,23 @@ pub(super) async fn download_update_and_cleanup(
     on_progress: ProgressCallback,
 ) -> Result<DownloadReady> {
     let channel = ChannelState::channel();
+
+    // Installed with Homebrew: `brew upgrade` installs the update, not the DMG, once q0wkp/pkgs has
+    // put it in the tap. Until then there is no update; the next poll checks again.
+    if matches!(channel, Channel::Oss) {
+        if let Some(command) = super::command_update::homebrew_upgrade_command() {
+            log::info!("Detected that Zap was installed with Homebrew");
+            let tag = super::github::release_tag(&version_info.version);
+            let target = super::command_update::PkgsTarget::Homebrew;
+            if super::command_update::pkgs_published(client, target, &tag)
+                .await?
+                .is_none()
+            {
+                return Ok(DownloadReady::No);
+            }
+            return Ok(DownloadReady::RunCommand(command));
+        }
+    }
 
     // openWarp(Channel::Oss):没有 Apple Developer ID 签名,不能走官方
     // download_and_extract_binary(mount + cp + codesign verify + RENAME_SWAP)。

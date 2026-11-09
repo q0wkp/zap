@@ -27,6 +27,13 @@ maintainers of Zap or Warp.
   without them.
 - **Package managers**: `zap` for pacman, `zap-deb` for Pacstall and the cask `zap-terminal` for Homebrew, from
   [q0wkp/pkgs](https://github.com/q0wkp/pkgs), which says how to add them.
+- **Updates through package managers**: when Zap was installed with pacman from q0wkp/pkgs' `[q0wkp]`, with Pacstall
+  or with the Homebrew cask, updating opens a tab that upgrades Zap alone, with `sudo pacman -U` of the release's
+  package from q0wkp/pkgs, `pacstall -I zap-deb` or `brew upgrade --cask --greedy zap-terminal`, and Zap offers to
+  restart once the new version is installed. Zap offers an update there only once q0wkp/pkgs has published it for
+  that package manager, which can take up to a day after the release. A `.deb` or `.rpm` installed by hand, an AUR
+  package or one from another pacman repository shows the command that installs the new one; the AppImage and the DMG
+  update themselves.
 - **Workflows**: the release workflow is this fork's own, and asks q0wkp/pkgs to package each release once it is out;
   upstream's other workflows, its issue and pull request templates and its Dependabot settings are gone.
 
