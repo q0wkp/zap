@@ -572,7 +572,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PKGS_DISPATCH_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::notice::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs picks the release up on its daily run"
+            echo "::warning::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs picks the release up on its daily run"
             exit 0
           fi
           gh workflow run sync.yml -R q0wkp/pkgs -f packages="zap"
