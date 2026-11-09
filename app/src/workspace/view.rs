@@ -630,6 +630,10 @@ pub enum WorkspaceBanner {
     UnableToUpdateToNewVersion,
     /// to display the AutoupdateStage::UnableToLaunchNewVersion
     UnableToLaunchNewVersion,
+    /// to display the AutoupdateStage::UpdateViaCommand
+    UpdateViaCommand,
+    /// to display the AutoupdateStage::UpdatedPendingRestart
+    UpdatedPendingRestart,
     // 去中心化分支:`Reauth` banner 已删除。
     // to display an anonymous user has X days left to sign in
     AnonymousUserAuth,
@@ -649,6 +653,8 @@ impl WorkspaceBanner {
         match self {
             Self::UnableToUpdateToNewVersion => true,
             Self::UnableToLaunchNewVersion => true,
+            Self::UpdateViaCommand => true,
+            Self::UpdatedPendingRestart => true,
             Self::VersionDeprecated => false,
             Self::AnonymousUserAuth => false,
             // 去中心化分支:`Reauth` 已删除。
@@ -917,6 +923,8 @@ pub struct Workspace {
     command_search_view: ViewHandle<CommandSearchView>,
     autoupdate_unable_to_update_banner_dismissed: bool,
     autoupdate_unable_to_launch_new_version: bool,
+    autoupdate_update_via_command_banner_dismissed: bool,
+    autoupdate_updated_pending_restart_banner_dismissed: bool,
     settings_file_error: Option<crate::settings::SettingsFileError>,
     settings_error_banner_dismissed: bool,
     ai_assistant_panel: ViewHandle<AIAssistantPanelView>,
@@ -2902,6 +2910,8 @@ impl Workspace {
             command_search_view,
             autoupdate_unable_to_update_banner_dismissed: false,
             autoupdate_unable_to_launch_new_version: false,
+            autoupdate_update_via_command_banner_dismissed: false,
+            autoupdate_updated_pending_restart_banner_dismissed: false,
             settings_file_error,
             settings_error_banner_dismissed: false,
             ai_assistant_panel,
@@ -6415,6 +6425,7 @@ impl Workspace {
                 );
                 match autoupdate::get_update_state(ctx) {
                     AutoupdateStage::UpdateReady { new_version, .. }
+                    | AutoupdateStage::UpdateViaCommand { new_version, .. }
                     | AutoupdateStage::UpdatedPendingRestart { new_version } => menu_items.push(
                         MenuItemFields::new(format!("Install update ({})", new_version.version))
                             .with_on_select_action(WorkspaceAction::ApplyUpdate)
@@ -8089,6 +8100,7 @@ impl Workspace {
         {
             match autoupdate::get_update_state(app) {
                 AutoupdateStage::UpdateReady { new_version, .. }
+                | AutoupdateStage::UpdateViaCommand { new_version, .. }
                 | AutoupdateStage::UpdatedPendingRestart { new_version }
                     if !is_incoming_version_past_current(
                         new_version.last_prominent_update.as_deref(),
@@ -10648,6 +10660,43 @@ impl Workspace {
                     &(update_command_fn)(*shell_type),
                     ctx,
                 );
+            }
+        });
+    }
+
+    /// Add a tab that runs the command which upgrades Zap through the package manager that
+    /// installed it, once the tab's shell is ready. Unlike [`Self::add_tab_for_assisted_autoupdate`],
+    /// the command runs without the user confirming it, since they asked for it by clicking Update;
+    /// a password prompt from `sudo` shows up in the tab.
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub fn add_tab_for_update_command(
+        &mut self,
+        update_command_fn: impl 'static + Fn(ShellType) -> String,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        self.add_tab_with_pane_layout(
+            Default::default(),
+            Arc::new(HashMap::new()),
+            Some(crate::t!("workspace-update-warp")),
+            ctx,
+        );
+
+        let Some(terminal_view) = self
+            .active_tab_pane_group()
+            .as_ref(ctx)
+            .active_session_view(ctx)
+        else {
+            log::error!("Could not access terminal view after creating a new tab!");
+            return;
+        };
+
+        // The command depends on the shell (fish chains commands differently), so wait for it.
+        ctx.subscribe_to_view(&terminal_view, move |_, terminal_view, event, ctx| {
+            if let terminal::Event::ShellSpawned(shell_type) = event {
+                let command = update_command_fn(*shell_type);
+                terminal_view.update(ctx, |terminal_view, ctx| {
+                    terminal_view.execute_command_or_set_pending(&command, ctx);
+                });
             }
         });
     }
@@ -17495,9 +17544,16 @@ impl Workspace {
                 AutoupdateStage::UnableToUpdateToNewVersion { new_version }
                     if !self.autoupdate_unable_to_update_banner_dismissed =>
                 {
+                    let manual_upgrade_hint = AutoupdateState::as_ref(app).manual_upgrade_hint();
                     let description =
                         if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
                             crate::t!("workspace-version-deprecation-without-permissions-banner")
+                        } else if let Some(command) = manual_upgrade_hint {
+                            crate::t!(
+                                "workspace-new-version-manual-upgrade-banner",
+                                version = new_version.version.as_str(),
+                                command = command
+                            )
                         } else {
                             crate::t!("workspace-new-version-unable-to-update-banner")
                         };
@@ -17542,8 +17598,36 @@ impl Workspace {
                         }),
                     })
                 }
+                AutoupdateStage::UpdateViaCommand {
+                    new_version,
+                    command,
+                    ..
+                } if !self.autoupdate_update_via_command_banner_dismissed => {
+                    Some(WorkspaceBannerFields {
+                        banner_type: WorkspaceBanner::UpdateViaCommand,
+                        severity: BannerSeverity::Warning,
+                        heading: None,
+                        description: crate::t!(
+                            "workspace-update-via-command-banner",
+                            version = new_version.version.as_str(),
+                            command = command.as_str()
+                        ),
+                        secondary_button: None,
+                        button: Some(WorkspaceBannerButtonDetails {
+                            text: crate::t!("workspace-update-now"),
+                            action: WorkspaceAction::ApplyUpdate,
+                            variant: BannerButtonVariant::Outlined,
+                            icon: None,
+                            more_info_button_action: None,
+                        }),
+                    })
+                }
                 AutoupdateStage::UpdateReady { new_version, .. }
                 | AutoupdateStage::UpdatedPendingRestart { new_version } => {
+                    let installed = matches!(
+                        autoupdate::get_update_state(app),
+                        AutoupdateStage::UpdatedPendingRestart { .. }
+                    );
                     if is_incoming_version_past_current(new_version.soft_cutoff.as_deref()) {
                         Some(WorkspaceBannerFields {
                             banner_type: WorkspaceBanner::VersionDeprecated,
@@ -17580,6 +17664,26 @@ impl Workspace {
                                 }
                             })
                         })
+                    } else if installed && !self.autoupdate_updated_pending_restart_banner_dismissed
+                    {
+                        // A package manager installed the update; offer to restart into it.
+                        Some(WorkspaceBannerFields {
+                            banner_type: WorkspaceBanner::UpdatedPendingRestart,
+                            severity: BannerSeverity::Warning,
+                            heading: None,
+                            description: crate::t!(
+                                "workspace-update-installed-banner",
+                                version = new_version.version.as_str()
+                            ),
+                            secondary_button: None,
+                            button: Some(WorkspaceBannerButtonDetails {
+                                text: crate::t!("workspace-restart-to-update"),
+                                action: WorkspaceAction::ApplyUpdate,
+                                variant: BannerButtonVariant::Outlined,
+                                icon: None,
+                                more_info_button_action: None,
+                            }),
+                        })
                     } else {
                         None
                     }
@@ -17589,6 +17693,7 @@ impl Workspace {
                 | AutoupdateStage::DownloadingUpdate
                 | AutoupdateStage::Updating { .. }
                 | AutoupdateStage::UnableToUpdateToNewVersion { .. }
+                | AutoupdateStage::UpdateViaCommand { .. }
                 | AutoupdateStage::UnableToLaunchNewVersion { .. } => None,
             }
         } else {
@@ -17823,6 +17928,12 @@ impl Workspace {
             }
             WorkspaceBanner::UnableToLaunchNewVersion => {
                 self.autoupdate_unable_to_launch_new_version = true;
+            }
+            WorkspaceBanner::UpdateViaCommand => {
+                self.autoupdate_update_via_command_banner_dismissed = true;
+            }
+            WorkspaceBanner::UpdatedPendingRestart => {
+                self.autoupdate_updated_pending_restart_banner_dismissed = true;
             }
             WorkspaceBanner::VersionDeprecated => {}
             WorkspaceBanner::AnonymousUserAuth => {}
@@ -20503,7 +20614,9 @@ impl View for Workspace {
 
         if matches!(
             autoupdate::get_update_state(app),
-            AutoupdateStage::UpdateReady { .. } | AutoupdateStage::UpdatedPendingRestart { .. }
+            AutoupdateStage::UpdateReady { .. }
+                | AutoupdateStage::UpdateViaCommand { .. }
+                | AutoupdateStage::UpdatedPendingRestart { .. }
         ) {
             context.set.insert("AutoupdateState_UpdateReady");
         }

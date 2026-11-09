@@ -38,6 +38,11 @@ This is q0wkp/zap, Tianyu Lu's own build of Zap, a terminal forked from Warp. Th
   When porting from Warp, leave out its Windows-only parts (`cfg(windows)` code, ConPTY, WSL/MSYS2 shells).
 - PRs are written in English, also into the user's own forks: "PR 全都用英语!". "PR 的模板要按 /gen-tlu-pr 来".
   Keep talking to the user in Chinese.
+- Updating through a package manager upgrades Zap alone (decided 2026-11-09): pacman, for a Zap from `[q0wkp]`, with
+  `sudo pacman -U https://github.com/q0wkp/pkgs/releases/download/x86_64/<file>` (not `-Syu`, and never `-Sy zap`, a
+  partial upgrade Arch doesn't support), Pacstall with `pacstall -I zap-deb` (not `-Up`). Zap offers an update to a
+  pacman, Pacstall or Homebrew install only once q0wkp/pkgs has published it there: its `versions/zap/<target>` on
+  main holds the release's tag, and for pacman the release `x86_64` has the package and its `.sig`.
 
 ### Porting from Warp
 
@@ -69,3 +74,8 @@ workflow's `pkgs` job (Sync has no schedule; a release that job didn't reach wai
 pacman, `zap-deb` for Pacstall, and the cask `zap-terminal` in q0wkp/homebrew-tap. Each goes out once the release has
 its own files (the `.pkg.tar.zst`, the `.deb`, the two DMGs), so a release missing one still reaches the others. The
 pkgs README says how publishing works.
+
+Pacstall 6.4.2 (read in its source): `pacstall -Up` takes no package names ("Invalid argument") and upgrades every
+Pacstall package; `pacstall -I <pkg>` of an installed package downloads its pacscript from the repository again and
+installs it over the old one, without comparing versions, so it reinstalls the same version when the repository has
+nothing newer.

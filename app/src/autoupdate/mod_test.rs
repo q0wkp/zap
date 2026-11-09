@@ -637,3 +637,107 @@ fn test_should_update() {
         });
     });
 }
+
+/// An install by a package manager that Zap can run offers to run its upgrade command, and doesn't
+/// count as a download, so it's offered again until the command has installed the new version.
+#[test]
+fn test_package_manager_update_runs_a_command() {
+    App::test((), |mut app| async move {
+        app.add_singleton_model(|ctx| AppExecutionMode::new(ExecutionMode::App, false, ctx));
+        let autoupdate_state = initialize_app(&mut app);
+
+        app.update_model(&autoupdate_state, |autoupdate, ctx| {
+            ChannelState::set_app_version(Some("v0.2023.05.15.08.04.stable_01"));
+            let v2 = "v0.2023.05.15.08.04.stable_02";
+
+            // Until q0wkp/pkgs has published the release for the package manager, there is no
+            // update.
+            autoupdate.on_download_update_complete(
+                RequestType::Poll,
+                make_version_info(v2, false),
+                "id_v2".to_string(),
+                Ok(DownloadReady::No),
+                ctx,
+            );
+            assert_eq!(autoupdate.stage, AutoupdateStage::NoUpdateAvailable);
+            assert_eq!(autoupdate.stage.available_new_version(), None);
+
+            autoupdate.on_download_update_complete(
+                RequestType::Poll,
+                make_version_info(v2, false),
+                "id_v2".to_string(),
+                Ok(DownloadReady::RunCommand("pacstall -I zap-deb".to_string())),
+                ctx,
+            );
+            assert_eq!(
+                autoupdate.stage,
+                AutoupdateStage::UpdateViaCommand {
+                    new_version: make_version_info(v2, false),
+                    update_id: "id_v2".to_string(),
+                    command: "pacstall -I zap-deb".to_string(),
+                }
+            );
+            assert!(autoupdate.downloaded_update.is_none());
+            assert!(!autoupdate.stage.ready_for_update());
+            assert!(matches!(
+                autoupdate.should_update(make_version_info(v2, false), "check".to_string()),
+                UpdateReady::CanDownload { .. }
+            ));
+
+            // Only the tab opened to run the command can report that it finished.
+            assert!(!autoupdate.on_update_command_finished("id_v2", ctx));
+            autoupdate.update_command_tab =
+                Some(("id_v2".to_string(), make_version_info(v2, false)));
+            assert!(!autoupdate.on_update_command_finished("other_id", ctx));
+
+            // The command succeeded, but the test binary wasn't replaced: the update stays
+            // available rather than offering a restart into the same version.
+            assert!(autoupdate.on_update_command_finished("id_v2", ctx));
+            assert!(matches!(
+                autoupdate.stage,
+                AutoupdateStage::UpdateViaCommand { .. }
+            ));
+        });
+    });
+}
+
+/// An install that Zap can't upgrade itself keeps the hint of what the user runs.
+#[test]
+fn test_manual_upgrade_keeps_its_hint() {
+    App::test((), |mut app| async move {
+        app.add_singleton_model(|ctx| AppExecutionMode::new(ExecutionMode::App, false, ctx));
+        let autoupdate_state = initialize_app(&mut app);
+
+        app.update_model(&autoupdate_state, |autoupdate, ctx| {
+            ChannelState::set_app_version(Some("v0.2023.05.15.08.04.stable_01"));
+            let v2 = "v0.2023.05.15.08.04.stable_02";
+
+            autoupdate.on_download_update_complete(
+                RequestType::Poll,
+                make_version_info(v2, false),
+                "id_v2".to_string(),
+                Ok(DownloadReady::ManualUpgrade {
+                    hint: "sudo apt install ./zap_*.deb".to_string(),
+                }),
+                ctx,
+            );
+            assert!(matches!(
+                autoupdate.stage,
+                AutoupdateStage::UnableToUpdateToNewVersion { .. }
+            ));
+            assert_eq!(
+                autoupdate.manual_upgrade_hint(),
+                Some("sudo apt install ./zap_*.deb")
+            );
+
+            autoupdate.on_download_update_complete(
+                RequestType::Poll,
+                make_version_info(v2, false),
+                "id_v2".to_string(),
+                Ok(DownloadReady::NeedsAuthorization),
+                ctx,
+            );
+            assert_eq!(autoupdate.manual_upgrade_hint(), None);
+        });
+    });
+}
