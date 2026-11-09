@@ -55,6 +55,10 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
   `smoke_*` tests in `agent_providers` (fixed by branch `fix/byop-smoke-test-setup`). Judge a branch by diffing its
   failing tests against that baseline, not by the exit code.
 - Share one `CARGO_TARGET_DIR` (this clone's `target`) between worktrees, so only the workspace crates rebuild.
+  But cargo 1.92.0 names workspace-crate artifacts by their path relative to the workspace, so checkouts sharing it
+  overwrite each other's, and a checkout whose files are older reuses the other's as fresh: after building a branch
+  that removed items from `warp_util`, `cargo test` in the main clone linked that branch's `warp_util` and failed in
+  `app/build.rs`. Build a baseline of such a branch in a separate target dir.
 - The build machine is headless, with no xvfb, nextest, wgslfmt, shellcheck or clang-format, so UI changes can't be
   checked there.
 
