@@ -64,7 +64,7 @@ Group errors by type:
 - **Linting issues**: `cargo clippy` warnings/errors
 - **Compilation errors**: Type errors, missing imports, signature mismatches
 - **Test failures**: Failing tests with their names and failure reasons
-- **Platform-specific issues**: WASM, Linux, macOS, Windows-specific failures
+- **Platform-specific issues**: WASM, Linux, macOS-specific failures
 
 ### 5. Generate fix plan
 
@@ -90,7 +90,6 @@ The plan should reference the `fix-errors` skill for detailed guidance on resolv
 - `Formatting + Clippy (Linux)`
 - `Run MacOS tests`
 - `Run Linux tests`
-- `Run Windows tests`
 - `Check CI results` (summary check)
 - `WASM build`
 

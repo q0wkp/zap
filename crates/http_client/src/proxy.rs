@@ -7,7 +7,7 @@
 //! - 三档 [`ProxyMode`]:`System` / `Custom` / `Off`。
 //! - `System` 退回 reqwest 默认行为;workspace 的 reqwest 已启用
 //!   `system-proxy` + `macos-system-configuration` features,因此 macOS 读
-//!   SystemConfiguration、Windows 读 WinINET、Linux 读 `HTTP_PROXY` 等环境变量,
+//!   SystemConfiguration、Linux 读 `HTTP_PROXY` 等环境变量,
 //!   无需自己实现。
 //! - `Custom` 显式指定 URL / basic auth / no_proxy 列表。
 //! - `Off` 调用 [`reqwest::ClientBuilder::no_proxy`],完全禁用代理(含环境变量)。

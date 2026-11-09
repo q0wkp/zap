@@ -12,6 +12,3 @@ pub mod path;
 pub mod standardized_path;
 pub mod user_input;
 pub mod worktree_names;
-
-#[cfg(windows)]
-pub mod windows;

@@ -7,11 +7,7 @@ mod text_layout;
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod linux;
 
-#[cfg(target_os = "windows")]
-mod windows;
 use warpui_core::fonts::{Style, Weight};
-#[cfg(target_os = "windows")]
-use windows::loader;
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -115,7 +111,7 @@ mod loader {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "windows")))]
+#[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
 mod loader {
     use super::*;
     #[cfg(not(target_family = "wasm"))]
@@ -159,7 +155,7 @@ fn load_font_family_from_bytes(name: &str, font_bytes: Vec<Vec<u8>>) -> Result<F
 }
 
 /// Enum indicating whether font validation should enforce that the font supports the english language.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 #[derive(Copy, Clone)]
 enum ValidateFontSupportsEn {
     Yes,
@@ -209,7 +205,6 @@ pub struct TextLayoutSystem {
     /// fonts while doing text layout. This means we need cache the fonts we loaded so we can read
     /// it out at raster time and load any necessary fonts.
     loaded_font_ids_since_last_raster: RwLock<Vec<FontId>>,
-    #[cfg(not(target_os = "windows"))]
     fallback_fonts: DashMap<FontId, Vec<FontId>>,
 }
 
@@ -223,19 +218,13 @@ pub struct FontDB {
 
 impl FontDB {
     pub fn new() -> Self {
-        let db = Self {
+        Self {
             text_layout_system: TextLayoutSystem::new(),
             #[cfg(feature = "fontkit-rasterizer")]
             font_kit_rasterizer: crate::fonts::font_kit::Rasterizer::new(),
             #[cfg(not(feature = "fontkit-rasterizer"))]
             swash_cache: RwLock::new(cosmic_text::SwashCache::new()),
-        };
-        // 添加预热仅限 Windows:PR #62 仅在 Windows 路径接入 locale-aware CJK 回退,
-        // 该回归(zerx-lab/warp#68)也仅出现在 Windows。macOS/Linux 走各自的 fallback 路径,
-        // 不需预热。
-        #[cfg(target_os = "windows")]
-        db.text_layout_system.warm_up_preferred_cjk_families();
-        db
+        }
     }
 
     /// Inserts the given font family into the DB, returning a [`FamilyId`]
@@ -313,7 +302,7 @@ impl Default for TextLayoutSystem {
 /// `per_script_monospace_font_ids`、`font_codepoint_support_info_cache`、
 /// `font_matches_cache`、`shape_plan_cache`,以及启用 `shape-run-cache` feature 时的
 /// `shape_run_cache`。构造函数还会对 monospace 字体集合重新运行 `cache_fonts`,
-/// 在系统字体很多的 Windows 上,首次重建后渲染可能耗时数百 ms 到约 1 s。
+/// 在系统字体很多时,首次重建后渲染可能耗时数百 ms 到约 1 s。
 /// mmap 支撑的字体文件数据本身不会被重新读取。
 ///
 /// 这是可接受的,因为 UI locale 切换很少发生(目前由 Settings → Language 和
@@ -365,7 +354,6 @@ impl TextLayoutSystem {
             font_id_map: Default::default(),
             font_selections: Default::default(),
             loaded_fonts: Default::default(),
-            #[cfg(not(target_os = "windows"))]
             fallback_fonts: Default::default(),
             #[cfg(feature = "fontkit-rasterizer")]
             loaded_font_ids_since_last_raster: Default::default(),
@@ -583,7 +571,6 @@ impl TextLayoutSystem {
 
     /// Loads all of the fallback fonts for the `font_id` with a given `family_name` and set of `properties`.
     /// Noops if fallback fonts for the font are already loaded.
-    #[cfg(not(target_os = "windows"))]
     fn load_fallback_fonts(&self, font_id: FontId, family_name: &str, properties: Properties) {
         if self.fallback_fonts.contains_key(&font_id) {
             return;
@@ -598,10 +585,6 @@ impl TextLayoutSystem {
             self.fallback_fonts.insert(font_id, fallback_fonts);
         }
     }
-
-    /// On Windows, this is a no-op. We retrieve fallback fonts dynamically as needed.
-    #[cfg(target_os = "windows")]
-    fn load_fallback_fonts(&self, _font_id: FontId, _family_name: &str, _properties: Properties) {}
 
     #[allow(clippy::too_many_arguments)]
     fn create_text_frame(
@@ -1218,21 +1201,10 @@ impl TextLayoutSystem {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
     fn fallback_fonts(&self, _ch: char, font_id: FontId) -> Vec<FontId> {
         self.fallback_fonts
             .get(&font_id)
             .map(|fallbacks| fallbacks.clone())
-            .unwrap_or_default()
-    }
-
-    #[cfg(target_os = "windows")]
-    fn fallback_fonts(&self, character: char, font_id: FontId) -> Vec<FontId> {
-        self.get_fallback_fonts_for_character(character, font_id)
-            .map_err(|err| {
-                log::warn!("Unable to fetch fallback fonts for character {character:?}: {err:?}");
-                err
-            })
             .unwrap_or_default()
     }
 

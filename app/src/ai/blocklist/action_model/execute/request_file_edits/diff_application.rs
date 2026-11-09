@@ -424,11 +424,8 @@ async fn apply_create_file<F, Fut>(
     F: Fn(String) -> Fut,
     Fut: Future<Output = FileReadResult>,
 {
-    let absolute_path = host_native_absolute_path(
-        &file_path,
-        session_context.shell(),
-        session_context.current_working_directory(),
-    );
+    let absolute_path =
+        host_native_absolute_path(&file_path, session_context.current_working_directory());
 
     match read_file(absolute_path.clone()).await {
         FileReadResult::Found(_) => {
@@ -470,11 +467,8 @@ async fn apply_delete_file<F, Fut>(
     F: Fn(String) -> Fut,
     Fut: Future<Output = FileReadResult>,
 {
-    let absolute_path = host_native_absolute_path(
-        &file_path,
-        session_context.shell(),
-        session_context.current_working_directory(),
-    );
+    let absolute_path =
+        host_native_absolute_path(&file_path, session_context.current_working_directory());
 
     match read_file(absolute_path.clone()).await {
         FileReadResult::Found(file_content) => {
@@ -515,11 +509,8 @@ async fn apply_search_replace<F, Fut>(
     F: Fn(String) -> Fut,
     Fut: Future<Output = FileReadResult>,
 {
-    let absolute_path = host_native_absolute_path(
-        &file_path,
-        session_context.shell(),
-        session_context.current_working_directory(),
-    );
+    let absolute_path =
+        host_native_absolute_path(&file_path, session_context.current_working_directory());
 
     match read_file(absolute_path.clone()).await {
         FileReadResult::NotFound => {
@@ -612,11 +603,8 @@ async fn apply_v4a_update<F, Fut>(
     F: Fn(String) -> Fut,
     Fut: Future<Output = FileReadResult>,
 {
-    let absolute_path = host_native_absolute_path(
-        &file_path,
-        session_context.shell(),
-        session_context.current_working_directory(),
-    );
+    let absolute_path =
+        host_native_absolute_path(&file_path, session_context.current_working_directory());
 
     let file_content = match read_file(absolute_path.clone()).await {
         FileReadResult::NotFound => {
@@ -650,11 +638,8 @@ async fn apply_v4a_update<F, Fut>(
 
     // Check if we're renaming to an existing file.
     let rename_target_content = if let Some(target) = &rename_to {
-        let target_absolute = host_native_absolute_path(
-            target,
-            session_context.shell(),
-            session_context.current_working_directory(),
-        );
+        let target_absolute =
+            host_native_absolute_path(target, session_context.current_working_directory());
         match read_file(target_absolute.clone()).await {
             FileReadResult::Found(content) => Some(content),
             FileReadResult::NotFound => None,

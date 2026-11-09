@@ -7,21 +7,12 @@
 #[cfg(not(target_family = "wasm"))]
 #[cfg_attr(target_os = "macos", path = "mac.rs")]
 #[cfg_attr(any(target_os = "linux", target_os = "freebsd"), path = "linux.rs")]
-#[cfg_attr(target_os = "windows", path = "windows.rs")]
 mod imp;
 mod noop;
 
 // Treat this as a noop on web, as there is no backing storage which is "secure".
 #[cfg(target_family = "wasm")]
 use noop as imp;
-
-#[cfg(target_os = "windows")]
-mod windows_only {
-    pub(super) use std::string::FromUtf8Error;
-}
-
-#[cfg(target_os = "windows")]
-use windows_only::*;
 
 /// A type alias for the concrete type stored within a warpui
 /// app context, enabling usage such as:
@@ -32,17 +23,12 @@ use windows_only::*;
 ///
 /// App::test((), |mut app| async move {
 ///     app.update(|ctx| {
-///         #[cfg(not(windows))]
 ///         secure_storage::register("service_name", ctx);
-///         #[cfg(windows)]
-///         secure_storage::register_with_dir("service_name", std::path::PathBuf::from(r"C:\some\path"), ctx);
 ///
 ///         let _ = secure_storage::Model::handle(ctx).as_ref(ctx).read_value("some_key");
 ///     });
 /// });
 /// ```
-/// Note that the above rustdoc example is `ignore`d in compilation
-/// due to API differences across platforms.
 pub type Model = Box<dyn SecureStorage>;
 
 /// Registers a platform-native Secure Storage provider with the application.
@@ -50,7 +36,6 @@ pub type Model = Box<dyn SecureStorage>;
 /// The service name is used as a namespace for the application's secrets.  It
 /// is recommended that this be a unique identifier for the application; one
 /// common scheme is reverse-DNS notation (e.g.: "dev.warp.Zap").
-#[cfg(not(target_os = "windows"))]
 pub fn register(service_name: &str, ctx: &mut warpui::AppContext) {
     ctx.add_singleton_model(|_| -> Model { Box::new(imp::SecureStorage::new(service_name)) });
 }
@@ -71,19 +56,6 @@ pub fn register_with_fallback(
             service_name,
             fallback_dir,
         ))
-    });
-}
-
-/// Registers a Windows-native Secure Storage provider
-/// that uses the provided directory to store data in encrypted files.
-#[cfg(target_os = "windows")]
-pub fn register_with_dir(
-    service_name: &str,
-    storage_dir: std::path::PathBuf,
-    ctx: &mut warpui::AppContext,
-) {
-    ctx.add_singleton_model(|_| -> Model {
-        Box::new(imp::SecureStorage::new_with_path(service_name, storage_dir))
     });
 }
 
@@ -124,31 +96,9 @@ pub enum Error {
     #[error("failed to decode UTF-8 string from bytes")]
     DecodeError(#[from] std::str::Utf8Error),
 
-    /// Encountered an error when reading to or from a file.
-    #[cfg(windows)]
-    #[error("File I/O error")]
-    IOError(#[from] std::io::Error),
-
-    /// An error was encountered while using the windows CryptProtect API.
-    #[cfg(windows)]
-    #[error("Windows CryptProtect API error")]
-    WindowsAPIError(#[from] windows::core::Error),
-
-    /// The provided secure storage directory path was not valid.
-    #[cfg(windows)]
-    #[error("Invalid secure storage location")]
-    InvalidLocation,
-
     /// Catch-all for unclassifiable errors.
     #[error("unknown error")]
     Unknown(#[from] anyhow::Error),
-}
-
-#[cfg(windows)]
-impl From<FromUtf8Error> for Error {
-    fn from(value: FromUtf8Error) -> Self {
-        Self::DecodeError(value.utf8_error())
-    }
 }
 
 /// An extension trait to make secure storage easier to use.
@@ -159,18 +109,13 @@ impl From<FromUtf8Error> for Error {
 ///
 /// App::test((), |mut app| async move {
 ///     app.update(|ctx| {
-///         #[cfg(not(windows))]
 ///         secure_storage::register("service_name", ctx);
-///         #[cfg(windows)]
-///         secure_storage::register_with_dir("service_name", std::path::PathBuf::from(r"C:\some\path"), ctx);
 ///
 ///         use secure_storage::AppContextExt;
 ///         let _ = ctx.secure_storage().read_value("some_key");
 ///     });
 /// });
 /// ```
-/// Note that the above rustdoc example is `ignore`d in compilation
-/// due to API differences across platforms.
 pub trait AppContextExt {
     fn secure_storage(&self) -> &dyn SecureStorage;
 }

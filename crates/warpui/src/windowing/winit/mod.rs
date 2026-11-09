@@ -11,9 +11,6 @@ pub mod wasm;
 
 mod window;
 
-#[cfg(target_os = "windows")]
-pub mod windows;
-
 use app::CustomEvent;
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub use app::WindowingSystem;

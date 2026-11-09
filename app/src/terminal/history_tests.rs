@@ -233,7 +233,7 @@ fn test_append_commands() {
             initialize_history_for_testing(
                 &mut history_handle,
                 session.clone(),
-                async move { session_clone.read_history(false).await },
+                async move { session_clone.read_history().await },
                 vec![
                     "pwd".to_owned(),
                     "ls".to_owned(),
@@ -259,7 +259,6 @@ fn test_append_commands() {
     });
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_append_multiple_sessions() {
     VirtualFS::test("append_multiple_sessions", |dirs, mut sandbox| {
@@ -285,7 +284,7 @@ fn test_append_multiple_sessions() {
             initialize_history_for_testing(
                 &mut history_handle,
                 session.clone(),
-                async move { session_clone.read_history(false).await },
+                async move { session_clone.read_history().await },
                 vec![
                     "ls target/".to_owned(),
                     "cargo clean".to_owned(),
@@ -362,7 +361,7 @@ fn test_len() {
             initialize_history_for_testing(
                 &mut history_handle,
                 session.clone(),
-                async move { session_clone.read_history(false).await },
+                async move { session_clone.read_history().await },
                 vec!["ls".to_owned(), "echo 'hello'".to_owned()],
                 &mut app,
             )
@@ -450,7 +449,7 @@ fn test_multiple_shells() {
             initialize_history_for_testing(
                 &mut history_handle,
                 bash_session.clone(),
-                async move { bash_session_clone.read_history(false).await },
+                async move { bash_session_clone.read_history().await },
                 vec!["bash-cmd3".to_owned()],
                 &mut app,
             )
@@ -460,7 +459,7 @@ fn test_multiple_shells() {
             initialize_history_for_testing(
                 &mut history_handle,
                 zsh_session.clone(),
-                async move { zsh_session_clone.read_history(false).await },
+                async move { zsh_session_clone.read_history().await },
                 vec!["zsh-cmd3".to_owned()],
                 &mut app,
             )
@@ -740,7 +739,6 @@ fn test_sessions_no_dupes_new_session() {
     });
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn append_command_with_rich_history_data() {
     App::test((), |mut app| async move {

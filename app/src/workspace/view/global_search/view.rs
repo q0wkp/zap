@@ -1999,9 +1999,6 @@ impl View for GlobalSearchView {
             | CodingPanelEnablementState::RemoteSession { .. } => {
                 return self.render_remote_state(app);
             }
-            CodingPanelEnablementState::UnsupportedSession => {
-                return self.render_unsupported_session_state(app);
-            }
             CodingPanelEnablementState::Disabled => {
                 return self.render_unavailable_state(app);
             }
@@ -2270,15 +2267,6 @@ impl GlobalSearchView {
             Icon::AlertTriangle,
             crate::t!("global-search-unavailable-title"),
             crate::t!("global-search-remote-description"),
-            app,
-        )
-    }
-
-    fn render_unsupported_session_state(&self, app: &AppContext) -> Box<dyn Element> {
-        self.render_zero_state(
-            Icon::AlertTriangle,
-            crate::t!("global-search-unavailable-title"),
-            crate::t!("global-search-unsupported-session-description"),
             app,
         )
     }

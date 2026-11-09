@@ -244,7 +244,6 @@ use crate::settings::{
 use crate::settings_view::flags;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::settings_view::SettingsSection;
-use crate::shell_indicator::ShellIndicatorType;
 use crate::terminal::alias::{check_for_alias_async, AliasedCommand};
 use crate::terminal::alt_screen_reporting::{AltScreenReporting, AltScreenReportingChangedEvent};
 use crate::terminal::block_filter::{
@@ -265,8 +264,6 @@ use crate::terminal::ligature_settings::{should_use_ligature_rendering, Ligature
 use crate::terminal::local_tty::get_shell_starter;
 #[cfg(feature = "local_tty")]
 use crate::terminal::local_tty::shell::ShellStarter;
-#[cfg(all(windows, feature = "local_tty"))]
-use crate::terminal::local_tty::windows::get_user_and_system_env_variable;
 use crate::terminal::model::blockgrid::BlockGrid;
 use crate::terminal::model::session::active_session::ActiveSession;
 use crate::terminal::model::session::{Session, SessionId};
@@ -534,7 +531,6 @@ use super::warpify::success_block::{WarpifySuccessBlock, WarpifySuccessBlockEven
 use super::warpify::trigger_state::{SshBlockState, WarpifyState};
 use super::warpify::WarpificationSource;
 use super::{GridType, HistoryEvent};
-use crate::antivirus::AntivirusInfo;
 use crate::terminal::links::should_directly_open_link;
 use crate::terminal::model_events::{AnsiHandlerEvent, ModelEvent, ModelEventDispatcher};
 use action::RememberForWarpification;
@@ -2594,14 +2590,6 @@ pub struct TerminalView {
     /// The file uploads initiated in this terminal pane.
     ssh_file_upload: ViewHandle<FileUpload>,
 
-    /// The type of the shell that this terminal pane is running, derived and
-    /// cached on the view from [`ShellLaunchdata`]. Used to render an indicator
-    /// in the tab bar.
-    shell_indicator_type: Option<ShellIndicatorType>,
-
-    /// Used to describe the active shell to the user.
-    shell_detail: Option<String>,
-
     /// Position ID for this view.
     position_id: String,
 
@@ -3957,8 +3945,6 @@ impl TerminalView {
             is_ssh_file_uploader: false,
             ssh_file_upload,
             most_recent_command_correction: None,
-            shell_indicator_type: None,
-            shell_detail: None,
             position_id: format!("terminal_view_{}", ctx.view_id()),
             cursor_position_id: format!("terminal_view:cursor_{}", ctx.view_id()),
             active_session,
@@ -5214,14 +5200,8 @@ impl TerminalView {
             self.cli_subagent_views.len()
         );
 
-        let should_forward_windows_ctrl_c = is_live;
         ctx.subscribe_to_view(&subagent_view, move |me, view, event, ctx| {
-            me.handle_cli_subagent_view_event(
-                view.id(),
-                event,
-                should_forward_windows_ctrl_c,
-                ctx,
-            );
+            me.handle_cli_subagent_view_event(view.id(), event, ctx);
         });
 
         if is_live {
@@ -5251,7 +5231,6 @@ impl TerminalView {
         &mut self,
         cli_subagent_view_id: EntityId,
         event: &CLISubagentViewEvent,
-        should_forward_windows_ctrl_c: bool,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
@@ -5271,12 +5250,6 @@ impl TerminalView {
             }
             CLISubagentViewEvent::CopiedEmptyText => {
                 self.copy(ctx);
-            }
-            #[cfg(windows)]
-            CLISubagentViewEvent::WindowsCtrlC => {
-                if should_forward_windows_ctrl_c {
-                    self.ctrl_c(ctx);
-                }
             }
         }
     }
@@ -6411,17 +6384,6 @@ impl TerminalView {
         })
     }
 
-    /// Returns the active session's WSL distribution information, if it exists.
-    /// Returns None if there is no active session or if the current session is
-    /// not a WSL session.
-    pub fn active_session_wsl_distro<C: ModelAsRef>(&self, ctx: &C) -> Option<String> {
-        self.active_block_session_id().and_then(|session_id| {
-            let current_session = self.sessions.as_ref(ctx).get(session_id)?;
-            let distro_name = current_session.wsl_distro_name();
-            distro_name.map(|name| name.to_string())
-        })
-    }
-
     pub fn active_block_session_id(&self) -> Option<SessionId> {
         self.active_block_metadata
             .as_ref()
@@ -6933,36 +6895,6 @@ impl TerminalView {
         ctx.notify();
     }
 
-    /// Copy if there is a selection. Otherwise, we defer to the normal ctrl-c
-    /// behaviour.
-    #[cfg(windows)]
-    fn ctrl_c_internal(
-        &mut self,
-        has_copiable_block_selection: bool,
-        has_block_list_selection: bool,
-        has_alt_screen_selection: bool,
-        is_long_running: bool,
-        is_agent_in_control_of_command: bool,
-        ctx: &mut ViewContext<Self>,
-    ) {
-        if has_block_list_selection {
-            self.copy(ctx);
-            self.clear_selections_when_shell_mode_without_focusing_input(ctx);
-            return;
-        } else if has_alt_screen_selection {
-            self.copy(ctx);
-            self.model.lock().alt_screen_mut().clear_selection();
-            return;
-        } else if has_copiable_block_selection {
-            // If there are blocks selected, we want to copy them but
-            // not prevent the normal ctrl-c behaviour.
-            self.copy(ctx);
-            self.clear_selections_when_shell_mode_without_focusing_input(ctx);
-        }
-
-        self.ctrl_c_to_active_block(is_long_running, is_agent_in_control_of_command, ctx);
-    }
-
     /// Focuses the provided AI block if this terminal view (or some part of it)
     /// are focused. This helps ensure AI block interactions (which are primarily async)
     /// don't steal focus from the user if they've focused another part of the app
@@ -6981,7 +6913,6 @@ impl TerminalView {
         }
     }
 
-    #[cfg(not(windows))]
     fn ctrl_c_internal(
         &mut self,
         has_copiable_block_selection: bool,
@@ -9255,7 +9186,6 @@ impl TerminalView {
 
             if let Some(termination_reason) = termination_reason {
                 let (shell_path, shell_type) = self.get_shell_starter_local(ctx).unzip();
-                let antivirus_name = AntivirusInfo::as_ref(ctx).get();
 
                 let long_os_version = crate::system::long_os_version(ctx);
 
@@ -9265,7 +9195,6 @@ impl TerminalView {
                         shell_path,
                         reason: termination_reason,
                         reason_details: termination_details,
-                        antivirus_name: antivirus_name.map(ToOwned::to_owned),
                         long_os_version,
                         exit_reason: exit_reason.map(|exit_reason| format!("{exit_reason:?}")),
                     },
@@ -9728,7 +9657,7 @@ impl TerminalView {
 
                 // If the pty spawn has failed, we've already inserted a banner.
                 if !self.pty_spawn_failed {
-                    let shell_detail = self.shell_detail.take().unwrap_or("shell".to_owned());
+                    let shell_detail = "shell".to_owned();
                     self.insert_shell_process_terminated_banner(
                         shell_terminated_banner::TerminationType::Premature {
                             shell_detail,
@@ -10388,14 +10317,6 @@ impl TerminalView {
                         ctx.emit(Event::AppStateChanged);
                     }
 
-                    // Update the shell launch data for the active session.
-                    if prev_block_metadata.session_id() != block_metadata.session_id()
-                        && block_metadata_received_event.is_done_bootstrapping
-                    {
-                        let shell_launch_data = self.shell_launch_data_if_local(ctx);
-                        self.on_active_shell_launch_data_updated(shell_launch_data, ctx);
-                    }
-
                     // Check if the block is done bootstrapping and the directory is set.
                     #[cfg(feature = "local_fs")]
                     if let Some(active_directory) = block_metadata_received_event
@@ -10406,9 +10327,8 @@ impl TerminalView {
                         if block_metadata_received_event.is_done_bootstrapping {
                             #[cfg(feature = "local_fs")]
                             {
-                                // Convert the shell-native CWD (e.g. "/c/Users/..." for
-                                // Git Bash/MSYS2) to a Windows-native path before passing
-                                // it to repo detection, which requires an OS-native path.
+                                // Convert the shell-native CWD to an OS-native path before
+                                // passing it to repo detection, which requires one.
                                 let native_directory = block_metadata_received_event
                                     .block_metadata
                                     .session_id()
@@ -11653,37 +11573,7 @@ impl TerminalView {
     fn local_session_path(session: &Session) -> Option<String> {
         if matches!(session.session_type(), SessionType::Local) && session.subshell_info().is_none()
         {
-            #[cfg(all(windows, feature = "local_tty"))]
-            let path = {
-                let path_result =
-                    get_user_and_system_env_variable("PATH").map(|entry| entry.into_string());
-                let result = match path_result {
-                    Some(Ok(path_result)) => Some(path_result),
-                    None => {
-                        log::warn!("Failed to get PATH for session on Windows.");
-                        None
-                    }
-                    Some(Err(e)) => {
-                        log::warn!("Failed to convert PATH for session on Windows: `{e:?}`");
-                        None
-                    }
-                };
-                if result.is_none() {
-                    if session.shell_family() == ShellFamily::PowerShell {
-                        // This is a fallback for if the OsString cannot be converted to a String.
-                        // We cannot accept a Posix PATH on Windows.
-                        session.path().clone()
-                    } else {
-                        None
-                    }
-                } else {
-                    result
-                }
-            };
-            #[cfg(not(all(windows, feature = "local_tty")))]
-            let path = session.path().clone();
-
-            return path;
+            return session.path().clone();
         }
         None
     }
@@ -13578,7 +13468,7 @@ impl TerminalView {
     /// Will send telemetry if the current session is not bootstrapped and will show a banner to
     /// the user if this is the first bootstrap in the session.
     fn on_bootstrap_failed_timer_complete(&mut self, _: (), ctx: &mut ViewContext<Self>) {
-        let (is_ssh, shell, is_subshell, was_triggered_by_rc_file, is_wsl, is_msys2) = {
+        let (is_ssh, shell, is_subshell, was_triggered_by_rc_file) = {
             let model = self.model.lock();
 
             // If we did actually bootstrap, or if the session is no longer usable
@@ -13596,17 +13486,8 @@ impl TerminalView {
             let was_triggered_by_rc_file = pending_subshell_info
                 .map(|info| info.was_triggered_by_rc_file_snippet)
                 .unwrap_or(false);
-            let is_wsl = model.is_pending_wsl();
-            let is_msys2 = model.is_pending_msys2();
 
-            (
-                is_ssh,
-                shell,
-                is_subshell,
-                was_triggered_by_rc_file,
-                is_wsl,
-                is_msys2,
-            )
+            (is_ssh, shell, is_subshell, was_triggered_by_rc_file)
         };
 
         log::warn!("Bootstrapping failed for shell {shell:?} on ssh {is_ssh}");
@@ -13625,8 +13506,6 @@ impl TerminalView {
                 shell,
                 is_ssh,
                 is_subshell,
-                is_wsl,
-                is_msys2,
                 was_triggered_by_rc_file,
                 bootstrap_duration_seconds: None,
                 shell_version: None,
@@ -13646,8 +13525,6 @@ impl TerminalView {
                 shell,
                 is_ssh,
                 is_subshell,
-                is_wsl,
-                is_msys2,
                 bootstrap_block_contents,
             }),
             ctx
@@ -13971,13 +13848,8 @@ impl TerminalView {
             let clipboard_content = ctx.clipboard().read();
 
             if is_cli_agent_paste && clipboard_content.has_image_data() {
-                // Windows Claude Code paste is `Alt+V` (ESC + 'v'); macOS/Linux is `Ctrl+V` (SYN).
-                let paste_bytes: Vec<u8> = if cfg!(windows) {
-                    vec![0x1b, b'v']
-                } else {
-                    vec![0x16]
-                };
-                self.write_user_bytes_to_pty(paste_bytes, ctx);
+                // Claude Code pastes an image on `Ctrl+V` (SYN).
+                self.write_user_bytes_to_pty(vec![0x16], ctx);
                 return;
             }
 
@@ -18133,7 +18005,6 @@ impl TerminalView {
         ctx.notify();
     }
 
-    #[cfg_attr(not(windows), allow(dead_code))]
     fn clear_selections_when_shell_mode_without_focusing_input(
         &mut self,
         ctx: &mut ViewContext<Self>,
@@ -18309,10 +18180,6 @@ impl TerminalView {
             }
             AIBlockEvent::DismissSecretTooltip => {
                 self.open_secret_tool_tip = None;
-            }
-            #[cfg(windows)]
-            AIBlockEvent::WindowsCtrlC => {
-                self.ctrl_c(ctx);
             }
             AIBlockEvent::AIOutputUpdated => {
                 self.model
@@ -22823,8 +22690,7 @@ impl TerminalView {
             // shell info here.
             let shell_starter = get_shell_starter(None, &self.auth_state, ctx)?;
             let shell_path = match &shell_starter {
-                ShellStarter::Direct(direct_shell_starter)
-                | ShellStarter::MSYS2(direct_shell_starter) => direct_shell_starter
+                ShellStarter::Direct(direct_shell_starter) => direct_shell_starter
                     .shell_path()
                     .to_string_lossy()
                     .to_string(),
@@ -22833,7 +22699,6 @@ impl TerminalView {
                     .shell_path()
                     .to_string_lossy()
                     .to_string(),
-                ShellStarter::Wsl(wsl_shell_starter) => wsl_shell_starter.shell_path(),
             };
             Some((shell_path, shell_starter.shell_type()))
         }
@@ -23047,33 +22912,6 @@ impl TerminalView {
         if sshed && !paths.is_empty() && FeatureFlag::SshDragAndDrop.is_enabled() {
             self.initiate_ssh_file_upload(paths, ctx);
         } else {
-            // For long-running commands in MSYS2/Git Bash on Windows, skip
-            // conversion and shell escaping. Executables in git bash
-            // aren't git bash _specific_, they still expect paths in
-            // the native windows format.
-            let is_msys2_long_running = cfg!(windows)
-                && !session.is_wsl()
-                && session.shell_family() == ShellFamily::Posix
-                && is_in_long_running_command;
-            if is_msys2_long_running {
-                let input = warpui::clipboard_utils::escaped_paths_str(paths, None);
-                self.typed_characters_on_terminal(&input, ctx);
-                return;
-            }
-
-            // For WSL sessions on Windows, convert paths to /mnt/<drive>/... format
-            // so the WSL session can read the file at the correct path.
-            let paths_converted;
-            let paths = if session.is_wsl() {
-                paths_converted = paths
-                    .iter()
-                    .map(|p| warp_util::path::convert_windows_path_to_wsl(p))
-                    .collect::<Vec<_>>();
-                paths_converted.as_slice()
-            } else {
-                paths
-            };
-
             let input =
                 warpui::clipboard_utils::escaped_paths_str(paths, Some(self.shell_family(ctx)));
             self.typed_characters_on_terminal(&input, ctx);
@@ -23267,34 +23105,6 @@ impl TerminalView {
                 );
             }
         }
-    }
-
-    /// Parses the shell launch data and sets the necessary fields so a shell
-    /// indicator is rendered in the tab bar and pane header. Does nothing on
-    /// non-Windows platforms.
-    pub fn on_active_shell_launch_data_updated(
-        &mut self,
-        shell_launch_data: Option<ShellLaunchData>,
-        ctx: &mut ViewContext<Self>,
-    ) {
-        if !cfg!(windows) {
-            return;
-        }
-
-        let shell_indicator_type = shell_launch_data
-            .as_ref()
-            .and_then(|data| ShellIndicatorType::try_from(data).ok());
-        self.shell_indicator_type = shell_indicator_type;
-        self.shell_detail = shell_launch_data.map(|launch_data| launch_data.shell_detail());
-
-        // Notify pane header to re-render with updated shell indicator.
-        self.pane_configuration.update(ctx, |config, ctx| {
-            config.notify_header_content_changed(ctx);
-        });
-    }
-
-    pub fn shell_indicator_type(&self) -> Option<ShellIndicatorType> {
-        self.shell_indicator_type
     }
 
     /// Shows the warpify footer for a detected subshell/SSH command.

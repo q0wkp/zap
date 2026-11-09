@@ -9,8 +9,6 @@
 pub mod linux;
 #[cfg(target_os = "macos")]
 mod mac;
-#[cfg(windows)]
-pub mod windows;
 
 use warpui::AppContext;
 
@@ -21,8 +19,6 @@ pub fn init(_ctx: &mut AppContext) {
     linux::init(_ctx);
     #[cfg(target_os = "macos")]
     mac::init();
-    #[cfg(windows)]
-    windows::init(_ctx);
 }
 
 pub fn teardown(_ctx: &mut AppContext) {

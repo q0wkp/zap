@@ -1,7 +1,6 @@
 use std::io::Write;
 use tempfile::NamedTempFile;
 
-use crate::terminal::shell::ShellType;
 
 /// Represents a temporary file used for bootstrap.
 pub struct TempBootstrapFile {
@@ -37,9 +36,4 @@ impl TryFrom<NamedTempFile> for TempBootstrapFile {
     fn try_from(temp_file: NamedTempFile) -> Result<Self, Self::Error> {
         Ok(Self { temp_file })
     }
-}
-
-/// We don't currently create a permanent bootstrap file on Unix-like systems.
-pub fn path_to_permanent_bootstrap_file(_shell_type: ShellType) -> Option<Vec<u8>> {
-    None
 }

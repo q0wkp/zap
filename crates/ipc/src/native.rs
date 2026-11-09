@@ -1,5 +1,5 @@
 //! This module implements IPC transport on top of the `interprocess` crate, which uses Unix Domain
-//! Sockets on Unix platforms and named pipes on Windows under the hood.
+//! Sockets under the hood.
 use async_compat::CompatExt as _;
 use futures::{AsyncRead, AsyncWrite};
 

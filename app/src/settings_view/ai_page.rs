@@ -533,7 +533,7 @@ impl AISettingsPageView {
         // it's most intuitive to allowlist whole directories.
         let code_read_allowlist_editor = ctx.add_typed_action_view(|ctx| {
             let mut input = SubmittableTextInput::new(ctx).validate_on_submit(|s| {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 Path::new(&expanded).is_dir()
             });
             input.set_placeholder_text(crate::t!("settings-ai-repo-placeholder"), ctx);
@@ -547,7 +547,7 @@ impl AISettingsPageView {
 
         ctx.subscribe_to_view(&code_read_allowlist_editor, |_, _, event, ctx| {
             if let SubmittableTextInputEvent::Submit(s) = event {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 BlocklistAIPermissions::handle(ctx).update(ctx, |model, ctx| {
                     report_if_error!(
                         model.add_filepath_to_code_read_allowlist(PathBuf::from(expanded), ctx)
@@ -1165,7 +1165,7 @@ impl AISettingsPageView {
 
         let directory_allowlist_editor = ctx.add_typed_action_view(|ctx| {
             let mut input = SubmittableTextInput::new(ctx).validate_on_submit(|s| {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 Path::new(&expanded).is_dir()
             });
             input.set_placeholder_text(crate::t!("settings-ai-repo-placeholder"), ctx);
@@ -1180,7 +1180,7 @@ impl AISettingsPageView {
 
         ctx.subscribe_to_view(&directory_allowlist_editor, |_, _, event, ctx| {
             if let SubmittableTextInputEvent::Submit(s) = event {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 AIExecutionProfilesModel::handle(ctx).update(ctx, |model, ctx| {
                     let profile = model.default_profile(ctx);
                     let profile_id = profile.id();

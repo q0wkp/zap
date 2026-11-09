@@ -8,7 +8,6 @@ fn assert_harness_setup_failed(err: &AgentDriverError) -> (&str, &str) {
     }
 }
 
-#[cfg(not(windows))]
 #[test]
 fn validate_cli_installed_succeeds_for_known_binary() {
     assert!(validate_cli_installed("ls", None).is_ok());

@@ -5,7 +5,7 @@ use crate::clipboard::{ClipboardContent, ImageData};
 // HELPER FUNCTIONS (shared across tests)
 // ============================================================================
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn create_rgba_data(w: usize, h: usize) -> Vec<u8> {
     // Simple test pattern: red gradient
     (0..h)
@@ -15,19 +15,19 @@ fn create_rgba_data(w: usize, h: usize) -> Vec<u8> {
         .collect()
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn create_simple_png() -> Vec<u8> {
     // PNG header for 1x1 red pixel
     vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] // PNG signature
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn create_simple_jpeg() -> Vec<u8> {
     // JPEG header
     vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn create_simple_gif() -> Vec<u8> {
     // GIF header
     let mut data = Vec::new();
@@ -36,7 +36,7 @@ fn create_simple_gif() -> Vec<u8> {
     data
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn create_simple_webp() -> Vec<u8> {
     // WebP header
     let mut data = Vec::new();
@@ -47,7 +47,7 @@ fn create_simple_webp() -> Vec<u8> {
     data
 }
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 fn assert_valid_png(result: Option<ImageData>) {
     let image_data = result.expect("Should process image successfully");
     assert_eq!(image_data.mime_type, "image/png");
@@ -184,10 +184,10 @@ fn test_extract_filename_from_clipboard_content() {
 }
 
 // ============================================================================
-// IMAGE PROCESSING TESTS (Linux/Windows platforms only)
+// IMAGE PROCESSING TESTS (Linux platforms only)
 // ============================================================================
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod image_processing_tests {
     use super::*;
 
@@ -301,31 +301,6 @@ mod image_processing_tests {
             result.data.len(),
             MAX_IMAGE_SIZE_BYTES,
         );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_windows_image_clipboard_format_candidates() {
-        assert!(is_windows_image_clipboard_format_candidate(8, "CF_DIB"));
-        assert!(is_windows_image_clipboard_format_candidate(17, "CF_DIBV5"));
-        assert!(is_windows_image_clipboard_format_candidate(0xC001, "PNG"));
-        assert!(is_windows_image_clipboard_format_candidate(
-            0xC002,
-            "image/jpeg"
-        ));
-
-        assert!(!is_windows_image_clipboard_format_candidate(
-            13,
-            "CF_UNICODETEXT"
-        ));
-        assert!(!is_windows_image_clipboard_format_candidate(
-            0xC003,
-            "HTML Format"
-        ));
-        assert!(!is_windows_image_clipboard_format_candidate(
-            0xC004,
-            "Chromium Web Custom MIME Data Format"
-        ));
     }
 }
 

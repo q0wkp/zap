@@ -369,7 +369,7 @@ fn load_default_monospace_font_family(ctx: &mut AppContext) -> anyhow::Result<Fa
 
 fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
     warpui::fonts::Cache::handle(ctx).update(ctx, |font_cache, _| {
-        let roboto = font_cache.load_family_from_bytes(
+        font_cache.load_family_from_bytes(
             "Roboto",
             vec![
                 ASSETS
@@ -389,18 +389,7 @@ fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId>
                     .get("bundled/fonts/roboto/Roboto-BoldItalic.ttf")?
                     .to_vec(),
             ],
-        );
-
-        // On Windows, default to use Segoe UI as the UI font. This font is recommended by
-        // Windows when rendering any UI text: https://learn.microsoft.com/en-us/windows/win32/uxguide/vis-fonts.
-        // This font should be bundled with any modern version of Windows, if we can't load it for
-        // any reason we fallback to using our normal bundled font.
-        #[cfg(windows)]
-        if let Ok(font_family_id) = font_cache.load_system_font("Segoe UI") {
-            return Ok(font_family_id);
-        }
-
-        roboto
+        )
     })
 }
 

@@ -174,16 +174,6 @@ impl ansi::Handler for GridHandler {
     }
 
     fn input(&mut self, c: char) {
-        // We disable Reset Grid checks in unit tests, as they are not designed to test
-        // PTY integration. `#[cfg(test)]` only applies to unit tests, not integration tests.
-        #[cfg(all(windows, not(test)))]
-        if let ResetGridChecks::Enabled { received_osc } = self.ansi_handler_state.reset_grid_checks
-        {
-            debug_assert!(
-                received_osc,
-                "Grid received input but did not receive Reset Grid OSC"
-            );
-        }
         // Number of cells the char will occupy.
         let Some(width) = c.width() else {
             return;

@@ -11,7 +11,6 @@ pub enum System {
     X11 { is_x_wayland: bool },
     Wayland,
     AppKit,
-    Windows,
 }
 
 impl System {
@@ -19,7 +18,7 @@ impl System {
     /// show/focus themselves.
     pub fn allows_programmatic_window_activation(&self) -> bool {
         match self {
-            Self::AppKit | Self::X11 { .. } | Self::Windows => true,
+            Self::AppKit | Self::X11 { .. } => true,
             Self::Wayland => false,
         }
     }
@@ -37,7 +36,6 @@ impl Display for System {
             }
             System::Wayland => write!(f, "Wayland"),
             System::AppKit => write!(f, "AppKit"),
-            System::Windows => write!(f, "Windows"),
         }
     }
 }
@@ -55,7 +53,6 @@ impl TryFrom<RawDisplayHandle> for System {
                     .filter(|val| !val.is_empty())
                     .is_some(),
             },
-            RawDisplayHandle::Windows(_) => System::Windows,
             _ => {
                 return Err(Self::Error::UnrecognizedDisplayHandle);
             }

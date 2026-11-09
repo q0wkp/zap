@@ -19,14 +19,12 @@ use crate::ai::blocklist::{
     telemetry_banner::should_collect_ai_ugc_telemetry, BlocklistAIPermissions,
 };
 use crate::ai::paths::{host_native_absolute_path, shell_native_absolute_path};
-use crate::terminal::model::session::ExecuteCommandOptions;
 use crate::PrivacySettings;
 use crate::{
     ai::agent::{AIAgentActionResultType, GrepFileMatch, GrepLineMatch},
     send_telemetry_from_app_ctx,
     terminal::{
         model::session::active_session::ActiveSession, model::session::Session, shell::ShellType,
-        ShellLaunchData,
     },
     TelemetryEvent,
 };
@@ -226,8 +224,7 @@ impl GrepExecutor {
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
-        let absolute_path = host_native_absolute_path(path, &shell, &current_working_directory);
+        let absolute_path = host_native_absolute_path(path, &current_working_directory);
 
         BlocklistAIPermissions::handle(ctx)
             .as_ref(ctx)
@@ -253,18 +250,13 @@ impl GrepExecutor {
             return ActionExecution::InvalidAction;
         };
 
-        let shell_launch_data = self.active_session.as_ref(ctx).shell_launch_data(ctx);
         let shell_type = self.active_session.as_ref(ctx).shell_type(ctx);
         let current_working_directory = self
             .active_session
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let absolute_path = shell_native_absolute_path(
-            path,
-            shell_launch_data.as_ref(),
-            current_working_directory.as_ref(),
-        );
+        let absolute_path = shell_native_absolute_path(path, current_working_directory.as_ref());
 
         let session = self.active_session.as_ref(ctx).session(ctx);
 
@@ -276,7 +268,7 @@ impl GrepExecutor {
         let conversation_id_clone = input.conversation_id;
         ActionExecution::new_async(
             async move {
-                match run_grep(queries_clone, absolute_path, session, shell_launch_data)
+                match run_grep(queries_clone, absolute_path, session)
                     .with_timeout(GREP_TIMEOUT)
                     .await
                 {
@@ -354,7 +346,6 @@ async fn run_grep(
     queries: Vec<String>,
     absolute_path: String,
     session: Option<Arc<Session>>,
-    shell_launch_data: Option<ShellLaunchData>,
 ) -> Result<GrepResult, GrepError> {
     if queries.is_empty() {
         return Err(GrepError::new("No queries provided to grep".to_string()));
@@ -402,7 +393,6 @@ async fn run_grep(
             &queries,
             &absolute_path,
             &session,
-            shell_launch_data,
             shell_type,
             &execute_directory,
         )
@@ -413,23 +403,9 @@ async fn run_grep(
             return run_ripgrep(&queries, absolute_path).await;
         }
         if shell_type == ShellType::PowerShell {
-            run_select_string_command(
-                &queries,
-                &absolute_path,
-                &session,
-                shell_launch_data,
-                &execute_directory,
-            )
-            .await
+            run_select_string_command(&queries, &absolute_path, &session, &execute_directory).await
         } else {
-            run_grep_command(
-                &queries,
-                &absolute_path,
-                &session,
-                shell_launch_data,
-                &execute_directory,
-            )
-            .await
+            run_grep_command(&queries, &absolute_path, &session, &execute_directory).await
         }
     }
 }
@@ -468,7 +444,6 @@ async fn run_git_grep_command(
     queries: &[String],
     target_path: &str,
     session: &Session,
-    shell_launch_data: Option<ShellLaunchData>,
     shell_type: ShellType,
     execute_directory: &str,
 ) -> Result<GrepResult, GrepError> {
@@ -488,28 +463,19 @@ async fn run_git_grep_command(
     grep_command.push_str(format!(" \"{target_path}\"").as_str());
 
     let command_output = session
-        .execute_command(
-            grep_command.as_str(),
-            Some(execute_directory),
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(grep_command.as_str(), Some(execute_directory), None)
         .await
         .map_err(|e| GrepError::new(e.to_string()).with_command(grep_command.clone()))?;
     let output = String::from_utf8_lossy(command_output.output());
 
     if command_output.success() {
-        parse_grep_output(
-            output.as_ref(),
-            shell_launch_data,
-            Some(execute_directory.to_string()),
-        )
-        .map(|matched_files| GrepResult::Success { matched_files })
-        .map_err(|e| {
-            GrepError::new(e.to_string())
-                .with_command(grep_command)
-                .with_output(output.into())
-        })
+        parse_grep_output(output.as_ref(), Some(execute_directory.to_string()))
+            .map(|matched_files| GrepResult::Success { matched_files })
+            .map_err(|e| {
+                GrepError::new(e.to_string())
+                    .with_command(grep_command)
+                    .with_output(output.into())
+            })
     } else if command_output
         .exit_code()
         .is_some_and(|exit_code| exit_code.value() == 1)
@@ -530,7 +496,6 @@ async fn run_grep_command(
     queries: &[String],
     target_path: &str,
     session: &Session,
-    shell_launch_data: Option<ShellLaunchData>,
     execute_directory: &str,
 ) -> Result<GrepResult, GrepError> {
     // Summary of the options we use:
@@ -547,28 +512,19 @@ async fn run_grep_command(
     grep_command.push_str(format!(" \"{target_path}\"").as_str());
 
     let command_output = session
-        .execute_command(
-            grep_command.as_str(),
-            Some(execute_directory),
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(grep_command.as_str(), Some(execute_directory), None)
         .await
         .map_err(|e| GrepError::new(e.to_string()).with_command(grep_command.clone()))?;
     let output = String::from_utf8_lossy(command_output.output());
 
     if command_output.success() {
-        parse_grep_output(
-            output.as_ref(),
-            shell_launch_data,
-            Some(execute_directory.to_string()),
-        )
-        .map(|matched_files| GrepResult::Success { matched_files })
-        .map_err(|e| {
-            GrepError::new(e.to_string())
-                .with_command(grep_command)
-                .with_output(output.into())
-        })
+        parse_grep_output(output.as_ref(), Some(execute_directory.to_string()))
+            .map(|matched_files| GrepResult::Success { matched_files })
+            .map_err(|e| {
+                GrepError::new(e.to_string())
+                    .with_command(grep_command)
+                    .with_output(output.into())
+            })
     } else if command_output
         .exit_code()
         .is_some_and(|exit_code| exit_code.value() == 1)
@@ -590,7 +546,6 @@ async fn run_select_string_command(
     queries: &[String],
     target_path: &str,
     session: &Session,
-    shell_launch_data: Option<ShellLaunchData>,
     execute_directory: &str,
 ) -> Result<GrepResult, GrepError> {
     // We enable the `-CaseSensitive` flag to match the default behavior of grep.
@@ -610,24 +565,19 @@ async fn run_select_string_command(
             select_string_command.as_str(),
             Some(execute_directory),
             None,
-            ExecuteCommandOptions::default(),
         )
         .await
         .map_err(|e| GrepError::new(e.to_string()).with_command(select_string_command.clone()))?;
     let output = String::from_utf8_lossy(command_output.output());
 
     if command_output.success() {
-        parse_grep_output(
-            output.as_ref(),
-            shell_launch_data,
-            Some(execute_directory.to_string()),
-        )
-        .map(|matched_files| GrepResult::Success { matched_files })
-        .map_err(|e| {
-            GrepError::new(e.to_string())
-                .with_command(select_string_command)
-                .with_output(output.into())
-        })
+        parse_grep_output(output.as_ref(), Some(execute_directory.to_string()))
+            .map(|matched_files| GrepResult::Success { matched_files })
+            .map_err(|e| {
+                GrepError::new(e.to_string())
+                    .with_command(select_string_command)
+                    .with_output(output.into())
+            })
     } else {
         Err(GrepError::new_for_non_zero_exit_code()
             .with_command(select_string_command)
@@ -642,7 +592,6 @@ async fn run_select_string_command(
 /// `{relative_file_path}:{line_number}:{line_contents}`.
 fn parse_grep_output(
     output: &str,
-    shell_launch_data: Option<ShellLaunchData>,
     current_working_directory: Option<String>,
 ) -> anyhow::Result<Vec<GrepFileMatch>> {
     let mut matched_files = HashMap::new();
@@ -676,11 +625,7 @@ fn parse_grep_output(
     Ok(matched_files
         .into_iter()
         .map(|(file, matched_lines)| GrepFileMatch {
-            file_path: host_native_absolute_path(
-                file,
-                &shell_launch_data,
-                &current_working_directory,
-            ),
+            file_path: host_native_absolute_path(file, &current_working_directory),
             matched_lines,
         })
         .collect())

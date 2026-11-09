@@ -11,7 +11,7 @@
 //! the WebWorkers `MessagePort` API in the browser for Zap on Web.
 //!
 //! On native platforms, this is implemented on top of the `interprocess` crate, which uses
-//! Unix Domain Sockets on Unix platforms and named pipes on Windows as the underlying transport.
+//! Unix Domain Sockets as the underlying transport.
 //!
 //! WASM (wasm32-unknown-unknown) is currently unsupported.
 //!

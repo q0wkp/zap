@@ -116,13 +116,6 @@ pub fn open_url_in_system(url: &str) {
             log::warn!("Unable to open url {e:?}");
         }
     }
-
-    #[cfg(windows)]
-    {
-        if let Err(e) = open::that_detached(url) {
-            log::warn!("Unable to open url {e:?}");
-        }
-    }
 }
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
@@ -221,13 +214,6 @@ impl AppDelegate {
                         log::error!("Error creating Linux clipboard: {err:?}");
                     }
                 }
-            } else if #[cfg(target_os = "windows")] {
-                match super::windows::WindowsClipboard::new() {
-                    Ok(clipboard) => self.clipboard = Box::new(clipboard),
-                    Err(err) => {
-                        log::error!("Error creating Windows clipboard: {err:?}");
-                    }
-                }
             }
         }
     }
@@ -258,16 +244,6 @@ impl platform::Delegate for AppDelegate {
             }
             Err(err) => {
                 log::info!("Unable to fetch Linux system color scheme: {err:#}");
-            }
-        }
-
-        #[cfg(target_os = "windows")]
-        match super::windows::get_system_theme() {
-            Ok(system_theme) => {
-                return system_theme;
-            }
-            Err(err) => {
-                log::warn!("Unable to fetch Windows system color scheme: {err:#?}");
             }
         }
 
@@ -306,10 +282,6 @@ impl platform::Delegate for AppDelegate {
                         let url = format!("file://{path}");
                         let _ = window.open_with_url(&url);
                     }
-                }
-            } else if #[cfg(windows)] {
-                if let Err(e) = open::that_detached(path) {
-                    log::warn!("Unable to open path {e:?}");
                 }
             }
         }

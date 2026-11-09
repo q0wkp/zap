@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use itertools::Itertools as _;
-use warp_terminal::shell::ShellLaunchData;
 
 use crate::agent::action_result::FileContext;
 use crate::{index::locations::CodeContextLocation, paths::shell_native_absolute_path};
@@ -17,12 +16,10 @@ impl FileLocations {
     /// Convert file locations to a user readable format.
     pub fn to_user_message(
         &self,
-        shell_launch_data: Option<&ShellLaunchData>,
         current_working_directory: Option<&String>,
         file_line_count: Option<usize>,
     ) -> String {
-        let absolute_path =
-            shell_native_absolute_path(&self.name, shell_launch_data, current_working_directory);
+        let absolute_path = shell_native_absolute_path(&self.name, current_working_directory);
 
         if self.lines.is_empty() {
             return absolute_path;
@@ -114,7 +111,6 @@ impl From<&CodeContextLocation> for FileLocations {
 /// preserving first-occurrence order.
 pub fn group_file_contexts_for_display(
     file_contexts: &[FileContext],
-    shell_launch_data: Option<&ShellLaunchData>,
     current_working_directory: Option<&String>,
 ) -> Vec<String> {
     let mut order: Vec<String> = Vec::new();
@@ -140,7 +136,7 @@ pub fn group_file_contexts_for_display(
                 name: file_name.clone(),
                 lines: sorted,
             };
-            locations.to_user_message(shell_launch_data, current_working_directory, None)
+            locations.to_user_message(current_working_directory, None)
         })
         .collect()
 }

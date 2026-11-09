@@ -26,8 +26,6 @@ crates/warp_files/test_data/test_write
 # Don't include fonts downloaded by the script used to generate font fallback code.
 script/font_fallback/downloaded_fonts
 
-# Don't include the generated Windows installer
-script/windows/Output
 .aider*
 
 # temporary vim files. Source: https://github.com/github/gitignore/blob/main/Global/Vim.gitignore
@@ -53,7 +51,6 @@ warp.pty.recording
 warp-server/
 
 # Ignore large directories that aren't required for any current Dockerfiles.
-app/assets/windows
 app/src/terminal/ref_tests
 
 # Ignore files only required for tests

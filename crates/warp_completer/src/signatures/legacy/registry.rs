@@ -44,11 +44,6 @@ impl SignatureCache {
     }
 
     fn get(&self, command: &str) -> Option<&Signature> {
-        let command = if cfg!(windows) {
-            command.trim_end_matches(".exe")
-        } else {
-            command
-        };
         let command = command.to_lowercase();
         self.signatures
             .get_or_insert(&command, || (self.lookup_fn)(&command))
@@ -193,11 +188,6 @@ impl CommandRegistry {
         context: &dyn CompletionContext,
     ) -> SignatureResult<'_> {
         let found_signature = tokens.first().and_then(|command| {
-            let command = if cfg!(windows) {
-                command.trim_end_matches(".exe")
-            } else {
-                command
-            };
             self.signatures
                 .get(command)
                 .map(|signature| (signature, self.dynamic_completion_data.get(command)))

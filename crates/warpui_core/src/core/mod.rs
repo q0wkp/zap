@@ -163,7 +163,6 @@ struct GlobalShortcut {
 #[derivative(Debug)]
 pub struct AddWindowOptions {
     pub background_blur_radius_pixels: Option<u8>,
-    pub background_blur_texture: bool,
     pub window_style: WindowStyle,
     pub window_bounds: WindowBounds,
     pub title: Option<String>,

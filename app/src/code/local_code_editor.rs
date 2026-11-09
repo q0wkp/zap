@@ -252,8 +252,6 @@ impl LocalCodeEditorView {
             | CodeEditorEvent::DiffHunkContextAdded { .. }
             | CodeEditorEvent::DiffReverted
             | CodeEditorEvent::HiddenSectionExpanded => {}
-            #[cfg(windows)]
-            CodeEditorEvent::WindowsCtrlC { .. } => {}
         });
 
         let is_new_file = matches!(diff_type, Some(DiffType::Create { .. }));
@@ -799,12 +797,8 @@ impl LocalCodeEditorView {
                         .as_ref(app)
                         .active_session_path_if_local(app)
                         .and_then(|cwd| {
-                            let is_wsl = terminal_view
-                                .as_ref(app)
-                                .active_session_wsl_distro(app)
-                                .is_some();
                             self.file_path()
-                                .and_then(|file_path| to_relative_path(is_wsl, file_path, &cwd))
+                                .and_then(|file_path| to_relative_path(file_path, &cwd))
                         })
                 })
             })

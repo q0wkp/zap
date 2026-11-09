@@ -70,7 +70,7 @@ const t = {
       zh: 'preview 阶段不提供安装包 — Zap 完全源码公开,只通过构建脚本发布。Clone、bootstrap、run。',
       ja: 'preview 段階ではインストーラーはありません。Zap はソース公開で、ビルドスクリプトのみが配布物です。Clone、bootstrap、run。',
     },
-    tabMac: 'macOS', tabLinux: 'Linux', tabWin: 'Windows',
+    tabMac: 'macOS', tabLinux: 'Linux',
   },
   cta: {
     h:       { en: 'Your terminal. Your keys.',  zh: '你的终端。你的密钥。', ja: 'あなたのターミナル。あなたの鍵。' },
@@ -488,7 +488,6 @@ const eqRight = makeEqBars(16, 2);
         <div class="install-tabs">
           <button data-tab="macos" class="active">macOS</button>
           <button data-tab="linux">Linux</button>
-          <button data-tab="windows">Windows<span class="meta">.ps1</span></button>
         </div>
 
         <div class="pre-wrap" data-pane="macos">
@@ -504,17 +503,6 @@ git clone https://github.com/zerx-lab/zap.git zap
 
         <div class="pre-wrap" data-pane="linux" hidden>
           <pre class="code"><span class="com"># Debian / Ubuntu (apt + cargo)</span>
-git clone https://github.com/zerx-lab/zap.git zap
-<span class="key">cd</span> zap
-./script/bootstrap
-
-<span class="com"># Build &amp; run</span>
-./script/run --release</pre>
-          <button class="copy" type="button" data-copy>Copy</button>
-        </div>
-
-        <div class="pre-wrap" data-pane="windows" hidden>
-          <pre class="code"><span class="com"># Run from PowerShell (winget + rustup)</span>
 git clone https://github.com/zerx-lab/zap.git zap
 <span class="key">cd</span> zap
 ./script/bootstrap

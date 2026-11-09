@@ -4,9 +4,6 @@
 //! depends on the platform. The Zap app must use this information to avoid rendering UI elements
 //! underneath them.
 
-#[cfg(windows)]
-pub mod windows;
-
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 mod linux_only {
     pub(super) use crate::workspace::TOTAL_TAB_BAR_HEIGHT;
@@ -22,31 +19,6 @@ mod linux_only {
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use linux_only::*;
 
-#[cfg(target_os = "windows")]
-mod windows_only {
-    pub(super) use crate::ui_components::icons::Icon as IconComponent;
-    pub(super) use pathfinder_color::ColorU;
-    pub(super) use pathfinder_geometry::vector::vec2f;
-    pub(super) use warp_core::ui::theme;
-    pub(super) use warpui::elements::{
-        Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, Hoverable,
-        OffsetPositioning, ParentAnchor, ParentOffsetBounds, Radius, Rect, Stack,
-    };
-    pub(super) const WINDOWS_BRIGHT_RED: ColorU = ColorU {
-        r: 232,
-        g: 17,
-        b: 32,
-        a: u8::MAX,
-    };
-
-    pub(super) const WINDOWS_BUTTON_PADDING_VERTICAL: f32 = 6.;
-    pub(super) const WINDOWS_BUTTON_PADDING_HORIZONTAL: f32 = 12.;
-}
-
-#[cfg(target_os = "windows")]
-use windows_only::*;
-
-#[cfg(not(target_os = "windows"))]
 use warpui::elements::Empty;
 
 use crate::themes::theme::WarpTheme;
@@ -54,7 +26,7 @@ use warpui::elements::MouseStateHandle;
 use warpui::platform::FullscreenState;
 use warpui::{AppContext, Element, WindowId};
 
-#[cfg(any(target_os = "windows", any(target_os = "linux", target_os = "freebsd")))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 const BUTTON_ICON_SIZE: f32 = 22.;
 
 pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<TrafficLightData> {
@@ -78,12 +50,6 @@ pub fn traffic_light_data(ctx: &AppContext, window_id: WindowId) -> Option<Traff
     {
         Some(TrafficLightData {
             width: 116.,
-            side: TrafficLightSide::Right,
-            scales_with_zoom: true,
-        })
-    } else if cfg!(target_os = "windows") {
-        Some(TrafficLightData {
-            width: 136.,
             side: TrafficLightSide::Right,
             scales_with_zoom: true,
         })
@@ -308,146 +274,7 @@ impl TrafficLightData {
         })
     }
 
-    #[cfg(target_os = "windows")]
-    pub fn render(
-        &self,
-        fullscreen_state: FullscreenState,
-        mouse_states: &TrafficLightMouseStates,
-        theme: &WarpTheme,
-        app: &AppContext,
-    ) -> Box<dyn Element> {
-        self.render_tab_row(fullscreen_state, mouse_states, theme, app)
-    }
-
-    #[cfg(target_os = "windows")]
-    fn render_windows_minimize_button_icon(fg_color: ColorU) -> Box<dyn Element> {
-        ConstrainedBox::new(Rect::new().with_background_color(fg_color).finish())
-            .with_height(1.)
-            .with_width(12.)
-            .finish()
-    }
-
-    #[cfg(target_os = "windows")]
-    fn render_windows_maximize_button_icon(
-        fg_color: ColorU,
-        fullscreen_state: FullscreenState,
-    ) -> Box<dyn Element> {
-        let mut maximize_button_icon = ConstrainedBox::new(
-            Rect::new()
-                .with_border(Border::all(1.).with_border_color(fg_color))
-                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(2.)))
-                .finish(),
-        )
-        .with_width(10.)
-        .with_height(10.)
-        .finish();
-
-        // If the window is already maximized, the icon looks a bit different.
-        if fullscreen_state != FullscreenState::Normal {
-            let mut stack = Stack::new();
-            stack.add_positioned_child(
-                maximize_button_icon,
-                OffsetPositioning::offset_from_parent(
-                    vec2f(0., 0.),
-                    ParentOffsetBounds::Unbounded,
-                    ParentAnchor::BottomLeft,
-                    ChildAnchor::BottomLeft,
-                ),
-            );
-            stack.add_positioned_child(
-                ConstrainedBox::new(
-                    Rect::new()
-                        .with_border(
-                            Border::new(1.)
-                                .with_sides(true, false, false, true)
-                                .with_border_color(fg_color),
-                        )
-                        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(2.)))
-                        .finish(),
-                )
-                .with_width(10.)
-                .with_height(10.)
-                .finish(),
-                OffsetPositioning::offset_from_parent(
-                    vec2f(0., 0.),
-                    ParentOffsetBounds::Unbounded,
-                    ParentAnchor::TopRight,
-                    ChildAnchor::TopRight,
-                ),
-            );
-            maximize_button_icon = ConstrainedBox::new(stack.finish())
-                .with_width(12.)
-                .with_height(12.)
-                .finish();
-        }
-
-        maximize_button_icon
-    }
-
-    #[cfg(target_os = "windows")]
-    fn render_windows_close_button(fg_color: ColorU, mouse_state: MouseStateHandle) -> Hoverable {
-        Hoverable::new(mouse_state, |state| {
-            let (background_color, icon_color) = if state.is_hovered() {
-                (WINDOWS_BRIGHT_RED, ColorU::white())
-            } else {
-                (ColorU::transparent_black(), fg_color)
-            };
-
-            Container::new(
-                ConstrainedBox::new(
-                    Align::new(Self::render_windows_close_button_icon(icon_color)).finish(),
-                )
-                .with_width(BUTTON_ICON_SIZE)
-                .with_height(BUTTON_ICON_SIZE)
-                .finish(),
-            )
-            .with_vertical_padding(WINDOWS_BUTTON_PADDING_VERTICAL)
-            .with_horizontal_padding(WINDOWS_BUTTON_PADDING_HORIZONTAL)
-            .with_background_color(background_color)
-            .finish()
-        })
-    }
-
-    #[cfg(target_os = "windows")]
-    fn render_windows_close_button_icon(icon_color: ColorU) -> Box<dyn Element> {
-        ConstrainedBox::new(
-            IconComponent::X
-                .to_warpui_icon(theme::Fill::Solid(icon_color))
-                .finish(),
-        )
-        .with_height(16.)
-        .with_width(16.)
-        .finish()
-    }
-
-    #[cfg(target_os = "windows")]
-    fn render_button(
-        mouse_state: MouseStateHandle,
-        child: Box<dyn Element>,
-        hover_color: ColorU,
-    ) -> Hoverable {
-        Hoverable::new(mouse_state, |state| {
-            let background_color = if state.is_hovered() {
-                hover_color
-            } else {
-                ColorU::transparent_black()
-            };
-            Container::new(
-                ConstrainedBox::new(Align::new(child).finish())
-                    .with_width(BUTTON_ICON_SIZE)
-                    .finish(),
-            )
-            .with_vertical_padding(WINDOWS_BUTTON_PADDING_VERTICAL)
-            .with_horizontal_padding(WINDOWS_BUTTON_PADDING_HORIZONTAL)
-            .with_background_color(background_color)
-            .finish()
-        })
-    }
-
-    #[cfg(all(
-        not(any(target_os = "linux", target_os = "freebsd")),
-        not(target_os = "windows")
-    ))]
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
     pub fn render(
         &self,
         _fullscreen_state: FullscreenState,

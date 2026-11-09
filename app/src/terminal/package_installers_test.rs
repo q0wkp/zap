@@ -71,8 +71,6 @@ fn test_command_at_cursor_has_common_package_installer_prefix_with_alias_expansi
         // Minimal working directory
         #[cfg(unix)]
         let cwd = TypedPathBuf::from("/");
-        #[cfg(windows)]
-        let cwd = TypedPathBuf::from_windows("C:\\");
 
         let session_ctx = app
             .read(|ctx| SessionContext::new(session, CommandRegistry::default().into(), cwd, ctx));

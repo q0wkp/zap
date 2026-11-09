@@ -12,7 +12,7 @@ license = "MIT"
 # binary. The shaders are written to the temp directory during initialization of
 # a renderer to enable this, which could slow opening of the first window.
 enable-metal-frame-capture = []
-# Enables the font-kit rasterizer on Windows.
+# Enables the font-kit rasterizer.
 fontkit-rasterizer = []
 traces = ["warpui_core/traces"]
 # Feature enabled only when app is compiled for integration tests.
@@ -113,15 +113,12 @@ web-sys.workspace = true
 workspace = true
 features = ["fragile-send-sync-non-atomic-wasm", "webgl"]
 
-[target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))'.dependencies]
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 arboard = { workspace = true, features = [
     "wayland-data-control",
     "image-data",
 ] }
 native-dialog = "0.7.0"
-open = "5.0.0"
-
-[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 blocking.workspace = true
 dirs.workspace = true
 fontconfig = { version = "0.8.0", features = ["dlopen"] }
@@ -141,25 +138,6 @@ zbus.workspace = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dev-dependencies]
 virtual-fs.workspace = true
-
-[target.'cfg(target_os = "windows")'.dependencies]
-dwrote = { git = "https://github.com/warpdotdev/dwrote-rs", rev = "a71ce6c0136f7d0954a9a8b181b5b2d8ace5eb9c", default-features = false }
-winreg.workspace = true
-windows = { workspace = true, features = [
-    "Win32_Graphics_Dwm",
-    "Win32_Graphics_DirectWrite",
-    "Win32_Graphics_Gdi",
-    "Win32_UI_Shell",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Networking",
-    "Win32_System_Com",
-    "Win32_Networking_NetworkListManager",
-    "Win32_System_DataExchange",
-    "Win32_System_Memory",
-] }
-windows-core.workspace = true
-windows-version = "0.1.2"
-tauri-winrt-notification = "0.7.0"
 
 [build-dependencies]
 bindgen = "0.70.1"

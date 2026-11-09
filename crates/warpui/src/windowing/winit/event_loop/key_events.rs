@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 
 use winit::event::ElementState;
-#[cfg(windows)]
-use winit::keyboard::NativeKey;
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 #[cfg(not(target_family = "wasm"))]
 use winit::platform::modifier_supplement::KeyEventExtModifierSupplement;
@@ -90,19 +88,7 @@ pub fn convert_keyboard_input_event(
 
     let shift = window_state.modifiers.shift_key();
 
-    let logical_key = match &input.logical_key {
-        // When keystrokes with ctrl-alt are pressed on Windows, `input.logical_key` is
-        // Unidentified.
-        #[cfg(windows)]
-        Key::Unidentified(NativeKey::Windows(_))
-            if window_state
-                .modifiers
-                .contains(ModifiersState::CONTROL | ModifiersState::ALT) =>
-        {
-            input.key_without_modifiers()
-        }
-        _ => input.logical_key,
-    };
+    let logical_key = input.logical_key;
     let input_key = get_input_key(&logical_key, shift);
 
     let key = convert_key(input_key)?.to_string();

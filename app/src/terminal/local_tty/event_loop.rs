@@ -132,7 +132,7 @@ impl Writing {
 
 enum ChannelResult {
     Continue,
-    TerminateLoop { child_exited: bool },
+    TerminateLoop,
 }
 
 impl<T> EventLoop<T>
@@ -162,13 +162,8 @@ where
         while let Ok(msg) = self.rx.try_recv() {
             match msg {
                 Message::Input(input) => state.write_list.push_back(input),
-                Message::Shutdown => {
-                    return ChannelResult::TerminateLoop {
-                        child_exited: false,
-                    }
-                }
+                Message::Shutdown => return ChannelResult::TerminateLoop,
                 Message::Resize(size) => self.pty.on_resize(&size),
-                Message::ChildExited => return ChannelResult::TerminateLoop { child_exited: true },
             }
         }
 
@@ -380,18 +375,7 @@ where
                             token if token == CHANNEL_TOKEN => {
                                 match self.channel_event(&mut state) {
                                     ChannelResult::Continue => {}
-                                    ChannelResult::TerminateLoop {
-                                        child_exited: exited,
-                                    } => {
-                                        if exited {
-                                            self.terminal
-                                                .lock()
-                                                .exit(ExitReason::ShellProcessExited);
-                                            child_exited = true;
-                                            self.event_listener.send_wakeup_event();
-                                        }
-                                        break 'event_loop;
-                                    }
+                                    ChannelResult::TerminateLoop => break 'event_loop,
                                 }
                             }
 

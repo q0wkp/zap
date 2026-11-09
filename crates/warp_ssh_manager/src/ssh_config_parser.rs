@@ -528,7 +528,7 @@ Host a
     #[test]
     fn default_path_points_under_home_dot_ssh_config() {
         // 跨平台:只要 dirs::home_dir() 拿得到值,结果就应该是
-        // `<home>/.ssh/config`。CI runner 始终有 HOME / USERPROFILE。
+        // `<home>/.ssh/config`。CI runner 始终有 HOME。
         let got = default_ssh_config_path().expect("test runner has home dir");
         let home = dirs::home_dir().expect("test runner has home dir");
         assert!(got.starts_with(&home), "{got:?} should start with {home:?}");

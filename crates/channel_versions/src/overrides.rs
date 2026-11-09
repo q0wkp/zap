@@ -2,7 +2,7 @@
 //! info.
 //!
 //! For example, we may want to roll out a hotfix release for Linux, but
-//! not want macOS and Windows users to need to perform another update.
+//! not want macOS users to need to perform another update.
 
 use serde::{Deserialize, Serialize};
 
@@ -51,8 +51,6 @@ impl TargetOS {
             Some(TargetOS::MacOS)
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             Some(TargetOS::Linux)
-        } else if cfg!(target_os = "windows") {
-            Some(TargetOS::Windows)
         } else {
             None
         }

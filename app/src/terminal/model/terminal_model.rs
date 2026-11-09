@@ -530,12 +530,6 @@ pub struct TerminalModel {
     /// `Handler::end_in_band_command_output()` are called.
     is_receiving_in_band_command_output: IsReceivingInBandCommandOutput,
 
-    #[cfg(windows)]
-    /// On Windows, in-band generators send reset grid OSCs when they finish, clearing out
-    /// any leftover state in conpty. When we receive these, we don't want to mistakenly route
-    /// them to the active grid.
-    ignore_reset_grid_after_in_band_generator: bool,
-
     is_receiving_completions_output: IsReceivingCompletionsOutput,
 
     is_receiving_iterm_image_data: IsReceivingITermImageData,
@@ -1148,8 +1142,6 @@ impl TerminalModel {
             ignore_bootstrapping_messages: false,
             session_startup_path,
             is_receiving_in_band_command_output: IsReceivingInBandCommandOutput::No,
-            #[cfg(windows)]
-            ignore_reset_grid_after_in_band_generator: false,
             is_receiving_completions_output: IsReceivingCompletionsOutput::No,
             is_receiving_iterm_image_data: IsReceivingITermImageData::No,
             is_receiving_kitty_image_data: IsReceivingKittyActionData::No,
@@ -1642,20 +1634,6 @@ impl TerminalModel {
         self.pending_session_info
             .as_ref()
             .map(|session_info| session_info.session_id)
-    }
-
-    pub fn is_pending_wsl(&self) -> bool {
-        matches!(
-            &self.pending_shell_launch_data,
-            Some(ShellLaunchData::WSL { .. })
-        )
-    }
-
-    pub fn is_pending_msys2(&self) -> bool {
-        matches!(
-            &self.pending_shell_launch_data,
-            Some(ShellLaunchData::MSYS2 { .. })
-        )
     }
 
     pub fn shell_launch_state(&self) -> &ShellLaunchState {
@@ -3076,8 +3054,7 @@ impl ansi::Handler for TerminalModel {
         };
     }
 
-    #[cfg_attr(not(windows), allow(unused_variables))]
-    fn end_in_band_command_output(&mut self, from_osc_sequence: bool) {
+    fn end_in_band_command_output(&mut self, _from_osc_sequence: bool) {
         match &mut self.is_receiving_in_band_command_output {
             IsReceivingInBandCommandOutput::Yes { output } => {
                 match validate_and_decode_in_band_command_output_to_bytes(output.as_str()) {
@@ -3105,11 +3082,6 @@ impl ansi::Handler for TerminalModel {
             IsReceivingInBandCommandOutput::No => {
                 log::warn!("Received 'end_in_band_command_output' while not expecting to read in-band command output.");
             }
-        }
-
-        #[cfg(windows)]
-        if from_osc_sequence {
-            self.ignore_reset_grid_after_in_band_generator = true;
         }
     }
 
@@ -3151,11 +3123,6 @@ impl ansi::Handler for TerminalModel {
     }
 
     fn on_reset_grid(&mut self) {
-        #[cfg(windows)]
-        if self.ignore_reset_grid_after_in_band_generator {
-            self.ignore_reset_grid_after_in_band_generator = false;
-            return;
-        }
         delegate!(self.on_reset_grid());
     }
 

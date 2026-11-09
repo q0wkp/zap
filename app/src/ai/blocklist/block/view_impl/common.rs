@@ -2718,10 +2718,9 @@ pub fn render_code_output_section<A: Action>(
             // Attempt to convert the absolute path to a relative path from the current working directory.
             // If that fails, fall back to using the original absolute path.
             Some(working_directory) => {
-                let is_wsl = matches!(props.shell_launch_data, Some(ShellLaunchData::WSL { .. }));
-                to_relative_path(is_wsl, path.as_path(), Path::new(working_directory))
+                { to_relative_path(path.as_path(), Path::new(working_directory)) }
+                    .unwrap_or_else(|| path.to_string_lossy().to_string())
             }
-            .unwrap_or_else(|| path.to_string_lossy().to_string()),
             None => path.to_string_lossy().to_string(),
         }
         .into(),

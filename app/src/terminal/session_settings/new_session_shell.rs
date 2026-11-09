@@ -26,10 +26,6 @@ pub enum NewSessionShell {
     SystemDefault,
     #[schemars(description = "A shell executable path.")]
     Executable(String),
-    #[schemars(description = "An MSYS2 shell environment.")]
-    MSYS2(String),
-    #[schemars(description = "A Windows Subsystem for Linux distribution.")]
-    WSL(String),
     #[schemars(description = "A custom shell command.")]
     Custom(String),
 }
@@ -38,9 +34,7 @@ impl NewSessionShell {
     pub fn shell_family(&self) -> ShellFamily {
         let shell = match self {
             NewSessionShell::SystemDefault => return OperatingSystem::get().default_shell_family(),
-            NewSessionShell::WSL(_) => return ShellFamily::Posix,
             NewSessionShell::Executable(shell) => shell,
-            NewSessionShell::MSYS2(shell) => shell,
             NewSessionShell::Custom(shell) => shell,
         };
 

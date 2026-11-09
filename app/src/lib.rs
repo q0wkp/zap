@@ -5,7 +5,6 @@
 
 mod ai;
 mod alloc;
-mod antivirus;
 #[cfg(target_os = "macos")]
 mod app_menus;
 mod app_services;
@@ -32,8 +31,6 @@ mod debounce;
 mod debug_dump;
 mod default_terminal;
 mod drive;
-#[cfg(windows)]
-mod dynamic_libraries;
 mod env_vars;
 mod experiments;
 mod external_secrets;
@@ -73,9 +70,8 @@ mod search_bar;
 mod server;
 mod server_time;
 mod session_management;
-mod shell_indicator;
-mod skill_manager;
 mod sftp_manager;
+mod skill_manager;
 mod ssh_manager;
 mod suggestions;
 mod system;
@@ -287,7 +283,6 @@ pub use warp_core::send_telemetry_sync_from_ctx;
 // Re-export the safe logging macros at the crate root level for backwards compatibility
 pub use warp_core::{safe_debug, safe_error, safe_info, safe_warn};
 
-use crate::antivirus::AntivirusInfo;
 #[cfg(feature = "local_fs")]
 use warp_files::FileModel;
 use warpui::platform::TerminationMode;
@@ -526,13 +521,11 @@ fn apply_scroll_multiplier(event: &mut Event, app: &AppContext) {
 /// Runs the app. If a subcommand was requested, it'll be run instead of the main application.
 pub fn run() -> Result<()> {
     // POSIX locale 兜底:在 LANG/LC_* 全部未设置时,给依赖这些环境变量的 C/Rust 库
-    // (chrono 数字格式化、libc strftime 等) 一个合理的 UTF-8 默认值。Windows 上特意跳过
-    // —— Windows API (`GetUserPreferredUILanguages`) 才是 UI locale 的真实来源,这里
-    // 强制 `LANG=en_US.UTF-8` 会让 `DesktopLanguageRequester` 不论用户选什么 UI 语言
-    // 都返回 en,进而把 CJK Han 字形回退打偏 (日文 UI 反倒拿到简体字字形)。
+    // (chrono 数字格式化、libc strftime 等) 一个合理的 UTF-8 默认值。
     // macOS 如果桌面打开 Bundle 也是没有环境变量的, 但它的 `DesktopLanguageRequester`
-    // 如果设置了 `LANG` 环境变量会直接返回该值而不询问系统, 因此同样需要跳过。
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    // 如果设置了 `LANG` 环境变量会直接返回该值而不询问系统 (强制 `LANG=en_US.UTF-8`
+    // 会让它不论用户选什么 UI 语言都返回 en), 因此需要跳过。
+    #[cfg(not(target_os = "macos"))]
     if std::env::var_os("LANG").is_none()
         && std::env::var_os("LC_ALL").is_none()
         && std::env::var_os("LC_CTYPE").is_none()
@@ -554,11 +547,6 @@ pub fn run() -> Result<()> {
     let args = warp_cli::Args::from_env();
 
     if let Some(command) = args.command() {
-        #[cfg(windows)]
-        if command.prints_to_stdout() {
-            // We attach a console to ensure that all standard output gets printed correctly.
-            warp_util::windows::attach_to_parent_console();
-        }
         match command {
             #[cfg(all(feature = "local_tty", unix))]
             warp_cli::Command::Worker(warp_cli::WorkerCommand::TerminalServer(args)) => {
@@ -577,7 +565,7 @@ pub fn run() -> Result<()> {
             #[cfg(feature = "local_tty")]
             warp_cli::Command::Worker(warp_cli::WorkerCommand::MinidumpServer { socket_name }) => {
                 cfg_if::cfg_if! {
-                    if #[cfg(all(linux_or_windows, feature = "crash_reporting"))] {
+                    if #[cfg(all(target_os = "linux", feature = "crash_reporting"))] {
                         return crate::crash_reporting::run_minidump_server(socket_name);
                     } else {
                         let _ = socket_name;
@@ -688,9 +676,6 @@ pub fn run_integration_test(driver: TestDriver) -> Result<()> {
 /// the step is only needed by the full app, add it to `run_internal`
 /// instead.
 fn init_common(launch_mode: &LaunchMode, timer: Option<&mut IntervalTimer>) -> Result<()> {
-    #[cfg(windows)]
-    dynamic_libraries::configure_library_loading();
-
     if launch_mode.needs_profiling() {
         profiling::init();
     }
@@ -773,7 +758,7 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
     #[cfg_attr(
         not(all(
             feature = "release_bundle",
-            any(windows, any(target_os = "linux", target_os = "freebsd"))
+            any(target_os = "linux", target_os = "freebsd")
         )),
         expect(unused_mut)
     )]
@@ -804,35 +789,6 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
             }
         }
     }
-
-    #[cfg(all(feature = "release_bundle", windows))]
-    if let LaunchMode::App { .. } = launch_mode {
-        match app_services::windows::pass_startup_args_to_existing_instance(
-            launch_mode.args().as_ref(),
-        ) {
-            // If we were able to contact an existing application instance, quit -
-            // we only want to run a single instance of Zap at a time.
-            Ok(_) => std::process::exit(0),
-            // If Zap isn't already running, we're good to go.
-            Err(app_services::windows::StartupArgsForwardingError::NoExistingInstance) => {}
-            // If we just finished an auto-update, we should continue running.
-            Err(app_services::windows::StartupArgsForwardingError::IgnoredAfterAutoUpdate) => {}
-            // If we were unable to perform the forwarding for an unknown reason,
-            // it's better to run a second instance than potentially end up in a
-            // state where Zap refuses to run even a first instance.
-            Err(err) => {
-                let err = anyhow::Error::from(err).context("Failed to forward startup args");
-                log::error!("{err:#}");
-                pre_init_errors.push(err);
-            }
-        }
-    }
-
-    // Sets up a Job Object that we associate with the Zap process to handle
-    // shared fate with its child processes. This should be called before we
-    // start spawning any child processes.
-    #[cfg(windows)]
-    command::windows::init();
 
     let private_preferences = settings::init_private_user_preferences();
     let (public_preferences, startup_toml_parse_error) = settings::init_public_user_preferences();
@@ -904,27 +860,6 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         // Force use of wayland if the user has passed the `WARP_ENABLE_WAYLAND` env var.
         let allow_wayland = linux::is_wayland_env_var_set() || !force_x11;
         app_builder.force_x11(!allow_wayland);
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        use warpui::platform::windows::AppBuilderExt;
-        app_builder.set_app_user_model_id(ChannelState::app_id().to_string());
-
-        // Only use DXC for DirectX shader compilation if we're not running in a Parallels VM
-        // Parallels VMs can have issues with DXC shader compilation
-        let is_parallels_vm = crate::util::vm_detection::is_running_in_windows_parallels_vm();
-        if !is_parallels_vm {
-            log::info!("Using DXC for DirectX shader compilation");
-            use warpui::platform::windows::DXCPath;
-
-            app_builder.use_dxc_for_directx_shader_compilation(DXCPath {
-                dxc_path: "dxcompiler.dll".to_string(),
-                dxil_path: "dxil.dll".to_string(),
-            });
-        } else {
-            log::info!("Skipping DXC for DirectX shader compilation; running in a Parallels VM");
-        }
     }
 
     // Override any bindings that have a `Custom` trigger to a `Keystroke`-based trigger. In theory,
@@ -1018,8 +953,6 @@ fn initialize_app(
             warpui_extras::secure_storage::register_noop(&data_domain, ctx);
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             warpui_extras::secure_storage::register_with_fallback(&data_domain, warp_core::paths::state_dir(), ctx)
-        } else if #[cfg(target_os = "windows")] {
-            warpui_extras::secure_storage::register_with_dir(&data_domain, warp_core::paths::state_dir(), ctx)
         } else {
             warpui_extras::secure_storage::register(&data_domain, ctx);
         }
@@ -1203,8 +1136,6 @@ fn initialize_app(
         },
     );
 
-    ctx.add_singleton_model(AntivirusInfo::new);
-
     // 云同步 Token 走 OS 密钥库，不落 TOML。
     ctx.add_singleton_model(crate::settings::CloudSyncTokenStore::new);
 
@@ -1231,7 +1162,7 @@ fn initialize_app(
     if FeatureFlag::Autoupdate.is_enabled() {
         // 原:同步调用 remove_old_executable() 清理上一次 auto-update 遗留的旧
         // 可执行文件。改:丢到 background_executor,跨平台路径当中只有 macOS
-        // 实际要做事(Linux/Windows 是 noop),在 macOS 上也只是 fs::remove_dir_all,
+        // 实际要做事(Linux 是 noop),在 macOS 上也只是 fs::remove_dir_all,
         // 与主线程后续逻辑零依赖。失败原本就只是 log::error,后台跳不会丢信息。
         ctx.background_executor()
             .spawn(async {
@@ -1530,9 +1461,6 @@ fn initialize_app(
         }
         model
     });
-    #[cfg(windows)]
-    ctx.add_singleton_model(util::traffic_lights::windows::RendererState::new);
-
     #[cfg(feature = "voice_input")]
     ctx.add_singleton_model(voice_input::VoiceInput::new);
     ctx.add_singleton_model(|_| {
@@ -1825,9 +1753,6 @@ fn app_callbacks(is_integration_test: bool) -> warpui::platform::AppCallbacks {
                 pty_spawner.prepare_for_app_termination();
             });
 
-            #[cfg(all(feature = "local_tty", windows))]
-            terminal::local_tty::shutdown_all_pty_event_loops(ctx);
-
             // Tear down app services before spawning the new process, to
             // ensure that the new process doesn't find the old process while
             // attempting to enforce our single-instance policy on Linux.
@@ -1850,11 +1775,10 @@ fn app_callbacks(is_integration_test: bool) -> warpui::platform::AppCallbacks {
         })),
         on_should_close_window: Some(Box::new(move |window_id, ctx| {
             let general_settings = GeneralSettings::as_ref(ctx);
-            // On Linux or Windows, if we're about to close the final window, we should quit the app instead.
+            // On Linux, if we're about to close the final window, we should quit the app instead.
             // On Mac, we do this conditionally based on a user setting.
-            let quit_on_last_window_closed =
-                cfg!(any(target_os = "linux", target_os = "freebsd", windows))
-                    || *general_settings.quit_on_last_window_closed;
+            let quit_on_last_window_closed = cfg!(any(target_os = "linux", target_os = "freebsd"))
+                || *general_settings.quit_on_last_window_closed;
             if ctx.window_ids().count() == 1 && quit_on_last_window_closed {
                 log::info!("No windows left, terminating app");
                 ctx.terminate_app(TerminationMode::Cancellable, None);
@@ -2269,11 +2193,10 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
     // (`cargo run`)不是 release bundle,该 flag 会一直关闭 —— 于是 SSH 会话
     // 永远退回 legacy 路径,remote-server transport 不激活,dev 模式自动构建并
     // 上传二进制(见 ssh_transport.rs)也就没有机会触发。这里在 debug 构建里
-    // 显式开启,保证开发时能联调远端文件打开 / buffer-sync。Windows 暂不支持
-    // remote-server 二进制,与 RELEASE_FLAGS 的 cfg 保持一致排除掉。
-    #[cfg(all(debug_assertions, not(windows)))]
+    // 显式开启,保证开发时能联调远端文件打开 / buffer-sync。
+    #[cfg(debug_assertions)]
     flags.insert(FeatureFlag::SshRemoteServer);
-    #[cfg(all(debug_assertions, not(windows)))]
+    #[cfg(debug_assertions)]
     flags.insert(FeatureFlag::ServerFileBrowser);
 
     // Issue #72: HTTP 代理设置页面。不走 channel 判断,所有 channel 含 zap-oss
@@ -2295,10 +2218,6 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::SequentialStorage,
         #[cfg(feature = "in_band_generators_ssh")]
         FeatureFlag::InBandGeneratorsForSSH,
-        #[cfg(feature = "run_generators_with_cmd_exe")]
-        FeatureFlag::RunGeneratorsWithCmdExe,
-        #[cfg(feature = "windows_high_performance_gpu_default")]
-        FeatureFlag::WindowsHighPerformanceGpuDefault,
         #[cfg(feature = "ligatures")]
         FeatureFlag::Ligatures,
         #[cfg(feature = "selectable_prompt")]
@@ -2373,7 +2292,7 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::ClearAutosuggestionOnEscape,
         #[cfg(feature = "autoupdate_ui_revamp")]
         FeatureFlag::AutoupdateUIRevamp,
-        #[cfg(all(not(windows), feature = "kitty_images"))]
+        #[cfg(feature = "kitty_images")]
         FeatureFlag::KittyImages,
         #[cfg(feature = "warp_packs")]
         FeatureFlag::WarpPacks,
@@ -2413,8 +2332,6 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::EditableMarkdownMermaid,
         #[cfg(feature = "image_as_context")]
         FeatureFlag::ImageAsContext,
-        #[cfg(feature = "msys2_shells")]
-        FeatureFlag::MSYS2Shells,
         #[cfg(feature = "file_retrieval_tools")]
         FeatureFlag::FileRetrievalTools,
         #[cfg(feature = "reload_stale_conversation_files")]
@@ -2685,10 +2602,5 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
 /// `ZAP_UNSTABLE_FEATURES` 接受的不稳定功能名 -> FeatureFlag 映射。
 /// 这里登记的功能在 release 构建下默认隐藏,设置对应 token 后才会出现;
 /// dev 构建走 debug_assertions 分支默认启用,无需该变量。
-const UNSTABLE_FEATURES: &[(&str, FeatureFlag)] = &[
-    ("server_file_browser", FeatureFlag::ServerFileBrowser),
-    (
-        "windows_high_performance_gpu_default",
-        FeatureFlag::WindowsHighPerformanceGpuDefault,
-    ),
-];
+const UNSTABLE_FEATURES: &[(&str, FeatureFlag)] =
+    &[("server_file_browser", FeatureFlag::ServerFileBrowser)];

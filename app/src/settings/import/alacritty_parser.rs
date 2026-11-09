@@ -339,13 +339,6 @@ impl ParseableConfig for AlacrittyConfig {
         // We follow Alacritty's strategy described here: https://github.com/alacritty/alacritty?tab=readme-ov-file#configuration.
         // Since alacritty uses the `xdg` crate to read config files, we include paths in XDG_CONFIG_DIRS.
 
-        // If we are on Windows, search the only path: %APPDATA%\alacritty\alacritty.toml.
-        if cfg!(windows) {
-            return dirs::config_dir()
-                .map(|path| vec![path.join("alacritty").join("alacritty.toml")])
-                .unwrap_or_default();
-        }
-
         let mut file_paths = vec![];
         let mut second_file_paths = vec![];
 

@@ -290,17 +290,6 @@ pub fn init(app: &mut AppContext) {
         ]);
     }
 
-    // By default, Windows Terminal recognizes both `ctrl-v` and `ctrl-shift-v` to paste into the
-    // terminal. It also allows users to disable it, so we also make this an EditableBinding.
-    #[cfg(windows)]
-    app.register_editable_bindings([EditableBinding::new(
-        "terminal:alternate_terminal_paste",
-        crate::t!("keybinding-desc-terminal-alternate-paste"),
-        TerminalAction::Paste,
-    )
-    .with_key_binding("ctrl-v")
-    .with_context_predicate(id!("Terminal") & !id!("IMEOpen"))]);
-
     app.register_fixed_bindings([
         FixedBinding::new(
             "shift-left",
@@ -384,11 +373,7 @@ pub fn init(app: &mut AppContext) {
         ),
         EditableBinding::new(
             CANCEL_COMMAND_KEYBINDING,
-            if cfg!(windows) {
-                crate::t!("keybinding-desc-terminal-cancel-process-windows")
-            } else {
-                crate::t!("keybinding-desc-terminal-cancel-process")
-            },
+            crate::t!("keybinding-desc-terminal-cancel-process"),
             TerminalAction::CtrlC,
         )
         .with_key_binding("ctrl-c")

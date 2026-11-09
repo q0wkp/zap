@@ -31,17 +31,8 @@ If you continue to encounter issues, ensure you don't have conflicting Node inst
 }
 
 fn build_command_signatures() -> anyhow::Result<()> {
-    let mut command = if cfg!(windows) {
-        let mut command = Command::new("cmd.exe");
-        #[cfg(windows)]
-        command.creation_flags(0);
-        command.arg("/C").arg("yarn").arg("build");
-        command
-    } else {
-        let mut command = Command::new("yarn");
-        command.arg("build");
-        command
-    };
+    let mut command = Command::new("yarn");
+    command.arg("build");
 
     match command
         .current_dir(format!("{}/js", env!("CARGO_MANIFEST_DIR")))

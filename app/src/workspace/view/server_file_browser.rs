@@ -48,7 +48,7 @@ use crate::menu::{
     MENU_ITEM_VERTICAL_PADDING, SUBMENU_OVERLAP,
 };
 use crate::remote_server::manager::RemoteServerManager;
-use crate::terminal::model::session::{ExecuteCommandOptions, Session};
+use crate::terminal::model::session::Session;
 use crate::ui_components::icons::Icon;
 
 const ITEM_FONT_SIZE: f32 = 14.0;
@@ -3654,7 +3654,7 @@ async fn list_directory_via_session(
         "cd {escaped} && find . -maxdepth 1 -type d -print0 && printf '\\000' && find . -maxdepth 1 -not -type d -print0"
     );
     let output = session
-        .execute_command(&script, None, None, ExecuteCommandOptions::default())
+        .execute_command(&script, None, None)
         .await
         .map_err(|e| format!("{e:#}"))?;
 
@@ -3743,7 +3743,7 @@ async fn resolve_path_via_session(
         "if [ -d {escaped} ]; then echo d; elif [ -f {escaped} ]; then echo f; elif [ -L {escaped} ]; then echo l; else echo o; fi"
     );
     let output = session
-        .execute_command(&script, None, None, ExecuteCommandOptions::default())
+        .execute_command(&script, None, None)
         .await
         .map_err(|e| format!("{e:#}"))?;
 
@@ -4554,7 +4554,7 @@ async fn execute_remote_shell_script(
 ) -> Result<(), String> {
     if let Some(session) = session {
         let output = session
-            .execute_command(&script, None, None, ExecuteCommandOptions::default())
+            .execute_command(&script, None, None)
             .await
             .map_err(|error| format!("{error:#}"))?;
         if output.status == CommandExitStatus::Success {

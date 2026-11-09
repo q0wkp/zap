@@ -378,15 +378,10 @@ impl RequestFileEditsExecutor {
             .current_working_directory()
             .cloned();
 
-        let shell_launch_data = self.active_session.as_ref(ctx).shell_launch_data(ctx);
-
         let mut diffs = Vec::with_capacity(applied_diffs.len());
         for diff in applied_diffs {
-            let path = host_native_absolute_path(
-                diff.file_name.as_str(),
-                &shell_launch_data,
-                &current_working_directory,
-            );
+            let path =
+                host_native_absolute_path(diff.file_name.as_str(), &current_working_directory);
             let file_diff = FileDiff::new(diff.original_content, path, diff.diff_type);
             diffs.push(file_diff);
         }

@@ -300,9 +300,6 @@ impl DProtoHook {
                 "linux_distribution" => {
                     value.linux_distribution = map_empty_to_none(v);
                 }
-                "wsl_name" => {
-                    value.wsl_name = map_empty_to_none(v);
-                }
                 _ => {
                     log::warn!("Tried to add unknown field {key} to Bootstrapped hook");
                 }
@@ -566,9 +563,6 @@ pub struct BootstrappedValue {
     #[serde(deserialize_with = "empty_string_is_none", default)]
     pub linux_distribution: Option<String>,
 
-    #[serde(deserialize_with = "empty_string_is_none", default)]
-    pub wsl_name: Option<String>,
-
     /// The full path to the running shell binary (e.g. "/usr/bin/zsh").
     #[serde(deserialize_with = "empty_string_is_none", default)]
     pub shell_path: Option<String>,
@@ -626,9 +620,6 @@ pub struct InitShellValue {
 
     #[serde(deserialize_with = "trim_null_byte_deserializer", default)]
     pub hostname: String,
-
-    #[serde(deserialize_with = "empty_string_is_none", default)]
-    pub wsl_name: Option<String>,
 }
 
 /// Emitted as part of the new ssh session bootstrapping process.

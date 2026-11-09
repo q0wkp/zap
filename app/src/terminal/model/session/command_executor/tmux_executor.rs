@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use chrono::DateTime;
 use parking_lot::Mutex;
 
-use super::{ExecuteCommandOptions, ExecutorCommandEvent};
+use super::ExecutorCommandEvent;
 use crate::server::datetime_ext::DateTimeExt;
 use crate::terminal::event::ExecutedExecutorCommandEvent;
 use crate::terminal::model::tmux::commands::TmuxCommand;
@@ -109,7 +109,6 @@ impl CommandExecutor for TmuxCommandExecutor {
         shell: &Shell,
         current_directory_path: Option<&str>,
         environment_variables: Option<HashMap<String, String>>,
-        _execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
         let command_id = DateTime::now().timestamp_micros().to_string();
 

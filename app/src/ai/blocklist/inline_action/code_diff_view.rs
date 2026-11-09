@@ -101,7 +101,7 @@ use crate::{
     send_telemetry_from_ctx,
     server::telemetry::{AgentModeCodeFileNavigationSource, ToggleCodeSuggestionsSettingSource},
     settings::AISettings,
-    terminal::{input::SET_INPUT_MODE_AGENT_ACTION_NAME, ShellLaunchData},
+    terminal::input::SET_INPUT_MODE_AGENT_ACTION_NAME,
     ui_components::{blended_colors, icons::Icon},
     util::bindings::keybinding_name_to_keystroke,
     view_components::{
@@ -597,8 +597,7 @@ impl CodeDiffView {
             )
         });
 
-        #[cfg_attr(not(windows), allow(unused_variables))]
-        ctx.subscribe_to_view(&editor, |me, view, event, ctx| match event {
+        ctx.subscribe_to_view(&editor, |_, view, event, ctx| match event {
             CodeEditorEvent::Focused => ctx.emit(CodeDiffViewEvent::EditorFocused),
             CodeEditorEvent::SelectionChanged => {
                 // The `is_some` check is necessary because `CodeEditorEvent::SelectionChanged` is
@@ -610,10 +609,6 @@ impl CodeDiffView {
             }
             CodeEditorEvent::CopiedEmptyText => {
                 ctx.emit(CodeDiffViewEvent::CopiedEmptyText);
-            }
-            #[cfg(windows)]
-            CodeEditorEvent::WindowsCtrlC { copied_selection } if !copied_selection => {
-                me.reject(ctx);
             }
             _ => {}
         });
@@ -2906,7 +2901,6 @@ impl TypedActionView for CodeDiffView {
 /// a lossy version of the FileDiff.
 pub fn convert_file_edits_to_file_diffs(
     file_edits: Vec<FileEdit>,
-    shell_launch_data: &Option<ShellLaunchData>,
     current_working_directory: &Option<String>,
 ) -> Vec<FileDiff> {
     // Group file edits by file path
@@ -2934,8 +2928,7 @@ pub fn convert_file_edits_to_file_diffs(
             })
         })
         .map(|(file_path, edits)| {
-            let path =
-                host_native_absolute_path(&file_path, shell_launch_data, current_working_directory);
+            let path = host_native_absolute_path(&file_path, current_working_directory);
 
             // Extract search content from file edits to create dummy content
             let mut search_and_replace_diffs = Vec::new();

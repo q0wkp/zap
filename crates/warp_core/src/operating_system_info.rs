@@ -135,8 +135,6 @@ impl OperatingSystemCategory {
             Some(OperatingSystemCategory::Linux)
         } else if cfg!(target_os = "macos") {
             Some(OperatingSystemCategory::Mac)
-        } else if cfg!(target_os = "windows") {
-            Some(OperatingSystemCategory::Windows)
         } else if cfg!(target_family = "wasm") {
             Some(OperatingSystemCategory::Web)
         } else {

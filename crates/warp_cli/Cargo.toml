@@ -20,11 +20,6 @@ warp_util = { path = "../warp_util" }
 clap_complete = "4.5.58"
 anyhow.workspace = true
 
-[target.'cfg(windows)'.dependencies]
-windows = { workspace = true, features = [
-    "Win32_Foundation"
-] }
-
 [build-dependencies]
 cfg_aliases.workspace = true
 

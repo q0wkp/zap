@@ -452,15 +452,7 @@ fn detect_nvm_installed() -> bool {
         false
     }
 
-    // 1) Windows nvm-windows
-    #[cfg(windows)]
-    {
-        env::var("PATH").is_ok_and(|path_var| path_var.contains("%NVM_HOME%"))
-            || env::var("NVM_HOME").is_ok()
-    }
-
-    // 2) POSIX shells: nvm is typically a shell function; detect via standard install locations
-    #[cfg(not(windows))]
+    // POSIX shells: nvm is typically a shell function; detect via standard install locations
     {
         use std::path::Path;
 
@@ -527,32 +519,6 @@ fn list_nvm_versions() -> Vec<String> {
 
     let mut out: Vec<String> = Vec::new();
 
-    #[cfg(windows)]
-    {
-        if let Ok(nvm_home) = env::var("NVM_HOME") {
-            let base = Path::new(&nvm_home);
-            if let Ok(read_dir) = std::fs::read_dir(base) {
-                for entry in read_dir.flatten() {
-                    if let Ok(ft) = entry.file_type() {
-                        if ft.is_dir() {
-                            let name = entry.file_name().to_string_lossy().to_string();
-                            // nvm-windows typically uses folder names like v18.19.1 or 18.19.1
-                            if name
-                                .chars()
-                                .next()
-                                .map(|c| c == 'v' || c.is_ascii_digit())
-                                .unwrap_or(false)
-                            {
-                                out.push(name);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[cfg(not(windows))]
     {
         // Prefer $NVM_DIR/versions/node
         let mut candidates: Vec<std::path::PathBuf> = Vec::new();

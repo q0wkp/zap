@@ -53,9 +53,6 @@ lazy_static! {
     /// PLAT-674.
     static ref MIN_SUPPORTED_NVIDIA_VERSION: Version<'static> = Version::from("545")
         .expect("should not fail to parse version");
-
-    static ref MAX_SUPPORTED_NVIDIA_VERSION_ON_WINDOWS: Version<'static> = Version::from("572")
-        .expect("should not fail to parse version");
 }
 
 /// Set of resources needed to render using wgpu.
@@ -335,14 +332,12 @@ pub(super) fn sort_adapters(
         .into_iter()
         // Sort adapters by backend priority.
         .sorted_by_cached_key(|adapter| adapter_backend_sort_func(adapter, backend_preference))
-        .sorted_by_cached_key(adapter_supported_features)
         // Sort adapters based on low/high power preferences.
         .sorted_by_cached_key(power_preference_adapter_sort_func(gpu_power_preference))
         // Sort adapters that we know have some issues towards the end of the list.
         .sorted_by_cached_key(|adapter| {
             adapter_stability_sort_func(
                 adapter,
-                gpu_power_preference,
                 windowing_system,
                 downrank_non_nvidia_vulkan_adapters,
             )
@@ -379,25 +374,6 @@ fn is_supported_adapter(adapter: &wgpu::Adapter, surface: &wgpu::Surface) -> boo
     can_present && supported_texture_format.is_some()
 }
 
-/// Encode levels of preference for graphics adapters based on features they enable. This takes
-/// precedence under the "GPU power preference".
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-enum AdapterFeatureSet {
-    /// No features are hindered by what this adapter supports.
-    Full = 0,
-    /// Some non-critical features not supported by the adapter.
-    MissingMinorFeatures = 1,
-}
-
-fn adapter_supported_features(adapter: &Adapter) -> AdapterFeatureSet {
-    if adapter_has_rendering_offset_bug(&adapter.get_info()) {
-        log::warn!("Deprioritizing OpenGL-backed Intel UHD adapter");
-        AdapterFeatureSet::MissingMinorFeatures
-    } else {
-        AdapterFeatureSet::Full
-    }
-}
-
 fn is_nvidia_adapter(adapter_info: &wgpu::AdapterInfo) -> bool {
     adapter_info.driver == "NVIDIA"
 }
@@ -427,45 +403,6 @@ fn is_older_nvidia_adapter(adapter_info: &wgpu::AdapterInfo) -> bool {
     version < *MIN_SUPPORTED_NVIDIA_VERSION
 }
 
-/// Returns whether this adapter is a newer Windows NVIDIA adapter using a non-DX12 backend.
-/// On NVIDIA drivers 572 and later, the default value of "auto" for the "Vulkan / OpenGL Present
-/// Method" can cause crashes when creating multiple windows, so we downrank it.
-fn is_newer_nondx12_nvidia_adapter_on_windows(adapter_info: &wgpu::AdapterInfo) -> bool {
-    if !cfg!(windows) {
-        return false;
-    }
-
-    if !is_nvidia_adapter(adapter_info) {
-        return false;
-    }
-
-    if adapter_info.backend == Backend::Dx12 {
-        return false;
-    }
-
-    let Some(version) = Version::from(&adapter_info.driver_info) else {
-        // Log an error so we know this occurred and can improve the logic as-needed.
-        log::error!(
-            "Unable to parse Nvidia adapter version {:?} adapter_info.driver_info",
-            adapter_info.driver_info
-        );
-        return false;
-    };
-
-    version >= *MAX_SUPPORTED_NVIDIA_VERSION_ON_WINDOWS
-}
-
-/// Returns whether this adapter is the integrated OpenGL driver for Windows running in Parallels.
-/// It caused problems with theme background images.
-/// https://linear.app/warpdotdev/issue/CORE-3692/background-images-broken-in-parallels
-fn is_gl_to_metal_adapter_on_windows_in_parallels(adapter_info: &wgpu::AdapterInfo) -> bool {
-    cfg!(windows)
-        && adapter_info.backend == Backend::Gl
-        && adapter_info.device_type == DeviceType::IntegratedGpu
-        && adapter_info.driver_info.to_lowercase().contains("metal")
-        && adapter_info.name.to_lowercase().starts_with("parallels")
-}
-
 /// Returns whether or not the provided adapter is an unsupported Intel UHD Mesa driver version for
 /// warpui to render properly. Currently, we limit this to "Intel UHD Graphics 620", but we do have
 /// some suspicion that more Intel UHD devices are affected, e.g. PLAT-599 has a "Intel(R) UHD
@@ -482,58 +419,6 @@ fn is_older_vulkan_intel_uhd_adapter(adapter_info: &wgpu::AdapterInfo) -> bool {
         &adapter_info.driver_info,
         &MIN_SUPPORTED_INTEL_UHD_VERSION,
     )
-}
-
-/// Returns true if this is:
-/// 1) An Intel UHD 620 Graphics device
-/// 2) Using the Vulkan backend
-/// 3) On Windows
-///
-/// We have indication that this specific device is unstable on Windows so we ignore it in the
-/// hopes that there is a DX12 or GL version of this adapter that is more stable.
-fn is_intel_uhd_620_adapter_on_windows_with_vulkan_backend(
-    adapter_info: &wgpu::AdapterInfo,
-) -> bool {
-    cfg!(windows)
-        && adapter_info.backend == Backend::Vulkan
-        && adapter_info.device_type == DeviceType::IntegratedGpu
-        && (adapter_info.name.contains("Intel(R) UHD Graphics 620")
-            || adapter_info.name.contains("Intel(R) HD Graphics 620"))
-}
-
-/// Returns whether the given adapter is known to have a rendering offset bug on Windows.
-///
-/// Certain Intel integrated GPU drivers using the GL backend render the scene at an offset from
-/// the window bounds when window decorations are disabled. The offset matches the size of the
-/// window decorations (e.g. title bar height). Enabling native window decorations fixes the
-/// alignment.
-///
-/// See: https://github.com/zerx-lab/warp/issues/6120
-pub fn adapter_has_rendering_offset_bug(adapter_info: &wgpu::AdapterInfo) -> bool {
-    if !cfg!(windows) {
-        return false;
-    }
-
-    if adapter_info.backend != Backend::Gl || adapter_info.device_type != DeviceType::IntegratedGpu
-    {
-        return false;
-    }
-
-    // Known affected Intel integrated GPU models. This list is based on user reports from
-    // https://github.com/zerx-lab/warp/issues/6120.
-    let affected_models = [
-        "Intel(R) HD Graphics 4000",
-        "Intel(R) HD Graphics 4400",
-        "Intel(R) HD Graphics 4600",
-        "Intel(R) HD Graphics 5500",
-        "Intel(R) HD Graphics P4600",
-        "Intel(R) Iris(TM) Pro Graphics 5200",
-        "Intel(R) Iris(TM) Graphics 6100",
-    ];
-
-    affected_models
-        .iter()
-        .any(|model| adapter_info.name.contains(model))
 }
 
 /// Checks whether the provided adapter info describes a lavapipe
@@ -643,7 +528,6 @@ async fn initialize_device(
 ///
 /// This matches the order used by wgpu; see:
 /// https://github.com/gfx-rs/wgpu/blob/v0.18/wgpu-core/src/instance.rs#L869-L913
-#[cfg(not(windows))]
 fn adapter_backend_sort_func(
     adapter: &wgpu::Adapter,
     backend_preference: Option<wgpu::Backend>,
@@ -662,33 +546,6 @@ fn adapter_backend_sort_func(
     }
 }
 
-/// Returns a priority for an adapter based on backend type, to be used as a
-/// sort function.
-///
-/// This prioritizes DX12 on Windows which is more reliable. See this issue:
-/// https://github.com/gfx-rs/wgpu/issues/2719
-#[cfg(windows)]
-fn adapter_backend_sort_func(
-    adapter: &wgpu::Adapter,
-    backend_preference: Option<wgpu::Backend>,
-) -> usize {
-    let backend = adapter.get_info().backend;
-    if backend_preference.is_some_and(|pref| pref == backend) {
-        return 0;
-    }
-    match backend {
-        // On Windows, we prefer DirectX 12 over Vulkan.  Given that no other
-        // platform supports DX12 at all, there's no need to condition this
-        // ranking on OS.
-        wgpu::Backend::Dx12 => 1,
-        wgpu::Backend::Vulkan => 2,
-        wgpu::Backend::Gl => 3,
-        wgpu::Backend::Metal => 4,
-        wgpu::Backend::BrowserWebGpu => 5,
-        wgpu::Backend::Noop => 6,
-    }
-}
-
 /// Returns a priority for an adapter based on our expectations of its
 /// stability.
 ///
@@ -698,7 +555,6 @@ fn adapter_backend_sort_func(
 /// us to attempt to use it than for us to give up without trying.
 fn adapter_stability_sort_func(
     adapter: &wgpu::Adapter,
-    gpu_power_preference: &GPUPowerPreference,
     windowing_system: Option<windowing::System>,
     downrank_non_nvidia_vulkan_adapters: bool,
 ) -> AdapterSupport {
@@ -715,11 +571,6 @@ fn adapter_stability_sort_func(
     {
         log::info!("Deprioritizing non-NVIDIA Vulkan adapter (the PRIME performance profile is likely enabled)");
         return AdapterSupport::Unsupported;
-    }
-
-    if is_intel_uhd_620_adapter_on_windows_with_vulkan_backend(&adapter_info) {
-        log::warn!("Deprioritizing Vulkan-backed Intel UHD 620 adapter");
-        return AdapterSupport::SupportedWithIssues;
     }
 
     if is_older_vulkan_intel_uhd_adapter(&adapter_info) {
@@ -743,19 +594,6 @@ fn adapter_stability_sort_func(
             *MIN_SUPPORTED_NVIDIA_VERSION
         );
         AdapterSupport::Unsupported
-    } else if is_newer_nondx12_nvidia_adapter_on_windows(&adapter_info)
-        && !matches!(gpu_power_preference, GPUPowerPreference::HighPerformance)
-    {
-        log::warn!(
-            "Deprioritizing non DX12 Nvidia adapter due to version > {} (unsupported). Newer NVIDIA \
-            drivers can crash if multiple windows are created if the `Vulkan / OpenGL Present Method\
-             NVIDIA setting is set to `Auto` or `Prefer layered on DXGI Swapchain`.",
-            *MAX_SUPPORTED_NVIDIA_VERSION_ON_WINDOWS
-        );
-        AdapterSupport::SupportedWithIssues
-    } else if is_gl_to_metal_adapter_on_windows_in_parallels(&adapter_info) {
-        log::warn!("Deprioritizing integrated OpenGL Windows Parallels adapter.");
-        AdapterSupport::SupportedWithIssues
     } else {
         AdapterSupport::Supported
     }
@@ -763,7 +601,7 @@ fn adapter_stability_sort_func(
 
 /// Encode levels of preference for graphics adapters based on application stability. This takes
 /// precedence over the "GPU power preference". We've seen varying severities of graphics issues on
-/// Linux and Windows.
+/// Linux.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum AdapterSupport {
     /// The adapter has no known issues.

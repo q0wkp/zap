@@ -45,16 +45,14 @@ use warpui::units::Pixels;
 /// display an empty prompt grid in the input.
 ///
 /// During this grace period, we will display the same prompt that was displayed in the input when
-/// the user submitted the newly-completed command. We use a higher duration for PowerShell and
-/// MSYS2 b/c it's significantly slower than bash/fish/zsh on Unix.
-fn prompt_marker_grace_period(shell_type: Option<ShellType>, is_msys2: bool) -> chrono::Duration {
+/// the user submitted the newly-completed command. We use a higher duration for PowerShell b/c
+/// it's significantly slower than bash/fish/zsh on Unix.
+fn prompt_marker_grace_period(shell_type: Option<ShellType>) -> chrono::Duration {
     static POSIX_SHELL_PROMPT_MARKER_GRACE_PERIOD: chrono::Duration =
         chrono::Duration::milliseconds(100);
     static POWERSHELL_PROMPT_MARKER_GRACE_PERIOD: chrono::Duration = chrono::Duration::seconds(1);
-    static MSYS2_PROMPT_MARKER_GRACE_PERIOD: chrono::Duration = chrono::Duration::seconds(1);
-    match (shell_type, is_msys2) {
-        (Some(ShellType::PowerShell), _) => POWERSHELL_PROMPT_MARKER_GRACE_PERIOD,
-        (_, true) => MSYS2_PROMPT_MARKER_GRACE_PERIOD,
+    match shell_type {
+        Some(ShellType::PowerShell) => POWERSHELL_PROMPT_MARKER_GRACE_PERIOD,
         _ => POSIX_SHELL_PROMPT_MARKER_GRACE_PERIOD,
     }
 }
@@ -471,11 +469,6 @@ impl PromptRenderHelper {
             // Only render PS1 directly if the shell is bootstrapped and universal developer input is disabled.
             let prompt_block = self.prompt_block(model).unwrap_or(active_block);
             let shell_type = active_block.shell_host().map(|shell| shell.shell_type);
-            let is_msys2 = active_block
-                .session_id()
-                .and_then(|session_id| self.sessions.as_ref(app).get(session_id))
-                .map(|session| session.is_msys2())
-                .unwrap_or_default();
             let (lprompt_grid_top, lprompt_grid_bottom, rprompt_grid) =
                 match &model.block_list().cached_prompt_data_from_last_user_block() {
                     // If we've cached the prompt from the active block, use our
@@ -494,7 +487,7 @@ impl PromptRenderHelper {
                     }) if block_creation_time == prompt_block.creation_ts()
                         || (prompt_block.is_prompt_empty()
                             && chrono::Local::now() - *prompt_block.creation_ts()
-                                < prompt_marker_grace_period(shell_type, is_msys2)) =>
+                                < prompt_marker_grace_period(shell_type)) =>
                     {
                         Self::compute_prompt_layout(
                             render_prompt_on_same_line,

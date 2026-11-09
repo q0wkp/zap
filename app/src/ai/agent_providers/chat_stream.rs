@@ -4119,8 +4119,7 @@ pub async fn generate_byop_output(
         //
         // **P2-16**:额外拼一个 `compaction=` 标识。压缩本身会重写历史使 messages
         // prefix 跨压缩之前后不一致 → 压缩后首轮必然 cache miss。在日志里输出该
-        // 信号让后期分析(`script/analyze-prompt-cache.ps1`)能区分“正常 miss”与
-        // “压缩导致 miss”,避免误伤。
+        // 信号让后期分析能区分“正常 miss”与“压缩导致 miss”,避免误伤。
         if captured_cache_read_tokens > 0 || captured_cache_create_tokens > 0 {
             let denom = captured_prompt_tokens.max(1);
             let read_ratio = captured_cache_read_tokens as f32 / denom as f32;

@@ -104,9 +104,6 @@ fn active_flags_for_channel(channel: &str) -> HashSet<FeatureFlag> {
         }
     }
 
-    #[cfg(feature = "windows_high_performance_gpu_default")]
-    flags.insert(FeatureFlag::WindowsHighPerformanceGpuDefault);
-
     flags
 }
 

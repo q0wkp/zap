@@ -146,8 +146,8 @@ use crate::{
         AutosuggestionLocation, AutosuggestionType, BaselinePositionComputationMethod,
         CommandXRayAnchor, CrdtOperation, CursorColors, DisplayPoint, EditOrigin, EditorAction,
         EditorDecoratorElements, EditorOptions, EditorSnapshot, EditorView, Event as EditorEvent,
-        ImageContextOptions, InteractionState, PathTransformerFn, PlainTextEditorViewAction,
-        Point as BufferPoint, PropagateAndNoOpEscapeKey, PropagateAndNoOpNavigationKeys,
+        ImageContextOptions, InteractionState, PlainTextEditorViewAction, Point as BufferPoint,
+        PropagateAndNoOpEscapeKey, PropagateAndNoOpNavigationKeys,
         PropagateHorizontalNavigationKeys, ReplicaId, TextColors, TextRun,
         MAX_IMAGES_PER_CONVERSATION,
     },
@@ -500,7 +500,7 @@ cfg_if::cfg_if! {
     if #[cfg(target_os = "macos")] {
         const CMD_ENTER_KEYBINDING: &str = "cmd-enter";
     } else {
-        // On linux and windows, the CmdEnter EditorAction is bound to ctrl-shift-enter.
+        // On linux, the CmdEnter EditorAction is bound to ctrl-shift-enter.
         const CMD_ENTER_KEYBINDING: &str =  "ctrl-shift-enter";
     }
 }
@@ -9543,13 +9543,7 @@ impl Input {
                                         let absolute_path = git_repo_path.join(file_path);
 
                                         // Try to get relative path if it's shorter
-                                        let is_wsl = self
-                                            .active_session(ctx)
-                                            .map(|session| session.is_wsl())
-                                            .unwrap_or(false);
-
                                         let relative_path = warp_util::path::to_relative_path(
-                                            is_wsl,
                                             &absolute_path,
                                             Path::new(pwd),
                                         );
@@ -9642,22 +9636,11 @@ impl Input {
                 let num_attached =
                     self.handle_pasted_or_dragdropped_image_filepaths(image_filepaths.clone(), ctx);
 
-                // If any attachment failed, insert all dropped image paths as text. Apply the
-                // same session-aware path transformation that the editor uses for dropped
-                // non-image paths so the fallback matches the primary drop flow (e.g.
-                // `/mnt/c/...` in a WSL session).
+                // If any attachment failed, insert all dropped image paths as text.
                 if num_attached < image_filepaths.len() {
                     let shell_family = self.editor.read(ctx, |editor, _| editor.shell_family());
-                    let converter = self
-                        .active_session(ctx)
-                        .as_deref()
-                        .and_then(Session::windows_path_converter);
-                    let transformed: Vec<String> = match converter {
-                        Some(convert) => image_filepaths.iter().map(|p| convert(p)).collect(),
-                        None => image_filepaths.clone(),
-                    };
                     let paths_str =
-                        warpui::clipboard_utils::escaped_paths_str(&transformed, shell_family);
+                        warpui::clipboard_utils::escaped_paths_str(image_filepaths, shell_family);
 
                     self.editor.update(ctx, |editor, ctx| {
                         editor.user_insert(&paths_str, ctx);
@@ -13083,12 +13066,8 @@ impl Input {
             .session_id()
             .and_then(|session_id| self.sessions.as_ref(ctx).get(session_id));
         if let Some(session) = active_session {
-            let transformer: Option<PathTransformerFn> = session
-                .windows_path_converter()
-                .map(|convert| Box::new(convert) as PathTransformerFn);
             self.editor.update(ctx, |editor, _| {
                 editor.set_shell_family(session.shell().shell_type().into());
-                editor.set_drag_drop_path_transformer(transformer);
             });
             self.input_suggestions.update(ctx, |input_suggestions, _| {
                 input_suggestions.set_path_separators(session.path_separators());

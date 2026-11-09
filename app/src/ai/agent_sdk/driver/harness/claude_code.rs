@@ -17,7 +17,6 @@ use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_events::AgentEventStreamClient;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::terminal::model::block::BlockId;
-use crate::terminal::model::session::ExecuteCommandOptions;
 use crate::terminal::CLIAgent;
 
 use super::super::terminal::{CommandHandle, TerminalDriver};
@@ -235,12 +234,7 @@ impl ClaudeHarnessRunner {
 
         let cli_name = &self.cli_name;
         let output = session
-            .execute_command(
-                &format!("{cli_name} --version"),
-                None,
-                None,
-                ExecuteCommandOptions::default(),
-            )
+            .execute_command(&format!("{cli_name} --version"), None, None)
             .await
             .ok()?;
 

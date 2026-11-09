@@ -10,13 +10,6 @@ pub enum Message {
     /// Indicates that the `EventLoop` should be shut down.
     Shutdown,
 
-    /// Indicates that the child process has exited.
-    ///
-    /// Only used on Windows, as we need to pass this information to the
-    /// event loop via the channel (and cannot use the child event token).
-    #[cfg_attr(not(windows), allow(dead_code))]
-    ChildExited,
-
     /// Instruction to resize the PTY.
     Resize(SizeInfo),
 }

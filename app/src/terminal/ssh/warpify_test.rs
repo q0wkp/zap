@@ -34,7 +34,6 @@ fn get_script(asset_source: AssetSource, ctx: &AppContext) -> String {
     }
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 /// See [assert_script_is_short_enough_mac] for more information.
 fn test_mac_warpification_script_size() {

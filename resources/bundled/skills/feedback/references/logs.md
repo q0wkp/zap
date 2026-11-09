@@ -23,11 +23,4 @@ Linux paths:
 - Preview app logs are typically `~/.local/state/warp-terminal-preview/warp_preview.log*`
 - If the exact channel is unclear, ask the user to open the nearest `warp*.log*` files under `~/.local/state/`
 
-Windows paths:
-
-- Logs live under Warp's local app data state directory.
-- Stable app logs are typically `%LOCALAPPDATA%\warp\Warp\data\logs\warp.log*`
-- Preview app logs are typically `%LOCALAPPDATA%\warp\WarpPreview\data\logs\warp_preview.log*`
-- If the exact channel is unclear, ask the user to look under `%LOCALAPPDATA%\warp\` for the relevant `Warp*` folder and attach the matching `warp*.log*` files from its `data\logs\` directory
-
 If no artifacts are available, say so plainly instead of implying they were checked.

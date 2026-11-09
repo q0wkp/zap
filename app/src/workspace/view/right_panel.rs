@@ -133,7 +133,6 @@ struct CodeReviewState {
 #[cfg(feature = "local_fs")]
 struct CodeReviewSessionEnv {
     is_remote: bool,
-    is_wsl: bool,
 }
 
 impl CodeReviewState {
@@ -453,13 +452,8 @@ impl RightPanelView {
     }
 
     #[cfg(feature = "local_fs")]
-    pub fn update_session_env(
-        &mut self,
-        is_remote: bool,
-        is_wsl: bool,
-        ctx: &mut ViewContext<Self>,
-    ) {
-        self.code_review_session_env = Some(CodeReviewSessionEnv { is_remote, is_wsl });
+    pub fn update_session_env(&mut self, is_remote: bool, ctx: &mut ViewContext<Self>) {
+        self.code_review_session_env = Some(CodeReviewSessionEnv { is_remote });
         ctx.notify();
     }
 
@@ -792,8 +786,6 @@ impl RightPanelView {
                 if let Some(env) = &self.code_review_session_env {
                     if env.is_remote {
                         CodeReviewView::render_remote_state(appearance, button)
-                    } else if env.is_wsl {
-                        CodeReviewView::render_wsl_state(appearance, button)
                     } else {
                         CodeReviewView::render_not_repo_state(appearance, button)
                     }

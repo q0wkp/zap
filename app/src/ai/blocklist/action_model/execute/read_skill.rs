@@ -98,9 +98,6 @@ impl ReadSkillExecutor {
         // - `extract_skill_parent_directory` 只校验路径形状,与 cache hit 时
         //   返回的 path 安全等级一致 —— 都不限定家目录前缀。这是有意的:
         //   project 内 skill (`/some/repo/.agents/skills/...`) 也需要能读。
-        // - Windows 下正则用反斜杠分隔,Linux 风格 `/home/<u>/...` 路径会被
-        //   拒绝;这意味着本兜底对 "Windows 主进程 + WSL session" 不生效,
-        //   是 issue #99 的已知限制(见 PR 描述)。
         // Cache miss fallback 仅在拥有本地文件系统的构建中可用;
         // WASM 等无 fs 构建里 `extract_skill_parent_directory` / `parse_skill`
         // 不存在,自然也无从读盘。

@@ -4467,48 +4467,6 @@ fn test_system_delete_various_unicode_categories() {
     })
 }
 
-#[test]
-fn test_drag_and_drop_files_applies_path_transformer() {
-    App::test((), |mut app| async move {
-        initialize_app(&mut app);
-
-        let (_, view) = app.add_window(WindowStyle::NotStealFocus, |ctx| {
-            EditorView::new(Default::default(), ctx)
-        });
-
-        let paths = || {
-            vec![
-                UserInput::new(r"C:\foo\bar".to_string()),
-                UserInput::new(r"D:\baz".to_string()),
-            ]
-        };
-
-        view.update(&mut app, |view, ctx| {
-            view.set_drag_drop_path_transformer(None);
-            view.drag_and_drop_files(&paths(), ctx);
-            assert_eq!(view.buffer_text(ctx), r"C:\foo\bar D:\baz ");
-        });
-
-        view.update(&mut app, |view, ctx| {
-            view.clear_buffer(ctx);
-            view.set_drag_drop_path_transformer(Some(Box::new(
-                warp_util::path::convert_windows_path_to_wsl,
-            )));
-            view.drag_and_drop_files(&paths(), ctx);
-            assert_eq!(view.buffer_text(ctx), "/mnt/c/foo/bar /mnt/d/baz ");
-        });
-
-        view.update(&mut app, |view, ctx| {
-            view.clear_buffer(ctx);
-            view.set_drag_drop_path_transformer(Some(Box::new(
-                warp_util::path::convert_windows_path_to_msys2,
-            )));
-            view.drag_and_drop_files(&paths(), ctx);
-            assert_eq!(view.buffer_text(ctx), "/c/foo/bar /d/baz ");
-        });
-    });
-}
-
 #[path = "vim_handler_test.rs"]
 mod vim_handler_tests;
 

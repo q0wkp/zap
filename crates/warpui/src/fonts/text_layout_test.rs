@@ -327,7 +327,6 @@ fn test_layout_str() -> Result<()> {
     Ok(())
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_layout_str_with_style() -> Result<()> {
     let (font_db, font_family) = init_fonts();

@@ -552,7 +552,6 @@ type HyperlinksByLocation = Vec<(TextLocation, Vec<(Range<usize>, String)>)>;
 pub(crate) fn collect_output_data_for_link_detection(
     output: &AIAgentOutput,
     current_working_directory: Option<&String>,
-    shell_launch_data: Option<&ShellLaunchData>,
 ) -> (Vec<(String, TextLocation)>, HyperlinksByLocation) {
     let mut texts = Vec::new();
     let mut hyperlinks = Vec::new();
@@ -562,11 +561,7 @@ pub(crate) fn collect_output_data_for_link_detection(
         if let AIAgentActionType::ReadFiles(ReadFilesRequest { locations }) = &action.action {
             for (line_index, file_location) in locations.iter().enumerate() {
                 texts.push((
-                    file_location.to_user_message(
-                        shell_launch_data,
-                        current_working_directory,
-                        None,
-                    ),
+                    file_location.to_user_message(current_working_directory, None),
                     TextLocation::Action {
                         action_index,
                         line_index,

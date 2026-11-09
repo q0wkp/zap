@@ -34,6 +34,8 @@ This is q0wkp/zap, Tianyu Lu's own build of Zap, a terminal forked from Warp. Th
   因为最后我们用的是 zap".
 - On structure: only logic that is truly independent goes in new files, "如果不是就不能这么做,
   大不了我们手动再在zap里实现一次". Don't distort Warp's code to make the port to zap easier.
+- This fork supports only Linux and macOS (decided 2026-11-08); all Windows code, assets and scripts were removed.
+  When porting from Warp, leave out its Windows-only parts (`cfg(windows)` code, ConPTY, WSL/MSYS2 shells).
 - PRs are written in English, also into the user's own forks: "PR 全都用英语!". "PR 的模板要按 /gen-tlu-pr 来".
   Keep talking to the user in Chinese.
 

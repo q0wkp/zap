@@ -696,7 +696,7 @@ pub fn handle_incoming_uri(url: &Url, ctx: &mut AppContext) {
 
     match validate_custom_uri(url) {
         Ok(host) => {
-            #[cfg(any(target_os = "linux", target_os = "freebsd", windows))]
+            #[cfg(any(target_os = "linux", target_os = "freebsd"))]
             let primary_window_id = host.window_behavior_hint().resolve(primary_window_id, ctx);
             host.handle(primary_window_id, url, ctx);
         }

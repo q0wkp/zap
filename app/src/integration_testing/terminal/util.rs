@@ -1,11 +1,8 @@
-use async_io::block_on;
 use command::blocking::Command;
 use std::borrow::Cow;
 use std::iter;
 use std::path::{Path, PathBuf};
 use warp_core::command::ExitCode;
-#[cfg(windows)]
-use warp_core::paths::base_config_dir;
 
 use rand::Rng;
 use rand::{distributions::Alphanumeric, thread_rng};
@@ -19,22 +16,11 @@ use crate::terminal::{
 
 /// Returns the shell starter along with the version of the shell about to be run.
 pub fn current_shell_starter_and_version() -> (DirectShellStarter, String) {
-    let shell_starter_or_wsl_name = ShellStarter::init(Default::default())
-        .expect("Could not create a shell starter or wsl name");
     let shell_starter_source =
-        block_on(async { shell_starter_or_wsl_name.to_shell_starter_source().await })
-            .expect("Could not create a shell starter source");
+        ShellStarter::init(Default::default()).expect("Could not create a shell starter source");
     let starter = match shell_starter_source {
         ShellStarterSource::Override(starter) => match starter {
             ShellStarter::Direct(direct_shell_starter) => direct_shell_starter,
-            ShellStarter::Wsl(_) => {
-                // TODO(CORE-2302): Support integration tests on Windows (including WSL).
-                todo!("We don't yet support integration tests for WSL shells")
-            }
-            // TODO(CORE-2302): Support integration tests on Windows (including WSL).
-            ShellStarter::MSYS2(_) => {
-                todo!("We don't yet support integration tests for MSYS2")
-            }
             ShellStarter::DockerSandbox(_) => {
                 todo!("We don't yet support integration tests for Docker sandbox shells")
             }
@@ -86,10 +72,7 @@ pub fn current_shell_starter_and_version() -> (DirectShellStarter, String) {
 pub fn default_histfile_directory(shell: &ShellType, home_dir: &Path) -> PathBuf {
     match shell {
         ShellType::Fish => home_dir.join(".local/share/fish"),
-        #[cfg(not(windows))]
         ShellType::PowerShell => home_dir.join(".local/share/powershell/PSReadLine"),
-        #[cfg(windows)]
-        ShellType::PowerShell => base_config_dir().join("Microsoft/Windows/PowerShell/PSReadLine"),
         _ => home_dir.to_owned(),
     }
 }

@@ -620,7 +620,6 @@ settings-about-update-check-now = Check for updates
 settings-about-update-open-release = Download from GitHub
 settings-about-update-install-now = Install now
 settings-about-update-install-hint-macos = The installer will open — drag Zap into your Applications folder to finish.
-settings-about-update-install-hint-windows = The setup wizard will launch — follow the prompts to finish the upgrade.
 settings-about-update-install-hint-linux = The AppImage will be replaced in place and Zap will restart.
 settings-about-export-logs = Export logs…
 settings-about-export-logs-description = Bundles recent app logs (and MCP / update logs when present) plus a diagnostic summary into a zip you choose where to save, so you can share it for troubleshooting.
@@ -1364,12 +1363,9 @@ settings-appearance-window-columns-label = Columns
 settings-appearance-window-rows-label = Rows
 settings-appearance-window-opacity-label = Window Opacity:
 settings-appearance-window-opacity-value = Window Opacity: { $value }
-settings-appearance-window-opacity-not-supported = Transparency is not supported with your graphics drivers.
 settings-appearance-window-opacity-graphics-warning = The selected graphics settings may not support rendering transparent windows.
 settings-appearance-window-opacity-graphics-warning-hint = Try changing the settings for the graphics backend or integrated GPU in Features > System.
 settings-appearance-window-blur-radius = Window Blur Radius: { $value }
-settings-appearance-window-blur-texture-label = Use Window Blur (Acrylic texture)
-settings-appearance-window-blur-texture-not-supported = The selected hardware may not support rendering transparent windows.
 settings-appearance-tools-panel-consistent-label = Tools panel visibility is consistent across tabs
 
 # Input
@@ -2410,7 +2406,6 @@ menu-filetree-open-file = Open file
 menu-filetree-new-file = New file
 menu-filetree-cd-to-directory = cd to directory
 menu-filetree-reveal-finder = Reveal in Finder
-menu-filetree-reveal-explorer = Reveal in Explorer
 menu-filetree-reveal-file-manager = Reveal in file manager
 menu-filetree-rename = Rename
 menu-filetree-delete = Delete
@@ -2747,7 +2742,6 @@ workspace-left-panel-project-explorer = Project explorer
 project-explorer-unavailable-title = Project explorer unavailable
 project-explorer-unavailable-disabled-description = The Project Explorer requires access to your local workspace. Open a new session or navigate to an active session to view.
 project-explorer-unavailable-remote-description = The Project Explorer requires access to your local workspace, which isn’t supported in remote sessions.
-project-explorer-unavailable-wsl-description = The Project Explorer doesn't currently work in WSL.
 workspace-left-panel-global-search = Global search
 workspace-left-panel-warp-drive = Zap Drive
 workspace-left-panel-agent-conversations = Agent conversations
@@ -2988,7 +2982,6 @@ global-search-description = Search in files across your current directories.
 global-search-unavailable-title = Global search unavailable
 global-search-unavailable-description = Global search requires access to your local workspace. Open a new session or navigate to an active session to view.
 global-search-remote-description = Global search requires access to your local workspace, which isn't supported in remote sessions
-global-search-unsupported-session-description = Global search doesn't currently work in Git Bash or WSL.
 global-search-failed = Global search failed.
 
 # Wasm NUX dialog (app/src/wasm_nux_dialog.rs)

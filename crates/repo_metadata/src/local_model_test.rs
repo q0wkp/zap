@@ -1057,9 +1057,6 @@ Thumbs.db
             // Create a symlink to real_dir
             #[cfg(unix)]
             let symlink_created = std::os::unix::fs::symlink(&real_dir, &symlink_dir).is_ok();
-            #[cfg(windows)]
-            let symlink_created =
-                std::os::windows::fs::symlink_dir(&real_dir, &symlink_dir).is_ok();
 
             if symlink_created {
                 // Test that different path representations canonicalize to the same path
@@ -1128,9 +1125,6 @@ Thumbs.db
             // Create symlink to the repo
             #[cfg(unix)]
             let symlink_created = std::os::unix::fs::symlink(&real_repo, &symlink_repo).is_ok();
-            #[cfg(windows)]
-            let symlink_created =
-                std::os::windows::fs::symlink_dir(&real_repo, &symlink_repo).is_ok();
 
             if symlink_created {
                 App::test((), |mut app| async move {

@@ -1,25 +1,9 @@
-// On Windows, we don't want to display a console window when the application is running in release
-// builds. See https://doc.rust-lang.org/reference/runtime.html#the-windows_subsystem-attribute.
-#![cfg_attr(feature = "release_bundle", windows_subsystem = "windows")]
-
 use anyhow::Result;
 use warp_core::{
     channel::{Channel, ChannelConfig, ChannelState},
     features::DEBUG_FLAGS,
     AppId,
 };
-
-#[cfg(all(target_os = "windows", feature = "windows_high_performance_gpu_default"))]
-#[allow(non_upper_case_globals)]
-#[no_mangle]
-#[used]
-pub static NvOptimusEnablement: u32 = 1;
-
-#[cfg(all(target_os = "windows", feature = "windows_high_performance_gpu_default"))]
-#[allow(non_upper_case_globals)]
-#[no_mangle]
-#[used]
-pub static AmdPowerXpressRequestHighPerformance: u32 = 1;
 
 // Zap OSS 构建的入口,简单包一层 warp::run()。
 fn main() -> Result<()> {
@@ -35,10 +19,9 @@ fn main() -> Result<()> {
     if cfg!(debug_assertions) {
         state = state.with_additional_features(DEBUG_FLAGS);
     }
-    // 始终启用 IME marked-text 渲染:winit 的 IME 路径在 macOS / Windows 都支持,
-    // 但若不在此处显式开启,Zap 会把 preedit / 输入合成更新整体丢弃,只剩 OS 的候选窗
-    // 可见 —— 在 Windows 上对日文 / 中文 / 韩文输入都属于实质性损坏。
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    // 始终启用 IME marked-text 渲染:若不在此处显式开启,Zap 会把 preedit / 输入合成更新
+    // 整体丢弃,只剩 OS 的候选窗可见。
+    #[cfg(target_os = "macos")]
     {
         use warp_core::features::FeatureFlag;
         state = state.with_additional_features(&[FeatureFlag::ImeMarkedText]);

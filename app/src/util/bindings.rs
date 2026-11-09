@@ -112,12 +112,10 @@ pub enum CustomAction {
     NewPersonalNotebook,
     NewPersonalEnvVars,
     SearchDrive,
-    // Also used on Linux: `EditorView` only binds Paste to `ctrl-shift-v` by default (see
-    // `cmd_or_ctrl_shift`), so Linux needs the same plain `ctrl-v` compensating binding as Windows.
-    #[cfg(any(windows, target_os = "linux"))]
+    // `EditorView` only binds Paste to `ctrl-shift-v` by default on Linux (see
+    // `cmd_or_ctrl_shift`), so Linux needs a compensating plain `ctrl-v` binding.
+    #[cfg(target_os = "linux")]
     WindowsPaste,
-    #[cfg(windows)]
-    WindowsCopy,
     /// Also applies to legacy Zap AI (toggles the panel)
     NewAgentModePane,
     /// Also applies to legacy Zap AI (attaches the selection to the panel editor)
@@ -265,10 +263,8 @@ pub fn custom_tag_to_keystroke(custom: CustomTag) -> Option<Keystroke> {
         CustomAction::Cut => Keystroke::parse("cmdorctrl-x").ok(),
         CustomAction::Copy => Keystroke::parse(cmd_or_ctrl_shift("c")).ok(),
         CustomAction::Paste => Keystroke::parse(cmd_or_ctrl_shift("v")).ok(),
-        #[cfg(any(windows, target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         CustomAction::WindowsPaste => Keystroke::parse("ctrl-v").ok(),
-        #[cfg(windows)]
-        CustomAction::WindowsCopy => Keystroke::parse("ctrl-c").ok(),
         CustomAction::Undo => Keystroke::parse("cmdorctrl-z").ok(),
         CustomAction::Redo => Keystroke::parse("cmdorctrl-shift-Z").ok(),
         CustomAction::ClearEditor => Keystroke::parse("ctrl-c").ok(),

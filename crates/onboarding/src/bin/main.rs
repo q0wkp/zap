@@ -451,12 +451,6 @@ fn build_appearance(theme: WarpTheme, ctx: &mut AppContext) -> Appearance {
 
 fn load_default_ui_font_family(ctx: &mut AppContext) -> anyhow::Result<FamilyId> {
     Cache::handle(ctx).update(ctx, |font_cache, _| {
-        // On Windows, default to use Segoe UI as the UI font.
-        #[cfg(windows)]
-        if let Ok(font_family_id) = font_cache.load_system_font("Segoe UI") {
-            return Ok(font_family_id);
-        }
-
         font_cache.load_family_from_bytes(
             "Roboto",
             vec![

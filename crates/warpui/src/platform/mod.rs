@@ -5,8 +5,6 @@ pub mod linux;
 pub mod mac;
 #[cfg(target_family = "wasm")]
 pub mod wasm;
-#[cfg(target_os = "windows")]
-pub mod windows;
 
 pub mod headless;
 
@@ -18,8 +16,6 @@ pub mod current {
             pub use super::linux::*;
         } else if #[cfg(target_os = "macos")] {
             pub use super::mac::*;
-        } else if #[cfg(target_os = "windows")] {
-            pub use super::windows::*;
         } else {
             pub use warpui_core::platform::test::*;
         }

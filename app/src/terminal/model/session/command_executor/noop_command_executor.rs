@@ -5,7 +5,7 @@ use async_trait::async_trait;
 
 use crate::terminal::shell::Shell;
 
-use super::{CommandExecutor, CommandOutput, ExecuteCommandOptions};
+use super::{CommandExecutor, CommandOutput};
 
 ///  A "no-op" implementation of `CommandExecutor` to be used as a placeholder `CommandExecutor`
 ///  implementation for remote non-SSH subshell `Session`s when the user has disabled in-band
@@ -29,7 +29,6 @@ impl CommandExecutor for NoOpCommandExecutor {
         _shell: &Shell,
         _current_directory_path: Option<&str>,
         _environment_variables: Option<HashMap<String, String>>,
-        _execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
         Err(anyhow!(
             "Did not execute command; using NoOpCommandExecutor"

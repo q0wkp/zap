@@ -473,7 +473,6 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                         }
                                         group_file_contexts_for_display(
                                             file_contexts,
-                                            props.shell_launch_data,
                                             props.current_working_directory,
                                         )
                                     }
@@ -482,7 +481,6 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                         .iter()
                                         .map(|file| {
                                             file.to_user_message(
-                                                props.shell_launch_data,
                                                 props.current_working_directory,
                                                 None,
                                             )
@@ -1287,7 +1285,6 @@ pub fn render_read_files_text<A: Action>(
         .map(|name| {
             shell_native_absolute_path(
                 name.as_ref(),
-                render_read_file_args.render_context.shell_launch_data,
                 render_read_file_args
                     .render_context
                     .current_working_directory,

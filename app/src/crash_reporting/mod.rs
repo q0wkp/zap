@@ -1,4 +1,4 @@
-#[cfg(linux_or_windows)]
+#[cfg(target_os = "linux")]
 mod local_minidump;
 
 #[cfg(target_os = "linux")]
@@ -10,7 +10,6 @@ use lazy_static::lazy_static;
 use warp_core::channel::Channel;
 use warpui::{r#async::block_on, AppContext, SingletonEntity};
 
-use crate::antivirus::{AntivirusInfo, AntivirusInfoEvent};
 use crate::auth::{AuthStateProvider, UserUid};
 use crate::channel::ChannelState;
 use crate::features::FeatureFlag;
@@ -22,7 +21,7 @@ use warpui::rendering::GPUDeviceInfo;
 use warpui::windowing::state::ApplicationStage;
 use warpui::windowing::{self, StateEvent, WindowManager};
 
-#[cfg(linux_or_windows)]
+#[cfg(target_os = "linux")]
 pub use local_minidump::run_server as run_minidump_server;
 
 lazy_static! {
@@ -54,7 +53,7 @@ fn set_tag_internal(key: Cow<'_, str>, value: Cow<'_, str>) {
         return;
     }
 
-    #[cfg(linux_or_windows)]
+    #[cfg(target_os = "linux")]
     local_minidump::set_tag(key.clone().into_owned(), value.clone().into_owned());
 
     TAGS.write().insert(key.into_owned(), value.into_owned());
@@ -67,17 +66,9 @@ pub(crate) fn set_gpu_device_info(gpu_device_info: GPUDeviceInfo) {
     }
 }
 
-/// Sets the [`AntivirusInfo`] for use in local crash logs.
-/// Only reports the first detected antivirus product.
-pub fn set_antivirus_info(antivirus_info: &AntivirusInfo) {
-    for (key, value) in antivirus_info.to_crash_report_tags() {
-        set_tag(key, value);
-    }
-}
-
 /// Sets the current application lifecycle stage for local crash diagnostics.
 fn set_lifecycle_stage(stage: ApplicationStage) {
-    #[cfg(linux_or_windows)]
+    #[cfg(target_os = "linux")]
     local_minidump::set_tags_from(&stage);
 
     *APPLICATION_LIFECYCLE_STAGE.write() = stage;
@@ -178,14 +169,6 @@ pub(crate) fn init(ctx: &mut AppContext) -> bool {
         }
     });
 
-    let antivirus_info = AntivirusInfo::handle(ctx);
-    ctx.subscribe_to_model(&antivirus_info, |antivirus_info, event, ctx| match event {
-        AntivirusInfoEvent::ScannedComplete => {
-            let antivirus_info = antivirus_info.as_ref(ctx);
-            set_antivirus_info(antivirus_info);
-        }
-    });
-
     let is_crash_reporting_enabled = is_crash_reporting_enabled(ctx);
 
     if is_crash_reporting_enabled {
@@ -237,9 +220,6 @@ fn get_environment() -> Cow<'static, str> {
             let operating_system = "mac";
         } else if #[cfg(target_os = "linux")] {
             let operating_system = "linux";
-        }
-        else if #[cfg(target_os = "windows")] {
-            let operating_system = "windows";
         } else {
            let operating_system = "";
         }
@@ -304,7 +284,7 @@ fn init_local_crash_reporting(
 
 /// Stops local minidump crash reporting if it was started by this process.
 pub fn uninit_crash_reporting() {
-    #[cfg(linux_or_windows)]
+    #[cfg(target_os = "linux")]
     local_minidump::uninit();
 }
 
@@ -411,15 +391,6 @@ impl ToCrashReportTags for Option<windowing::System> {
             self.as_ref()
                 .map(|windowing_system| windowing_system.to_string())
                 .unwrap_or_else(|| "unknown".to_owned()),
-        )]
-    }
-}
-
-impl ToCrashReportTags for &AntivirusInfo {
-    fn to_crash_report_tags(&self) -> impl IntoIterator<Item = (&str, String)> {
-        [(
-            "warp.window.antivirus.name",
-            self.get().unwrap_or("none").into(),
         )]
     }
 }

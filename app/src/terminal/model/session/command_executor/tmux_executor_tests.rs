@@ -1,4 +1,4 @@
-use crate::terminal::{model::session::ExecuteCommandOptions, shell::ShellType};
+use crate::terminal::shell::ShellType;
 
 use super::*;
 use warpui::App;
@@ -13,11 +13,8 @@ async fn execute_test_command<F>(
     let shell = Shell::new(ShellType::Zsh, None, None, Default::default(), None);
     let test_command_result = executor
         .execute_command(
-            command,
-            &shell,
-            /*current_directory_path=*/ None,
+            command, &shell, /*current_directory_path=*/ None,
             /*environment_variables=*/ None,
-            ExecuteCommandOptions::default(),
         )
         .await;
 

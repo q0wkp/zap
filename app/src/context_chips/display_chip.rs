@@ -712,15 +712,9 @@ impl DisplayChip {
                         ctx.focus_self();
                     }
                     NodeVersionPopupEvent::InstallNvm => {
-                        ctx.emit(PromptDisplayChipEvent::RunAgentQuery(if cfg!(windows) {
-                            // nvm-windows has documented issues when installed alongside an existing Node.js installation.
-                            // https://github.com/coreybutler/nvm-windows?tab=readme-ov-file#star-star-uninstall-any-pre-existing-node-installations-star-star
-                            // Prompt the agent to remove this first.
-                            "Uninstall existing Node.js installation and install nvm for me"
-                                .to_string()
-                        } else {
-                            "Install nvm for me".to_string()
-                        }));
+                        ctx.emit(PromptDisplayChipEvent::RunAgentQuery(
+                            "Install nvm for me".to_string(),
+                        ));
                         me.close_node_version_popup(ctx);
                     }
                     NodeVersionPopupEvent::InstallLatestNodeVersion => {

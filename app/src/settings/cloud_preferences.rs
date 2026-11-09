@@ -72,9 +72,6 @@ impl Platform {
             return Self::Linux;
         }
 
-        if cfg!(all(not(target_family = "wasm"), target_os = "windows")) {
-            return Self::Windows;
-        }
         if cfg!(target_family = "wasm") {
             return Self::Web;
         }
