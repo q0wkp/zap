@@ -149,7 +149,7 @@ pub const ACTIVATION_HOTKEY_KEYBINDING: &str = "ActivationHotkeyKeybinding";
 pub const DISMISSED_AI_ASSISTANT_WELCOME_KEY: &str = "DismissedWarpAIWarmWelcome";
 
 pub const TIMES_TO_SHOW_AUTOSUGGESTION_HINT: i8 = 2;
-pub const QUAKE_WINDOW_AUTOHIDE_SUPPORTED: bool = cfg!(any(target_os = "macos", windows));
+pub const QUAKE_WINDOW_AUTOHIDE_SUPPORTED: bool = cfg!(target_os = "macos");
 
 lazy_static! {
     pub static ref DEFAULT_QUAKE_MODE_SIZE_PERCENTAGES: HashMap<QuakeModePinPosition, SizePercentages> =

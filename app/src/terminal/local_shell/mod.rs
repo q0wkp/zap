@@ -7,7 +7,6 @@ use std::{collections::HashMap, path::PathBuf, process::Stdio};
 use super::model::session::LocalCommandExecutor;
 use super::{local_tty::shell::ShellStarter, shell::ShellType};
 use crate::terminal::available_shells::AvailableShells;
-use crate::terminal::local_tty::shell::ShellStarterSourceOrWslName;
 #[cfg(feature = "local_tty")]
 use command::r#async::Command;
 use warpui::{Entity, ModelContext, SingletonEntity};
@@ -17,8 +16,6 @@ pub enum LocalShellState {
     /// The shell for a session has been loaded.
     Loaded(LocalShell),
     /// The shell state for a local session has not been loaded.
-    /// Loading shell information for WSL is extremely expensive and can take upwards of 10s to
-    /// load.
     NotLoaded,
 }
 
@@ -84,19 +81,13 @@ impl LocalShellState {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
         let preferred_shell = AvailableShells::handle(ctx)
             .read(ctx, |shells, ctx| shells.get_user_preferred_shell(ctx));
-        let shell_starter_source_or_wsl_name = match ShellStarter::init(preferred_shell) {
-            Some(shell_starter_source_or_wsl_name) => shell_starter_source_or_wsl_name,
-            None => return LocalShellState::NotLoaded,
+        let Some(starter_source) = ShellStarter::init(preferred_shell) else {
+            return LocalShellState::NotLoaded;
         };
 
-        let shell_starter = match shell_starter_source_or_wsl_name {
-            ShellStarterSourceOrWslName::Source(starter_source) => match starter_source.into() {
-                ShellStarter::Direct(starter) | ShellStarter::MSYS2(starter) => starter,
-                ShellStarter::DockerSandbox(docker_starter) => docker_starter.direct,
-                ShellStarter::Wsl(_) => return LocalShellState::NotLoaded,
-            },
-            // TODO(CORE-3020): Implement WSL for the Local Shell model.
-            ShellStarterSourceOrWslName::WSLName { .. } => return LocalShellState::NotLoaded,
+        let shell_starter = match starter_source.into() {
+            ShellStarter::Direct(starter) => starter,
+            ShellStarter::DockerSandbox(docker_starter) => docker_starter.direct,
         };
 
         let shell_path = shell_starter.logical_shell_path().to_owned();

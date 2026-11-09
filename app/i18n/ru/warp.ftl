@@ -620,7 +620,6 @@ settings-about-update-check-now = Проверить обновления
 settings-about-update-open-release = Скачать с GitHub
 settings-about-update-install-now = Установить сейчас
 settings-about-update-install-hint-macos = Откроется установщик — перетащите Zap в папку «Программы», чтобы завершить.
-settings-about-update-install-hint-windows = Запустится мастер установки — следуйте подсказкам, чтобы завершить обновление.
 settings-about-update-install-hint-linux = Файл AppImage будет заменен на месте, и Zap перезапустится.
 settings-about-export-logs = Экспортировать журналы…
 settings-about-export-logs-description = Собирает недавние журналы приложения (а также журналы MCP и обновлений, если они есть) и диагностическую сводку в zip-архив, для которого вы выбираете место сохранения, чтобы можно было поделиться им для устранения неполадок.
@@ -1364,12 +1363,9 @@ settings-appearance-window-columns-label = Столбцы
 settings-appearance-window-rows-label = Строки
 settings-appearance-window-opacity-label = Прозрачность окна:
 settings-appearance-window-opacity-value = Прозрачность окна: { $value }
-settings-appearance-window-opacity-not-supported = Прозрачность не поддерживается вашими графическими драйверами.
 settings-appearance-window-opacity-graphics-warning = Выбранные графические настройки могут не поддерживать отрисовку прозрачных окон.
 settings-appearance-window-opacity-graphics-warning-hint = Попробуйте изменить настройки графического бэкенда или интегрированного GPU в разделе «Функции» > «Система».
 settings-appearance-window-blur-radius = Радиус размытия окна: { $value }
-settings-appearance-window-blur-texture-label = Использовать размытие окна (текстура Acrylic)
-settings-appearance-window-blur-texture-not-supported = Выбранное оборудование может не поддерживать отрисовку прозрачных окон.
 settings-appearance-tools-panel-consistent-label = Видимость панели инструментов одинакова во всех вкладках
 
 # Input
@@ -2414,7 +2410,6 @@ menu-filetree-open-file = Открыть файл
 menu-filetree-new-file = Новый файл
 menu-filetree-cd-to-directory = cd в директорию
 menu-filetree-reveal-finder = Показать в Finder
-menu-filetree-reveal-explorer = Показать в Проводнике
 menu-filetree-reveal-file-manager = Показать в файловом менеджере
 menu-filetree-rename = Переименовать
 menu-filetree-delete = Удалить
@@ -2757,7 +2752,6 @@ workspace-left-panel-project-explorer = Проводник проекта
 project-explorer-unavailable-title = Проводник проекта недоступен
 project-explorer-unavailable-disabled-description = Проводник проекта требует доступ к локальному рабочему пространству. Откройте новую сессию или перейдите к активной сессии, чтобы просмотреть.
 project-explorer-unavailable-remote-description = Проводник проекта требует доступ к локальному рабочему пространству, что не поддерживается в удаленных сессиях.
-project-explorer-unavailable-wsl-description = Проводник проекта сейчас не работает в WSL.
 workspace-left-panel-global-search = Глобальный поиск
 workspace-left-panel-warp-drive = Zap Drive
 workspace-left-panel-agent-conversations = Разговоры агента
@@ -3002,7 +2996,6 @@ global-search-description = Поиск по файлам во всех теку�
 global-search-unavailable-title = Глобальный поиск недоступен
 global-search-unavailable-description = Для глобального поиска требуется доступ к локальному рабочему пространству. Откройте новую сессию или перейдите к активной сессии для просмотра.
 global-search-remote-description = Для глобального поиска требуется доступ к локальному рабочему пространству, что не поддерживается в удаленных сессиях
-global-search-unsupported-session-description = Глобальный поиск пока не работает в Git Bash и WSL.
 global-search-failed = Не удалось выполнить глобальный поиск.
 
 # Wasm NUX dialog (app/src/wasm_nux_dialog.rs)

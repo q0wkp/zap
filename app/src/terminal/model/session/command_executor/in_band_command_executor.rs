@@ -25,8 +25,6 @@ use crate::terminal::model::session::command_executor::{
 use crate::terminal::SizeInfo;
 use warp_completer::completer::{CommandExitStatus, CommandOutput};
 
-use super::ExecuteCommandOptions;
-
 #[derive(Clone, Debug)]
 pub struct InBandCommand {
     pub command: String,
@@ -394,7 +392,6 @@ impl CommandExecutor for InBandCommandExecutor {
         shell: &Shell,
         _current_directory_path: Option<&str>,
         _environment_variables: Option<HashMap<String, String>>,
-        _execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
         let command_id = DateTime::now().timestamp_micros().to_string();
 

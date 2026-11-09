@@ -48,15 +48,11 @@ const BYTE_ORDER_MARK: &str = "\u{FEFF}";
 /// to spawn a subshell by `poetry shell` uses blocking PTY reads and writes, which results in a
 /// deadlock when attempting to write the whole bootstrap script to the PTY; RC file-based
 /// bootstrap is the only known way to bootstrap such subshells successfully.
-///
-/// We use RC-file based bootstrap for MSYS2 because it has slow PTY throughput.
 #[cfg(feature = "local_fs")]
 pub fn should_use_rc_file_bootstrap_method(
     shell_type: ShellType,
     session_info: &SessionInfo,
 ) -> bool {
-    use super::ShellLaunchData;
-
     let session_type = &session_info.session_type;
     match session_type {
         BootstrapSessionType::Local => {
@@ -69,17 +65,10 @@ pub fn should_use_rc_file_bootstrap_method(
                 .as_ref()
                 .map(|info| PIPENV_SUBSHELL_COMMAND_REGEX.is_match(info.spawning_command.as_str()))
                 .unwrap_or(false);
-            let is_msys2 = session_info
-                .launch_data
-                .as_ref()
-                .is_some_and(|data| matches!(data, ShellLaunchData::MSYS2 { .. }));
             shell_type == ShellType::Fish
                 || shell_type == ShellType::PowerShell
                 || is_poetry_subshell
-                || ((is_pipenv_subshell
-                    || (subshell_initialization_info.is_some() && cfg!(windows)))
-                    && shell_type == ShellType::Zsh)
-                || is_msys2
+                || (is_pipenv_subshell && shell_type == ShellType::Zsh)
         }
         BootstrapSessionType::WarpifiedRemote => false,
     }
@@ -153,12 +142,7 @@ pub fn script_for_shell(shell_type: ShellType, assets: &dyn AssetProvider) -> Co
                                 let data = assets.get(path).unwrap_or_else(|_| {
                                     panic!("failed to retrieve {path} from assets")
                                 });
-                                let data_string =
-                                    unsafe { String::from_utf8_unchecked(data.to_vec()) };
-                                data_string.replace(
-                                    "@@USING_CON_PTY_BOOLEAN@@",
-                                    &(cfg!(windows).to_string()),
-                                )
+                                unsafe { String::from_utf8_unchecked(data.to_vec()) }
                             })
                             .split('\n')
                             .map(trim_and_borrow_line)
@@ -279,7 +263,7 @@ fn init_subshell_script_for_unknown_shell(assets: &dyn AssetProvider) -> String 
 ///
 /// Gated on `unix` because the sole caller today is the Unix Docker
 /// sandbox spawn path (`local_tty::unix::prepare_docker_sandbox`); on
-/// Windows/wasm the function is dead code.
+/// wasm the function is dead code.
 #[cfg(unix)]
 pub fn raw_init_shell_script_for_shell(
     shell_type: ShellType,
@@ -291,7 +275,7 @@ pub fn raw_init_shell_script_for_shell(
         ShellType::Fish => "bundled/bootstrap/fish_init_shell.sh",
         ShellType::PowerShell => "bundled/bootstrap/pwsh_init_shell.ps1",
     };
-    load_script(file, assets).replace("@@USING_CON_PTY_BOOLEAN@@", &(cfg!(windows).to_string()))
+    load_script(file, assets)
 }
 
 /// Returns the script in the file at `file_path` to be passed as a single-quoted argument in the
@@ -304,9 +288,7 @@ pub fn raw_init_shell_script_for_shell(
 ///   however, that you still cannot use a 'partial line' comment, since this logic only considers
 ///   whole lines.
 fn load_and_escape_script(file_path: &str, assets: &dyn AssetProvider) -> String {
-    load_script(file_path, assets)
-        .replace('\'', r#"'"'"'"#)
-        .replace("@@USING_CON_PTY_BOOLEAN@@", &(cfg!(windows).to_string()))
+    load_script(file_path, assets).replace('\'', r#"'"'"'"#)
 }
 
 fn load_script(file_path: &str, assets: &dyn AssetProvider) -> String {

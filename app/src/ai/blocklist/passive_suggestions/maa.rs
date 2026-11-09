@@ -270,14 +270,12 @@ impl PassiveSuggestionsModel {
                                     .as_ref(ctx)
                                     .current_working_directory()
                                     .cloned();
-                                let shell = me.active_session.as_ref(ctx).shell_launch_data(ctx);
 
                                 let diffs: Vec<FileDiff> = applied_diffs
                                     .into_iter()
                                     .map(|diff: ai::diff_validation::AIRequestedCodeDiff| {
                                         let path = host_native_absolute_path(
                                             diff.file_name.as_str(),
-                                            &shell,
                                             &cwd,
                                         );
                                         FileDiff::new(diff.original_content, path, diff.diff_type)
@@ -483,8 +481,7 @@ impl PassiveSuggestionsModel {
             if let Some(current_working_directory) = block_completed.serialized_block.pwd.clone() {
                 let block_contents =
                     format!("{}\n{}", &block_context.command, &block_context.output);
-                let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
-                let shell_for_detection = shell.clone();
+                let shell_for_detection = self.active_session.as_ref(ctx).shell_launch_data(ctx);
                 let current_working_directory_for_detection = current_working_directory.clone();
                 let terminal_view_id = self.terminal_view_id;
 
@@ -527,7 +524,7 @@ impl PassiveSuggestionsModel {
                         };
 
                         me.pending_file_read_handle =
-                            Some(ctx.spawn(read_files(file_locations, current_working_directory, shell), move |me, relevant_files, ctx| {
+                            Some(ctx.spawn(read_files(file_locations, current_working_directory), move |me, relevant_files, ctx| {
                                 me.pending_file_read_handle = None;
                                 supported_tools.push(warp_multi_agent_api::ToolType::ApplyFileDiffs);
                                 me.send_shell_command_completed_request(
@@ -873,12 +870,10 @@ fn get_allowed_file_locations_for_paths(
 async fn read_files(
     file_locations: Vec<FileLocations>,
     current_working_directory: String,
-    shell: Option<ShellLaunchData>,
 ) -> Vec<FileContext> {
     let file_future = read_local_file_context(
         &file_locations,
         Some(current_working_directory),
-        shell,
         None,
         // TODO (suraj): do something smarter than a single, fixed limit.
         Some(500000),

@@ -40,8 +40,6 @@ use crate::notebooks::{NotebookObject, NotebookObjectModel};
 use crate::settings::import::model::ImportedConfigModel;
 use crate::settings::{AliasExpansionSettings, AppEditorSettings, InputBoxType, PrivacySettings};
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
-#[cfg(windows)]
-use crate::system::SystemInfo;
 use crate::system::SystemStats;
 use crate::terminal::alt_screen_reporting::AltScreenReporting;
 use crate::terminal::event::BootstrappedEvent;
@@ -175,11 +173,6 @@ pub fn initialize_app(app: &mut App) {
             settings_file_error: None,
         })
     });
-
-    #[cfg(windows)]
-    {
-        app.add_singleton_model(SystemInfo::new);
-    }
 
     app.update(experiments::init);
     AltScreenReporting::register(app);
@@ -334,11 +327,8 @@ pub async fn add_window_with_bootstrapped_terminal_and_window_id(
 ) -> (WindowId, ViewHandle<TerminalView>) {
     let tips_model = app.add_model(|_| TipsCompleted::default());
 
-    let shell_starter_source = ShellStarter::init(Default::default())
-        .expect("Could not create a shell starter source or wsl name")
-        .to_shell_starter_source()
-        .await
-        .expect("Could not create a shell starter source");
+    let shell_starter_source =
+        ShellStarter::init(Default::default()).expect("Could not create a shell starter source");
     let shell_type = shell_starter_source.shell_type();
 
     let session_info = session_info
@@ -1299,7 +1289,6 @@ fn test_history_up_multiline_vim() {
 /// complexity of setting up that test. As that module depends on a TerminalModel with a valid
 /// BlockList, it was easier to utilize the boilerplate local to this module. Long-term, some of
 /// these helpers should move into shared test utils to make setup easier.
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_histignorespace_support_in_zsh() {
     let session_id: SessionId = 1.into();
@@ -2065,7 +2054,6 @@ fn test_tab_completion() {
     });
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_tab_completion_with_selection() {
     App::test((), |mut app| async move {
@@ -3797,7 +3785,6 @@ fn test_cursor_movement() {
     });
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_newline_insertion() {
     App::test((), |mut app| async move {
@@ -3861,7 +3848,6 @@ fn test_should_not_insert_newline_on_enter_in_empty_buffer() {
     })
 }
 
-#[cfg_attr(windows, ignore = "TODO(CORE-3626)")]
 #[test]
 fn test_should_insert_newline_on_enter() {
     App::test((), |mut app| async move {

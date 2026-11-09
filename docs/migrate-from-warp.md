@@ -17,7 +17,7 @@ below. Always migrate from OpenWarp first if both apply.
 
 This guide deliberately does **not** cover command history, the SQLite
 database, Drive objects, or any credentials. Those live in stores that are
-either machine-bound (Keychain / DPAPI / libsecret) or schema-coupled and are
+either machine-bound (Keychain / libsecret) or schema-coupled and are
 not safe to copy across forks.
 
 ---
@@ -32,41 +32,36 @@ Zap (and OpenWarp / upstream Warp before it) splits its on-disk state into
 - **home dotfile** — `.mcp.json`, `skills/`
 
 On macOS all three categories coincide under a single home dotfile directory
-(`~/.warp/`, `~/.openwarp/`, or `~/.zap/`). On Linux and Windows they live in
-**three different places** following XDG conventions on Linux and the
-`directories` crate layout on Windows. The migration scripts below take care
-of placing each file in the correct destination per platform.
+(`~/.warp/`, `~/.openwarp/`, or `~/.zap/`). On Linux they live in
+**three different places** following XDG conventions. The migration scripts
+below take care of placing each file in the correct destination per platform.
 
 ### Zap destination paths
 
-| Category | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.zap/` | `${XDG_CONFIG_HOME:-~/.config}/zap/` | `%LOCALAPPDATA%\zap\Zap\config\` |
-| data | `~/.zap/` | `${XDG_DATA_HOME:-~/.local/share}/zap/` | `%APPDATA%\zap\Zap\data\` |
-| home dotfile | `~/.zap/` | `~/.zap/` | `%USERPROFILE%\.zap\` |
+| Category | macOS | Linux |
+|---|---|---|
+| config | `~/.zap/` | `${XDG_CONFIG_HOME:-~/.config}/zap/` |
+| data | `~/.zap/` | `${XDG_DATA_HOME:-~/.local/share}/zap/` |
+| home dotfile | `~/.zap/` | `~/.zap/` |
 
 ### OpenWarp source paths
 
-| Category | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.openwarp/` | `${XDG_CONFIG_HOME:-~/.config}/openwarp/` | `%LOCALAPPDATA%\openwarp\OpenWarp\config\` |
-| data | `~/.openwarp/` | `${XDG_DATA_HOME:-~/.local/share}/openwarp/` | `%APPDATA%\openwarp\OpenWarp\data\` |
-| home dotfile | `~/.openwarp/` | `~/.openwarp/` | `%USERPROFILE%\.openwarp\` |
+| Category | macOS | Linux |
+|---|---|---|
+| config | `~/.openwarp/` | `${XDG_CONFIG_HOME:-~/.config}/openwarp/` |
+| data | `~/.openwarp/` | `${XDG_DATA_HOME:-~/.local/share}/openwarp/` |
+| home dotfile | `~/.openwarp/` | `~/.openwarp/` |
 
 ### Upstream Warp source paths
 
-| Category | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.warp/` | `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/` | `%LOCALAPPDATA%\warp\Warp-Terminal\config\` |
-| data | `~/.warp/` | `${XDG_DATA_HOME:-~/.local/share}/warp-terminal/` | `%APPDATA%\warp\Warp-Terminal\data\` |
-| home dotfile | `~/.warp/` | `~/.warp/` | `%USERPROFILE%\.warp\` |
+| Category | macOS | Linux |
+|---|---|---|
+| config | `~/.warp/` | `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/` |
+| data | `~/.warp/` | `${XDG_DATA_HOME:-~/.local/share}/warp-terminal/` |
+| home dotfile | `~/.warp/` | `~/.warp/` |
 
 > The Linux directory name `warp-terminal` matches the Linux package name
-> (e.g. `/opt/warpdotdev/warp-terminal/` on Debian/Ubuntu). The exact Windows
-> organization folder may differ depending on how Warp was packaged; if you
-> can't find `%APPDATA%\warp\Warp-Terminal` (or `%LOCALAPPDATA%\warp\Warp-Terminal`),
-> check the actual `%APPDATA%` / `%LOCALAPPDATA%` location your Warp install
-> uses.
+> (e.g. `/opt/warpdotdev/warp-terminal/` on Debian/Ubuntu).
 
 ---
 
@@ -133,36 +128,6 @@ copy "$src_home"   "$dst_home"   .mcp.json
 copy "$src_home"   "$dst_home"   skills
 ```
 
-**Windows (PowerShell)**
-
-```powershell
-$src_config = "$env:LOCALAPPDATA\openwarp\OpenWarp\config"
-$src_data   = "$env:APPDATA\openwarp\OpenWarp\data"
-$src_home   = "$env:USERPROFILE\.openwarp"
-
-$dst_config = "$env:LOCALAPPDATA\zap\Zap\config"
-$dst_data   = "$env:APPDATA\zap\Zap\data"
-$dst_home   = "$env:USERPROFILE\.zap"
-New-Item -ItemType Directory -Force -Path $dst_config, $dst_data, $dst_home | Out-Null
-
-function Copy-IfMissing($srcDir, $dstDir, $name) {
-  $from = Join-Path $srcDir $name
-  $to   = Join-Path $dstDir $name
-  if ((Test-Path $from) -and -not (Test-Path $to)) {
-    Copy-Item -Path $from -Destination $to -Recurse
-  }
-}
-
-Copy-IfMissing $src_config $dst_config settings.toml
-Copy-IfMissing $src_config $dst_config keybindings.yaml
-Copy-IfMissing $src_data   $dst_data   themes
-Copy-IfMissing $src_data   $dst_data   workflows
-Copy-IfMissing $src_data   $dst_data   launch_configurations
-Copy-IfMissing $src_data   $dst_data   tab_configs
-Copy-IfMissing $src_home   $dst_home   .mcp.json
-Copy-IfMissing $src_home   $dst_home   skills
-```
-
 The `[ ! -e ... ]` / `-not (Test-Path $to)` guard avoids overwriting anything
 you might have already set in Zap. Drop it if you'd rather have OpenWarp's
 values win.
@@ -204,12 +169,12 @@ Same eight items as above:
 
 - **`user_preferences.json`** — a private store under
   `~/Library/Application Support/dev.warp.Warp/` (macOS) or the equivalent
-  state directory on Linux/Windows. Mixes user preferences with auth tokens,
+  state directory on Linux. Mixes user preferences with auth tokens,
   machine-bound IDs and cached cloud state. Copying it can leak identity and
   confuse Zap's auth state. Zap defaults are already privacy-friendly.
 - **`warp.sqlite`** (and its `-wal` / `-shm` sidecars) — schema is coupled
   to upstream Warp and not guaranteed to be compatible with Zap's migrations.
-- **Keychain / DPAPI / libsecret entries** — bound to the Warp bundle /
+- **Keychain / libsecret entries** — bound to the Warp bundle /
   service name, useless to Zap.
 
 ### Steps
@@ -255,36 +220,6 @@ copy "$src_home"   "$dst_home"   .mcp.json
 copy "$src_home"   "$dst_home"   skills
 ```
 
-**Windows (PowerShell)**
-
-```powershell
-$src_config = "$env:LOCALAPPDATA\warp\Warp-Terminal\config"
-$src_data   = "$env:APPDATA\warp\Warp-Terminal\data"
-$src_home   = "$env:USERPROFILE\.warp"
-
-$dst_config = "$env:LOCALAPPDATA\zap\Zap\config"
-$dst_data   = "$env:APPDATA\zap\Zap\data"
-$dst_home   = "$env:USERPROFILE\.zap"
-New-Item -ItemType Directory -Force -Path $dst_config, $dst_data, $dst_home | Out-Null
-
-function Copy-IfMissing($srcDir, $dstDir, $name) {
-  $from = Join-Path $srcDir $name
-  $to   = Join-Path $dstDir $name
-  if ((Test-Path $from) -and -not (Test-Path $to)) {
-    Copy-Item -Path $from -Destination $to -Recurse
-  }
-}
-
-Copy-IfMissing $src_config $dst_config settings.toml
-Copy-IfMissing $src_config $dst_config keybindings.yaml
-Copy-IfMissing $src_data   $dst_data   themes
-Copy-IfMissing $src_data   $dst_data   workflows
-Copy-IfMissing $src_data   $dst_data   launch_configurations
-Copy-IfMissing $src_data   $dst_data   tab_configs
-Copy-IfMissing $src_home   $dst_home   .mcp.json
-Copy-IfMissing $src_home   $dst_home   skills
-```
-
 Your original Warp data is never touched — Warp itself keeps working.
 
 ---
@@ -313,13 +248,6 @@ rm -rf ~/.zap
 rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/zap"
 rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/zap"
 rm -rf "$HOME/.zap"
-```
-
-```powershell
-# Windows
-Remove-Item -Recurse -Force "$env:APPDATA\zap"
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\zap"
-Remove-Item -Recurse -Force "$env:USERPROFILE\.zap"
 ```
 
 The OpenWarp and Warp source directories are never touched by this guide.

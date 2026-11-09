@@ -5,8 +5,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-#[cfg(windows)]
-use warp_util::path::is_network_resource;
 use warp_util::path::{CleanPathResult, LineAndColumnArg};
 
 use crate::terminal::model::grid::grid_handler::{ContainsPoint, Link};
@@ -122,13 +120,6 @@ fn is_path_valid(
     clean_path_result: &CleanPathResult,
     validation_ctx: &LinkValidationContext,
 ) -> bool {
-    // Checking for the existence of a network resource takes a long time (~15s),
-    // and hangs the UI, so we skip validating it.
-    #[cfg(windows)]
-    if is_network_resource(path) {
-        return false;
-    }
-
     // Zap:远端 SSH 会话的文件不在本地磁盘上,`fs::metadata` 必然失败。
     // 改用 daemon `ListDirectory` 缓存下来的真实目录列表精确校验:候选解析
     // 路径有效 ⇔ 其父目录恰好等于缓存的 cwd 且其文件名是该目录下的已知子项。

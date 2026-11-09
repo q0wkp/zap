@@ -12,8 +12,6 @@ use warpui::{notification::UserNotification, Presenter, WindowInvalidation};
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
 use crate::ai::agent::task::TaskId;
-#[cfg(windows)]
-use crate::ai::blocklist::block::cli::CLISubagentViewEvent;
 use crate::ai::blocklist::block::cli_controller::{
     CLISubagentEvent, LongRunningCommandControlState, UserTakeOverReason,
 };
@@ -757,57 +755,6 @@ fn finished_cli_subagent_skips_rebuild_when_block_missing() {
                 "FinishedSubagent should not rebuild a card when the block no longer exists"
             );
         });
-    });
-}
-
-#[cfg(windows)]
-#[test]
-fn restored_cli_subagent_windows_ctrl_c_does_not_write_to_pty() {
-    App::test((), |mut app| async move {
-        initialize_app_for_terminal_view(&mut app);
-
-        let terminal = add_window_with_terminal(&mut app, None);
-        let pty_writes: Rc<RefCell<Vec<Vec<u8>>>> = Rc::new(RefCell::new(Vec::new()));
-        let writes = pty_writes.clone();
-        app.update(|ctx| {
-            ctx.subscribe_to_view(&terminal, move |_, event, _| {
-                if let Event::WriteBytesToPty { bytes } = event {
-                    writes.borrow_mut().push(bytes.to_vec());
-                }
-            });
-        });
-
-        terminal.update(&mut app, |view, ctx| {
-            // 让 Ctrl-C 的 live 路径具备可观察副作用：如果被转发，会写 ETX 到 PTY。
-            view.model
-                .lock()
-                .simulate_long_running_block("sleep 10", "running");
-
-            view.handle_cli_subagent_view_event(
-                view.view_id,
-                &CLISubagentViewEvent::WindowsCtrlC,
-                false,
-                ctx,
-            );
-        });
-        assert!(
-            pty_writes.borrow().is_empty(),
-            "restored CLI subagent Ctrl-C should not reach the live terminal"
-        );
-
-        terminal.update(&mut app, |view, ctx| {
-            view.handle_cli_subagent_view_event(
-                view.view_id,
-                &CLISubagentViewEvent::WindowsCtrlC,
-                true,
-                ctx,
-            );
-        });
-        assert_eq!(
-            pty_writes.borrow().as_slice(),
-            &[vec![warp_terminal::model::escape_sequences::C0::ETX]],
-            "live CLI subagent Ctrl-C should still forward to the active terminal"
-        );
     });
 }
 

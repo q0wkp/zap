@@ -36,7 +36,6 @@ use crate::platform::{
 use crate::r#async::Timer;
 use crate::rendering::wgpu::renderer;
 use crate::windowing::winit::app::RequestPermissionsCallback;
-use crate::windowing::winit::window::MIN_WINDOW_SIZE;
 use crate::Event::{ClearMarkedText, SetMarkedText, TypedCharacters};
 use crate::{AppContext, WindowId};
 
@@ -46,9 +45,6 @@ use wasm_bindgen::JsCast;
 use super::app::ClipboardEvent;
 use super::window::DEFAULT_TITLEBAR_HEIGHT;
 use super::CustomEvent;
-
-#[cfg(windows)]
-use super::windows::{add_network_connection_listener, WindowsNetworkConnectionPoint};
 
 use self::key_events::{convert_keyboard_input_event, text_fallback_event_for_unconverted_key};
 
@@ -98,9 +94,7 @@ fn try_from_winit_keycode(keycode: &KeyCode) -> Result<crate::platform::keyboard
         KeyCode::ControlRight => Ok(crate::platform::keyboard::KeyCode::ControlRight),
         KeyCode::SuperLeft => Ok(crate::platform::keyboard::KeyCode::SuperLeft),
         KeyCode::SuperRight => Ok(crate::platform::keyboard::KeyCode::SuperRight),
-        // Note that the Fn key is not well identified on Windows laptops (e.g.
-        // winit wasn't able to identify it correctly on ThinkPad). But, if it's
-        // identified, we still pass it on to the UI framework.
+        // If the Fn key is identified, we pass it on to the UI framework.
         KeyCode::Fn => Ok(crate::platform::keyboard::KeyCode::Fn),
         _ => Err(()),
     }
@@ -251,9 +245,6 @@ impl LogicalPositionExt for winit::dpi::LogicalPosition<f32> {
 struct State {
     windows: HashMap<winit::window::WindowId, WindowState>,
     pending_active_window_change: Option<ActiveWindowChange>,
-
-    #[cfg(windows)]
-    network_connection_listener: Option<WindowsNetworkConnectionPoint>,
 }
 
 /// This enum holds the state needed to convert multiple emitted
@@ -588,16 +579,6 @@ impl EventLoop {
                     }
                 }
 
-                #[cfg(windows)]
-                match add_network_connection_listener(self.proxy.clone()) {
-                    Ok(listener) => {
-                        self.state.network_connection_listener = Some(listener);
-                    }
-                    Err(e) => {
-                        log::warn!("Creating a network connection listener failed: {e:?}");
-                    }
-                }
-
                 // Initialize soft keyboard support on mobile WASM devices.
                 #[cfg(target_family = "wasm")]
                 {
@@ -759,14 +740,9 @@ impl EventLoop {
             Event::UserEvent(CustomEvent::ActiveCursorPositionUpdated) => {
                 // 关键:不要用 `self.ime_enabled` 守卫这个调用。
                 //
-                // 在 Windows 上,winit 仅在收到 `WM_IME_STARTCOMPOSITION` 时才派发 `Ime::Enabled`,
-                // 此时 IMM 已经在同一条消息处理中读取过 COMPOSITIONFORM/CANDIDATEFORM,
-                // 异步等到 `Ime::Enabled` 才第一次 `ImmSetCompositionWindow` 已经赶不上 Win11
-                // 微软拼音渲染候选窗,导致候选窗落到屏幕右下角"输入工具箱"默认位置。
-                //
-                // 因此焦点/光标移动一旦触发 `ActiveCursorPositionUpdated`,无论 IME 是否处于
-                // composition 状态,都要把当前光标矩形推给 IMM,让下一次 composition 启动时
-                // IMM 上下文里已经有正确的位置。
+                // 焦点/光标移动一旦触发 `ActiveCursorPositionUpdated`,无论 IME 是否处于
+                // composition 状态,都要把当前光标矩形推给 IME,让下一次 composition 启动时
+                // 已经有正确的位置。
                 self.update_ime_position();
             }
             Event::UserEvent(CustomEvent::AboutToSleep) => {
@@ -895,53 +871,12 @@ impl EventLoop {
             } => {
                 self.handle_ime_event(window_id, evt);
             }
+            // Scale factor changes need no handling here; keep them from reaching
+            // `handle_window_event`.
             Event::WindowEvent {
-                window_id,
-                event:
-                    WindowEvent::ScaleFactorChanged {
-                        scale_factor,
-                        mut inner_size_writer,
-                    },
-            } => {
-                // The following correction is only needed on Windows.
-                if !cfg!(windows) {
-                    return;
-                }
-                let Some(window_state) = self.state.windows.get(&window_id) else {
-                    return;
-                };
-                let Some(window) = self
-                    .ui_app
-                    .read(|ctx| ctx.windows().platform_window(window_state.window_id))
-                else {
-                    return;
-                };
-
-                // There is a winit bug such that events which cause a window to switch displays to
-                // one with a different scale factor resize the Zap window to an absurdly small
-                // size, <157, 25> on my system when I repro it. Events include unplugging a
-                // display, changing a display from extended to mirrored, and the like. We work
-                // around that by listening for [`WindowEvent::ScaleFactorChanged`] and changing
-                // the size back up to the minimum dimensions.
-                let size = window.as_ctx().size();
-                let mut size = LogicalSize::new(size.x() as f64, size.y() as f64);
-                let mut request_new_size = false;
-                if size.width < MIN_WINDOW_SIZE.width {
-                    size.width = MIN_WINDOW_SIZE.width;
-                    request_new_size = true;
-                }
-                if size.height < MIN_WINDOW_SIZE.height {
-                    size.height = MIN_WINDOW_SIZE.height;
-                    request_new_size = true;
-                }
-                if request_new_size {
-                    if let Err(err) =
-                        inner_size_writer.request_inner_size(size.to_physical(scale_factor))
-                    {
-                        log::warn!("unable to correct window size: {err:#}");
-                    }
-                }
-            }
+                event: WindowEvent::ScaleFactorChanged { .. },
+                ..
+            } => {}
             Event::WindowEvent { window_id, event } => self.handle_window_event(window_id, event),
             Event::LoopExiting => {
                 // Hide all open windows such that, if the application takes a
@@ -956,11 +891,6 @@ impl EventLoop {
                         },
                     );
                 });
-
-                #[cfg(windows)]
-                if let Some(network_listener) = self.state.network_connection_listener.take() {
-                    network_listener.clean_up();
-                }
 
                 self.callbacks.app_will_terminate();
 

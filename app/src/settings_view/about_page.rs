@@ -442,9 +442,7 @@ impl AboutPageWidget {
             // t! 是宏,必须传 literal,不能用变量。按 cfg 分支挑选具体 key。
             #[cfg(target_os = "macos")]
             let hint = crate::t!("settings-about-update-install-hint-macos");
-            #[cfg(windows)]
-            let hint = crate::t!("settings-about-update-install-hint-windows");
-            #[cfg(all(not(target_os = "macos"), not(windows)))]
+            #[cfg(not(target_os = "macos"))]
             let hint = crate::t!("settings-about-update-install-hint-linux");
 
             return Flex::column()

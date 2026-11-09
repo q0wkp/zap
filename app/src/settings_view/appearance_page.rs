@@ -52,7 +52,7 @@ use crate::themes::theme::{self, RespectSystemTheme, SelectedSystemThemes, Theme
 use crate::user_config::WarpConfig;
 use crate::util::bindings;
 use crate::window_settings::{
-    BackgroundBlurRadius, BackgroundBlurTexture, BackgroundOpacity, LeftPanelVisibilityAcrossTabs,
+    BackgroundBlurRadius, BackgroundOpacity, LeftPanelVisibilityAcrossTabs,
     OpenWindowsAtCustomSize, WindowSettings, WindowSettingsChangedEvent, ZoomLevel,
 };
 use crate::workspace::header_toolbar_editor::HeaderToolbarInlineEditor;
@@ -484,7 +484,6 @@ pub enum AppearancePageAction {
     ToggleShowTitleBarSearchBar,
     ToggleUseLatestUserPromptAsConversationTitleInTabNames,
     ToggleLigatureRendering,
-    ToggleBlurTexture,
     ToggleLeftPanelVisibility,
     SetEnforceMinimumContrast(EnforceMinimumContrast),
     OpenUrl(String),
@@ -621,7 +620,6 @@ impl TypedActionView for AppearanceSettingsPageView {
             ToggleRespectSystemTheme => self.toggle_respect_system_theme(ctx),
             ToggleAllAvailableFonts => self.toggle_all_available_fonts(ctx),
             ToggleDimInactivePanes => self.toggle_dim_inactive_panes(ctx),
-            ToggleBlurTexture => self.toggle_blur_texture(ctx),
             ToggleLeftPanelVisibility => self.toggle_left_panel_visibility(ctx),
             SetInputMode {
                 new_mode,
@@ -1460,12 +1458,6 @@ impl AppearanceSettingsPageView {
             .is_supported_on_current_platform()
         {
             window_settings_widgets.push(Box::new(WindowBlurWidget::default()));
-        }
-        if window_settings
-            .background_blur_texture
-            .is_supported_on_current_platform()
-        {
-            window_settings_widgets.push(Box::new(WindowBlurTextureWidget::default()));
         }
 
         if FeatureFlag::UIZoom.is_enabled() {
@@ -2676,20 +2668,6 @@ impl AppearanceSettingsPageView {
         });
     }
 
-    pub fn toggle_blur_texture(&mut self, ctx: &mut ViewContext<Self>) {
-        let blur_enabled = WindowSettings::handle(ctx).read(ctx, |window_settings, _ctx| {
-            *window_settings.background_blur_texture.value()
-        });
-        ctx.windows()
-            .set_all_windows_background_blur_texture(!blur_enabled);
-        WindowSettings::handle(ctx).update(ctx, |window_settings, ctx| {
-            report_if_error!(window_settings
-                .background_blur_texture
-                .toggle_and_save_value(ctx));
-        });
-        ctx.notify();
-    }
-
     pub fn toggle_left_panel_visibility(&mut self, ctx: &mut ViewContext<Self>) {
         WindowSettings::handle(ctx).update(ctx, |window_settings, ctx| {
             report_if_error!(window_settings
@@ -3620,38 +3598,6 @@ impl SettingsWidget for WindowOpacityWidget {
         app: &AppContext,
     ) -> Box<dyn Element> {
         let window_settings = WindowSettings::as_ref(app);
-        if !window_settings
-            .background_opacity
-            .is_configurable(view.window_id, app)
-        {
-            return Flex::column()
-                .with_child(
-                    Container::new(render_body_item_label::<AppearancePageAction>(
-                        crate::t!("settings-appearance-window-opacity-label"),
-                        None,
-                        None,
-                        LocalOnlyIconState::Hidden,
-                        ToggleState::Disabled,
-                        appearance,
-                    ))
-                    .finish(),
-                )
-                .with_child(
-                    Container::new(
-                        FormattedTextElement::from_str(
-                            crate::t!("settings-appearance-window-opacity-not-supported"),
-                            appearance.ui_font_family(),
-                            appearance.ui_font_size(),
-                        )
-                        .with_color(appearance.theme().disabled_ui_text_color().into_solid())
-                        .finish(),
-                    )
-                    .with_margin_bottom(8.0)
-                    .finish(),
-                )
-                .finish();
-        }
-
         let opacity_value = *window_settings.background_opacity;
         let mut col = Flex::column().with_child(render_body_item::<AppearancePageAction>(
             crate::t!(
@@ -3798,69 +3744,6 @@ impl SettingsWidget for WindowBlurWidget {
                 None,
             ))
             .finish()
-    }
-}
-
-#[derive(Default)]
-struct WindowBlurTextureWidget {
-    switch_state: SwitchStateHandle,
-}
-
-impl SettingsWidget for WindowBlurTextureWidget {
-    type View = AppearanceSettingsPageView;
-
-    fn search_terms(&self) -> &str {
-        "window blur texture acrylic"
-    }
-
-    fn render(
-        &self,
-        view: &Self::View,
-        appearance: &Appearance,
-        app: &AppContext,
-    ) -> Box<dyn Element> {
-        let window_settings = WindowSettings::as_ref(app);
-        let use_blur_texture = *window_settings.background_blur_texture;
-        let mut col = Flex::column().with_child(render_body_item::<AppearancePageAction>(
-            crate::t!("settings-appearance-window-blur-texture-label"),
-            None,
-            LocalOnlyIconState::for_setting(
-                BackgroundBlurTexture::storage_key(),
-                BackgroundBlurTexture::sync_to_cloud(),
-                &mut view.local_only_icon_tooltip_states.borrow_mut(),
-                app,
-            ),
-            ToggleState::Enabled,
-            appearance,
-            appearance
-                .ui_builder()
-                .switch(self.switch_state.clone())
-                .check(use_blur_texture)
-                .build()
-                .on_click(|evt_ctx, _app, _v2f| {
-                    evt_ctx.dispatch_typed_action(AppearancePageAction::ToggleBlurTexture);
-                })
-                .finish(),
-            None,
-        ));
-        if let Some(window) = app.windows().platform_window(view.window_id) {
-            if !window.supports_transparency() && window.graphics_backend() != GraphicsBackend::Gl {
-                col.add_child(
-                    Container::new(
-                        FormattedTextElement::from_str(
-                            crate::t!("settings-appearance-window-blur-texture-not-supported"),
-                            appearance.ui_font_family(),
-                            appearance.ui_font_size(),
-                        )
-                        .with_color(appearance.theme().disabled_ui_text_color().into_solid())
-                        .finish(),
-                    )
-                    .with_margin_bottom(8.0)
-                    .finish(),
-                );
-            }
-        }
-        col.finish()
     }
 }
 

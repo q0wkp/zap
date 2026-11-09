@@ -154,11 +154,7 @@ use crate::settings::{
 // 子系统物理删。
 use crate::settings_view::pane_manager::SettingsPaneManager;
 use crate::settings_view::{SettingsSection, SettingsView, SettingsViewEvent};
-#[cfg(all(target_os = "windows", feature = "local_tty"))]
-use crate::shell_indicator::ShellIndicatorType;
 use crate::terminal::available_shells::AvailableShell;
-#[cfg(target_os = "windows")]
-use crate::terminal::available_shells::AvailableShells;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::ligature_settings::should_use_ligature_rendering;
 use crate::terminal::warpify::settings::WarpifySettings;
@@ -5776,7 +5772,7 @@ impl Workspace {
     /// 收集本次"导出日志"要附加进 zip 的诊断材料:
     ///
     /// - `manifest.txt`:版本 / channel / 平台 / arch / 执行模式 / 生成时间戳;
-    /// - 其它子系统日志(MCP server stderr、Windows 自动更新器、minidump 服务进程),
+    /// - 其它子系统日志(MCP server stderr、minidump 服务进程),
     ///   仅当文件实际存在时才会进入 zip。
     ///
     /// 故意**不**打包的内容(权衡):
@@ -5838,11 +5834,10 @@ impl Workspace {
             ..Default::default()
         };
 
-        // 2) 同目录下其它产物:同 channel 的 minidump 服务进程日志、Windows 更新器日志。
+        // 2) 同目录下其它产物:同 channel 的 minidump 服务进程日志。
         if let Some(dir) = log_dir.as_ref() {
             let candidates: &[&str] = &[
-                "warp-minidump.log", // Linux/Windows minidump 服务进程
-                "warp_update.log",   // Windows 自动更新器(Inno Setup)
+                "warp-minidump.log", // Linux minidump 服务进程
             ];
             for name in candidates {
                 let path = dir.join(name);
@@ -5915,62 +5910,18 @@ impl Workspace {
         let reopen_closed_session_shortcut_label =
             keybinding_name_to_display_string("app:reopen_closed_session", ctx);
 
-        // 1. Terminal (+ individual shells on Windows)
+        // 1. Terminal
         {
-            // On Windows, list the default terminal and each available shell as
-            // individual top-level items (no submenu) so each gets a sidecar.
-            #[cfg(target_os = "windows")]
-            {
-                let is_terminal_default = effective_default == DefaultSessionMode::Terminal;
-                let mut terminal_item =
-                    MenuItemFields::new(crate::t!("workspace-new-session-terminal"))
-                        .with_on_select_action(WorkspaceAction::AddTerminalTab {
-                            hide_homepage: false,
-                        })
-                        .with_icon(icons::Icon::LayoutAlt01);
-                if is_terminal_default {
-                    terminal_item = terminal_item.with_key_shortcut_label(shortcut_label.clone());
-                }
-                menu_items.push(terminal_item.into_item());
-
-                #[cfg(feature = "local_tty")]
-                if FeatureFlag::ShellSelector.is_enabled() {
-                    AvailableShells::handle(ctx).read(ctx, |model, _| {
-                        for shell in model.get_available_shells() {
-                            let shell_name = model.display_name_for_shell(shell);
-                            let icon = shell
-                                .get_valid_shell_path_and_type()
-                                .and_then(|shell_launch_data| {
-                                    ShellIndicatorType::try_from(&shell_launch_data).ok()
-                                })
-                                .map(|shell_indicator_type| shell_indicator_type.to_icon())
-                                .unwrap_or(icons::Icon::Terminal);
-                            let item = MenuItemFields::new(shell_name)
-                                .with_on_select_action(WorkspaceAction::AddTabWithShell {
-                                    shell: shell.clone(),
-                                    source: AddTabWithShellSource::ShellSelectorMenu,
-                                })
-                                .with_icon(icon);
-                            menu_items.push(item.into_item());
-                        }
-                    });
-                }
+            let mut terminal_item =
+                MenuItemFields::new(crate::t!("workspace-new-session-terminal"))
+                    .with_on_select_action(WorkspaceAction::AddTerminalTab {
+                        hide_homepage: false,
+                    })
+                    .with_icon(icons::Icon::LayoutAlt01);
+            if effective_default == DefaultSessionMode::Terminal {
+                terminal_item = terminal_item.with_key_shortcut_label(shortcut_label.clone());
             }
-
-            // On other platforms, Terminal is a regular item.
-            #[cfg(not(target_os = "windows"))]
-            {
-                let mut terminal_item =
-                    MenuItemFields::new(crate::t!("workspace-new-session-terminal"))
-                        .with_on_select_action(WorkspaceAction::AddTerminalTab {
-                            hide_homepage: false,
-                        })
-                        .with_icon(icons::Icon::LayoutAlt01);
-                if effective_default == DefaultSessionMode::Terminal {
-                    terminal_item = terminal_item.with_key_shortcut_label(shortcut_label.clone());
-                }
-                menu_items.push(terminal_item.into_item());
-            }
+            menu_items.push(terminal_item.into_item());
         }
 
         // 2. User tab configs
@@ -10066,10 +10017,7 @@ impl Workspace {
                 if cfg!(all(not(target_family = "wasm"), target_os = "macos")) {
                     AppContext::show_native_platform_modal(ctx, dialog);
                     return false;
-                } else if cfg!(all(
-                    not(target_family = "wasm"),
-                    any(target_os = "linux", windows)
-                )) {
+                } else if cfg!(all(not(target_family = "wasm"), target_os = "linux")) {
                     self.show_native_modal(dialog, ctx);
                     return false;
                 }
@@ -10287,12 +10235,8 @@ impl Workspace {
     }
 
     fn add_welcome_tab(&mut self, ctx: &mut ViewContext<Self>) {
-        let startup_directory = self.get_new_tab_startup_directory(
-            NewSessionSource::Tab,
-            Some(ctx.window_id()),
-            None,
-            ctx,
-        );
+        let startup_directory =
+            self.get_new_tab_startup_directory(NewSessionSource::Tab, Some(ctx.window_id()), ctx);
         self.add_tab_with_pane_layout(
             PanesLayout::Snapshot(Box::new(PaneNodeSnapshot::Leaf(LeafSnapshot {
                 is_focused: true,
@@ -10445,12 +10389,7 @@ impl Workspace {
             .filter(|path| path.is_dir());
 
         let startup_directory = startup_directory_from_conversation.or_else(|| {
-            self.get_new_tab_startup_directory(
-                new_session_source,
-                previous_session_window_id,
-                chosen_shell.as_ref(),
-                ctx,
-            )
+            self.get_new_tab_startup_directory(new_session_source, previous_session_window_id, ctx)
         });
 
         self.add_tab_with_pane_layout(
@@ -13736,33 +13675,24 @@ impl Workspace {
 
         if let Some(terminal_handle) = pane_group_handle.as_ref(ctx).active_session_view(ctx) {
             #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
-            let (
-                session,
-                path_if_local,
-                is_local,
-                is_wsl_session,
-                session_id,
-                pwd,
-                has_pending_ssh,
-            ) = terminal_handle.read(ctx, |terminal, ctx| {
-                let active_session_id = terminal.active_block_session_id();
-                let session =
-                    active_session_id.and_then(|id| terminal.sessions_model().as_ref(ctx).get(id));
-                let path_if_local = terminal.active_session_path_if_local(ctx);
-                let is_local = terminal.active_session_is_local(ctx);
-                let is_wsl_session = session.as_ref().map(|s| s.is_wsl()).unwrap_or(false);
-                let pwd = terminal.pwd();
-                let has_pending_ssh = terminal.has_pending_ssh_command();
-                (
-                    session,
-                    path_if_local,
-                    is_local,
-                    is_wsl_session,
-                    active_session_id,
-                    pwd,
-                    has_pending_ssh,
-                )
-            });
+            let (session, path_if_local, is_local, session_id, pwd, has_pending_ssh) =
+                terminal_handle.read(ctx, |terminal, ctx| {
+                    let active_session_id = terminal.active_block_session_id();
+                    let session = active_session_id
+                        .and_then(|id| terminal.sessions_model().as_ref(ctx).get(id));
+                    let path_if_local = terminal.active_session_path_if_local(ctx);
+                    let is_local = terminal.active_session_is_local(ctx);
+                    let pwd = terminal.pwd();
+                    let has_pending_ssh = terminal.has_pending_ssh_command();
+                    (
+                        session,
+                        path_if_local,
+                        is_local,
+                        active_session_id,
+                        pwd,
+                        has_pending_ssh,
+                    )
+                });
 
             let window_id = ctx.window_id();
             let path_if_local_clone = path_if_local.clone();
@@ -13778,7 +13708,6 @@ impl Workspace {
             });
 
             let is_remote = matches!(is_local, Some(false));
-            let is_unsupported_session = is_wsl_session;
 
             // Check whether this remote session has an active remote server
             // connection (or is in the process of connecting). This is only
@@ -13834,7 +13763,6 @@ impl Workspace {
             let enablement = CodingPanelEnablementState::from_session_env(
                 file_tree_and_global_search_are_enabled,
                 is_remote,
-                is_unsupported_session,
                 has_remote_server,
             );
 
@@ -13857,7 +13785,7 @@ impl Workspace {
             #[cfg(feature = "local_fs")]
             {
                 self.right_panel_view.update(ctx, |right_panel, ctx| {
-                    right_panel.update_session_env(is_remote, is_wsl_session, ctx);
+                    right_panel.update_session_env(is_remote, ctx);
                 });
 
                 if self.active_tab_pane_group().as_ref(ctx).right_panel_open {
@@ -13869,7 +13797,6 @@ impl Workspace {
                 file_tree_and_global_search_are_enabled,
                 false,
                 false,
-                false,
             );
 
             self.left_panel_view.update(ctx, |left_panel, ctx| {
@@ -13879,7 +13806,7 @@ impl Workspace {
             #[cfg(feature = "local_fs")]
             {
                 self.right_panel_view.update(ctx, |right_panel, ctx| {
-                    right_panel.update_session_env(false, false, ctx);
+                    right_panel.update_session_env(false, ctx);
                 });
             }
         }
@@ -17925,7 +17852,7 @@ impl Workspace {
         let traffic_light_data = traffic_light_data(app, self.window_id);
         let vertical_tabs_active =
             FeatureFlag::VerticalTabs.is_enabled() && *TabSettings::as_ref(app).use_vertical_tabs;
-        // Add a spacer for the traffic light buttons on Windows/Linux.
+        // Add a spacer for the traffic light buttons on Linux.
         if traffic_light_data.is_some_and(|data| data.side == TrafficLightSide::Right)
             && *side == PanelPosition::Right
             && !vertical_tabs_active
@@ -20747,7 +20674,7 @@ impl View for Workspace {
             let panels_row = self.render_panels(app, Shrinkable::new(1.0, content).finish(), true);
             outer_column.add_child(Shrinkable::new(1.0, panels_row).finish());
             Container::new(outer_column.finish())
-                .with_background(util::get_terminal_background_fill(self.window_id, app))
+                .with_background(util::get_terminal_background_fill(app))
                 .finish()
         } else {
             let mut outer_column = Flex::column();
@@ -20758,7 +20685,7 @@ impl View for Workspace {
             let panels_row = self.render_panels(app, Shrinkable::new(1.0, content).finish(), false);
             outer_column.add_child(Shrinkable::new(1.0, panels_row).finish());
             Container::new(outer_column.finish())
-                .with_background(util::get_terminal_background_fill(self.window_id, app))
+                .with_background(util::get_terminal_background_fill(app))
                 .finish()
         };
         let mut stack = Stack::new();
@@ -21600,9 +21527,7 @@ impl View for Workspace {
         let mut stack = Stack::new();
         let theme = appearance.theme();
         let window_settings = WindowSettings::as_ref(app);
-        let background_opacity = window_settings
-            .background_opacity
-            .effective_opacity(self.window_id, app);
+        let background_opacity = *window_settings.background_opacity;
 
         if let Some(img) = theme.background_image() {
             let opacity_ratio = background_opacity as f32 / 100.;
@@ -21752,10 +21677,10 @@ impl View for Workspace {
             stack.finish()
         };
 
-        #[cfg_attr(not(any(windows, target_os = "linux")), allow(unused_mut))]
+        #[cfg_attr(not(target_os = "linux"), allow(unused_mut))]
         let mut event_handler = EventHandler::new(stack);
 
-        #[cfg(any(windows, target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         {
             event_handler =
                 event_handler.on_scroll_wheel(move |ctx, _app, delta, modifiers_state| {

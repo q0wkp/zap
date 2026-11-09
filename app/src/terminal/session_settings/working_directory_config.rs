@@ -76,13 +76,12 @@ impl WorkingDirectoryPerSourceConfig {
     fn initial_directory_for_new_session(
         &self,
         initial_directory_from_current_session: Option<PathBuf>,
-        ignore_custom_directory: bool,
     ) -> Option<PathBuf> {
         match self.mode {
             WorkingDirectoryMode::HomeDir => None,
             WorkingDirectoryMode::PreviousDir => initial_directory_from_current_session,
             WorkingDirectoryMode::CustomDir => {
-                if self.custom_dir.is_empty() || ignore_custom_directory {
+                if self.custom_dir.is_empty() {
                     None
                 } else {
                     Some(
@@ -145,13 +144,9 @@ impl WorkingDirectoryConfig {
         &self,
         source: NewSessionSource,
         initial_directory_from_current_session: Option<PathBuf>,
-        ignore_custom_directory: bool,
     ) -> Option<PathBuf> {
         self.config_for_source(source)
-            .initial_directory_for_new_session(
-                initial_directory_from_current_session,
-                ignore_custom_directory,
-            )
+            .initial_directory_for_new_session(initial_directory_from_current_session)
     }
 
     /// Invokes the provided function with a mutable reference to the setting's

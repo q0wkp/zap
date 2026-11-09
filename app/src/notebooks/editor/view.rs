@@ -276,20 +276,6 @@ pub fn init(app: &mut AppContext) {
             EditorViewAction::Paste,
             id!("RichTextEditorView") & !id!("IMEOpen"),
         ),
-        #[cfg(windows)]
-        FixedBinding::custom(
-            CustomAction::WindowsPaste,
-            EditorViewAction::Paste,
-            crate::t!("keybinding-desc-editor-paste"),
-            id!("RichTextEditorView") & !id!("IMEOpen"),
-        ),
-        #[cfg(windows)]
-        FixedBinding::custom(
-            CustomAction::WindowsCopy,
-            EditorViewAction::Copy,
-            crate::t!("keybinding-desc-editor-copy"),
-            id!("RichTextEditorView") & !id!("IMEOpen"),
-        ),
         FixedBinding::custom(
             CustomAction::Cut,
             EditorViewAction::Cut,

@@ -13,7 +13,6 @@ use settings::Setting as _;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::shell_indicator::ShellIndicatorType;
 use crate::terminal::shared_session::render_util::shared_session_indicator_color;
 use crate::terminal::view::TerminalViewState;
 use crate::themes::theme::{AnsiColorIdentifier, Fill as ThemeFill, VerticalGradient};
@@ -497,8 +496,6 @@ enum Indicator {
     Shared,
     /// One of the panes in this tab is maximized.
     Maximized,
-    /// We should show a shell indicator for the tab.
-    Shell(ShellIndicatorType),
     Agent {
         conversation_status: Option<ConversationStatus>,
     },
@@ -645,7 +642,6 @@ impl<'a> TabComponent<'a> {
             .into();
         let has_active_pane_state_indicator = !(matches!(pane_state_indicator, Indicator::None));
         let is_maximized = tab.pane_group.as_ref(ctx).is_focused_pane_maximized(ctx);
-        let shell_indicator_type = tab.pane_group.as_ref(ctx).focused_shell_indicator_type(ctx);
 
         // If a session is being shared, we want to show that indicator in the tab bar above all else.
         // Otherwise, if the tab indicator setting is explicitly turned off, we don't want to show any indicator.
@@ -664,8 +660,6 @@ impl<'a> TabComponent<'a> {
             Indicator::Synced
         } else if let Some(agent) = Self::agent_indicator(tab, ctx) {
             agent
-        } else if let Some(shell_indicator_type) = shell_indicator_type {
-            Indicator::Shell(shell_indicator_type)
         } else if has_active_pane_state_indicator {
             pane_state_indicator
         } else if is_maximized {
@@ -677,11 +671,7 @@ impl<'a> TabComponent<'a> {
         let tooltip_message = Self::get_tooltip_message(&indicator, tab, ctx);
         let tooltip_directory = Self::get_tooltip_directory(&indicator, tab, ctx);
         let tooltip_git_branch = Self::get_tooltip_git_branch(&indicator, tab, ctx);
-        let window_id = tab.pane_group.window_id(ctx);
-        let background_opacity = WindowSettings::as_ref(ctx)
-            .background_opacity
-            .effective_opacity(window_id, ctx)
-            .clamp(20, 100);
+        let background_opacity = (*WindowSettings::as_ref(ctx).background_opacity).clamp(20, 100);
         Self {
             tab: tab.clone(),
             tab_bar,
@@ -1056,12 +1046,6 @@ impl<'a> TabComponent<'a> {
                             .unwrap_or(ColorU::white())
                             .into(),
                     )
-                    .finish(),
-            ),
-            Indicator::Shell(shell_indicator_type) => Some(
-                shell_indicator_type
-                    .to_icon()
-                    .to_warpui_icon(internal_colors::neutral_5(self.appearance.theme()).into())
                     .finish(),
             ),
             Indicator::Agent {

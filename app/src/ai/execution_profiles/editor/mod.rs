@@ -483,7 +483,7 @@ impl ExecutionProfileEditorView {
 
         let directory_allowlist_editor = ctx.add_typed_action_view(|ctx| {
             let mut input = SubmittableTextInput::new(ctx).validate_on_submit(|s| {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 Path::new(&expanded).is_dir()
             });
             input.set_placeholder_text(crate::t!("settings-ai-repo-placeholder"), ctx);
@@ -608,7 +608,7 @@ impl ExecutionProfileEditorView {
 
         ctx.subscribe_to_view(&view.directory_allowlist_editor, |view, _, event, ctx| {
             if let SubmittableTextInputEvent::Submit(s) = event {
-                let expanded = host_native_absolute_path(s, &None, &None);
+                let expanded = host_native_absolute_path(s, &None);
                 AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles_model, ctx| {
                     profiles_model.add_to_directory_allowlist(
                         view.profile_id,

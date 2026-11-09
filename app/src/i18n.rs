@@ -70,11 +70,10 @@ pub fn init(override_locale: Option<&str>) {
     let _ = LANGUAGE_LOADER.set(loader);
 }
 
-/// Forward the resolved UI locale to `warpui::set_ui_locale` so DirectWrite / CoreText
+/// Forward the resolved UI locale to `warpui::set_ui_locale` so CoreText / fontconfig
 /// glyph fallback biases CJK Han characters toward the user's UI language. Japanese,
-/// Simplified Chinese, and Traditional Chinese share Han code points; without a locale
-/// hint, DirectWrite tends to pick Microsoft YaHei (Simplified Chinese) on Windows even
-/// when the UI is rendered in Japanese.
+/// Simplified Chinese, and Traditional Chinese share Han code points, so without a locale
+/// hint the fallback font may not match the UI language.
 fn propagate_ui_locale(loader: &FluentLanguageLoader) {
     let langs = loader.current_languages();
     if let Some(li) = langs.first() {

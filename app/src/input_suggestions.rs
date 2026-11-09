@@ -200,7 +200,7 @@ pub struct InputSuggestions {
     scroll_state: ScrollStateHandle,
     selected_index: Option<usize>,
     /// Which characters to use as path separators. This can deviate from
-    /// [`std::path::MAIN_SEPARATOR`], e.g. for a WSL session on Windows.
+    /// [`std::path::MAIN_SEPARATOR`], depending on the session's shell.
     path_separators: PathSeparators,
     /// Flag for whether we want to cycle through the items or not.
     cycle: bool,

@@ -236,11 +236,8 @@ impl<T: SegmentedControlOption> View for SegmentedControl<T> {
             );
 
             if let Some(label_config) = option_config.label.take() {
-                let font_size = if cfg!(any(
-                    windows,
-                    any(target_os = "linux", target_os = "freebsd")
-                )) {
-                    // Reduce the font size by one to avoid text being cut off on Windows and Linux.
+                let font_size = if cfg!(any(target_os = "linux", target_os = "freebsd")) {
+                    // Reduce the font size by one to avoid text being cut off on Linux.
                     self.styles.font_size.unwrap_or(12.0) - 1.0
                 } else {
                     self.styles.font_size.unwrap_or(12.0)

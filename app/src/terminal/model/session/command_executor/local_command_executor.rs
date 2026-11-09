@@ -1,4 +1,4 @@
-use super::{CommandExecutor, CommandOutput, ExecuteCommandOptions};
+use super::{CommandExecutor, CommandOutput};
 use crate::safe_warn;
 use crate::terminal::shell::{Shell, ShellType};
 use anyhow::{anyhow, Result};
@@ -21,8 +21,6 @@ fn kill_all_processes_in_process_group(pid: u32) -> Result<(), nix::Error> {
 }
 
 enum CommandBuilder<'a> {
-    #[cfg(windows)]
-    CmdExe,
     ShellType {
         shell_type: ShellType,
         local_shell_path: Option<&'a Path>,
@@ -32,14 +30,6 @@ enum CommandBuilder<'a> {
 impl CommandBuilder<'_> {
     fn build(self, command_string: &str, shell_config_flag: &str) -> Command {
         match self {
-            #[cfg(windows)]
-            CommandBuilder::CmdExe => {
-                use command::windows::CommandExt as _;
-                let mut command = Command::new_with_process_group("cmd.exe");
-                command.args(["/Q", "/C"]);
-                command.raw_arg(command_string);
-                command
-            }
             CommandBuilder::ShellType {
                 local_shell_path,
                 shell_type,
@@ -86,7 +76,6 @@ impl LocalCommandExecutor {
         command: &str,
         current_directory_path: Option<&str>,
         environment_variables: Option<HashMap<String, String>>,
-        execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
         let shell_config_flag = match self.shell_type {
             ShellType::Zsh => "-f",
@@ -100,7 +89,6 @@ impl LocalCommandExecutor {
             current_directory_path,
             environment_variables,
             shell_config_flag,
-            execute_command_options,
         )
         .await
     }
@@ -121,40 +109,15 @@ impl LocalCommandExecutor {
             current_directory_path,
             environment_variables,
             shell_config_flag,
-            ExecuteCommandOptions {
-                // We have to run the command in the same shell as the session
-                // because we want to run it in a login shell.
-                run_command_in_same_shell_as_session: true,
-            },
         )
         .await
     }
 
     #[cfg(unix)]
-    fn command_builder(
-        &self,
-        _execute_command_options: ExecuteCommandOptions,
-    ) -> CommandBuilder<'_> {
+    fn command_builder(&self) -> CommandBuilder<'_> {
         CommandBuilder::ShellType {
             shell_type: self.shell_type,
             local_shell_path: self.local_shell_path.as_deref(),
-        }
-    }
-
-    #[cfg(windows)]
-    fn command_builder(
-        &self,
-        execute_command_options: ExecuteCommandOptions,
-    ) -> CommandBuilder<'_> {
-        let use_cmd_exe = !execute_command_options.run_command_in_same_shell_as_session
-            && self.shell_type == ShellType::PowerShell;
-        if use_cmd_exe {
-            CommandBuilder::CmdExe
-        } else {
-            CommandBuilder::ShellType {
-                shell_type: self.shell_type,
-                local_shell_path: self.local_shell_path.as_deref(),
-            }
         }
     }
 
@@ -167,9 +130,8 @@ impl LocalCommandExecutor {
         // indicating the supplied command should be run under some configuration,
         // i.e. in a login shell or without sourcing .rc files
         shell_config_flag: &str,
-        execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
-        let command_builder = self.command_builder(execute_command_options);
+        let command_builder = self.command_builder();
 
         let mut command_process = command_builder.build(command, shell_config_flag);
 
@@ -228,15 +190,9 @@ impl CommandExecutor for LocalCommandExecutor {
         _shell: &Shell,
         current_directory_path: Option<&str>,
         environment_variables: Option<HashMap<String, String>>,
-        execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
-        self.execute_local_command(
-            command,
-            current_directory_path,
-            environment_variables,
-            execute_command_options,
-        )
-        .await
+        self.execute_local_command(command, current_directory_path, environment_variables)
+            .await
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -250,7 +206,6 @@ impl CommandExecutor for LocalCommandExecutor {
     fn cancel_active_commands(&self) {
         let spawned_children_pids = std::mem::take(&mut *self.spawned_children_pids.lock());
         for _pid in spawned_children_pids {
-            // TODO(roland): handle for windows
             #[cfg(unix)]
             if let Err(e) = kill_all_processes_in_process_group(_pid) {
                 match e {

@@ -7,8 +7,7 @@ param(
 
 $rulesFile = './.PSScriptAnalyzerSettings.psd1'
 $sources = @(
-    './app/assets/bundled/bootstrap/',
-    './script/windows/'
+    './app/assets/bundled/bootstrap/'
 )
 
 foreach ($source in $sources) {

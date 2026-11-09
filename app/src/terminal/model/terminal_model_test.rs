@@ -71,7 +71,6 @@ fn ssh_bootstraps_if_blocklist_empty() {
         vi_mode_enabled: None,
         os_category: None,
         linux_distribution: None,
-        wsl_name: None,
         shell_path: None,
     };
     terminal.bootstrapped(bootstrapped_value.clone());

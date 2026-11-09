@@ -3,8 +3,6 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod mac;
 pub mod settings;
-#[cfg(target_os = "windows")]
-mod windows;
 
 use std::path::PathBuf;
 
@@ -51,7 +49,7 @@ pub const SUPPORTED_EDITORS: &[Editor] = &[
     Editor::DataSpell,
     Editor::DataGrip,
     Editor::AndroidStudio,
-    #[cfg(any(target_os = "macos", windows))]
+    #[cfg(target_os = "macos")]
     // Cursor *can* run on linux, but does not have a .desktop file
     Editor::Cursor,
     Editor::Windsurf,
@@ -313,8 +311,6 @@ pub fn open_file_path_with_editor(
             mac::open_file_path_with_line_and_col(line_column_number, editor, &full_path, ctx);
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             linux::open_file_path_with_line_and_col(line_column_number, editor, &full_path, ctx);
-        } else if #[cfg(windows)]{
-            windows::open_file_path_with_line_and_col(line_column_number, editor, &full_path, ctx);
         } else {
             ctx.open_file_path(&full_path);
         }

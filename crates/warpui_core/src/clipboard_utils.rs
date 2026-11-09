@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use crate::clipboard::{Clipboard, ClipboardContent};
 
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use {arboard, image::ImageEncoder};
 
 use itertools::Itertools;
@@ -19,7 +19,7 @@ pub const CLIPBOARD_IMAGE_MIME_TYPES: &[&str] = &[
 ];
 
 /// Minimum bytes needed for image format detection.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 const MIN_IMAGE_HEADER_SIZE: usize = 8;
 
 /// Check if a string has an image file extension.
@@ -270,7 +270,7 @@ pub fn strip_html_to_plain_text(html: &str) -> String {
 }
 
 /// Process clipboard image data, preserving original format or converting to PNG.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub fn process_clipboard_image(
     arboard_image: &arboard::ImageData,
     filename: Option<String>,
@@ -295,7 +295,7 @@ pub fn process_clipboard_image(
 }
 
 /// Read image data from clipboard, checking for images before expensive filename extraction.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub fn read_images_from_clipboard(
     clipboard: &mut arboard::Clipboard,
     html_content: &Option<String>,
@@ -315,203 +315,21 @@ pub fn read_images_from_clipboard(
                 Some(image_data) => Some(vec![image_data]),
                 None => {
                     log::warn!("Failed to process clipboard image: format detection and conversion both failed");
-                    // Fall through to Windows custom-format fallback below.
-                    #[cfg(target_os = "windows")]
-                    {
-                        let filename =
-                            extract_filename_from_clipboard_content(html_content, text_content);
-                        if let Some(img) = try_read_image_via_custom_windows_formats(filename) {
-                            return Some(vec![img]);
-                        }
-                    }
                     None
                 }
             }
         }
-        // arboard saw no CF_DIB / CF_BITMAP, or failed to convert it.
-        // On Windows, many screenshot tools (Snipaste / ShareX / QQ / 微信)
-        // only write the registered "PNG" format, or write a malformed CF_DIB
-        // alongside a real PNG payload. Try those raw formats before giving up.
         Err(err) => {
-            #[cfg(target_os = "windows")]
-            {
-                if !matches!(err, arboard::Error::ContentNotAvailable) {
-                    log::debug!("arboard image() failed ({err:?}); trying custom Windows formats");
-                }
-                let filename = extract_filename_from_clipboard_content(html_content, text_content);
-                if let Some(img) = try_read_image_via_custom_windows_formats(filename) {
-                    return Some(vec![img]);
-                }
-            }
-            #[cfg(not(target_os = "windows"))]
-            {
-                if !matches!(err, arboard::Error::ContentNotAvailable) {
-                    log::warn!("Unable to read image from clipboard: {err:?}");
-                }
+            if !matches!(err, arboard::Error::ContentNotAvailable) {
+                log::warn!("Unable to read image from clipboard: {err:?}");
             }
             None
         }
     }
 }
 
-/// Windows 专用兜底: 只枚举看起来像图片的剪贴板格式,并寻找
-/// PNG/JPEG/GIF/WebP 等已知图片字节。
-///
-/// 这用于兼容不写 CF_DIB、只注册 "PNG" 或 "image/png" 之类格式名的截图工具。
-/// 不要探测任意注册格式: clipboard-win 读取原始字节时必须调用
-/// GlobalSize/GlobalLock,而一些外部剪贴板格式不能安全地当成 HGLOBAL 字节缓冲读取。
-#[cfg(target_os = "windows")]
-fn try_read_image_via_custom_windows_formats(
-    filename: Option<String>,
-) -> Option<crate::clipboard::ImageData> {
-    use clipboard_win::{raw, Clipboard, EnumFormats};
-
-    // RAII OpenClipboard / CloseClipboard. arboard has already released the
-    // clipboard by the time we get here (its `get().image()` call returned).
-    let _clip = match Clipboard::new_attempts(10) {
-        Ok(c) => c,
-        Err(err) => {
-            log::warn!("Custom-format fallback: OpenClipboard failed: {err:?}");
-            return None;
-        }
-    };
-
-    // 先收集候选格式,避免为了诊断而 raw-read 外部应用放入的每一种自定义格式。
-    let formats: Vec<(u32, String)> = EnumFormats::new()
-        .filter_map(|fmt| {
-            let name = raw::format_name_big(fmt).unwrap_or_else(|| format!("<unknown {fmt:#06x}>"));
-            is_windows_image_clipboard_format_candidate(fmt, &name).then_some((fmt, name))
-        })
-        .collect();
-    if formats.is_empty() {
-        return None;
-    }
-
-    let names: Vec<String> = formats.iter().map(|(_, name)| name.clone()).collect();
-    log::info!(
-        "Custom-format fallback: clipboard has {} image candidate format(s): {:?}",
-        formats.len(),
-        names
-    );
-
-    for (fmt, name) in formats {
-        let mut buf: Vec<u8> = Vec::new();
-        match raw::get_vec(fmt, &mut buf) {
-            Ok(_) if !buf.is_empty() => {
-                // 1) Try magic-byte detection (PNG / JPEG / GIF / WebP)
-                if let Some(img) = try_preserve_original_format(&buf, filename.clone()) {
-                    log::info!(
-                        "Custom-format fallback: matched format {name:?} ({} bytes, mime={})",
-                        buf.len(),
-                        img.mime_type
-                    );
-                    return Some(img);
-                }
-
-                // 2) DIB decode path. CF_DIB/CF_DIBV5 carry headerless BMP
-                // bytes. Some screenshot tools (PixPin, etc.) write a DIB that
-                // arboard fails to parse but the `image` crate's BmpDecoder
-                // handles fine via `new_without_file_header`.
-                if is_windows_dib_clipboard_format(fmt) || looks_like_dib(&buf) {
-                    if let Some(img) = try_decode_dib_to_png(&buf, filename.clone()) {
-                        log::info!(
-                            "Custom-format fallback: decoded DIB from format {name:?} ({} bytes → {} bytes PNG)",
-                            buf.len(),
-                            img.data.len()
-                        );
-                        return Some(img);
-                    }
-                }
-            }
-            Ok(_) => continue,
-            Err(err) => {
-                log::debug!("Custom-format fallback: GetClipboardData({fmt:#06x}) failed: {err:?}");
-                continue;
-            }
-        }
-    }
-
-    log::info!("Custom-format fallback: no format on clipboard contained recognizable image bytes");
-    None
-}
-
-#[cfg(target_os = "windows")]
-fn is_windows_dib_clipboard_format(format: u32) -> bool {
-    const CF_DIB: u32 = 8;
-    const CF_DIBV5: u32 = 17;
-
-    format == CF_DIB || format == CF_DIBV5
-}
-
-#[cfg(target_os = "windows")]
-fn is_windows_image_clipboard_format_candidate(format: u32, name: &str) -> bool {
-    if is_windows_dib_clipboard_format(format) {
-        return true;
-    }
-
-    // 只有格式名明确表示图片字节的注册格式才足够适合 raw-read。
-    // 这样保留常见截图工具支持,同时文本粘贴时不会触碰浏览器/编辑器的任意私有格式。
-    let normalized = name.to_ascii_lowercase();
-    ["png", "jpeg", "jpg", "gif", "webp", "image/"]
-        .iter()
-        .any(|token| normalized.contains(token))
-}
-
-/// Detect whether a byte slice plausibly starts with a Windows DIB header.
-/// The first 4 bytes of a DIB are `biSize` (header size, little-endian).
-/// Valid header sizes: 12 (BITMAPCOREHEADER), 40 (BITMAPINFOHEADER),
-/// 52/56/64 (Adobe variants), 108 (BITMAPV4HEADER), 124 (BITMAPV5HEADER).
-#[cfg(target_os = "windows")]
-fn looks_like_dib(bytes: &[u8]) -> bool {
-    if bytes.len() < 4 {
-        return false;
-    }
-    let size = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-    matches!(size, 12 | 40 | 52 | 56 | 64 | 108 | 124)
-}
-
-/// Decode a headerless DIB (no BITMAPFILEHEADER) into PNG bytes via the
-/// `image` crate's BMP decoder. Returns `None` on decode failure.
-#[cfg(target_os = "windows")]
-fn try_decode_dib_to_png(
-    bytes: &[u8],
-    filename: Option<String>,
-) -> Option<crate::clipboard::ImageData> {
-    use image::codecs::bmp::BmpDecoder;
-    use image::{DynamicImage, ImageFormat};
-    use std::io::Cursor;
-
-    let decoder = match BmpDecoder::new_without_file_header(Cursor::new(bytes)) {
-        Ok(d) => d,
-        Err(err) => {
-            log::debug!("DIB decode: BmpDecoder init failed: {err:?}");
-            return None;
-        }
-    };
-
-    let dyn_img = match DynamicImage::from_decoder(decoder) {
-        Ok(img) => img,
-        Err(err) => {
-            log::debug!("DIB decode: DynamicImage::from_decoder failed: {err:?}");
-            return None;
-        }
-    };
-
-    let mut png_bytes: Vec<u8> = Vec::new();
-    if let Err(err) = dyn_img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png) {
-        log::debug!("DIB decode: PNG encode failed: {err:?}");
-        return None;
-    }
-
-    Some(crate::clipboard::ImageData {
-        data: png_bytes,
-        mime_type: "image/png".to_string(),
-        filename,
-    })
-}
-
 /// Try to preserve original image format using infer crate for detection.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub fn try_preserve_original_format(
     bytes: &[u8],
     filename: Option<String>,
@@ -538,7 +356,7 @@ pub fn try_preserve_original_format(
 }
 
 /// Converts RGBA bitmap data to PNG format, returns None on invalid dimensions/encoding.
-#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))]
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
 pub fn convert_raw_bitmap_to_png(
     width: usize,
     height: usize,

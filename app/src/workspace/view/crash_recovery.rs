@@ -38,7 +38,6 @@ pub fn banner_metadata(ctx: &AppContext) -> Option<WorkspaceBannerFields> {
         // mechanisms. These set of crashes occur before there is a visible window, so any
         // information surfaced to the user would be unactionable noise that the user would see on
         // every invocation of Zap.
-        RecoveryMechanism::DisableOpenGL | RecoveryMechanism::ForceVulkan => None,
     }
 }
 

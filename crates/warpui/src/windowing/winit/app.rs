@@ -76,8 +76,7 @@ pub enum CustomEvent {
     #[cfg_attr(any(target_os = "macos"), allow(dead_code))]
     InternetDisconnected,
     /// The system theme (light/dark) changed.
-    /// TODO(CORE-2274): theming on Windows
-    #[cfg_attr(any(target_os = "macos", target_os = "windows"), allow(dead_code))]
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     SystemThemeChanged,
     /// Send a platform-native notification.
     SendNotification {
@@ -147,9 +146,9 @@ impl App {
         }
     }
 
-    // Dead code is allowed on wasm and Windows as the window class is only set for Linux
+    // Dead code is allowed on wasm as the window class is only set for Linux
     // platforms.
-    #[cfg_attr(any(target_family = "wasm", target_os = "windows"), allow(dead_code))]
+    #[cfg_attr(target_family = "wasm", allow(dead_code))]
     pub(crate) fn set_window_class(&mut self, window_class: String) {
         self.window_class = Some(window_class);
     }

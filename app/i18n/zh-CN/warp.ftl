@@ -608,7 +608,6 @@ settings-about-update-check-now = 检查更新
 settings-about-update-open-release = 前往 GitHub 下载
 settings-about-update-install-now = 立即安装
 settings-about-update-install-hint-macos = 安装包将打开,请把 Zap 拖到「应用程序」文件夹完成升级。
-settings-about-update-install-hint-windows = 安装向导将启动,按提示完成升级。
 settings-about-update-install-hint-linux = AppImage 将就地更新并重启 Zap。
 settings-about-export-logs = 导出日志…
 settings-about-export-logs-description = 将最近的应用日志(以及存在时的 MCP / 自动更新日志)和一份诊断摘要打包为 zip，由您选择保存位置，便于分享给排查人员。
@@ -1341,12 +1340,9 @@ settings-appearance-window-columns-label = 列数
 settings-appearance-window-rows-label = 行数
 settings-appearance-window-opacity-label = 窗口不透明度：
 settings-appearance-window-opacity-value = 窗口不透明度：{ $value }
-settings-appearance-window-opacity-not-supported = 当前显卡驱动不支持透明效果。
 settings-appearance-window-opacity-graphics-warning = 当前图形设置可能不支持透明窗口渲染。
 settings-appearance-window-opacity-graphics-warning-hint = 请尝试在 Features > System 中调整图形后端或集成 GPU 设置。
 settings-appearance-window-blur-radius = 窗口模糊半径：{ $value }
-settings-appearance-window-blur-texture-label = 启用窗口模糊（Acrylic 纹理）
-settings-appearance-window-blur-texture-not-supported = 当前硬件可能不支持透明窗口渲染。
 settings-appearance-tools-panel-consistent-label = 工具面板在所有标签页保持一致显示
 
 # Input
@@ -2336,7 +2332,6 @@ menu-filetree-open-file = 打开文件
 menu-filetree-new-file = 新建文件
 menu-filetree-cd-to-directory = cd 到该目录
 menu-filetree-reveal-finder = 在 Finder 中显示
-menu-filetree-reveal-explorer = 在资源管理器中显示
 menu-filetree-reveal-file-manager = 在文件管理器中显示
 menu-filetree-rename = 重命名
 menu-filetree-delete = 删除
@@ -2664,7 +2659,6 @@ workspace-left-panel-project-explorer = 项目浏览器
 project-explorer-unavailable-title = 项目浏览器不可用
 project-explorer-unavailable-disabled-description = 项目浏览器需要访问本地工作区。请打开新会话或切换到活动会话后查看。
 project-explorer-unavailable-remote-description = 项目浏览器需要访问本地工作区,远程会话暂不支持。
-project-explorer-unavailable-wsl-description = 项目浏览器当前不支持 WSL。
 workspace-left-panel-global-search = 全局搜索
 workspace-left-panel-warp-drive = Zap Drive
 workspace-left-panel-agent-conversations = 智能体对话
@@ -2900,7 +2894,6 @@ global-search-description = 在当前目录的文件中搜索。
 global-search-unavailable-title = 全局搜索不可用
 global-search-unavailable-description = 全局搜索需要访问本地工作区。请打开新会话或切换到活动会话后查看。
 global-search-remote-description = 全局搜索需要访问本地工作区，远程会话不支持此功能
-global-search-unsupported-session-description = 全局搜索目前不支持 Git Bash 或 WSL。
 global-search-failed = 全局搜索失败。
 
 # Wasm NUX dialog (app/src/wasm_nux_dialog.rs)

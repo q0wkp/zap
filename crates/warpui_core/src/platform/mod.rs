@@ -100,7 +100,6 @@ pub struct WindowOptions {
     pub title: Option<String>,
     pub style: WindowStyle,
     pub background_blur_radius_pixels: Option<u8>,
-    pub background_blur_texture: bool,
     pub gpu_power_preference: GPUPowerPreference,
     pub backend_preference: Option<GraphicsBackend>,
     pub on_gpu_device_info_reported: Box<OnGPUDeviceSelected>,
@@ -122,7 +121,6 @@ impl std::fmt::Debug for WindowOptions {
                 "background_blur_radius_pixels",
                 &self.background_blur_radius_pixels,
             )
-            .field("background_blur_texture", &self.background_blur_texture)
             .field("gpu_power_preference", &self.gpu_power_preference)
             .field("backend_preference", &self.backend_preference)
             .field("window_instance", &self.window_instance)
@@ -595,9 +593,6 @@ pub trait WindowManager {
     /// Sets the background blur radius for all windows to the given `blur_radius_pixels` value.
     fn set_all_windows_background_blur_radius(&self, blur_radius_pixels: u8);
 
-    /// [Windows only] Sets the background blur texture (Acrylic) for all windows.
-    fn set_all_windows_background_blur_texture(&self, use_blur_texture: bool);
-
     fn set_window_title(&self, window_id: WindowId, title: &str);
 
     /// Closes a window asynchronously. This is done asynchronously solely because the UI framework
@@ -680,8 +675,6 @@ impl OperatingSystem {
                 OperatingSystem::Linux
             } else if #[cfg(target_os = "macos")] {
                 OperatingSystem::Mac
-            } else if #[cfg(windows)] {
-                OperatingSystem::Windows
             } else {
                 OperatingSystem::Other(None)
             }

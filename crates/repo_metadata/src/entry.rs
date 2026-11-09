@@ -342,8 +342,8 @@ pub fn matches_gitignores(
     gitignores.iter().any(|gitignore| {
         if let Ok(relative_path) = path.strip_prefix(gitignore.path()) {
             // `matched_path_or_any_parents` panics if the path has a root.
-            // If not on windows, we allow paths with a root if the gitignore path is empty (since this denotes a global gitignore).
-            if relative_path.has_root() && (cfg!(windows) || gitignore.path() != Path::new("")) {
+            // We allow paths with a root if the gitignore path is empty (since this denotes a global gitignore).
+            if relative_path.has_root() && gitignore.path() != Path::new("") {
                 return false;
             }
 

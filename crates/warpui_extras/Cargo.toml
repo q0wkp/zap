@@ -43,8 +43,3 @@ secret-service = {version = "5.0.0", features = ["rt-async-io-crypto-rust"], opt
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 gloo-storage = { version = "0.3.0", optional = true }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = { workspace = true, features = ["Win32_Security_Cryptography", "Win32_UI_Shell"] }
-windows-registry = { workspace = true }
-windows-result = { workspace = true }

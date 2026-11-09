@@ -627,7 +627,6 @@ fn parse_dcs_bootstrapped() {
                 vi_mode_enabled: None,
                 os_category: None,
                 linux_distribution: None,
-                wsl_name: None,
                 shell_path: Some("/usr/local/bin/bash".to_string())
             }
         ),

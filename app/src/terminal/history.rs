@@ -517,25 +517,11 @@ impl History {
             );
         } else {
             let session_clone = session.clone();
-            let is_kaspersky_running = Self::is_kaspersky_running(ctx);
             self.init_session_with(
                 session,
-                async move { session_clone.read_history(is_kaspersky_running).await },
+                async move { session_clone.read_history().await },
                 ctx,
             );
-        }
-    }
-
-    /// Determines whether Kaspersky is running on the system. We only care if
-    /// Kaspersky is running on Windows, so we return false for other platforms.
-    #[cfg_attr(not(windows), allow(unused_variables))]
-    fn is_kaspersky_running(ctx: &mut ModelContext<Self>) -> bool {
-        cfg_if::cfg_if! {
-            if #[cfg(windows)] {
-                crate::util::windows::is_kaspersky_running(ctx)
-            } else {
-                false
-            }
         }
     }
 

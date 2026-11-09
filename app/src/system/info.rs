@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::ffi::OsStr;
 
 use byte_unit::Byte;
 use chrono::{DateTime, Local, Utc};
@@ -222,23 +221,6 @@ impl SystemInfo {
         sysinfo::ProcessRefreshKind::nothing()
             .with_memory()
             .with_cpu()
-    }
-
-    #[cfg_attr(not(windows), allow(dead_code))]
-    pub fn refresh_all_processes(&mut self) {
-        self.system.refresh_processes_specifics(
-            ProcessesToUpdate::All,
-            true, /* remove_dead_processes */
-            Self::refresh_kind(),
-        );
-    }
-
-    #[cfg_attr(not(windows), allow(dead_code))]
-    pub fn processes_by_name<'a>(
-        &'a self,
-        name: &'a str,
-    ) -> impl Iterator<Item = &'a sysinfo::Process> {
-        self.system.processes_by_name(OsStr::new(name))
     }
 }
 

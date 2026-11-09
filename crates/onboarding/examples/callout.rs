@@ -35,8 +35,6 @@ fn main() -> platform::app::TerminationResult {
     app_builder.run(move |ctx| {
         let font_name = if cfg!(target_os = "macos") {
             ".AppleSystemUIFont".to_string()
-        } else if cfg!(target_os = "windows") {
-            "Segoe UI".to_string()
         } else {
             "Noto Sans".to_string()
         };

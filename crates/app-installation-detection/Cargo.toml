@@ -17,6 +17,3 @@ tower-http = { workspace = true, features = ["trace", "cors"] }
 tracing.workspace = true
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 warp_cli.workspace = true
-
-[target.'cfg(target_os = "windows")'.dependencies]
-win32job = "2.0.1"

@@ -1,5 +1,5 @@
 //! OS keychain 封装 — 用 `keyring` crate 跨平台。
-//! Windows = Credential Manager / macOS = Keychain / Linux = Secret Service。
+//! macOS = Keychain / Linux = Secret Service。
 //!
 //! Account key 形如 `<node_uuid>:password` 或 `<node_uuid>:passphrase`,
 //! 不依赖 host/username,**节点改名或改 host 不丢密码**。

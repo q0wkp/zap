@@ -119,106 +119,6 @@ fn test_path_passes_filters_unix() {
     });
 }
 
-#[cfg_attr(
-    windows,
-    ignore = "TODO(CODE-312): issue with Gitignore matching on Windows"
-)]
-#[cfg(windows)]
-#[test]
-fn test_path_passes_filters_windows() {
-    VirtualFS::test("test_path_passes_filters", |dirs, mut sandbox| {
-        sandbox.mkdir("my_repo");
-        sandbox.mkdir(r"my_repo\.git");
-        sandbox.mkdir(r"my_repo\.git\refs");
-        sandbox.mkdir(r"my_repo\.git\refs\heads");
-        sandbox.mkdir(r"my_repo\src");
-        sandbox.mkdir(r"my_repo\target");
-        sandbox.mkdir(r"my_repo\target\debug");
-        sandbox.mkdir("outside_of_codebase");
-        sandbox.with_files(vec![
-            Stub::EmptyFile(r"my_repo\README.txt"),
-            Stub::EmptyFile(r"my_repo\.git\blob.txt"),
-            Stub::EmptyFile(r"my_repo\.git\HEAD"),
-            Stub::EmptyFile(r"my_repo\.git\refs\heads\main"),
-            Stub::EmptyFile(r"my_repo\.git\refs\heads\feature-branch"),
-            Stub::EmptyFile(r"my_repo\src\main.rs"),
-            Stub::EmptyFile(r"my_repo\target\debug\a.out"),
-            Stub::EmptyFile(r"outside_of_codebase\text.txt"),
-        ]);
-        sandbox.with_files(vec![Stub::FileWithContent(r"my_repo\.gitignore", "target")]);
-
-        let test_gitignore_entry = dirs.tests().join(r"my_repo\.gitignore");
-        let gitignores = vec![Gitignore::new(test_gitignore_entry).0];
-
-        assert!(path_passes_filters(
-            dirs.tests().join(r"my_repo\src").as_path(),
-            &gitignores
-        ));
-        assert!(path_passes_filters(
-            dirs.tests().join(r"my_repo\src\main.rs").as_path(),
-            &gitignores
-        ));
-        assert!(path_passes_filters(
-            dirs.tests().join(r"outside_of_codebase\text.txt").as_path(),
-            &gitignores
-        ));
-
-        // Allow .git internal files that provide useful signals
-        assert!(path_passes_filters(
-            dirs.tests().join(r"my_repo\.git\HEAD").as_path(),
-            &gitignores
-        ));
-        assert!(path_passes_filters(
-            dirs.tests().join(r"my_repo\.git\refs\heads").as_path(),
-            &gitignores
-        ));
-        assert!(path_passes_filters(
-            dirs.tests().join(r"my_repo\.git\refs\heads\main").as_path(),
-            &gitignores
-        ));
-        assert!(path_passes_filters(
-            dirs.tests()
-                .join(r"my_repo\.git\refs\heads\feature-branch")
-                .as_path(),
-            &gitignores
-        ));
-
-        // .git directory itself is still ignored
-        assert!(!path_passes_filters(
-            dirs.tests().join(r"my_repo\.git").as_path(),
-            &gitignores
-        ));
-
-        // Ignore .gitignored paths and their children.
-        assert!(!path_passes_filters(
-            dirs.tests().join(r"my_repo\target").as_path(),
-            &gitignores
-        ));
-        assert!(!path_passes_filters(
-            dirs.tests().join(r"my_repo\target\debug").as_path(),
-            &gitignores
-        ));
-        assert!(!path_passes_filters(
-            dirs.tests().join(r"my_repo\target\debug\a.out").as_path(),
-            &gitignores
-        ));
-
-        // Ensure paths are canonicalized before being matched against gitignores.
-        assert!(path_passes_filters(
-            dirs.tests()
-                .join(r"outside_of_codebase\..\my_repo\README.txt")
-                .as_path(),
-            &gitignores
-        ));
-        assert!(!path_passes_filters(
-            dirs.tests()
-                .join(r"outside_of_codebase\..\my_repo\target\debug\a.out")
-                .as_path(),
-            &gitignores
-        ));
-    });
-}
-
 #[test]
 fn test_git_path_filtering_allowlist() {
     use super::{is_commit_related_git_file, is_index_lock_file, should_ignore_git_path};
@@ -327,20 +227,6 @@ fn test_git_path_filtering_allowlist() {
     )));
     assert!(!is_index_lock_file(Path::new("/repo/.git/HEAD")));
     assert!(!is_index_lock_file(Path::new("/repo/.git/index")));
-
-    // Test Windows-style paths (only on Windows, as path parsing is platform-specific)
-    #[cfg(windows)]
-    {
-        assert!(!should_ignore_git_path(Path::new(
-            r"C:\Users\user\project\.git\HEAD"
-        )));
-        assert!(!should_ignore_git_path(Path::new(
-            r"C:\Users\user\project\.git\index.lock"
-        )));
-        assert!(should_ignore_git_path(Path::new(
-            r"C:\Users\user\project\.git\index"
-        )));
-    }
 }
 
 #[test]

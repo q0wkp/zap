@@ -385,7 +385,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "warp_cli",
- "win32job",
 ]
 
 [[package]]
@@ -2996,15 +2995,9 @@ dependencies = [
 name = "command"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-process",
  "futures-lite 1.13.0",
- "lazy_static",
  "libc",
- "log",
- "thiserror 2.0.18",
- "win32job",
- "windows 0.62.2",
 ]
 
 [[package]]
@@ -3090,7 +3083,6 @@ dependencies = [
  "tokio",
  "url",
  "warpui",
- "windows 0.62.2",
  "x11rb",
  "zbus 5.16.0",
 ]
@@ -4417,20 +4409,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e079f19b08ca6239f47f8ba8509c11cf3ea30095831f7fed61441475edd8c449"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "embed-resource"
-version = "3.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c31a88c8d26de40ed18fe748c547845aa39de1db3afd958f8cb91579f3644bcb"
-dependencies = [
- "cc",
- "memchr",
- "rustc_version",
- "toml 1.1.2+spec-1.1.0",
- "vswhom",
- "winreg",
 ]
 
 [[package]]
@@ -6414,7 +6392,7 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
- "windows-registry 0.6.1",
+ "windows-registry",
 ]
 
 [[package]]
@@ -7359,7 +7337,6 @@ version = "3.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eebcc3aff044e5944a8fbaf69eb277d11986064cba30c468730e8b9909fb551c"
 dependencies = [
- "byteorder",
  "dbus-secret-service",
  "linux-keyutils",
  "log",
@@ -7367,7 +7344,6 @@ dependencies = [
  "secret-service 4.0.0",
  "security-framework 2.11.1",
  "security-framework 3.7.0",
- "windows-sys 0.60.2",
  "zeroize",
 ]
 
@@ -8527,7 +8503,6 @@ dependencies = [
  "sha2 0.10.9",
  "tar",
  "warp_core",
- "zip 2.4.2",
 ]
 
 [[package]]
@@ -10121,13 +10096,10 @@ dependencies = [
  "cfg-if",
  "cfg_aliases 0.2.1",
  "futures",
- "itertools 0.14.0",
  "log",
  "objc2 0.6.4",
  "objc2-foundation 0.3.2",
- "parking_lot",
  "pin-project",
- "windows 0.62.2",
 ]
 
 [[package]]
@@ -13711,21 +13683,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml"
-version = "1.1.2+spec-1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81f3d15e84cbcd896376e6730314d59fb5a87f31e4b038454184435cd57defee"
-dependencies = [
- "indexmap 2.14.0",
- "serde_core",
- "serde_spanned 1.1.1",
- "toml_datetime 1.1.1+spec-1.1.0",
- "toml_parser",
- "toml_writer",
- "winnow 1.0.3",
-]
-
-[[package]]
 name = "toml-span"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14580,26 +14537,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
 
 [[package]]
-name = "vswhom"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be979b7f07507105799e854203b470ff7c78a1639e330a58f183b5fea574608b"
-dependencies = [
- "libc",
- "vswhom-sys",
-]
-
-[[package]]
-name = "vswhom-sys"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb067e4cbd1ff067d1df46c9194b5de0e98efd2810bbc95c5d5e5f25a3231150"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
 name = "vte"
 version = "0.13.0"
 source = "git+https://github.com/warpdotdev/vte.git?rev=4b399c87b63ba88f45709edaa6383fc519f6c900#4b399c87b63ba88f45709edaa6383fc519f6c900"
@@ -14679,7 +14616,6 @@ dependencies = [
  "bounded-vec-deque",
  "byte-unit",
  "bytecount",
- "bytemuck",
  "bytes",
  "cc",
  "cfg-if",
@@ -14714,7 +14650,6 @@ dependencies = [
  "dirs 6.0.0",
  "dunce",
  "email_address 0.2.3",
- "embed-resource",
  "embed_plist",
  "enclose",
  "enum-iterator",
@@ -14907,11 +14842,7 @@ dependencies = [
  "web-sys",
  "websocket",
  "wgpu",
- "windows 0.62.2",
- "windows-registry 0.2.0",
- "windows-result 0.2.0",
  "winit",
- "winreg",
  "x11rb",
  "zap_sftp",
  "zap_sync",
@@ -14990,7 +14921,6 @@ dependencies = [
  "uuid",
  "warp_core",
  "warp_util",
- "windows 0.62.2",
 ]
 
 [[package]]
@@ -15346,7 +15276,6 @@ dependencies = [
  "thiserror 2.0.18",
  "typed-path 0.10.0",
  "warpui",
- "windows 0.62.2",
 ]
 
 [[package]]
@@ -15390,7 +15319,6 @@ dependencies = [
  "derive_more 0.99.20",
  "dirs 6.0.0",
  "dispatch",
- "dwrote",
  "env_logger",
  "font-kit",
  "fontconfig",
@@ -15429,7 +15357,6 @@ dependencies = [
  "serde",
  "sum_tree",
  "takecell",
- "tauri-winrt-notification",
  "thiserror 2.0.18",
  "tini",
  "urlencoding",
@@ -15442,11 +15369,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "wgpu",
- "windows 0.62.2",
- "windows-core 0.62.2",
- "windows-version",
  "winit",
- "winreg",
  "x11-dl",
  "x11rb",
  "zbus 5.16.0",
@@ -15469,7 +15392,6 @@ dependencies = [
  "cfg-if",
  "cfg_aliases 0.2.1",
  "chrono",
- "clipboard-win",
  "command",
  "concat-idents",
  "ctor",
@@ -15554,9 +15476,6 @@ dependencies = [
  "toml_edit 0.25.12+spec-1.1.0",
  "warpui",
  "warpui_extras",
- "windows 0.62.2",
- "windows-registry 0.2.0",
- "windows-result 0.2.0",
 ]
 
 [[package]]
@@ -16132,16 +16051,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "win32job"
-version = "2.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c6a6724ccfbf34154a8691bd868b0fcd2be2ca3f7b47b32614654f1a01b191c"
-dependencies = [
- "thiserror 1.0.69",
- "windows 0.61.3",
-]
-
-[[package]]
 name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -16319,17 +16228,6 @@ dependencies = [
 
 [[package]]
 name = "windows-registry"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e400001bb720a623c1c69032f8e3e4cf09984deec740f007dd2b03ec864804b0"
-dependencies = [
- "windows-result 0.2.0",
- "windows-strings 0.1.0",
- "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-registry"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02752bf7fbdcce7f2a27a742f798510f3e5ad88dbe84871e5168e2120c3d5720"
@@ -16337,15 +16235,6 @@ dependencies = [
  "windows-link 0.2.1",
  "windows-result 0.4.1",
  "windows-strings 0.5.1",
-]
-
-[[package]]
-name = "windows-result"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d1043d8214f791817bab27572aaa8af63732e11bf84aa21a45a78d6c317ae0e"
-dependencies = [
- "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -16364,16 +16253,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
 dependencies = [
  "windows-link 0.2.1",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd9b125c486025df0eabcb585e62173c6c9eddcec5d117d3b6e8c30e2ee4d10"
-dependencies = [
- "windows-result 0.2.0",
- "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -16729,16 +16608,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0592e1c9d151f854e6fd382574c3a0855250e1d9b2f99d9281c6e6391af352f1"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "winreg"
-version = "0.55.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5a765337c50e9ec252c2069be9bf91c7df47afb103b642ba3a53bf8101be97"
-dependencies = [
- "cfg-if",
- "windows-sys 0.59.0",
 ]
 
 [[package]]

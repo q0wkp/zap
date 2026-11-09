@@ -6,9 +6,9 @@ pub mod windowing;
 // Re-export everything from the core crate.
 pub use warpui_core::*;
 
-/// UI locale used to bias DirectWrite / CoreText / fontconfig glyph fallback for CJK Han characters.
+/// UI locale used to bias CoreText / fontconfig glyph fallback for CJK Han characters.
 /// Set by `app::i18n::init` / `set_locale` so that font fallback for Japanese UI prefers Japanese
-/// glyphs (e.g. Yu Gothic / Meiryo) over Simplified Chinese (Microsoft YaHei) on Windows.
+/// glyphs over Simplified Chinese ones.
 mod ui_locale {
     use std::sync::{Arc, Mutex, OnceLock, RwLock};
 

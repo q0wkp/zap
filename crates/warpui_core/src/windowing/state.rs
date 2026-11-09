@@ -130,11 +130,6 @@ impl WindowManager {
             .set_all_windows_background_blur_radius(blur_radius_pixels)
     }
 
-    pub fn set_all_windows_background_blur_texture(&self, use_blur_texture: bool) {
-        self.platform
-            .set_all_windows_background_blur_texture(use_blur_texture)
-    }
-
     pub fn set_window_title(&self, window_id: WindowId, title: &str) {
         self.platform.set_window_title(window_id, title)
     }
@@ -190,10 +185,9 @@ impl WindowManager {
     }
 
     /// The window itself usually has rounded corners, except when running in a tiling window
-    /// manager or when on Windows. We don't need to specify a custom window corner radius on
-    /// Windows because we use OS APIs to round the corners of the window.
+    /// manager.
     pub fn window_corner_radius(&self) -> CornerRadius {
-        let radius = if self.is_tiling_window_manager() || cfg!(windows) {
+        let radius = if self.is_tiling_window_manager() {
             0.
         } else {
             8.

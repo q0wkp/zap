@@ -83,20 +83,12 @@ pub fn main() -> Result<()> {
                 "Integration test binary should have set an ORIGINAL_HOME environment variable",
             );
             assert_ne!(home, original_home, "HOME should not be the same as ORIGINAL_HOME!");
-        } else if #[cfg(windows)] {
-            let userprofile = std::env::var("USERPROFILE").expect(
-                "Should have a value for the USERPROFILE environment variable",
-            );
-            let original_userprofile = std::env::var("ORIGINAL_USERPROFILE").expect(
-                "Integration test binary should have set an ORIGINAL_USERPROFILE environment variable",
-            );
-            assert_ne!(userprofile, original_userprofile, "USERPROFILE should not be the same as ORIGINAL_USERPROFILE!");
         } else {
             unimplemented!("Need to add support for hermetic integration tests for the current platform!");
         }
     }
 
-    #[cfg_attr(not(any(unix, windows)), allow(unreachable_code))]
+    #[cfg_attr(not(unix), allow(unreachable_code))]
     warp::run_integration_test(driver)
 }
 
@@ -235,7 +227,6 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_preferred_shell);
     register_test!(test_git_prompt);
     register_test!(test_terminal_announces_capabilities_to_shell);
-    register_test!(test_open_new_tab_with_specific_shell_from_new_session_menu);
     register_test!(test_open_launch_config_from_add_tab_menu_legacy);
     register_test!(test_open_launch_config_with_custom_size);
     register_test!(test_launch_config_single_child_branch);

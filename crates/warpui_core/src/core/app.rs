@@ -905,8 +905,6 @@ impl AppContext {
     /// this method handles dispatching the right handler for the button clicked. The response is
     /// encoded as a 0-based index into the list of buttons on the modal, and the callback will be
     /// at the same index in the Vec of callbacks.
-    /// TODO(CORE-2323): Implement native Windows OS modal
-    #[cfg_attr(target_os = "windows", allow(dead_code))]
     pub(crate) fn process_platform_modal_response(
         &mut self,
         modal_id: ModalId,
@@ -2303,7 +2301,6 @@ impl AppContext {
             title,
             fullscreen_state,
             background_blur_radius_pixels,
-            background_blur_texture,
             anchor_new_windows_from_closed_position,
             on_gpu_driver_selected: on_gpu_driver_reported,
             window_instance,
@@ -2331,7 +2328,6 @@ impl AppContext {
             title,
             style: window_style,
             background_blur_radius_pixels,
-            background_blur_texture,
             gpu_power_preference: self.rendering_config.gpu_power_preference,
             backend_preference: self.rendering_config.backend_preference,
             on_gpu_device_info_reported: on_gpu_driver_reported.unwrap_or(Box::new(|_| {})),
@@ -2448,11 +2444,11 @@ impl AppContext {
 
                 window.request_redraw();
 
-                // On Linux and Windows, we don't have a direct way to react to
+                // On Linux, we don't have a direct way to react to
                 // window fullscreen state changes, so instead we're using a
                 // resize event as a signal that the fullscreen state _may_ have
                 // changed.
-                #[cfg(any(target_os = "linux", target_os = "freebsd", windows))]
+                #[cfg(any(target_os = "linux", target_os = "freebsd"))]
                 crate::windowing::WindowManager::handle(ctx).update(ctx, |manager, ctx| {
                     manager.update_is_active_window_fullscreen(ctx);
                 });
@@ -2648,7 +2644,6 @@ impl AppContext {
         let add_window_options = AddWindowOptions {
             // TODO(vorporeal): what's the right value here?
             background_blur_radius_pixels: None,
-            background_blur_texture: false,
             window_bounds: WindowBounds::ExactPosition(bounds),
             // TODO(alokedesai): Determine if, and how, we want to pass the on_gpu_driver_reported
             // callback from the original window back to this window.

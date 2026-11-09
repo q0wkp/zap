@@ -3,7 +3,6 @@
 //! This is intended to never be used by a vast majority of users. This is only intended for users
 //! who are unable to run Zap and want to provide us, the dev team, with useful debugging
 //! information.
-#[cfg(not(windows))]
 use command::blocking::Command;
 use warp_core::channel::ChannelState;
 use warpui::windowing;
@@ -11,7 +10,6 @@ use warpui::windowing;
 pub(crate) fn run() -> anyhow::Result<()> {
     println!("Zap version: {:?}", ChannelState::app_version());
 
-    #[cfg(not(windows))]
     {
         let uname = collect_output_or_suggest_install("uname -a");
         println!("uname(1) output: {}", uname.trim_end());
@@ -23,7 +21,6 @@ pub(crate) fn run() -> anyhow::Result<()> {
         crate::autoupdate::linux::UpdateMethod::detect()
     );
 
-    #[cfg_attr(windows, expect(unused_mut))]
     #[cfg_attr(any(target_os = "macos", target_family = "wasm"), expect(unused))]
     let mut windowing_system: Option<windowing::System> = None;
 
@@ -54,7 +51,7 @@ pub(crate) fn run() -> anyhow::Result<()> {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "freebsd", windows))]
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     {
         use std::ops::Deref as _;
 
@@ -114,7 +111,6 @@ pub(crate) fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(not(windows))]
 fn collect_output_or_suggest_install(full_command: &str) -> String {
     let redirected_command = format!("{full_command} 2>&1");
     let output = Command::new("sh")

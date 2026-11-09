@@ -1,16 +1,10 @@
 use settings::{macros::define_settings_group, SupportedPlatforms, SyncToCloud};
-use warp_core::features::FeatureFlag;
 use warpui::platform::GraphicsBackend;
-
-fn default_to_windows_high_performance_gpu() -> bool {
-    cfg!(windows) && FeatureFlag::WindowsHighPerformanceGpuDefault.is_enabled()
-}
 
 define_settings_group!(GPUSettings, settings: [
     prefer_low_power_gpu: PreferLowPowerGPU {
         type: bool,
-        default: cfg!(any(target_os = "linux", target_os = "freebsd"))
-            || (cfg!(windows) && !default_to_windows_high_performance_gpu()),
+        default: cfg!(any(target_os = "linux", target_os = "freebsd")),
         supported_platforms: SupportedPlatforms::ALL,
         sync_to_cloud: SyncToCloud::Never,
         private: false,
@@ -19,7 +13,7 @@ define_settings_group!(GPUSettings, settings: [
     },
     preferred_backend: PreferredGraphicsBackend {
         type: Option<GraphicsBackend>,
-        default: default_to_windows_high_performance_gpu().then_some(GraphicsBackend::Vulkan),
+        default: None,
         supported_platforms: SupportedPlatforms::WINDOWS,
         sync_to_cloud: SyncToCloud::Never,
         private: false,

@@ -1300,12 +1300,9 @@ settings-appearance-window-columns-label = 列数
 settings-appearance-window-rows-label = 行数
 settings-appearance-window-opacity-label = ウィンドウの不透明度:
 settings-appearance-window-opacity-value = ウィンドウの不透明度: { $value }
-settings-appearance-window-opacity-not-supported = 透明化はお使いのグラフィックドライバではサポートされていません。
 settings-appearance-window-opacity-graphics-warning = 選択中のグラフィック設定では透明ウィンドウのレンダリングがサポートされない場合があります。
 settings-appearance-window-opacity-graphics-warning-hint = 機能 > システムでグラフィックバックエンドまたは統合 GPU の設定を変更してみてください。
 settings-appearance-window-blur-radius = ウィンドウぼかし半径: { $value }
-settings-appearance-window-blur-texture-label = ウィンドウぼかしを使用 (Acrylic テクスチャ)
-settings-appearance-window-blur-texture-not-supported = 選択中のハードウェアでは透明ウィンドウのレンダリングがサポートされない場合があります。
 settings-appearance-tools-panel-consistent-label = ツールパネルの表示状態をタブ間で統一する
 
 # Input
@@ -2314,7 +2311,6 @@ menu-filetree-open-file = ファイルを開く
 menu-filetree-new-file = 新規ファイル
 menu-filetree-cd-to-directory = ディレクトリへ cd
 menu-filetree-reveal-finder = Finder で表示
-menu-filetree-reveal-explorer = エクスプローラーで表示
 menu-filetree-reveal-file-manager = ファイルマネージャーで表示
 menu-filetree-rename = 名前変更
 menu-filetree-delete = 削除
@@ -2798,7 +2794,6 @@ global-search-description = 現在のディレクトリ全体のファイル内�
 global-search-unavailable-title = グローバル検索を利用できません
 global-search-unavailable-description = グローバル検索にはローカルワークスペースへのアクセスが必要です。新しいセッションを開くか、アクティブなセッションに移動してください。
 global-search-remote-description = グローバル検索にはローカルワークスペースへのアクセスが必要で、リモートセッションでは未対応です
-global-search-unsupported-session-description = グローバル検索は現在 Git Bash や WSL では動作しません。
 global-search-failed = グローバル検索に失敗しました。
 
 # Wasm NUX dialog (app/src/wasm_nux_dialog.rs)

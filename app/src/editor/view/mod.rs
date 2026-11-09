@@ -261,7 +261,7 @@ pub fn init(ctx: &mut AppContext) {
             EditorAction::Paste,
             id!("EditorView") & !id!("IMEOpen"),
         ),
-        #[cfg(any(windows, target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         FixedBinding::custom(
             CustomAction::WindowsPaste,
             EditorAction::Paste,
@@ -1490,11 +1490,6 @@ pub struct EditorOptions {
     /// If true, this editor will delegate handling of paste events to its parent instead of
     /// inserting clipboard contents directly.
     pub delegate_paste_handling: bool,
-    /// Optional hook that transforms each dropped path before it's escaped and inserted into
-    /// the buffer. Invoked for non-image paths only; image paths are forwarded via
-    /// [`Event::DroppedImageFiles`] unchanged so the host can still read them from the
-    /// filesystem.
-    pub drag_drop_path_transformer: Option<PathTransformerFn>,
     /// If true, this is treated as a password field:
     /// * Text is rendered as dots instead of the actual characters
     /// * Copying is disabled (but paste still works)
@@ -1531,7 +1526,6 @@ impl Default for EditorOptions {
             convert_newline_to_space: false,
             include_ai_context_menu: false,
             delegate_paste_handling: false,
-            drag_drop_path_transformer: None,
             is_password: false,
             keymap_context_modifier: None,
         }
@@ -1566,7 +1560,6 @@ impl From<SingleLineEditorOptions> for EditorOptions {
             convert_newline_to_space: options.convert_newline_to_space,
             include_ai_context_menu: false,
             delegate_paste_handling: false,
-            drag_drop_path_transformer: None,
             is_password: options.is_password,
             keymap_context_modifier: None,
         }
@@ -1629,8 +1622,6 @@ impl Default for SingleLineEditorOptions {
 }
 
 pub type CursorColorsFn = Box<dyn Fn(&AppContext) -> CursorColors>;
-
-pub type PathTransformerFn = Box<dyn Fn(&str) -> String>;
 
 /// Returns theme-based cursor and selection colors.
 pub fn default_cursor_colors(ctx: &AppContext) -> CursorColors {
@@ -1934,10 +1925,6 @@ pub struct EditorView {
 
     /// Whether this editor should delegate handling of paste events to its parent.
     delegate_paste_handling: bool,
-
-    /// Optional hook that transforms each dropped path before it is escaped and inserted into
-    /// the buffer. See [`EditorOptions::drag_drop_path_transformer`].
-    drag_drop_path_transformer: Option<PathTransformerFn>,
 
     process_attached_images_future_handle: Option<SpawnedFutureHandle>,
 
@@ -2939,10 +2926,6 @@ impl EditorView {
         self.shell_family
     }
 
-    pub fn set_drag_drop_path_transformer(&mut self, transformer: Option<PathTransformerFn>) {
-        self.drag_drop_path_transformer = transformer;
-    }
-
     fn clipboard_content(&mut self, ctx: &mut ViewContext<Self>) -> String {
         let content = ctx.clipboard().read();
         self.clipboard_text_content(content)
@@ -3223,7 +3206,6 @@ impl EditorView {
             image_context_button_mouse_handle: Default::default(),
             ai_context_menu_state,
             delegate_paste_handling: options.delegate_paste_handling,
-            drag_drop_path_transformer: options.drag_drop_path_transformer,
             process_attached_images_future_handle: None,
             is_password: options.is_password,
             keymap_context_modifier: options.keymap_context_modifier,
@@ -4337,13 +4319,6 @@ impl EditorView {
         #[cfg(feature = "voice_input")]
         {
             self.stop_voice_input(true, ctx);
-        }
-
-        #[cfg(windows)]
-        // On Windows, if there is selected text, users expect ctrl-c to copy.
-        if !self.selected_text(ctx).is_empty() {
-            self.copy(ctx);
-            return;
         }
 
         if !self.can_edit(ctx) {
@@ -7969,13 +7944,8 @@ impl EditorView {
             }
         }
 
-        let transformed_paths: Vec<String> = match &self.drag_drop_path_transformer {
-            Some(transformer) => paths_as_strings.iter().map(|p| transformer(p)).collect(),
-            None => paths_as_strings,
-        };
-
         let input =
-            warpui::clipboard_utils::escaped_paths_str(&transformed_paths, self.shell_family);
+            warpui::clipboard_utils::escaped_paths_str(&paths_as_strings, self.shell_family);
 
         self.user_insert(&input, ctx);
     }

@@ -172,7 +172,6 @@ jaq-all = { version = "0.1", default-features = false }
 jsonschema = { version = "0.45", default-features = false }
 keyring = { version = "3.6", features = [
     "apple-native",
-    "windows-native",
     "sync-secret-service",
     "linux-native",
     "linux-native-sync-persistent",
@@ -392,22 +391,6 @@ sysinfo = { version = "0.37.0", default-features = false, features = [
   "system",
   "multithread",
 ] }
-windows = { version = "0.62.2", features = [
-  "Win32",
-  "Win32_System",
-  "Win32_System_Kernel",
-  "Win32_System_Threading",
-  "Wdk_System",
-  "Wdk_System_SystemServices",
-  "Win32_System_Com",
-  "Win32_System_SecurityCenter",
-  "Win32_System_SystemInformation",
-  "Win32_System_Console",
-] }
-windows-core = { version = "0.62.2" }
-windows-registry = { version = "0.2.0" }
-windows-result = { version = "0.2.0" }
-winreg = "0.55.0"
 typed-path = "0.10.0"
 streaming-iterator = "0.1.0"
 derivative = "2.2.0"
@@ -470,24 +453,10 @@ miniz_oxide.opt-level = 3
 inherits = "release"
 lto = "thin"
 
-# A shorthand profile for `release-lto`.
-# Windows enforces that any path is a maximum of 255 characters and
-# the length of this profile is sufficiently long that it can cause
-# compiler errors. We use a shorthand to get around these issues.
-[profile.rlto]
-inherits = "release-lto"
-
 # A custom release-like profile that forces debug assertions on.
 [profile.release-lto-debug_assertions]
 inherits = "release-lto"
 debug-assertions = true
-
-# A shorthand profile for `release-lto-debug_assertions`.
-# Windows enforces that any path is a maximum of 255 characters and
-# the length of this profile is sufficiently long that it can cause
-# compiler errors. We use a shorthand to get around these issues.
-[profile.rltoda]
-inherits = "release-lto-debug_assertions"
 
 # A profile tuned for the `oz` CLI tarball. The CLI is shipped over the network
 # and run headlessly, so we trade some compile time and a small amount of

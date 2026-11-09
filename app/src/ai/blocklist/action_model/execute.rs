@@ -76,10 +76,10 @@ use crate::{
         ambient_agents::AmbientAgentTaskId,
     },
     terminal::{
-        model::session::{active_session::ActiveSession, ExecuteCommandOptions, Session},
+        model::session::{active_session::ActiveSession, Session},
         model_events::ModelEventDispatcher,
         shell::ShellType,
-        ShellLaunchData, TerminalModel,
+        TerminalModel,
     },
     BlocklistAIHistoryModel,
 };
@@ -853,7 +853,6 @@ pub struct ReadFileContextResult {
 pub async fn read_local_file_context(
     file_names: &[FileLocations],
     current_working_directory: Option<String>,
-    shell: Option<ShellLaunchData>,
     max_file_bytes: Option<usize>,
     max_batch_bytes: Option<usize>,
 ) -> anyhow::Result<ReadFileContextResult> {
@@ -874,7 +873,6 @@ pub async fn read_local_file_context(
         for file in file_names {
             let absolute_file_path = PathBuf::from(host_native_absolute_path(
                 &file.name,
-                &shell,
                 &current_working_directory,
             ));
 
@@ -1081,7 +1079,7 @@ async fn is_file_path(path: &str, session: &Session) -> bool {
         format!("test -f \"{path}\"")
     };
     session
-        .execute_command(&command, None, None, ExecuteCommandOptions::default())
+        .execute_command(&command, None, None)
         .await
         .map(|output| output.success())
         .unwrap_or(false)
@@ -1091,12 +1089,7 @@ async fn is_file_path(path: &str, session: &Session) -> bool {
 async fn is_git_repository(absolute_path: &str, session: &Session) -> anyhow::Result<bool> {
     let git_command = format!("git -C \"{absolute_path}\" rev-parse");
     let command_output = session
-        .execute_command(
-            git_command.as_str(),
-            None,
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(git_command.as_str(), None, None)
         .await?;
     Ok(command_output.success())
 }

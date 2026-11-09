@@ -465,7 +465,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     ai_page::init_actions_from_parent_view(app, context, builder);
     code_page::init_actions_from_parent_view(app, context, builder);
 
-    if ChannelState::enable_debug_features() || cfg!(windows) {
+    if ChannelState::enable_debug_features() {
         ToggleSettingActionPair::add_toggle_setting_action_pairs_as_bindings(
             vec![
                 ToggleSettingActionPair::custom(

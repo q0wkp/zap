@@ -11,8 +11,6 @@ fn test_data_dir_path() {
             assert_eq!(data_dir(), home_dir.join(".zap"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(data_dir(), home_dir.join(".local/share/zap"));
-        } else if #[cfg(windows)] {
-            assert_eq!(data_dir(), home_dir.join("AppData\\Roaming\\zap\\Zap\\data"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -28,8 +26,6 @@ fn test_config_local_dir_path() {
             assert_eq!(config_local_dir(), home_dir.join(".zap"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(config_local_dir(), home_dir.join(".config/zap"));
-        } else if #[cfg(windows)] {
-            assert_eq!(config_local_dir(), home_dir.join("AppData\\Local\\zap\\Zap\\config"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -71,8 +67,6 @@ fn test_cache_dir_path() {
             assert_eq!(cache_dir(), home_dir.join("Library/Application Support/dev.zap.Zap"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(cache_dir(), home_dir.join(".cache/zap"));
-        } else if #[cfg(windows)] {
-            assert_eq!(cache_dir(), home_dir.join("AppData\\Local\\zap\\Zap\\cache"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -88,8 +82,6 @@ fn test_state_dir_path() {
             assert_eq!(state_dir(), home_dir.join("Library/Application Support/dev.zap.Zap"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(state_dir(), home_dir.join(".local/state/zap"));
-        } else if #[cfg(windows)] {
-            assert_eq!(state_dir(), home_dir.join("AppData\\Local\\zap\\Zap\\data"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -115,8 +107,6 @@ fn test_project_path_for_zap_dev_app_id() {
             assert_eq!(project_dirs.project_path(), "dev.zap.ZapDev");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(project_dirs.project_path(), "zap-dev");
-        } else if #[cfg(windows)] {
-            assert_eq!(project_dirs.project_path(), "zap\\ZapDev");
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -132,8 +122,6 @@ fn test_project_path_for_oss_app_id() {
             assert_eq!(project_dirs.project_path(), "dev.zap.Zap");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
             assert_eq!(project_dirs.project_path(), "zap");
-        } else if #[cfg(windows)] {
-            assert_eq!(project_dirs.project_path(), "zap\\Zap");
         } else {
             unimplemented!("Need to update tests for current platform!");
         }

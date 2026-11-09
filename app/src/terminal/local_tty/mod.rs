@@ -13,8 +13,6 @@ pub mod terminal_attributes;
 pub mod terminal_manager;
 #[cfg(unix)]
 mod unix;
-#[cfg(windows)]
-pub mod windows;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -22,13 +20,9 @@ use std::{collections::HashMap, ffi::OsString, io, path::PathBuf};
 
 #[cfg(unix)]
 pub use self::unix::*;
-#[cfg(windows)]
-pub use self::windows::*;
 use super::SizeInfo;
 use shell::ShellStarter;
 
-#[cfg(windows)]
-pub use self::terminal_manager::shutdown_all_pty_event_loops;
 pub use self::terminal_manager::{get_shell_starter, TerminalManager};
 
 /// This trait defines the behaviour needed to read and/or write to a stream.

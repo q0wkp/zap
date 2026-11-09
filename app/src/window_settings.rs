@@ -1,7 +1,6 @@
 use settings::{
     macros::define_settings_group, RespectUserSyncSetting, SupportedPlatforms, SyncToCloud,
 };
-use warpui::{AppContext, WindowId};
 
 define_settings_group!(WindowSettings, settings: [
     background_blur_radius: BackgroundBlurRadius {
@@ -14,16 +13,6 @@ define_settings_group!(WindowSettings, settings: [
         toml_path: "appearance.window.override_blur",
         description: "The blur radius applied to the window background.",
     },
-    background_blur_texture: BackgroundBlurTexture {
-        type: bool,
-        default: false,
-        supported_platforms: SupportedPlatforms::WINDOWS,
-        sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
-        private: false,
-        storage_key: "OverrideBlurTexture",
-        toml_path: "appearance.window.override_blur_texture",
-        description: "Whether to apply a blur texture to the window background.",
-    }
     background_opacity: BackgroundOpacity {
         type: u8,
         default: 100,
@@ -123,28 +112,6 @@ impl BackgroundOpacity {
     // last frame will start showing up in the current frame in metal when opacity is at 0.
     pub const MIN: u8 = 1;
     pub const MAX: u8 = 100;
-
-    /// Returns the effective background opacity for the window.
-    ///
-    /// When native window decorations are enabled (e.g. as a GPU driver workaround) on Windows,
-    /// the native frame adds a white background that bleeds through any transparent areas, so we
-    /// force full opacity.
-    pub fn effective_opacity(&self, window_id: WindowId, app: &AppContext) -> u8 {
-        if self.is_configurable(window_id, app) {
-            **self
-        } else {
-            Self::MAX
-        }
-    }
-
-    pub fn is_configurable(&self, window_id: WindowId, app: &AppContext) -> bool {
-        let disable_transparency = app
-            .windows()
-            .platform_window(window_id)
-            .is_some_and(|w| w.uses_native_window_decorations())
-            && cfg!(windows);
-        !disable_transparency
-    }
 
     fn validate(&self, new_value: u8) -> u8 {
         if new_value < Self::MIN {

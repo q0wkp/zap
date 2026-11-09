@@ -1400,7 +1400,6 @@ impl AIBlock {
             Some(output) => collect_output_data_for_link_detection(
                 output,
                 self.current_working_directory.as_ref(),
-                self.shell_launch_data.as_ref(),
             ),
             None => (Vec::new(), Vec::new()),
         };
@@ -2539,10 +2538,6 @@ impl AIBlock {
                     CodeEditorEvent::CopiedEmptyText => {
                         ctx.emit(AIBlockEvent::CopiedEmptyText);
                     }
-                    #[cfg(windows)]
-                    CodeEditorEvent::WindowsCtrlC { .. } => {
-                        ctx.emit(AIBlockEvent::WindowsCtrlC);
-                    }
                     _ => {}
                 });
                 self.code_editor_views.push(EmbeddedCodeEditorView {
@@ -2654,7 +2649,6 @@ impl AIBlock {
             let active_session = self.active_session.as_ref(ctx);
             let file_diffs = convert_file_edits_to_file_diffs(
                 file_edits,
-                &active_session.shell_launch_data(ctx),
                 &active_session.current_working_directory().cloned(),
             );
             view.update(ctx, |diff_view, ctx| {
@@ -2840,12 +2834,9 @@ impl AIBlock {
             .current_working_directory()
             .cloned();
 
-        let shell_launch_data = self.active_session.as_ref(ctx).shell_launch_data(ctx);
-
         if let Some(code_diff_view) = self.requested_edits.get(action_id).map(|edit| &edit.view) {
             let file_diffs = crate::ai::blocklist::inline_action::code_diff_view::convert_file_edits_to_file_diffs(
                 file_edits,
-                &shell_launch_data,
                 &current_working_directory,
             );
 
@@ -5156,8 +5147,6 @@ pub enum AIBlockEvent {
     },
     FocusTerminal,
     OpenThemeChooser,
-    #[cfg(windows)]
-    WindowsCtrlC,
     AIOutputUpdated,
     ActionFinished,
     /// Emitted when text is selected within any `ChildView` of an `AIBlock`. This includes

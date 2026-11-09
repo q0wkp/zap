@@ -2942,19 +2942,13 @@ impl CodeReviewView {
     fn session_env(&self, app: &AppContext) -> Option<GitSessionState> {
         let terminal_view = self.terminal_view.as_ref()?.upgrade(app)?;
         terminal_view.read(app, |terminal, ctx| {
-            let session = terminal
-                .active_block_session_id()
-                .and_then(|id| terminal.sessions_model().as_ref(ctx).get(id));
             let is_local = terminal.active_session_is_local(ctx);
             let is_remote = matches!(is_local, Some(false));
-            let is_wsl = session.as_ref().map(|s| s.is_wsl()).unwrap_or(false);
 
             let enablement = if is_remote {
                 CodingPanelEnablementState::RemoteSession {
                     has_remote_server: false,
                 }
-            } else if is_wsl {
-                CodingPanelEnablementState::UnsupportedSession
             } else {
                 CodingPanelEnablementState::Enabled
             };
@@ -2986,14 +2980,6 @@ impl CodeReviewView {
                 ) =>
             {
                 self.render_remote_state_with_buttons(appearance)
-            }
-            Some(state)
-                if matches!(
-                    state.enablement,
-                    CodingPanelEnablementState::UnsupportedSession
-                ) =>
-            {
-                self.render_wsl_state_with_buttons(appearance)
             }
             None => self.render_not_repo_state_with_buttons(appearance),
             Some(_) => self.render_not_repo_state_with_buttons(appearance),
@@ -4091,6 +4077,7 @@ impl CodeReviewView {
         )
     }
 
+    #[cfg(target_family = "wasm")]
     pub fn render_wsl_state(
         appearance: &Appearance,
         open_repo_button: Option<Box<dyn Element>>,
@@ -4118,15 +4105,6 @@ impl CodeReviewView {
         self.render_no_repo_found_state_with_buttons(
             appearance,
             crate::t!("code-review-diffs-local-workspaces-only"),
-            InitButtons::OpenRepository,
-        )
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    fn render_wsl_state_with_buttons(&self, appearance: &Appearance) -> Box<dyn Element> {
-        self.render_no_repo_found_state_with_buttons(
-            appearance,
-            crate::t!("code-review-diffs-wsl-unsupported"),
             InitButtons::OpenRepository,
         )
     }
@@ -7524,11 +7502,7 @@ impl BackingView for CodeReviewView {
                 AppContext::show_native_platform_modal(ctx, dialog);
             } else if cfg!(all(
                 not(target_family = "wasm"),
-                any(
-                    target_os = "linux",
-                    target_os = "freebsd",
-                    target_os = "windows"
-                )
+                any(target_os = "linux", target_os = "freebsd")
             )) {
                 // Find the workspace to show the Zap-native modal
                 if let Some(workspace) = ctx

@@ -15,8 +15,6 @@ fn test_trim_newline() {
     assert_eq!("   test    ", string);
 }
 
-/// TODO(CORE-3626): write an equivalent test with Windows paths.
-#[cfg(not(windows))]
 #[test]
 fn test_resolve_command() {
     use crate::util::path::resolve_executable;

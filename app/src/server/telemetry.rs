@@ -96,8 +96,6 @@ pub struct BootstrappingInfo {
     pub shell: &'static str,
     pub is_ssh: bool,
     pub is_subshell: bool,
-    pub is_wsl: bool,
-    pub is_msys2: bool,
     /// `true` if the bootstrapping process was triggered by an RC file snippet.
     ///
     /// This should only be true if `is_subshell` is true.
@@ -121,8 +119,6 @@ pub struct SlowBootstrapInfo {
     pub shell: &'static str,
     pub is_ssh: bool,
     pub is_subshell: bool,
-    pub is_wsl: bool,
-    pub is_msys2: bool,
     /// Contents of the bootstrap block when the slow bootstrap was detected.
     /// This includes both command and output content from the block.
     pub bootstrap_block_contents: String,
@@ -908,7 +904,6 @@ pub enum AgentModeCodeFileNavigationSource {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum AddTabWithShellSource {
     CommandPalette,
-    ShellSelectorMenu,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -2116,18 +2111,6 @@ pub enum TelemetryEvent {
         /// Whether or not Universal Developer Input mode is enabled
         is_udi_enabled: bool,
     },
-    /// An error was encountered fetching available WSL distributions from the Registry.
-    /// This typically means the user hasn't installed or enabled WSL.
-    #[cfg(windows)]
-    WSLRegistryError,
-    #[cfg(windows)]
-    AutoupdateUnableToCloseApplications,
-    #[cfg(windows)]
-    AutoupdateFileInUse,
-    #[cfg(windows)]
-    AutoupdateMutexTimeout,
-    #[cfg(windows)]
-    AutoupdateForcekillFailed,
     ExecutedWarpDrivePrompt {
         id: Option<WorkflowId>,
         selection_source: WorkflowSelectionSource,
@@ -2201,7 +2184,6 @@ pub enum TelemetryEvent {
         shell_path: Option<String>,
         reason: String,
         reason_details: Option<String>,
-        antivirus_name: Option<String>,
         long_os_version: Option<String>,
         exit_reason: Option<String>,
     },
@@ -3542,7 +3524,6 @@ impl TelemetryEvent {
                 shell_path,
                 reason,
                 reason_details,
-                antivirus_name,
                 long_os_version,
                 exit_reason,
             } => Some(json!({
@@ -3550,7 +3531,6 @@ impl TelemetryEvent {
                 "shell_path": shell_path,
                 "reason": reason,
                 "reason_details": reason_details,
-                "antivirus_name": antivirus_name,
                 "long_os_version": long_os_version,
                 "exit_reason": exit_reason,
             })),
@@ -3866,12 +3846,6 @@ impl TelemetryEvent {
             TelemetryEvent::AgentModeSetupProjectScopedRulesAction { action } => Some(json!({
                 "action": action,
             })),
-            #[cfg(windows)]
-            TelemetryEvent::WSLRegistryError
-            | TelemetryEvent::AutoupdateUnableToCloseApplications
-            | TelemetryEvent::AutoupdateFileInUse
-            | TelemetryEvent::AutoupdateMutexTimeout
-            | TelemetryEvent::AutoupdateForcekillFailed => None,
             TelemetryEvent::InputBufferSubmitted {
                 input_type,
                 is_locked,
@@ -4502,12 +4476,6 @@ impl TelemetryEvent {
             TelemetryEvent::CodePaneOpened { .. }
             | TelemetryEvent::CodePanelsFileOpened { .. }
             | TelemetryEvent::PreviewPanePromoted => false,
-            #[cfg(windows)]
-            TelemetryEvent::WSLRegistryError
-            | TelemetryEvent::AutoupdateUnableToCloseApplications
-            | TelemetryEvent::AutoupdateFileInUse
-            | TelemetryEvent::AutoupdateMutexTimeout
-            | TelemetryEvent::AutoupdateForcekillFailed => false,
         }
     }
 }

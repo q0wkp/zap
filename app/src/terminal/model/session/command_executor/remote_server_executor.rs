@@ -10,7 +10,7 @@ use warp_core::command::ExitCode;
 use warp_core::SessionId;
 
 use crate::remote_server::proto::run_command_response;
-use crate::terminal::model::session::command_executor::{CommandExecutor, ExecuteCommandOptions};
+use crate::terminal::model::session::command_executor::CommandExecutor;
 use crate::terminal::shell::Shell;
 
 /// `CommandExecutor` implementation that executes commands via a persistent
@@ -59,7 +59,6 @@ impl CommandExecutor for RemoteServerCommandExecutor {
         _shell: &Shell,
         current_directory_path: Option<&str>,
         environment_variables: Option<HashMap<String, String>>,
-        _execute_command_options: ExecuteCommandOptions,
     ) -> Result<CommandOutput> {
         let response = self
             .client

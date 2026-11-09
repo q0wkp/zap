@@ -57,7 +57,6 @@ impl ReadFilesExecutor {
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
 
         BlocklistAIPermissions::as_ref(ctx)
             .can_read_files_with_conversation(
@@ -67,7 +66,6 @@ impl ReadFilesExecutor {
                     .map(|file| {
                         PathBuf::from(host_native_absolute_path(
                             &file.name,
-                            &shell,
                             &current_working_directory,
                         ))
                     })
@@ -108,7 +106,6 @@ impl ReadFilesExecutor {
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
 
         let locations = locations.clone();
 
@@ -147,7 +144,6 @@ impl ReadFilesExecutor {
                             .map(|loc| {
                                 let absolute_path = host_native_absolute_path(
                                     &loc.name,
-                                    &shell,
                                     &current_working_directory,
                                 );
                                 remote_server::proto::ReadFileContextFile {
@@ -235,14 +231,9 @@ impl ReadFilesExecutor {
         // Local path.
         ActionExecution::Async {
             execute_future: Box::pin(async move {
-                let result = read_local_file_context(
-                    &locations,
-                    current_working_directory,
-                    shell,
-                    None,
-                    None,
-                )
-                .await?;
+                let result =
+                    read_local_file_context(&locations, current_working_directory, None, None)
+                        .await?;
                 if result.missing_files.is_empty() {
                     Ok(ReadFilesResult::Success {
                         files: result.file_contexts,

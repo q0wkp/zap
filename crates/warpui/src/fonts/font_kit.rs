@@ -123,8 +123,7 @@ impl Rasterizer {
 
         Ok(RasterizedGlyph {
             canvas: canvas.into(),
-            // TODO(alokedesai): Properly support colored glyphs on Windows.
-            is_emoji: self.font_for_id(font_id).is_colored() && !cfg!(windows),
+            is_emoji: self.font_for_id(font_id).is_colored(),
         })
     }
 }

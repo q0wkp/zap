@@ -333,37 +333,12 @@ nix = { workspace = true, features = [
     "mman",
 ] }
 
-[target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "windows"))'.dependencies]
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 crash-handler = { version = "0.6.3", optional = true }
 minidumper = { version = "0.8.3", optional = true }
-
-[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 freedesktop-desktop-entry = "0.5.0"
 x11rb.workspace = true
 zbus.workspace = true
-
-[target.'cfg(target_os = "windows")'.dependencies]
-bytemuck.workspace = true
-windows = { workspace = true, features = [
-    "Wdk_Foundation",
-    "Wdk_Storage_FileSystem",
-    "Win32_Security",
-    "Win32_Storage",
-    "Win32_Storage_FileSystem",
-    "Win32_System_Console",
-    "Win32_System_Diagnostics_Debug",
-    "Win32_System_Environment",
-    "Win32_System_IO",
-    "Win32_System_ProcessStatus",
-    "Win32_System_SystemInformation",
-    "Win32_System_Threading",
-    "Win32_System_LibraryLoader",
-    "Win32_System_WindowsProgramming",
-    "Win32_UI_WindowsAndMessaging",
-] }
-windows-registry = { workspace = true }
-windows-result = { workspace = true }
-winreg.workspace = true
 
 [dev-dependencies]
 ai = { workspace = true, features = ["test-util"] }
@@ -400,16 +375,12 @@ tempfile.workspace = true
 walkdir = "2.3.2"
 warp_util.workspace = true
 
-[target.'cfg(windows)'.build-dependencies]
-embed-resource = "3.0"
-
 # Note that we support channel-specific enables for these features
 [features]
 ai_resume_button = []
 autoupdate = []
 figma_detection = []
 bundled_skills = []
-windows_high_performance_gpu_default = []
 agent_mode = []
 agent_mode_computer_use = []
 agent_mode_debug = []
@@ -599,7 +570,6 @@ grep_tool = []
 # For the most part, including GUI code in headless builds is fine; the main use case is
 # for things that pull in external dependencies.
 gui = ["voice_input"]
-msys2_shells = []
 onekey_prompt = []
 file_retrieval_tools = []
 welcome_tab = []
@@ -627,7 +597,6 @@ jemalloc = ["dep:tikv-jemallocator", "ai/jemalloc"]
 jemalloc_with_profiling = ["jemalloc", "tikv-jemallocator/profiling"]
 jemalloc_auto_heap_profiling = ["jemalloc_with_profiling"]
 jemalloc_pprof = ["jemalloc_with_profiling", "dep:jemalloc_pprof"]
-run_generators_with_cmd_exe = []
 inline_ssh_banner = []
 kitty_images = []
 kitty_keyboard_protocol = []
@@ -841,7 +810,7 @@ copyright = "© 2025-2026, Zap"
 identifier = "dev.zap.Zap"
 name = "Zap"
 resources = ["assets/onboarding"]
-icon = ["channels/oss/icon/padded/512x512.png", "channels/oss/icon/padded/icon.ico"]
+icon = ["channels/oss/icon/padded/512x512.png"]
 short_description = "The open-source, local-first agentic terminal."
 
 [package.metadata.cargo-udeps.ignore]

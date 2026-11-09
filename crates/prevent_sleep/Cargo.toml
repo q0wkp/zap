@@ -11,13 +11,6 @@ futures.workspace = true
 log.workspace = true
 pin-project.workspace = true
 
-[target.'cfg(windows)'.dependencies]
-itertools.workspace = true
-parking_lot.workspace = true
-windows = { workspace = true, features = [
-    "Win32_System_Power",
-] }
-
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2.workspace = true
 objc2-foundation = { workspace = true, features = [

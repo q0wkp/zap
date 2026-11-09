@@ -14,7 +14,7 @@ use warpui_extras::user_preferences::UserPreferences;
 /// preferences.
 ///
 /// Private settings are always stored in the platform-native store (e.g.
-/// UserDefaults on macOS, registry on Windows, JSON file on Linux) and never
+/// UserDefaults on macOS, JSON file on Linux) and never
 /// appear in the user-visible settings file.
 pub trait GetUserPreferences {
     /// Returns the preferences backend for private settings.

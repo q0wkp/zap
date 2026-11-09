@@ -50,19 +50,11 @@ impl ShellRcType {
             ShellRcType::Bash => vec![Path::new(".bash_profile")],
             ShellRcType::Zsh => vec![Path::new(".zshrc")],
             ShellRcType::Fish => vec![Path::new(".config/fish/config.fish")],
-            #[cfg(not(windows))]
             ShellRcType::PowerShell => {
                 vec![Path::new(
                     ".config/powershell/Microsoft.PowerShell_profile.ps1",
                 )]
             }
-            // We need to make sure this works for either editor of PowerShell (PowerShell Core or
-            // Windows PowerShell) so just write the file to both.
-            #[cfg(windows)]
-            ShellRcType::PowerShell => vec![
-                Path::new("Documents/PowerShell/Microsoft.PowerShell_profile.ps1"),
-                Path::new("Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"),
-            ],
         };
         relative_paths
             .iter()

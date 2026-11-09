@@ -58,19 +58,11 @@ enum Config {
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
     KnownLocal(LocalConfig),
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
-    Wsl {
-        distro: String,
-    },
-    #[cfg_attr(any(not(feature = "local_tty"), unix), allow(dead_code))]
-    MSYS2(LocalConfig),
-    #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
     Custom(LocalConfig),
     /// A shell running inside a Docker sandbox via `sbx run`.
     ///
     /// Unlike local shells, we don't pick the shell binary or path here: the
-    /// shell that actually runs comes from the container image. This mirrors
-    /// how [`Config::Wsl`] carries just the distro name and defers the shell
-    /// choice to WSL itself.
+    /// shell that actually runs comes from the container image.
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
     DockerSandbox {
         /// Path to the `sbx` CLI binary on the host.
@@ -91,7 +83,7 @@ enum Config {
 /// into 4 categories:
 /// - Known Local: A shell that is known to be installed on the local filesystem, and can be run
 ///   by invoking an executable.
-/// - Known WSL: A WSL distro that can be launched by invoking WSL with a specific distro flag
+/// - Docker Sandbox: A shell running inside a Docker sandbox container.
 /// - Custom: A user-specified custom executable that can be run locally.
 /// - System Default: Uses the default shell for a given system.
 ///
@@ -115,8 +107,7 @@ impl AvailableShell {
     pub fn short_name(&self) -> Cow<'_, str> {
         match self.state.as_ref() {
             Config::SystemDefault => Cow::from("Default"),
-            Config::KnownLocal(LocalConfig { command, .. })
-            | Config::MSYS2(LocalConfig { command, .. }) => match command.as_str() {
+            Config::KnownLocal(LocalConfig { command, .. }) => match command.as_str() {
                 "bash" => Cow::from("Bash"),
                 "zsh" => Cow::from("Zsh"),
                 "fish" => Cow::from("Fish"),
@@ -124,7 +115,6 @@ impl AvailableShell {
                 "powershell" | "powershell.exe" => Cow::from("Windows PowerShell"),
                 _ => Cow::from(command),
             },
-            Config::Wsl { distro } => Cow::from(distro),
             Config::Custom(_) => Cow::from("Custom"),
             Config::DockerSandbox { .. } => Cow::from("Docker Sandbox"),
         }
@@ -135,11 +125,7 @@ impl AvailableShell {
             Config::SystemDefault => Cow::from("System default shell"),
             Config::KnownLocal(LocalConfig {
                 executable_path, ..
-            })
-            | Config::MSYS2(LocalConfig {
-                executable_path, ..
             }) => Cow::from(format!("{}", executable_path.display())),
-            Config::Wsl { .. } => Cow::from("Windows Subsystem for Linux"),
             Config::Custom(LocalConfig {
                 executable_path, ..
             }) => Cow::from(format!("Custom: {}", executable_path.display())),
@@ -149,25 +135,13 @@ impl AvailableShell {
 
     /// Returns a telemetry string that represents the value of the shell without any PII involved.
     pub fn telemetry_value(&self) -> String {
-        // NOTE: These explicitly do not log the shell path or wsl name, as those can contain PII.
+        // NOTE: These explicitly do not log the shell path, as it can contain PII.
         match self.state.as_ref() {
             Config::SystemDefault => "SystemDefault".to_string(),
-            Config::KnownLocal(config) | Config::MSYS2(config) => config.command.clone(),
-            Config::Wsl { .. } => "WSL".to_string(),
+            Config::KnownLocal(config) => config.command.clone(),
             Config::Custom(_) => "Custom".to_string(),
             Config::DockerSandbox { .. } => "DockerSandbox".to_string(),
         }
-    }
-
-    pub fn wsl_distro(&self) -> Option<String> {
-        match self.state.as_ref() {
-            Config::Wsl { distro } => Some(distro.clone()),
-            _ => None,
-        }
-    }
-
-    pub fn is_wsl(&self) -> bool {
-        matches!(self.state.as_ref(), Config::Wsl { .. })
     }
 }
 
@@ -181,11 +155,7 @@ impl AvailableShell {
             Config::KnownLocal(LocalConfig {
                 executable_path, ..
             }) => format!("{} ({})", self.short_name(), executable_path.display()),
-            Config::Wsl { distro } => distro.to_string(),
             Config::Custom(LocalConfig { command, .. }) => format!("Custom ({command})"),
-            Config::MSYS2(LocalConfig {
-                executable_path, ..
-            }) => format!("{} ({})", self.short_name(), executable_path.display()),
             Config::DockerSandbox { .. } => "Docker Sandbox".to_string(),
         }
     }
@@ -206,14 +176,8 @@ impl AvailableShell {
             NewSessionShell::Executable(path) => {
                 matches!(self.state.as_ref(), Config::KnownLocal(LocalConfig { executable_path, .. }) if executable_path == Path::new(path))
             }
-            NewSessionShell::WSL(distro) => {
-                matches!(self.state.as_ref(), Config::Wsl { distro: d } if d == distro)
-            }
             NewSessionShell::Custom(path) => {
                 matches!(self.state.as_ref(), Config::Custom(LocalConfig { executable_path, .. }) if executable_path == Path::new(path))
-            }
-            NewSessionShell::MSYS2(path) => {
-                matches!(self.state.as_ref(), Config::MSYS2(LocalConfig{ executable_path, .. } ) if executable_path == Path::new(path))
             }
         }
     }
@@ -226,9 +190,7 @@ impl AvailableShell {
     /// |:---------------------------|:----------:|-----------------------------------:|
     /// | [`Config::SystemDefault`]  | No         | [`Option::None`]                   |
     /// | [`Config::KnownLocal`]     | Yes        | [`ShellLaunchData::Executable`]    |
-    /// | [`Config::Wsl`]            | No         | [`ShellLaunchData::WSL`]           |
     /// | [`Config::Custom`]         | Yes        | [`ShellLaunchData::Executable`]    |
-    /// | [`Config::MSYS2`]          | No         | [`ShellLaunchData::MSYS2`]         |
     /// | [`Config::DockerSandbox`]  | No         | [`ShellLaunchData::DockerSandbox`] |
     ///
     /// For `KnownLocal` and `Custom` we validate that the executable path
@@ -257,13 +219,6 @@ impl AvailableShell {
                     None
                 }
             }
-            Config::Wsl { distro } => Some(ShellLaunchData::WSL {
-                distro: distro.to_string(),
-            }),
-            Config::MSYS2(local_config) => Some(ShellLaunchData::MSYS2 {
-                executable_path: local_config.executable_path.clone(),
-                shell_type: local_config.shell_type,
-            }),
             Config::DockerSandbox {
                 sbx_path,
                 base_image,
@@ -286,26 +241,6 @@ impl AvailableShell {
                 executable_path,
                 shell_type,
             })),
-        }
-    }
-
-    #[cfg(windows)]
-    fn new_msys2(command: String, executable_path: PathBuf, shell_type: ShellType) -> Self {
-        Self {
-            id: Some(format!("msys2:{}", executable_path.display())),
-            state: Arc::new(Config::MSYS2(LocalConfig {
-                command,
-                executable_path,
-                shell_type,
-            })),
-        }
-    }
-
-    #[cfg_attr(not(windows), allow(dead_code))]
-    fn new_wsl(distro: String) -> Self {
-        Self {
-            id: Some(format!("wsl:{distro}")),
-            state: Arc::new(Config::Wsl { distro }),
         }
     }
 
@@ -346,13 +281,9 @@ impl From<AvailableShell> for NewSessionShell {
             Config::KnownLocal(LocalConfig {
                 executable_path, ..
             }) => NewSessionShell::Executable(executable_path.display().to_string()),
-            Config::Wsl { distro } => NewSessionShell::WSL(distro.clone()),
             Config::Custom(LocalConfig {
                 executable_path, ..
             }) => NewSessionShell::Custom(executable_path.display().to_string()),
-            Config::MSYS2(local_config) => {
-                NewSessionShell::MSYS2(local_config.executable_path.display().to_string())
-            }
             // Docker sandbox isn't a persistable "preferred shell" today —
             // it's always launched on-demand via a tab action or slash
             // command. Round-trip through settings falls back to the system
@@ -367,16 +298,13 @@ impl From<AvailableShell> for NewSessionShell {
 impl From<AvailableShell> for StartupShell {
     fn from(value: AvailableShell) -> Self {
         match value.state.as_ref() {
-            Config::SystemDefault | Config::Wsl { .. } => StartupShell::Default,
+            Config::SystemDefault => StartupShell::Default,
             Config::KnownLocal(LocalConfig { shell_type, .. }) => {
                 StartupShell::from(Some(shell_type.name().to_string()))
             }
             Config::Custom(LocalConfig {
                 executable_path, ..
             }) => StartupShell::Custom(executable_path.display().to_string()),
-            Config::MSYS2(local_config) => {
-                StartupShell::from(Some(local_config.shell_type.name().to_string()))
-            }
             // See the matching comment on `From<AvailableShell> for
             // NewSessionShell`: the sandbox isn't persistable as a startup
             // shell today, so fall back to default.
@@ -448,7 +376,7 @@ impl AvailableShells {
         let fallback_shells_path = cfg!(unix).then_some(Path::new("/etc/shells"));
 
         let env_path = std::env::var_os("PATH").unwrap_or_default();
-        #[cfg_attr(not(windows), allow(unused_mut))]
+        #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
         let mut paths_to_search = std::env::split_paths(&env_path).collect::<Vec<PathBuf>>();
 
         // The PATH here is limited since it doesn't include the locations added
@@ -462,29 +390,7 @@ impl AvailableShells {
             paths_to_search.push(PathBuf::from("/usr/local/bin"));
         }
 
-        // The user may have installed PowerShell in locations not in the system
-        // path. We add some typical install locations for PowerShell to the paths
-        // to search.
-        #[cfg(windows)]
-        {
-            use crate::util::windows;
-
-            paths_to_search.extend(windows::powershell_7_install_paths());
-            paths_to_search.push(windows::powershell_5_install_path());
-        }
-
-        #[cfg_attr(not(windows), allow(unused_mut))]
-        let mut shells = Self::load_known_shells(&paths_to_search, fallback_shells_path);
-
-        #[cfg(windows)]
-        {
-            let ctx = _ctx;
-            shells.extend(
-                super::wsl::WslInfo::as_ref(ctx)
-                    .distributions()
-                    .map(|distro| AvailableShell::new_wsl(distro.name.to_owned())),
-            );
-        }
+        let shells = Self::load_known_shells(&paths_to_search, fallback_shells_path);
 
         let shell_counts = shells.iter().fold(HashMap::new(), |mut counts, shell| {
             let count = counts.entry(shell.short_name().to_string()).or_insert(0);
@@ -526,10 +432,8 @@ impl AvailableShells {
     /// The methodology is:
     ///
     /// 1. Search for a matching shell in the list of AvailableShells.
-    ///    If it exists, then we return it. This covers all `KnownLocal` or `WSL` cases.
-    /// 2. If we don't find it in the list, and the ShellLaunchData is `WSL`, that means
-    ///    the wsl distro is no longer valid, so we return None.
-    /// 3. If we have `Executable`` data that has not matched the list, we convert it to
+    ///    If it exists, then we return it. This covers all `KnownLocal` cases.
+    /// 2. If we have `Executable`` data that has not matched the list, we convert it to
     ///    a custom shell. This covers the case of either a Custom shell or a KnownLocal
     ///    that for whatever reason is no longer valid. An invalid Custom or KnownLocal
     ///    will still be validated before launching a shell (and fall back to default),
@@ -541,15 +445,6 @@ impl AvailableShells {
         self.shells
             .iter()
             .find(|shell| match (shell.state.as_ref(), config) {
-                (Config::Wsl { distro }, ShellLaunchData::WSL { distro: d }) => distro == d,
-                (
-                    Config::MSYS2(LocalConfig {
-                        executable_path, ..
-                    }),
-                    ShellLaunchData::MSYS2 {
-                        executable_path: p, ..
-                    },
-                ) => executable_path == p,
                 (
                     Config::KnownLocal(LocalConfig {
                         executable_path,
@@ -651,21 +546,6 @@ impl AvailableShells {
             .unwrap_or_default();
 
         for (shell_type, command_name) in shell_types {
-            #[cfg(windows)]
-            if ["bash.exe", "fish.exe", "zsh.exe"].contains(&command_name) {
-                let msys2_executables = Self::locate_msys2_executables();
-                for msys2_path in &msys2_executables {
-                    if msys2_path.ends_with(command_name) {
-                        known_shells.push(AvailableShell::new_msys2(
-                            command_name.to_string(),
-                            msys2_path.clone(),
-                            shell_type,
-                        ));
-                    }
-                }
-                continue;
-            }
-
             let mut fallback_shells = fallback_shell_map.remove(command_name).unwrap_or_default();
             for path in Self::resolve_all_executables(command_name, paths_to_search.iter()) {
                 fallback_shells.remove(&path);
@@ -692,114 +572,12 @@ impl AvailableShells {
     }
 
     fn get_shell_types() -> Vec<(ShellType, &'static str)> {
-        if cfg!(windows) {
-            vec![
-                (ShellType::PowerShell, "pwsh.exe"),
-                (ShellType::PowerShell, "powershell.exe"),
-                (ShellType::Zsh, "zsh.exe"),
-                (ShellType::Bash, "bash.exe"),
-                (ShellType::Fish, "fish.exe"),
-            ]
-        } else {
-            vec![
-                (ShellType::Zsh, "zsh"),
-                (ShellType::Bash, "bash"),
-                (ShellType::Fish, "fish"),
-                (ShellType::PowerShell, "pwsh"),
-            ]
-        }
-    }
-
-    /// Looks for UNIX shells running "natively" on Windows via MSYS2.
-    ///
-    /// Attempts to find Git Bash executables at a few locations:
-    /// 1. `$env:LocalAppData\Programs\Git\usr\bin`
-    /// 2. `$env:ProgramFiles\Git\usr\bin`
-    /// 3. Where scoop may have installed it
-    /// We don't want to search the PATH for a `bash.exe` since there are false positives.
-    /// Also search for bash/fish/zsh in the
-    #[cfg(windows)]
-    fn locate_msys2_executables() -> Vec<PathBuf> {
-        use std::env;
-
-        use warp_core::features::FeatureFlag;
-
-        let mut paths = Vec::new();
-
-        // We look for Git Bash at `$env:LocalAppData\Programs\Git\usr\bin`.
-        match env::var("LocalAppData") {
-            Ok(local_app_data_path) => {
-                let user_location = Path::new(&local_app_data_path)
-                    .join("Programs")
-                    .join("Git")
-                    .join("usr")
-                    .join("bin")
-                    .join("bash.exe");
-                if file_exists_and_is_executable(&user_location) {
-                    paths.push(user_location);
-                }
-            }
-            Err(err) => {
-                log::warn!("Environment variable LocalAppData not found {err:#}");
-            }
-        }
-
-        // Next, we look for Git Bash at `$env:ProgramFiles\Git\usr\bin`.
-        match env::var("ProgramFiles") {
-            Ok(program_files_path) => {
-                let global_location = Path::new(&program_files_path)
-                    .join("Git")
-                    .join("usr")
-                    .join("bin")
-                    .join("bash.exe");
-                if file_exists_and_is_executable(&global_location) {
-                    paths.push(global_location);
-                }
-            }
-            Err(err) => {
-                log::warn!("Environment variable ProgramFiles not found {err:#}");
-            }
-        }
-
-        // Next, we look for Git Bash where scoop, a package manager, may have installed it at
-        // `$env:USERPROFILE\scoop\apps\git\current\usr\bin`.
-        // Note that `current` is a symbolic link to the folder with the latest version.
-        if let Ok(user_profile) = env::var("USERPROFILE") {
-            let maybe_scoop_path = Path::new(&user_profile)
-                .join("scoop")
-                .join("apps")
-                .join("git")
-                .join("current")
-                .join("usr")
-                .join("bin")
-                .join("bash.exe");
-            if file_exists_and_is_executable(&maybe_scoop_path) {
-                paths.push(maybe_scoop_path);
-            }
-        }
-
-        if FeatureFlag::MSYS2Shells.is_enabled() {
-            // Search the default install location for MSYS2 shells (installed via pacman).
-            match env::var("SystemDrive") {
-                Ok(system_drive) => {
-                    let msys_bin = Path::new(&format!(r"{system_drive}\"))
-                        .join("msys64")
-                        .join("usr")
-                        .join("bin");
-                    for shell in ["bash.exe", "fish.exe", "zsh.exe"] {
-                        let msys_shell = msys_bin.join(shell);
-                        if file_exists_and_is_executable(&msys_shell) {
-                            paths.push(msys_shell);
-                        }
-                    }
-                }
-                Err(err) => {
-                    log::warn!("Environment variable SystemDrive not found {err:#}");
-                }
-            }
-        }
-
-        paths
+        vec![
+            (ShellType::Zsh, "zsh"),
+            (ShellType::Bash, "bash"),
+            (ShellType::Fish, "fish"),
+            (ShellType::PowerShell, "pwsh"),
+        ]
     }
 
     /// Resolves all full paths to executables of the given command name in PATH.
@@ -927,52 +705,20 @@ impl AvailableShells {
     /// [`AvailableShell::try_from`] would miss when Zap is launched outside
     /// an interactive shell.
     ///
-    /// Comparison is case-sensitive on Unix. On Windows, where file names are
-    /// case-insensitive and users commonly omit the `.exe` suffix, comparison
-    /// ignores case and an optional trailing `.exe` on either side.
+    /// Comparison is case-sensitive.
     pub fn find_by_command_name(&self, name: &str) -> Option<AvailableShell> {
         self.shells
             .iter()
             .find(|shell| {
                 let command = match shell.state.as_ref() {
-                    Config::KnownLocal(LocalConfig { command, .. })
-                    | Config::MSYS2(LocalConfig { command, .. }) => command.as_str(),
-                    Config::Custom(_)
-                    | Config::SystemDefault
-                    | Config::Wsl { .. }
-                    | Config::DockerSandbox { .. } => {
+                    Config::KnownLocal(LocalConfig { command, .. }) => command.as_str(),
+                    Config::Custom(_) | Config::SystemDefault | Config::DockerSandbox { .. } => {
                         return false;
                     }
                 };
-                command_name_matches(command, name, cfg!(windows))
+                command == name
             })
             .cloned()
-    }
-}
-
-/// Returns whether two shell command names are equivalent when resolving a
-/// tab config's `shell` field. See [`AvailableShells::find_by_command_name`].
-///
-/// `is_windows` selects the matching rules:
-/// - On Windows, file names are case-insensitive and users commonly omit the
-///   `.exe` suffix (e.g. `shell = "pwsh"`), so matching is case-insensitive
-///   and ignores an optional trailing `.exe` on either side.
-/// - On Unix, matching is a plain case-sensitive equality check.
-///
-/// Parameterized (rather than keying off `cfg!(windows)` internally) so both
-/// branches can be unit-tested from any host platform.
-#[cfg(feature = "local_tty")]
-fn command_name_matches(stored: &str, requested: &str, is_windows: bool) -> bool {
-    if is_windows {
-        let stored_norm = stored.to_ascii_lowercase();
-        let requested_norm = requested.to_ascii_lowercase();
-        let stored_stem = stored_norm.strip_suffix(".exe").unwrap_or(&stored_norm);
-        let requested_stem = requested_norm
-            .strip_suffix(".exe")
-            .unwrap_or(&requested_norm);
-        stored_stem == requested_stem
-    } else {
-        stored == requested
     }
 }
 
@@ -983,12 +729,9 @@ impl SingletonEntity for AvailableShells {}
 
 #[cfg(feature = "local_tty")]
 pub fn register(app: &mut impl warpui::AddSingletonModel) {
-    #[cfg(windows)]
-    app.add_singleton_model(super::wsl::WslInfo::new);
     app.add_singleton_model(AvailableShells::new);
 }
 
 #[cfg(test)]
-#[cfg(not(windows))]
 #[path = "available_shells_test.rs"]
 mod tests;

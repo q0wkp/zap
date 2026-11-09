@@ -12,7 +12,7 @@
 2. **上游 [Warp](https://github.com/warpdotdev/warp)** —— Zap 所 fork 的项目。
 
 本文**有意不覆盖**命令历史、SQLite 数据库、Drive 对象,以及任何凭证。这些要么
-绑定到本机(Keychain / DPAPI / libsecret),要么 schema 与对方强耦合,跨过来
+绑定到本机(Keychain / libsecret),要么 schema 与对方强耦合,跨过来
 并不安全。
 
 ---
@@ -26,38 +26,35 @@ Zap(以及 OpenWarp / 上游 Warp)把磁盘状态分成**三类目录**:
 - **home dotfile** —— `.mcp.json`、`skills/`
 
 macOS 上三类目录都收敛到同一个 home dotfile 目录(`~/.warp/`、`~/.openwarp/`
-或 `~/.zap/`);Linux 上按 XDG 规范分到**三个不同的位置**,Windows 上按
-`directories` crate 的等价布局分。下面的迁移脚本会按平台把每个文件放到
-正确的目标。
+或 `~/.zap/`);Linux 上按 XDG 规范分到**三个不同的位置**。下面的迁移脚本会按
+平台把每个文件放到正确的目标。
 
 ### Zap 目标路径
 
-| 类别 | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.zap/` | `${XDG_CONFIG_HOME:-~/.config}/zap/` | `%LOCALAPPDATA%\zap\Zap\config\` |
-| data | `~/.zap/` | `${XDG_DATA_HOME:-~/.local/share}/zap/` | `%APPDATA%\zap\Zap\data\` |
-| home dotfile | `~/.zap/` | `~/.zap/` | `%USERPROFILE%\.zap\` |
+| 类别 | macOS | Linux |
+|---|---|---|
+| config | `~/.zap/` | `${XDG_CONFIG_HOME:-~/.config}/zap/` |
+| data | `~/.zap/` | `${XDG_DATA_HOME:-~/.local/share}/zap/` |
+| home dotfile | `~/.zap/` | `~/.zap/` |
 
 ### OpenWarp 源路径
 
-| 类别 | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.openwarp/` | `${XDG_CONFIG_HOME:-~/.config}/openwarp/` | `%LOCALAPPDATA%\openwarp\OpenWarp\config\` |
-| data | `~/.openwarp/` | `${XDG_DATA_HOME:-~/.local/share}/openwarp/` | `%APPDATA%\openwarp\OpenWarp\data\` |
-| home dotfile | `~/.openwarp/` | `~/.openwarp/` | `%USERPROFILE%\.openwarp\` |
+| 类别 | macOS | Linux |
+|---|---|---|
+| config | `~/.openwarp/` | `${XDG_CONFIG_HOME:-~/.config}/openwarp/` |
+| data | `~/.openwarp/` | `${XDG_DATA_HOME:-~/.local/share}/openwarp/` |
+| home dotfile | `~/.openwarp/` | `~/.openwarp/` |
 
 ### 上游 Warp 源路径
 
-| 类别 | macOS | Linux | Windows |
-|---|---|---|---|
-| config | `~/.warp/` | `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/` | `%LOCALAPPDATA%\warp\Warp-Terminal\config\` |
-| data | `~/.warp/` | `${XDG_DATA_HOME:-~/.local/share}/warp-terminal/` | `%APPDATA%\warp\Warp-Terminal\data\` |
-| home dotfile | `~/.warp/` | `~/.warp/` | `%USERPROFILE%\.warp\` |
+| 类别 | macOS | Linux |
+|---|---|---|
+| config | `~/.warp/` | `${XDG_CONFIG_HOME:-~/.config}/warp-terminal/` |
+| data | `~/.warp/` | `${XDG_DATA_HOME:-~/.local/share}/warp-terminal/` |
+| home dotfile | `~/.warp/` | `~/.warp/` |
 
 > Linux 下目录名 `warp-terminal` 与 Linux 软件包名一致(例如 Debian/Ubuntu 下
-> `/opt/warpdotdev/warp-terminal/`)。Windows 上的 organization 文件夹名可能因
-> 打包方式而异;如果你在 `%APPDATA%\warp\Warp-Terminal`(或 `%LOCALAPPDATA%\warp\Warp-Terminal`)
-> 找不到,请检查 Warp 实际使用的 `%APPDATA%` / `%LOCALAPPDATA%` 路径。
+> `/opt/warpdotdev/warp-terminal/`)。
 
 ---
 
@@ -123,36 +120,6 @@ copy "$src_home"   "$dst_home"   .mcp.json
 copy "$src_home"   "$dst_home"   skills
 ```
 
-**Windows(PowerShell)**
-
-```powershell
-$src_config = "$env:LOCALAPPDATA\openwarp\OpenWarp\config"
-$src_data   = "$env:APPDATA\openwarp\OpenWarp\data"
-$src_home   = "$env:USERPROFILE\.openwarp"
-
-$dst_config = "$env:LOCALAPPDATA\zap\Zap\config"
-$dst_data   = "$env:APPDATA\zap\Zap\data"
-$dst_home   = "$env:USERPROFILE\.zap"
-New-Item -ItemType Directory -Force -Path $dst_config, $dst_data, $dst_home | Out-Null
-
-function Copy-IfMissing($srcDir, $dstDir, $name) {
-  $from = Join-Path $srcDir $name
-  $to   = Join-Path $dstDir $name
-  if ((Test-Path $from) -and -not (Test-Path $to)) {
-    Copy-Item -Path $from -Destination $to -Recurse
-  }
-}
-
-Copy-IfMissing $src_config $dst_config settings.toml
-Copy-IfMissing $src_config $dst_config keybindings.yaml
-Copy-IfMissing $src_data   $dst_data   themes
-Copy-IfMissing $src_data   $dst_data   workflows
-Copy-IfMissing $src_data   $dst_data   launch_configurations
-Copy-IfMissing $src_data   $dst_data   tab_configs
-Copy-IfMissing $src_home   $dst_home   .mcp.json
-Copy-IfMissing $src_home   $dst_home   skills
-```
-
 `[ ! -e ... ]` / `-not (Test-Path $to)` 这层守卫是为了避免覆盖你已经在 Zap
 里改过的内容。如果你就是想让 OpenWarp 的值覆盖掉 Zap,去掉它即可。
 
@@ -189,13 +156,13 @@ Zap 编译时 channel = `Oss`,对应独立的 app id(`dev.zap.Zap`)和按平台�
 ### **不要**拷的内容
 
 - **`user_preferences.json`** —— 这是私有存储,位于 macOS 上的
-  `~/Library/Application Support/dev.warp.Warp/`(Linux / Windows 对应的 state
+  `~/Library/Application Support/dev.warp.Warp/`(Linux 对应的 state
   目录),里面混杂了用户偏好、登录 token、机器绑定 ID 和云端缓存状态。整文件
   拷过去会泄漏身份信息,也会让 Zap 误判登录状态。Zap 默认值本身已经是隐私
   优先的,**不要碰它**。
 - **`warp.sqlite`**(以及 `-wal` / `-shm` 伴生文件)—— schema 与上游 Warp 耦合,
   不保证能跑 Zap 的 migrations。
-- **Keychain / DPAPI / libsecret 中的条目** —— 绑定到 Warp 的 bundle / service
+- **Keychain / libsecret 中的条目** —— 绑定到 Warp 的 bundle / service
   名,对 Zap 没有意义。
 
 ### 操作步骤
@@ -241,36 +208,6 @@ copy "$src_home"   "$dst_home"   .mcp.json
 copy "$src_home"   "$dst_home"   skills
 ```
 
-**Windows(PowerShell)**
-
-```powershell
-$src_config = "$env:LOCALAPPDATA\warp\Warp-Terminal\config"
-$src_data   = "$env:APPDATA\warp\Warp-Terminal\data"
-$src_home   = "$env:USERPROFILE\.warp"
-
-$dst_config = "$env:LOCALAPPDATA\zap\Zap\config"
-$dst_data   = "$env:APPDATA\zap\Zap\data"
-$dst_home   = "$env:USERPROFILE\.zap"
-New-Item -ItemType Directory -Force -Path $dst_config, $dst_data, $dst_home | Out-Null
-
-function Copy-IfMissing($srcDir, $dstDir, $name) {
-  $from = Join-Path $srcDir $name
-  $to   = Join-Path $dstDir $name
-  if ((Test-Path $from) -and -not (Test-Path $to)) {
-    Copy-Item -Path $from -Destination $to -Recurse
-  }
-}
-
-Copy-IfMissing $src_config $dst_config settings.toml
-Copy-IfMissing $src_config $dst_config keybindings.yaml
-Copy-IfMissing $src_data   $dst_data   themes
-Copy-IfMissing $src_data   $dst_data   workflows
-Copy-IfMissing $src_data   $dst_data   launch_configurations
-Copy-IfMissing $src_data   $dst_data   tab_configs
-Copy-IfMissing $src_home   $dst_home   .mcp.json
-Copy-IfMissing $src_home   $dst_home   skills
-```
-
 Warp 自己的数据从始至终不会被改动,Warp 本体继续可用。
 
 ---
@@ -299,13 +236,6 @@ rm -rf ~/.zap
 rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/zap"
 rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/zap"
 rm -rf "$HOME/.zap"
-```
-
-```powershell
-# Windows
-Remove-Item -Recurse -Force "$env:APPDATA\zap"
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\zap"
-Remove-Item -Recurse -Force "$env:USERPROFILE\.zap"
 ```
 
 OpenWarp 与 Warp 的源端目录都不会被本指南改动。

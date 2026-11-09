@@ -1,7 +1,7 @@
 //! Node.js and npm runtime management for Zap.
 //!
 //! This module provides functionality to install and manage Node.js/npm,
-//! supporting multiple platforms (macOS, Linux, Windows) and architectures
+//! supporting multiple platforms (macOS, Linux) and architectures
 //! (x64, arm64).
 
 use anyhow::{bail, Context, Result};
@@ -30,10 +30,7 @@ const MIN_NODE_VERSION: Version = Version::new(20, 0, 0);
 
 // Platform-specific paths for Node.js binaries
 cfg_if::cfg_if! {
-    if #[cfg(all(feature = "local_fs", windows))] {
-        const NODE_BINARY_PATH: &str = "node.exe";
-        const NPM_BINARY_PATH: &str = "node_modules/npm/bin/npm-cli.js";
-    } else if #[cfg(feature = "local_fs")] {
+    if #[cfg(feature = "local_fs")] {
         const NODE_BINARY_PATH: &str = "bin/node";
         const NPM_BINARY_PATH: &str = "bin/npm";
     }
@@ -65,8 +62,6 @@ impl NpmInfo {
 pub enum ArchiveType {
     /// A gzip-compressed tarball (for macOS and Linux)
     TarGz,
-    /// A zip archive (for Windows)
-    Zip,
 }
 
 /// Platform-specific Node.js distribution information.
@@ -84,7 +79,6 @@ impl NodeDistribution {
         let os = match std::env::consts::OS {
             "macos" => "darwin",
             "linux" => "linux",
-            "windows" => "win",
             other => bail!("Unsupported operating system: {}", other),
         };
 
@@ -94,10 +88,7 @@ impl NodeDistribution {
             other => bail!("Unsupported architecture: {}", other),
         };
 
-        let archive_type = match std::env::consts::OS {
-            "windows" => ArchiveType::Zip,
-            _ => ArchiveType::TarGz,
-        };
+        let archive_type = ArchiveType::TarGz;
 
         Ok(Self {
             os,
@@ -115,7 +106,6 @@ impl NodeDistribution {
     fn file_extension(&self) -> &'static str {
         match self.archive_type {
             ArchiveType::TarGz => "tar.gz",
-            ArchiveType::Zip => "zip",
         }
     }
 
@@ -231,9 +221,6 @@ pub async fn install_npm(client: &http_client::Client) -> Result<PathBuf> {
         ArchiveType::TarGz => {
             extract_tar_gz(&bytes, &node_containing_dir)?;
         }
-        ArchiveType::Zip => {
-            extract_zip(&bytes, &node_containing_dir, None::<fn(&str) -> bool>).await?;
-        }
     }
 
     log::info!("Node.js extracted successfully to {}", node_dir.display());
@@ -312,83 +299,6 @@ pub async fn extract_gz(data: &[u8], dest_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Extracts files from a zip archive to the destination directory.
-///
-/// # Arguments
-/// * `data` - The zip archive data
-/// * `dest_dir` - The destination directory to extract to
-/// * `file_filter` - Optional filter function that takes a file name and returns true if it should be extracted.
-///   If None, all files are extracted.
-///
-/// # Returns
-/// Returns Ok(()) on success, or an error if extraction fails or if a filter is provided but no files match.
-///
-/// Note: This function performs synchronous zip reading (which is CPU-bound) followed by
-/// async file I/O. Similar to `extract_gz`, this approach is acceptable for reasonably-sized
-/// archives since the zip reading is relatively fast.
-#[cfg(feature = "local_fs")]
-pub async fn extract_zip<F>(data: &[u8], dest_dir: &Path, file_filter: Option<F>) -> Result<()>
-where
-    F: Fn(&str) -> bool,
-{
-    // Extract all file data synchronously first
-    let files_to_write: Vec<(PathBuf, Vec<u8>)> = {
-        let cursor = std::io::Cursor::new(data);
-        let mut archive = zip::ZipArchive::new(cursor).context("Failed to read zip archive")?;
-        let mut result = Vec::new();
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).context("Failed to read zip entry")?;
-            let file_name = file.name().to_string();
-
-            if let Some(ref filter) = file_filter {
-                if !filter(&file_name) {
-                    continue;
-                }
-            }
-
-            let outpath = match file.enclosed_name() {
-                Some(path) => dest_dir.join(path),
-                None => continue,
-            };
-
-            if !file.is_dir() {
-                let mut data = Vec::new();
-                file.read_to_end(&mut data)
-                    .context("Failed to read file from zip")?;
-                result.push((outpath, data));
-            }
-        }
-        result
-    }; // archive is dropped here
-
-    // If a filter was provided but no files matched, return an error
-    if file_filter.is_some() && files_to_write.is_empty() {
-        bail!("No files matched the filter in the zip archive");
-    }
-
-    // Now do async file I/O
-    for (outpath, data) in files_to_write {
-        if let Some(parent) = outpath.parent() {
-            async_fs::create_dir_all(parent).await.ok();
-        }
-
-        let mut outfile = async_fs::File::create(&outpath)
-            .await
-            .with_context(|| format!("Failed to create file: {:?}", outpath))?;
-        outfile
-            .write_all(&data)
-            .await
-            .with_context(|| format!("Failed to write file: {:?}", outpath))?;
-        outfile
-            .flush()
-            .await
-            .with_context(|| format!("Failed to flush file: {:?}", outpath))?;
-    }
-
-    Ok(())
-}
-
 /// Finds a working Node.js binary, preferring our custom installation over system node.
 ///
 /// This function checks:
@@ -449,20 +359,6 @@ pub async fn find_working_node_binary(path_env_var: Option<&str>) -> Option<Path
 pub async fn detect_system_node(path_env_var: impl AsRef<OsStr>) -> Result<()> {
     let path_env_var = path_env_var.as_ref();
 
-    // On Windows, we must use `cmd.exe /c node` so that the provided PATH
-    // (set via `.env("PATH", ...)`) is used for executable search.
-    // `CreateProcessW` uses the parent process's PATH, not the child's
-    // `lpEnvironment` PATH, so running `node` directly would find node.exe
-    // via Zap's inherited env rather than the captured interactive PATH.
-    #[cfg(windows)]
-    let output = Command::new("cmd.exe")
-        .args(["/c", "node", "--version"])
-        .env("PATH", path_env_var)
-        .output()
-        .await
-        .context("Failed to run node --version. Is Node.js installed?")?;
-
-    #[cfg(not(windows))]
     let output = Command::new("node")
         .env("PATH", path_env_var)
         .arg("--version")

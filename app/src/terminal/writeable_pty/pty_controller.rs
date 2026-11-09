@@ -16,7 +16,7 @@ use crate::terminal::model::tmux::commands::TmuxCommand;
 use crate::terminal::model_events::AnsiHandlerEvent;
 use crate::terminal::view::LINEFEED_REGEX;
 #[cfg(not(target_family = "wasm"))]
-use crate::terminal::writeable_pty::bootstrap_file::{permanent_bootstrap_file, TempBootstrapFile};
+use crate::terminal::writeable_pty::bootstrap_file::TempBootstrapFile;
 use crate::terminal::{
     bootstrap,
     line_editor_status::{LineEditorStatus, LineEditorStatusEvent},
@@ -397,14 +397,6 @@ impl<T: EventLoopSender> PtyController<T> {
     ) {
         let shell_type = pending_session_info.shell.shell_type();
 
-        #[cfg(feature = "local_fs")]
-        if let Some(path) = permanent_bootstrap_file(shell_type, pending_session_info) {
-            // If there is a permanent bootstrap file, source it directly. We
-            // currently only do this for local PowerShell sessions on Windows.
-            self.source_bootstrap_script(path, shell_type, ctx);
-            return;
-        }
-
         let bootstrap = bootstrap::script_for_shell(shell_type, &crate::ASSETS);
         self.write_bootstrap_script_to_shell(pending_session_info, ctx, shell_type, bootstrap);
     }
@@ -415,8 +407,6 @@ impl<T: EventLoopSender> PtyController<T> {
         cfg_if::cfg_if! {
             if #[cfg(unix)] {
                 self.write_bytes(&b"\n"[..], ctx);
-            } else if #[cfg(target_os = "windows")] {
-                self.write_bytes(&b"\r"[..], ctx);
             }
         }
     }
@@ -430,29 +420,14 @@ impl<T: EventLoopSender> PtyController<T> {
         bootstrap: Cow<'static, [u8]>,
     ) {
         use super::bootstrap_file::create_bootstrap_file;
-        use crate::terminal::ShellLaunchData;
 
         if bootstrap::should_use_rc_file_bootstrap_method(shell_type, pending_session_info) {
-            let wsl_distribution = match (
-                &pending_session_info.launch_data,
-                pending_session_info.wsl_name.as_ref(),
-            ) {
-                (_, Some(wsl_name)) => Some(wsl_name),
-                (Some(ShellLaunchData::WSL { distro }), _) => Some(distro),
-                (
-                    Some(ShellLaunchData::Executable { .. })
-                    | Some(ShellLaunchData::MSYS2 { .. })
-                    | Some(ShellLaunchData::DockerSandbox { .. })
-                    | None,
-                    _,
-                ) => None,
-            };
             // If creating the temporary file fails for any reason, we fall
             // back to the existing bracketed paste logic. Using bracketed paste
             // reduces the amount of reformatting that Fish tries to do and so improves
             // bootstrap speed. We need to add an explicit leading space, since Fish
             // automatically trims the input when performing a bracketed paste.
-            if let Some(file) = create_bootstrap_file(&bootstrap, shell_type, wsl_distribution) {
+            if let Some(file) = create_bootstrap_file(&bootstrap, shell_type) {
                 if let Some(path) = file.path_as_bytes() {
                     self.source_bootstrap_script(path, shell_type, ctx);
                 } else {

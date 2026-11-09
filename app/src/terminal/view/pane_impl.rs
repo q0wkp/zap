@@ -576,7 +576,7 @@ impl TerminalView {
     }
 
     /// Render the indicator for terminal mode (no conversation selected).
-    /// Shows error indicator if terminal is in error state, otherwise shell indicator on Windows.
+    /// Shows error indicator if terminal is in error state.
     fn render_terminal_mode_indicator(&self, app: &AppContext) -> Option<Box<dyn Element>> {
         let appearance = Appearance::as_ref(app);
         let font_size = appearance.ui_font_size();
@@ -592,23 +592,6 @@ impl TerminalView {
                 .with_height(font_size)
                 .with_width(font_size)
                 .finish(),
-            );
-        }
-
-        // Shell indicator (Windows only)
-        if let Some(shell_indicator_type) = self.shell_indicator_type {
-            let shell_indicator_icon = shell_indicator_type
-                .to_icon()
-                .to_warpui_icon(
-                    blended_colors::text_sub(appearance.theme(), appearance.theme().background())
-                        .into(),
-                )
-                .finish();
-            return Some(
-                ConstrainedBox::new(shell_indicator_icon)
-                    .with_height(font_size)
-                    .with_width(font_size)
-                    .finish(),
             );
         }
 

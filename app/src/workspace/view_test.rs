@@ -42,8 +42,6 @@ use crate::system::SystemStats;
 use crate::tab_configs::tab_config::{TabConfigPaneNode, TabConfigPaneType};
 use crate::terminal::history::History;
 use crate::terminal::keys::TerminalKeybindings;
-#[cfg(windows)]
-use crate::util::traffic_lights::windows::RendererState;
 use crate::workspaces::user_profiles::UserProfiles;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 
@@ -149,11 +147,6 @@ fn initialize_app(app: &mut App) {
     #[cfg(feature = "local_fs")]
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(search::files::model::FileSearchModel::new);
-
-    #[cfg(windows)]
-    {
-        app.add_singleton_model(RendererState::new);
-    }
 
     #[cfg(feature = "local_tty")]
     terminal::available_shells::register(app);

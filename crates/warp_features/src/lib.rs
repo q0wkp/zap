@@ -27,9 +27,6 @@ pub enum FeatureFlag {
     /// If set, generators are executed in-band in all SSH sessions.
     InBandGeneratorsForSSH,
 
-    /// If set, generators are executed using cmd.exe on Windows.
-    RunGeneratorsWithCmdExe,
-
     /// Gates a bindable keyboard action for accepting command corrections.
     CommandCorrectionKey,
 
@@ -58,9 +55,6 @@ pub enum FeatureFlag {
     /// Enables a setting on Intel Dual-GPU Macs to enable use of the integrated GPU over the
     /// discrete GPU.
     IntegratedGPU,
-
-    /// Defaults Windows builds to the high-performance GPU with Vulkan as the preferred backend.
-    WindowsHighPerformanceGpuDefault,
 
     /// Zap Agent Mode.
     AgentMode,
@@ -243,9 +237,6 @@ pub enum FeatureFlag {
 
     /// Enables image as context for AM.
     ImageAsContext,
-
-    /// UNIX shells running "natively" on Windows via MSYS2.
-    MSYS2Shells,
 
     /// Allows AI to call the file retrieval tools.
     FileRetrievalTools,
@@ -712,17 +703,14 @@ pub const DOGFOOD_FLAGS: &[FeatureFlag] = &[
     FeatureFlag::RemoveAutosuggestionDuringTabCompletions,
     FeatureFlag::ResizeFix,
     FeatureFlag::AgentModeWorkflows,
-    #[cfg(not(windows))]
     FeatureFlag::SSHTmuxWrapper,
     FeatureFlag::AgentModeAnalytics,
     FeatureFlag::LazySceneBuilding,
     FeatureFlag::SshDragAndDrop,
     FeatureFlag::MultiWorkspace,
     FeatureFlag::ImeMarkedText,
-    FeatureFlag::MSYS2Shells,
     FeatureFlag::RetryTruncatedCodeResponses,
     FeatureFlag::ContextLineReviewComments,
-    FeatureFlag::RunGeneratorsWithCmdExe,
     FeatureFlag::NLDClassifierModelEnabled,
     FeatureFlag::Projects,
     FeatureFlag::ProviderCommand,
@@ -764,14 +752,9 @@ pub const RELEASE_FLAGS: &[FeatureFlag] = &[
     FeatureFlag::Autoupdate,
     FeatureFlag::Changelog,
     FeatureFlag::CrashReporting,
-    // winit 的 IME 路径在 macOS 和 Windows 都已支持 marked text。
-    // Windows 必须开启该 flag 才能渲染 IME preedit / 输入合成文本,
-    // 否则只能看到 OS 的候选窗,Zap 会把 marked text 更新整体丢弃。
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     FeatureFlag::ImeMarkedText,
     FeatureFlag::BlocklistMarkdownTableRendering,
-    // Remote server binary is not yet supported on Windows.
-    #[cfg(not(windows))]
     FeatureFlag::SshRemoteServer,
 ];
 

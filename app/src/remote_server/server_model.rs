@@ -53,9 +53,7 @@ pub type ConnectionId = uuid::Uuid;
 use super::protocol::RequestId;
 use crate::ai::agent::FileLocations;
 use crate::ai::blocklist::{read_local_file_context, ReadFileContextResult};
-use crate::terminal::model::session::command_executor::{
-    ExecuteCommandOptions, LocalCommandExecutor,
-};
+use crate::terminal::model::session::command_executor::LocalCommandExecutor;
 
 /// Outcome of dispatching a request-style `ClientMessage`.
 ///
@@ -906,12 +904,7 @@ impl ServerModel {
             request_id.clone(),
             async move {
                 executor
-                    .execute_local_command(
-                        &command,
-                        cwd.as_deref(),
-                        env_vars,
-                        ExecuteCommandOptions::default(),
-                    )
+                    .execute_local_command(&command, cwd.as_deref(), env_vars)
                     .await
             },
             move |me, result, _ctx| {
@@ -1285,14 +1278,8 @@ impl ServerModel {
         let handle = self.spawn_request_handler(
             request_id.clone(),
             async move {
-                read_local_file_context(
-                    &file_locations,
-                    None,
-                    None,
-                    max_file_bytes,
-                    max_batch_bytes,
-                )
-                .await
+                read_local_file_context(&file_locations, None, max_file_bytes, max_batch_bytes)
+                    .await
             },
             move |me, result: anyhow::Result<ReadFileContextResult>, _ctx| {
                 let response = match result {

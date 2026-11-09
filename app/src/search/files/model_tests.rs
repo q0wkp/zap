@@ -255,13 +255,9 @@ mod strip_absolute_path_prefix_tests {
     use super::*;
     use std::path::{Path, PathBuf};
 
-    /// Builds an absolute path from the given components, using the platform's
-    /// root (`/` on Unix, `C:\` on Windows).  This ensures the constructed
-    /// path is treated as absolute by `Path::is_absolute` on both platforms.
+    /// Builds an absolute path from the given components, rooted at `/`.
     fn abs_path(components: &[&str]) -> String {
         let mut path = PathBuf::new();
-        #[cfg(windows)]
-        path.push(r"C:\");
         #[cfg(unix)]
         path.push("/");
         for component in components {

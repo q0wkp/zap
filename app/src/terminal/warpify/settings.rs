@@ -169,15 +169,6 @@ pub struct WarpifySettings {
     pub ssh_extension_install_mode: SshExtensionInstallModeSetting,
 }
 
-#[cfg(windows)]
-lazy_static! {
-    /// Matches `wsl` commands which is for Windows Subsystem for Linux. Calling this can open
-    /// interactive shells into Linux VMs.
-    pub static ref WSL_SUBSHELL_REGEX: Regex = Regex::new(r"^wsl(\.exe)?($|\s)").expect("wsl regex must compile");
-    /// We filter out `wsl` commands that are not for opening interactive shells.
-    pub static ref WSL_IGNORE_REGEX: Regex = Regex::new(r" --(default-user|enable-wsl1|export|help|import|import-in-place|inbox|install|list|mount|no-distribution|no-launch|set-default|shutdown|status|terminate|uninstall|unmount|unregister|update|version|web-download)").expect("wsl ignore regex invalid");
-}
-
 lazy_static! {
     pub static ref POETRY_SUBSHELL_COMMAND_REGEX: Regex  = Regex::new(r"^poetry\s+shell").expect("Poetry subshell regex invalid");
     pub static ref PIPENV_SUBSHELL_COMMAND_REGEX: Regex  = Regex::new(r"^pipenv\s+shell").expect("pipenv subshell regex invalid");
@@ -370,12 +361,6 @@ impl WarpifySettings {
     fn is_built_in_subshell_match(command: &str) -> bool {
         for command_regex in SUBSHELL_COMMAND_REGEXES.iter() {
             if command_regex.is_match(command) {
-                return true;
-            }
-        }
-        #[cfg(windows)]
-        {
-            if WSL_SUBSHELL_REGEX.is_match(command) && !WSL_IGNORE_REGEX.is_match(command) {
                 return true;
             }
         }

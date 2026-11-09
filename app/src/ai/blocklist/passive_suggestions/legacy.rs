@@ -367,7 +367,6 @@ impl PassiveSuggestionsModel {
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
 
         let can_read_file = BlocklistAIPermissions::as_ref(ctx)
             .can_read_files(
@@ -377,7 +376,6 @@ impl PassiveSuggestionsModel {
                     .map(|file| {
                         PathBuf::from(host_native_absolute_path(
                             &file.name,
-                            &shell,
                             &current_working_directory,
                         ))
                     })
@@ -407,7 +405,7 @@ impl PassiveSuggestionsModel {
         self.code_diff_preflight_future_handle = Some(ctx.spawn(
             async move {
                 let file_future =
-                    read_local_file_context(&files, current_working_directory, shell, None, None);
+                    read_local_file_context(&files, current_working_directory, None, None);
                 let Ok(result) = file_future.with_timeout(PASSIVE_CODE_DIFF_FILE_READING_TIMEOUT).await
                 else {
                     return Err(anyhow::anyhow!("File reading timed out"));

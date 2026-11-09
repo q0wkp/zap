@@ -5,8 +5,6 @@ pub(crate) mod github;
 pub mod linux;
 #[cfg(target_os = "macos")]
 mod mac;
-#[cfg(windows)]
-mod windows;
 
 use crate::features::FeatureFlag;
 use crate::send_telemetry_sync_from_app_ctx;
@@ -798,7 +796,6 @@ pub enum DownloadReady {
     /// The update was downloaded successfully.
     Yes,
     /// There were insufficient permissions to download the update.
-    #[cfg_attr(windows, allow(dead_code))]
     NeedsAuthorization,
     /// A newer version could not be downloaded.
     No,
@@ -816,7 +813,7 @@ pub enum DownloadReady {
 #[cfg_attr(target_family = "wasm", allow(dead_code))]
 pub enum ReadyForRelaunch {
     Yes,
-    #[cfg_attr(any(target_os = "macos", windows), allow(dead_code))]
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     No,
 }
 
@@ -933,8 +930,6 @@ async fn download_update(
             mac::download_update_and_cleanup(&version_info, &update_id, last_successful_update_id.as_deref(), http_client.as_ref(), on_progress).await
         } else if #[cfg(target_os = "linux")] {
             linux::download_update_and_cleanup(&version_info, &update_id, http_client.as_ref(), on_progress).await
-        } else if #[cfg(windows)] {
-            windows::download_update_and_cleanup(&version_info, &update_id, http_client.as_ref(), on_progress).await
         } else {
             let _ = on_progress;
             Err(anyhow::anyhow!("Not implemented"))
@@ -949,22 +944,20 @@ async fn download_update(
 /// The timing of how updates are applied is very platform-specific:
 /// * On macOS, updates are applied asynchronously, _immediately_ before relaunching. This always
 ///   returns [`ReadyForRelaunch::Yes`].
-/// * On Windows, updates are applied by a separate installer process, which is spawned
-///   [just before the app terminates](spawn_child_if_necessary).
 /// * On Linux, if using a package manager, we ask the user to install the update via their package
 ///   manager, and do not relaunch until that's complete. This returns [`ReadyForRelaunch::No`].
 pub fn apply_update(
     _initiating_workspace: &mut Workspace,
     _ctx: &mut ViewContext<Workspace>,
 ) -> Result<ReadyForRelaunch> {
-    // openWarp:三平台 apply_update 都走与官方一致的入口,只是各平台 relaunch()
-    // 内部针对 OSS 分支选择了不同的"安装动作"(mac: open dmg / Windows: 非 silent
-    // Inno 安装 / Linux AppImage: in-place 覆盖+重启)。
+    // openWarp:各平台 apply_update 都走与官方一致的入口,只是各平台 relaunch()
+    // 内部针对 OSS 分支选择了不同的"安装动作"(mac: open dmg / Linux AppImage:
+    // in-place 覆盖+重启)。
 
     cfg_if::cfg_if! {
-        if #[cfg(any(target_os = "macos", windows))] {
-            // macOS applies the update during the download step. Windows does it during
-            // `spawn_child_if_necessary`. In either case, simply continue relaunching the app.
+        if #[cfg(target_os = "macos")] {
+            // macOS applies the update during the download step, so simply continue relaunching
+            // the app.
             Ok(ReadyForRelaunch::Yes)
         } else if #[cfg(target_os = "linux")] {
             let AutoupdateStage::UpdateReady { .. } = &AutoupdateState::handle(_ctx).as_ref(_ctx).stage else {
@@ -1152,8 +1145,6 @@ pub fn spawn_child_if_necessary(app: &mut AppContext) {
                 let relaunch_status = mac::relaunch();
             } else if #[cfg(target_os = "linux")] {
                 let relaunch_status = linux::relaunch();
-            } else if #[cfg(windows)] {
-                let relaunch_status = windows::relaunch();
             } else {
                 let relaunch_status: Result<()> = Err(anyhow!("No autoupdate support on this platform!"));
             }
@@ -1192,18 +1183,14 @@ fn manually_download_version(channel: &Channel, version: &VersionInfo, ctx: &mut
     mac::manually_download_version(channel, version, ctx);
 }
 
-pub(crate) fn check_and_report_update_errors(_ctx: &mut AppContext) {
-    #[cfg(windows)]
-    windows::check_and_report_update_errors(_ctx);
-}
+pub(crate) fn check_and_report_update_errors(_ctx: &mut AppContext) {}
 
 pub fn remove_old_executable() -> Result<()> {
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
             mac::remove_old_executable()
-        } else if #[cfg(any(target_os = "linux", windows))] {
-            // Nothing to do on Linux or Windows; we don't leave anything behind to clean up after
-            // a relaunch.
+        } else if #[cfg(target_os = "linux")] {
+            // Nothing to do on Linux; we don't leave anything behind to clean up after a relaunch.
             Ok(())
         } else if #[cfg(target_family = "wasm")] {
             // Nothing to do on web. There's no executables stored somewhere.

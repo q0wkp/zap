@@ -388,9 +388,6 @@ fn test_is_git_internal_path() {
     assert!(is_git_internal_path(Path::new("/repo/.git/objects/abc123")));
     assert!(is_git_internal_path(Path::new("/repo/.git")));
 
-    #[cfg(windows)]
-    assert!(is_git_internal_path(Path::new(r"C:\repo\.git\HEAD")));
-
     // Non-git files should not be detected
     assert!(!is_git_internal_path(Path::new("/repo/src/main.rs")));
     assert!(!is_git_internal_path(Path::new("/repo/README.md")));

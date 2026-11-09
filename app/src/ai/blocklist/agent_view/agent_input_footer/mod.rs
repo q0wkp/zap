@@ -993,15 +993,9 @@ impl AgentInputFooter {
             Some(ShellLaunchData::Executable {
                 executable_path,
                 shell_type,
-            })
-            | Some(ShellLaunchData::MSYS2 {
-                executable_path,
-                shell_type,
             }) => (Some(executable_path), Some(shell_type)),
             // Shell not yet resolved (e.g. still bootstrapping).
             None => (None, None),
-            // WSL is not supported for auto-install.
-            Some(ShellLaunchData::WSL { .. }) => return false,
             // Auto-install isn't supported for Docker sandbox sessions — the
             // install would run against the *host's* shell config, not the
             // container's. `should_use_manual_mode` already routes sandbox

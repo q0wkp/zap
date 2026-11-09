@@ -104,8 +104,7 @@ use crate::auth::{WebHandoffEvent, WebHandoffView};
 ///
 /// 取 `ChannelState::app_id().application_name()` 是为了让 OSS 构建显示 `Zap`、
 /// 而 Stable/Preview/Dev 等上游 channel 仍显示各自的 `Zap` / `WarpPreview` / `WarpDev`,
-/// 避免在 fork 中跨多处硬编码字符串(Windows 任务管理器按窗口标题做进程分组,
-/// 硬编码 `"Zap"` 会让 Zap 在任务管理器里显示成 `Zap(N)`)。
+/// 避免在 fork 中跨多处硬编码字符串。
 ///
 /// 注意:窗口创建后,`Workspace::update_window_title()` 会在每次 tab 切换/重命名时
 /// 用 tab 标题覆盖此值,所以此函数仅决定窗口刚打开、还未挂上 tab 时的初始标题。
@@ -365,7 +364,7 @@ pub fn init(app: &mut AppContext) {
     ]);
 
     app.register_editable_bindings([
-        // Register a binding to toggle fullscreen on Linux and Windows.
+        // Register a binding to toggle fullscreen on Linux.
         EditableBinding::new(
             "root_view:toggle_fullscreen",
             crate::t!("keybinding-desc-root-view-toggle-fullscreen"),
@@ -528,7 +527,6 @@ pub fn create_transferred_window(
             window_bounds,
             title: Some(window_title()),
             background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
-            background_blur_texture: *window_settings.background_blur_texture,
             on_gpu_driver_selected: on_gpu_driver_selected_callback(),
             ..Default::default()
         },
@@ -587,13 +585,8 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
     if let Some(app_state) = &arg.app_state {
         maybe_register_global_window_shortcuts(global_resource_handles.clone(), ctx);
 
-        let (background_blur_radius_pixels, background_blur_texture) = {
-            let window_settings = WindowSettings::as_ref(ctx);
-            (
-                Some(*window_settings.background_blur_radius),
-                *window_settings.background_blur_texture,
-            )
-        };
+        let background_blur_radius_pixels =
+            Some(*WindowSettings::as_ref(ctx).background_blur_radius);
 
         // Check whether user has enabled session restoration.
         if *GeneralSettings::as_ref(ctx).restore_session {
@@ -602,12 +595,6 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
             for (idx, window) in app_state.windows.iter().enumerate() {
                 // If this window is a quake window, hide it by default.
                 if window.quake_mode {
-                    // If this is Windows, skip restoring the quake window. Creating a hidden window
-                    // is not supported on Windows. We can't have the quake window visible on
-                    // startup or else it will get mistaken for a normal window.
-                    if cfg!(windows) {
-                        continue;
-                    }
                     let frame_args = quake_mode_config(
                         &KeysSettings::as_ref(ctx)
                             .quake_mode_settings
@@ -623,7 +610,6 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                             title: Some(window_title()),
                             fullscreen_state: window.fullscreen_state,
                             background_blur_radius_pixels,
-                            background_blur_texture,
                             // Don't use the quake window for positioning new windows.
                             anchor_new_windows_from_closed_position:
                                 NextNewWindowsHasThisWindowsBoundsUponClose::No,
@@ -666,7 +652,6 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                                 title: Some(window_title()),
                                 fullscreen_state: window.fullscreen_state,
                                 background_blur_radius_pixels,
-                                background_blur_texture,
                                 on_gpu_driver_selected: on_gpu_driver_selected_callback(),
                                 ..Default::default()
                             },
@@ -718,7 +703,6 @@ fn open_from_restored(arg: &OpenFromRestoredArg, ctx: &mut AppContext) {
                         title: Some(window_title()),
                         fullscreen_state: window.fullscreen_state,
                         background_blur_radius_pixels,
-                        background_blur_texture,
                         on_gpu_driver_selected: on_gpu_driver_selected_callback(),
                         ..Default::default()
                     },
@@ -995,7 +979,6 @@ fn default_window_options(window_settings: &WindowSettings, ctx: &AppContext) ->
         window_bounds: next_bounds,
         title: Some(window_title()),
         background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
-        background_blur_texture: *window_settings.background_blur_texture,
         on_gpu_driver_selected: on_gpu_driver_selected_callback(),
         ..Default::default()
     }
@@ -1180,7 +1163,6 @@ fn toggle_quake_mode_window(global_resource_handles: &GlobalResourceHandles, ctx
                     window_bounds: WindowBounds::ExactPosition(config.window_bounds),
                     title: Some(window_title()),
                     background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
-                    background_blur_texture: *window_settings.background_blur_texture,
                     // Ignore the quake window for positioning the next window
                     anchor_new_windows_from_closed_position:
                         warpui::NextNewWindowsHasThisWindowsBoundsUponClose::No,

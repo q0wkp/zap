@@ -7,8 +7,6 @@ use crate::{
     terminal::local_tty::{self},
 };
 
-#[cfg(target_os = "windows")]
-use super::PseudoConsoleChild;
 use super::{PtyOptions, PtySpawnResult};
 #[cfg(unix)]
 use {
@@ -60,27 +58,6 @@ impl PtyHandle for DirectPtyHandle {
     }
 }
 
-#[cfg(target_os = "windows")]
-struct DirectPtyHandle {
-    child: PseudoConsoleChild,
-}
-
-#[cfg(target_os = "windows")]
-impl PtyHandle for DirectPtyHandle {
-    fn pid(&self) -> u32 {
-        self.child.id()
-    }
-
-    fn has_process_terminated(&mut self) -> Result<bool> {
-        Ok(self.child.is_terminated())
-    }
-
-    fn kill(&mut self) -> Result<()> {
-        // The logic to kill the process and file handles are fully contained in
-        // EventedPty::kill().
-        Ok(())
-    }
-}
 /// Invokes the provided callback function without crash reporting enabled.
 fn invoke_without_crash_reporting<T>(
     is_crash_reporting_enabled: bool,
@@ -105,8 +82,6 @@ pub(super) struct PtySpawnInfo {
     pub result: PtySpawnResult,
     #[cfg(unix)]
     pub child: Child,
-    #[cfg(windows)]
-    pub child: PseudoConsoleChild,
 }
 
 /// A global singleton that provides the ability to spawn ptys.
@@ -133,8 +108,6 @@ impl PtySpawner {
                 Ok(Self {
                     server: Some(server),
                 })
-            } else if #[cfg(target_os = "windows")] {
-                Ok(Self {})
             } else {
                 unreachable!("Spawning a PTY is not supported on this platform.");
             }
@@ -146,8 +119,6 @@ impl PtySpawner {
         cfg_if::cfg_if! {
             if #[cfg(unix)] {
                 Self{ server: None }
-            } else if #[cfg(target_os = "windows")] {
-                Self {}
             } else {
                 unreachable!("Spawning a PTY for tests is not supported on this platform.");
             }
@@ -172,9 +143,6 @@ impl PtySpawner {
         &self,
         options: PtyOptions,
         is_crash_reporting_enabled: bool,
-        #[cfg(windows)] event_loop_tx: super::mio_channel::Sender<
-            crate::terminal::writeable_pty::Message,
-        >,
         ctx: &mut AppContext,
     ) -> Result<(PtySpawnResult, Box<dyn PtyHandle>)> {
         #[cfg(not(unix))]
@@ -208,28 +176,16 @@ impl PtySpawner {
         };
         send_telemetry_from_app_ctx!(TelemetryEvent::PtySpawned { mode }, ctx);
 
-        Self::spawn_pty_directly(
-            options,
-            #[cfg(windows)]
-            event_loop_tx,
-            is_crash_reporting_enabled,
-        )
+        Self::spawn_pty_directly(options, is_crash_reporting_enabled)
     }
 
     fn spawn_pty_directly(
         options: PtyOptions,
-        #[cfg(windows)] event_loop_tx: super::mio_channel::Sender<
-            crate::terminal::writeable_pty::Message,
-        >,
         is_crash_reporting_enabled: bool,
     ) -> Result<(PtySpawnResult, Box<dyn PtyHandle>)> {
         let pty_spawn_info =
             invoke_without_crash_reporting(is_crash_reporting_enabled, move || {
-                local_tty::spawn(
-                    options,
-                    #[cfg(windows)]
-                    event_loop_tx,
-                )
+                local_tty::spawn(options)
             })?;
         let direct_pty_handle = Box::new(DirectPtyHandle {
             child: pty_spawn_info.child,

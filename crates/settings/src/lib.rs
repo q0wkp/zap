@@ -133,7 +133,7 @@ impl warpui::SingletonEntity for PublicPreferences {}
 /// Private settings (those marked `private: true` in `define_settings_group!`)
 /// are stored here instead of in the user-visible settings file. This always
 /// uses the platform-native store (e.g. UserDefaults on macOS, JSON file on
-/// Linux, registry on Windows).
+/// Linux).
 pub struct PrivatePreferences(Box<dyn UserPreferences>);
 
 impl PrivatePreferences {
@@ -160,7 +160,7 @@ impl warpui::SingletonEntity for PrivatePreferences {}
 #[derive(Debug, Clone)]
 pub enum SupportedPlatforms {
     ALL,
-    DESKTOP, /* Refers to running on device, not web-based, such as Mac, Linux, and Windows */
+    DESKTOP, /* Refers to running on device, not web-based, such as Mac and Linux */
     MAC,
     LINUX,
     WINDOWS,
@@ -209,9 +209,7 @@ impl SupportedPlatforms {
                     any(target_os = "linux", target_os = "freebsd")
                 ))
             }
-            SupportedPlatforms::WINDOWS => {
-                cfg!(all(not(target_family = "wasm"), target_os = "windows"))
-            }
+            SupportedPlatforms::WINDOWS => false,
             SupportedPlatforms::WEB => {
                 cfg!(target_family = "wasm")
             }

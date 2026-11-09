@@ -14,13 +14,11 @@ use crate::ai::agent::{
 };
 use crate::ai::blocklist::BlocklistAIPermissions;
 use crate::ai::paths::{host_native_absolute_path, join_paths, shell_native_absolute_path};
-use crate::terminal::model::session::ExecuteCommandOptions;
 use crate::{
     ai::agent::AIAgentActionResultType,
     send_telemetry_from_app_ctx,
     terminal::{
         model::session::active_session::ActiveSession, model::session::Session, shell::ShellType,
-        ShellLaunchData,
     },
     TelemetryEvent,
 };
@@ -80,9 +78,7 @@ impl FileGlobExecutor {
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let shell = self.active_session.as_ref(ctx).shell_launch_data(ctx);
-        let absolute_path =
-            host_native_absolute_path(path.as_str(), &shell, &current_working_directory);
+        let absolute_path = host_native_absolute_path(path.as_str(), &current_working_directory);
 
         BlocklistAIPermissions::as_ref(ctx)
             .can_read_files_with_conversation(
@@ -115,17 +111,13 @@ impl FileGlobExecutor {
         // If the path is not provided, use the current working directory.
         let path = path.clone().unwrap_or_else(|| ".".to_string());
 
-        let shell_launch_data = self.active_session.as_ref(ctx).shell_launch_data(ctx);
         let current_working_directory = self
             .active_session
             .as_ref(ctx)
             .current_working_directory()
             .cloned();
-        let absolute_path = shell_native_absolute_path(
-            path.as_str(),
-            shell_launch_data.as_ref(),
-            current_working_directory.as_ref(),
-        );
+        let absolute_path =
+            shell_native_absolute_path(path.as_str(), current_working_directory.as_ref());
 
         let session = self.active_session.as_ref(ctx).session(ctx);
 
@@ -134,7 +126,7 @@ impl FileGlobExecutor {
         let is_file_glob_v2 = is_file_glob_v2(&input);
         ActionExecution::new_async(
             async move {
-                match run_file_glob(patterns_clone, absolute_path, session, shell_launch_data)
+                match run_file_glob(patterns_clone, absolute_path, session)
                     .with_timeout(FILE_GLOB_TIMEOUT)
                     .await
                 {
@@ -201,7 +193,6 @@ async fn run_file_glob(
     patterns: Vec<String>,
     absolute_path: String,
     session: Option<Arc<Session>>,
-    shell_launch_data: Option<ShellLaunchData>,
 ) -> anyhow::Result<FileGlobV2Result> {
     if patterns.is_empty() {
         return Err(anyhow::anyhow!("No patterns provided to file_glob"));
@@ -218,13 +209,7 @@ async fn run_file_glob(
         });
 
     if is_in_git_repo {
-        run_git_ls_files_command(
-            &patterns,
-            &absolute_path,
-            session.as_ref(),
-            shell_launch_data,
-        )
-        .await
+        run_git_ls_files_command(&patterns, &absolute_path, session.as_ref()).await
     } else if session.shell().shell_type() == ShellType::PowerShell {
         run_powershell_get_childitem_command(&patterns, &absolute_path, session.as_ref()).await
     } else {
@@ -237,16 +222,15 @@ async fn run_git_ls_files_command(
     patterns: &[String],
     target_path: &str,
     session: &Session,
-    shell_launch_data: Option<ShellLaunchData>,
 ) -> anyhow::Result<FileGlobV2Result> {
     let pattern_args = patterns
         .iter()
         .flat_map(|pattern| {
             [
                 // Matches on files in the target path.
-                join_paths(&[target_path, pattern], shell_launch_data.as_ref()),
+                join_paths(&[target_path, pattern]),
                 // Matches on files in any subdirectory of the target path.
-                join_paths(&[target_path, "*", pattern], shell_launch_data.as_ref()),
+                join_paths(&[target_path, "*", pattern]),
             ]
         })
         .map(|pattern| format!("'{pattern}'"))
@@ -254,12 +238,7 @@ async fn run_git_ls_files_command(
     let command = format!("git ls-files -c -o --exclude-standard -- {pattern_args}");
 
     let command_output = session
-        .execute_command(
-            command.as_str(),
-            Some(target_path),
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(command.as_str(), Some(target_path), None)
         .await?;
     let output = String::from_utf8_lossy(command_output.output()).to_string();
 
@@ -267,9 +246,7 @@ async fn run_git_ls_files_command(
         // git ls-files outputs paths relative to the current directory. For consistency with the
         // `find` and PowerShell implementations, convert to absolute paths.
         let absolute_paths = non_empty_lines(&output)
-            .map(|relative_path| {
-                join_paths(&[target_path, relative_path], shell_launch_data.as_ref())
-            })
+            .map(|relative_path| join_paths(&[target_path, relative_path]))
             .map(|path| FileGlobV2Match { file_path: path });
 
         Ok(FileGlobV2Result::Success {
@@ -295,12 +272,7 @@ async fn run_find_command(
     let find_command = format!("find \"{target_path}\" -type f {pattern_args}");
 
     let command_output = session
-        .execute_command(
-            find_command.as_str(),
-            Some(target_path),
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(find_command.as_str(), Some(target_path), None)
         .await?;
     let stdout = String::from_utf8_lossy(&command_output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&command_output.stderr).to_string();
@@ -340,12 +312,7 @@ async fn run_powershell_get_childitem_command(
     );
 
     let command_output = session
-        .execute_command(
-            command.as_str(),
-            Some(target_path),
-            None,
-            ExecuteCommandOptions::default(),
-        )
+        .execute_command(command.as_str(), Some(target_path), None)
         .await?;
     let output = String::from_utf8_lossy(command_output.output()).to_string();
 

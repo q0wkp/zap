@@ -586,7 +586,7 @@ impl From<CLIAgent> for CLIAgentType {
 }
 
 // ── CLI Agent 安装状态 singleton model ──
-// 对齐 AntivirusInfo 模式:ctx.spawn 异步扫描 → 回调 emit 事件 → 订阅者自动刷新 UI
+// ctx.spawn 异步扫描 → 回调 emit 事件 → 订阅者自动刷新 UI
 
 /// CLI agent 安装扫描完成事件。
 pub enum CLIAgentInstallEvent {
@@ -652,21 +652,13 @@ impl Entity for CLIAgentInstallModel {
 impl SingletonEntity for CLIAgentInstallModel {}
 
 /// 同步 PATH 搜索，检测所有 agent 是否安装。仅供 `ctx.spawn` 异步任务内部使用。
+/// 同步 PATH 搜索，检测所有 agent 是否安装。仅供 `ctx.spawn` 异步任务内部使用。
 #[cfg(unix)]
 fn scan_cli_agent_installations() -> HashMap<CLIAgent, bool> {
     let search_dirs = cli_agent_search_dirs().collect::<Vec<_>>();
     enum_iterator::all::<CLIAgent>()
         .filter(|a| !matches!(a, CLIAgent::Unknown))
         .map(|a| (a, cli_agent_is_on_path_with_dirs(a, &search_dirs)))
-        .collect()
-}
-
-/// 同步 PATH 搜索，检测所有 agent 是否安装。仅供 `ctx.spawn` 异步任务内部使用。
-#[cfg(windows)]
-fn scan_cli_agent_installations() -> HashMap<CLIAgent, bool> {
-    enum_iterator::all::<CLIAgent>()
-        .filter(|a| !matches!(a, CLIAgent::Unknown))
-        .map(|a| (a, cli_agent_is_on_path(a)))
         .collect()
 }
 
@@ -739,29 +731,6 @@ fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
         }
     }
     deduped
-}
-
-#[cfg(windows)]
-fn cli_agent_is_on_path(agent: CLIAgent) -> bool {
-    match agent {
-        CLIAgent::Unknown => false,
-        CLIAgent::CursorCli => is_on_path("cursor-agent"),
-        CLIAgent::DeepSeek => is_on_path("deepseek") || is_on_path("deepseek-tui"),
-        other => is_on_path(other.command_prefix()),
-    }
-}
-
-#[cfg(windows)]
-fn is_on_path(cmd: &str) -> bool {
-    let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| ".EXE;.CMD;.BAT".into());
-    let Ok(path_var) = std::env::var("PATH") else {
-        return false;
-    };
-    let exts: Vec<&str> = pathext.split(';').collect();
-    std::env::split_paths(&path_var).any(|dir| {
-        exts.iter()
-            .any(|ext| dir.join(format!("{}{}", cmd, ext)).is_file())
-    })
 }
 
 #[cfg(test)]

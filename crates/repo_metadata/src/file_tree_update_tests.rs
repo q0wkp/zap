@@ -7,12 +7,7 @@ use warp_util::standardized_path::StandardizedPath;
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/// Platform-appropriate absolute root for test paths.
-/// On Windows `/repo` is not a valid local absolute path, so we use
-/// a drive-letter prefix instead.
-#[cfg(windows)]
-const TEST_REPO_ROOT: &str = "C:\\repo";
-#[cfg(not(windows))]
+/// Absolute root for test paths.
 const TEST_REPO_ROOT: &str = "/repo";
 
 /// Creates a `StandardizedPath` from a Unix-style test path like

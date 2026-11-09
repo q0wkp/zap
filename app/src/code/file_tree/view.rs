@@ -2320,8 +2320,6 @@ impl FileTreeView {
 
             let open_text = if cfg!(target_os = "macos") {
                 crate::t!("menu-filetree-reveal-finder")
-            } else if cfg!(target_os = "windows") {
-                crate::t!("menu-filetree-reveal-explorer")
             } else {
                 crate::t!("menu-filetree-reveal-file-manager")
             };
@@ -2919,16 +2917,6 @@ impl View for FileTreeView {
                         app,
                     )
                 };
-            }
-
-            if matches!(
-                self.enablement,
-                CodingPanelEnablementState::UnsupportedSession
-            ) {
-                return self.render_error_state(
-                    crate::t!("project-explorer-unavailable-wsl-description"),
-                    app,
-                );
             }
 
             return self.render_loading_state(app);

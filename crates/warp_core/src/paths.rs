@@ -17,7 +17,6 @@
 use std::path::{Path, PathBuf};
 
 use cfg_if::cfg_if;
-use directories::BaseDirs;
 
 use crate::{
     channel::{Channel, ChannelState},
@@ -31,7 +30,6 @@ use crate::{
 pub const WARP_CONFIG_DIR: &str = ".warp";
 
 /// The name of the folder that stores Zap execution logs and network logs.
-/// This is currently only used on Windows to maintain backwards compatibility.
 pub const WARP_LOGS_DIR: &str = "logs";
 
 fn base_warp_config_dir_name() -> String {
@@ -127,14 +125,6 @@ pub fn config_local_dir() -> PathBuf {
     }
 }
 
-/// Returns the base directory for general config files. Useful for accessing the config files for
-/// other programs.
-pub fn base_config_dir() -> PathBuf {
-    BaseDirs::new()
-        .map(|dirs| dirs.config_dir().to_owned())
-        .unwrap_or_default()
-}
-
 /// Returns the path to the directory where non-portable application state data
 /// should be stored.
 ///
@@ -146,7 +136,7 @@ pub fn state_dir() -> PathBuf {
         return PathBuf::new();
     };
     // For platforms that don't have a notion of a "state" directory (e.g.:
-    // macOS and Windows), fall back to using the data directory.
+    // macOS), fall back to using the data directory.
     project_dirs
         .state_dir()
         .unwrap_or_else(|| project_dirs.data_local_dir())
@@ -304,10 +294,6 @@ pub fn app_group_container_path() -> Option<PathBuf> {
 /// ## Linux
 /// The resources directory is `$INSTALL_DIR/resources`, where `$INSTALL_DIR` depends on the
 /// specific package manager. For example, on Ubuntu this might be `/opt/warpdotdev/warp-terminal/resources`.
-///
-/// ## Windows
-/// The resources directory is `$INSTALL_DIR/resources`, where `$INSTALL_DIR` is the directory
-/// containing the Zap executable (e.g. `C:\Program Files\WarpDev\resources`).
 pub fn bundled_resources_dir() -> Option<PathBuf> {
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
@@ -318,11 +304,6 @@ pub fn bundled_resources_dir() -> Option<PathBuf> {
                         .join("Resources")
                 })
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            std::env::current_exe()
-                .ok()
-                .and_then(|executable| std::fs::canonicalize(executable).ok())
-                .and_then(|executable| executable.parent().map(|parent| parent.join("resources")))
-        } else if #[cfg(target_os = "windows")] {
             std::env::current_exe()
                 .ok()
                 .and_then(|executable| std::fs::canonicalize(executable).ok())

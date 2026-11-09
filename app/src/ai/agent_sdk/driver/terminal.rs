@@ -14,8 +14,6 @@ use warp_core::command::ExitCode;
 use warp_util::path::ShellFamily;
 use warpui::{r#async::FutureExt, AppContext, Entity, ModelContext, ModelHandle, ViewHandle};
 
-use crate::terminal::model::session::ExecuteCommandOptions;
-
 use crate::{
     ai::ambient_agents::AmbientAgentTaskId,
     pane_group::NewTerminalOptions,
@@ -263,7 +261,7 @@ impl TerminalDriver {
         async move {
             let session = session.ok_or(AgentDriverError::InvalidRuntimeState)?;
             session
-                .execute_command(&command, None, None, ExecuteCommandOptions::default())
+                .execute_command(&command, None, None)
                 .await
                 .map_err(|e| {
                     log::warn!("silent command failed: {e:#}");

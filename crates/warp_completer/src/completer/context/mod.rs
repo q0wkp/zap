@@ -113,7 +113,7 @@ pub trait CompletionContext: Send + Sync {
 ///
 /// There is a [`std::path::MAIN_SEPARATOR`], but we usually can't read that. We need to be dynamic
 /// in order to accommodate for sessions using a different separator from the system the app is
-/// running on, e.g. WSL or MSYS2.
+/// running on.
 #[derive(Clone, Debug)]
 pub struct PathSeparators {
     /// Analogous to [`std::path::MAIN_SEPARATOR`].

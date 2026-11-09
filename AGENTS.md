@@ -51,7 +51,7 @@ Key patterns:
 1. **Entity-Handle system**: the global `App` owns every view and model entity. Views refer to each other through
    `ViewHandle<T>` instead of owning them.
 2. **Elements and actions**: the UI is a declarative element tree (Flutter-style) plus an action system for events.
-3. **Cross-platform**: native macOS, Windows and Linux plus a WASM target; platform code is isolated with `#[cfg(...)]`.
+3. **Cross-platform**: native macOS and Linux plus a WASM target; platform code is isolated with `#[cfg(...)]`.
 4. **AI**: Agent Mode and context indexing live in `app/src/ai/` and `crates/ai/`.
 5. **Cloud sync**: Drive syncs objects across devices; see `app/src/drive/` and `crates/warp_files/`.
 
@@ -134,4 +134,4 @@ Key patterns:
 
 ### Spawning processes
 
-- Never call `std::process::Command::new(...)` directly; on Windows it opens a console window. Use `crates/command`.
+- Never call `std::process::Command::new(...)` directly (`.clippy.toml` disallows it). Use `crates/command`.

@@ -79,16 +79,8 @@ static SKILL_PROVIDER_PATHS: LazyLock<HashSet<String>> = LazyLock::new(|| {
 
 // Pattern: {prefix}/{provider_path}/{skill-name}/SKILL.md
 // where provider_path is 2 parts (e.g., ".agents/skills") and skill-name is 1 part
-#[cfg(not(target_os = "windows"))]
 static SKILL_FILE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(.+)/([^/]+/[^/]+)/[^/]+/SKILL\.md$")
-        .expect("Failed to compile skill file pattern")
-});
-
-// On windows, the path separator is \
-#[cfg(target_os = "windows")]
-static SKILL_FILE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(.+)\\([^\\]+\\[^\\]+)\\[^\\]+\\SKILL\.md$")
         .expect("Failed to compile skill file pattern")
 });
 
