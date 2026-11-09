@@ -1,568 +1,264 @@
-# Zap 发布流水线 — push tag (v*) 即触发,tag 格式见 README 的 Fork releases 一节
-#
-# 与上游 create_release.yml 的差异:
-# - 仅 macOS arm64 + macOS Intel + Windows x64 + Linux x86_64,
-#   Web/CLI/Universal/Win-arm64 全砍
-#   (macOS 双架构分别产单架构 DMG 与 CLI tarball;Linux 产 AppImage/deb/rpm
-#    以及尽力而为的 Arch 包,不发布上游 Zap 仓库源或签名 key)
-# - 单 channel: preview(由 release_configurations.json 提供配置)
-# - 不签名:不传 --read-passwords-from-env(macOS) / 不设 SIGN_TOOL_CMD(Windows)
-# - 不上传 GCS / 第三方 crash 平台 / Slack / changelog,不调 channel-versions repository_dispatch
-# - 复用 ./.github/actions/{prepare_environment,get_channel_config}
-#
-# 流水线结构(各平台互不阻塞,齐了才对自动更新可见):
-#   prepare_metadata → 先建 prerelease
-#                    → release_{macos,windows,linux} (各自编译完立刻上传到这个 Release)
-#                    → finalize_release (资产齐全才转正为 latest)
-# prerelease 不算 latest:app 的自动更新读 releases/latest,远程服务端从
-# releases/latest/download 安装,不完整的版本转正会让缺失平台下载 404。
-# 某平台失败时 Release 保持 prerelease,其余平台仍可手动下载;
-# `gh run rerun --failed` 只重跑失败的平台和 finalize_release,补齐后自动转正。
+# The release of prebuilt archives: pushing a version tag runs ci.yml, then builds the archives on
+# each system, and creates the GitHub release with them. This file holds all of the project's
+# releasing; what is marked Per project is this project's own. By hand: the same build commands,
+# then gh release create with the archives.
+name: Release
 
-name: Zap Release
-
-# PR 验证由 .github/workflows/pr-check.yml 负责(Linux cargo check)。
-# 本 workflow 只在 push tag / 手动 dispatch 时跑全量三平台打包,避免 PR 跑 ~3h 浪费。
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
-# 创建 release + 上传 asset 需要写权限。默认 GITHUB_TOKEN 在 fork/受限仓库下是只读,
-# 这里显式声明 contents: write 兜底 403 "Resource not accessible by integration"。
 permissions:
-  contents: write
+  contents: read
 
 env:
-  CARGO_TERM_COLOR: always
-  GH_REPO: ${{ github.repository }}
-  CONFIG_FILE: ".github/workflows/release_configurations.json"
-  # Zap fork 用 oss channel(对应 app/src/bin/oss.rs 内联 ChannelConfig,
-  # 不依赖 warp-channel-config 私有二进制),preview 等内部 channel 走
-  # channel_config::load_config!() 宏 → build.rs 调 warp-channel-config 失败 →
-  # *_config.json 不生成 → include_str! 编译失败。
+  # Per project: Zap's own channel, whose config is built in (app/src/bin/oss.rs); the others need
+  # Warp's private channel config.
   CHANNEL: oss
+  CARGO_TERM_COLOR: always
 
 jobs:
-  prepare_metadata:
-    name: Prepare metadata
-    runs-on: ubuntu-latest
-    outputs:
-      release_tag: ${{ steps.compute_tag.outputs.tag }}
-      release_branch: ${{ steps.compute_tag.outputs.branch }}
-    steps:
-      # fetch-depth: 0 让 git-cliff 能看到完整 tag/commit 历史;
-      # shallow clone 下 `git describe` 找不到上一个 tag,会退化成空 release notes。
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
+  # Per project: no ci.yml, as in a fork whose tests run in build: the build below compiles every
+  # file of the release from the tag, and a release goes out only when all of them build.
 
-      - name: Get channel configuration
-        id: get-config
-        uses: ./.github/actions/get_channel_config/
-        with:
-          config_file: ${{ env.CONFIG_FILE }}
-          channel: ${{ env.CHANNEL }}
-
-      - name: Compute release tag and branch
-        id: compute_tag
-        shell: bash
-        run: |
-          # tag-触发场景:GITHUB_REF=refs/tags/<tag>
-          # workflow_dispatch:GITHUB_REF=refs/heads/<branch>,无 tag,生成临时 tag
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
-            BRANCH="$TAG"
-          else
-            TAG="v0.$(date +%Y.%m.%d.%H%M)"
-            BRANCH="${GITHUB_REF#refs/heads/}"
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "Release tag: $TAG / build ref: $BRANCH"
-
-      # 找上一个 release tag(匹配 v*),用于限定 git-cliff 的 commit 范围。
-      # tag-触发:HEAD == 当前 tag,要从 HEAD^ 起找最近的 v* tag。
-      # dispatch:HEAD 不是 tag,直接从 HEAD 起找。
-      # 找不到(首次发布)时输出空字符串,后面 git-cliff 不限定范围。
-      - name: Compute previous release tag
-        id: prev_tag
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            PREV=$(git describe --tags --abbrev=0 --match='v*' HEAD^ 2>/dev/null || echo "")
-          else
-            PREV=$(git describe --tags --abbrev=0 --match='v*' HEAD 2>/dev/null || echo "")
-          fi
-          echo "prev=$PREV" >> $GITHUB_OUTPUT
-          echo "Previous tag: ${PREV:-<none, first release>}"
-
-      # 用官方推荐的 orhun/git-cliff-action 生成「上个 tag 到 HEAD」的变更说明。
-      # --strip header 去掉模板顶部空 header;--tag 把 unreleased 段标记为本次发布版本。
-      # 范围参数 `<prev>..HEAD` 通过三元表达式注入:有 prev 时限定范围,无 prev 时让
-      # git-cliff 输出全部历史(首次发布场景)。
-      - name: Generate release notes via git-cliff
-        uses: orhun/git-cliff-action@98c93442bb05a455a77bee982867857ae748eeea # v4.5.1
-        with:
-          config: cliff.toml
-          args: >-
-            --strip header
-            --tag ${{ steps.compute_tag.outputs.tag }}
-            ${{ steps.prev_tag.outputs.prev != '' && format('{0}..HEAD', steps.prev_tag.outputs.prev) || '' }}
-        env:
-          OUTPUT: release-notes.md
-          GITHUB_REPO: ${{ github.repository }}
-
-      # 把 release_configurations.json 里的一句固定说明拼到 git-cliff 输出之前,
-      # 形成最终的 release body。
-      - name: Assemble final release body
-        shell: bash
-        env:
-          RELEASE_BODY_TEXT: ${{ steps.get-config.outputs.release_body_text }}
-          PREV_TAG: ${{ steps.prev_tag.outputs.prev }}
-          THIS_TAG: ${{ steps.compute_tag.outputs.tag }}
-        run: |
-          {
-            echo "$RELEASE_BODY_TEXT"
-            echo
-            if [[ -n "$PREV_TAG" ]]; then
-              echo "## 自 \`$PREV_TAG\` 以来的更新"
-            else
-              echo "## 首发版本变更"
-            fi
-            echo
-            cat release-notes.md
-          } > release-body.md
-          echo "---- release-body.md ----"
-          cat release-body.md
-
-      # 整个 workflow 重跑时 Release 已存在,保持原状,已上传的资产由各平台 --clobber 覆盖。
-      - name: Create prerelease
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.compute_tag.outputs.tag }}
-          RELEASE_NAME: ${{ steps.get-config.outputs.release_base_name }} ${{ steps.compute_tag.outputs.tag }}
-        run: |
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --prerelease --latest=false \
-              --title "$RELEASE_NAME" --notes-file release-body.md
-          fi
-
-  release_macos:
-    name: Build Release (macOS ${{ matrix.dmg_name_suffix }})
-    runs-on: ${{ matrix.runner }}
-    needs: prepare_metadata
-    # macos-26 / macos-26-intel(Pro standard)无 sccache,full cargo build + bundle + create-dmg
-    # 耗时高;Intel 构建历史上超过 180min,这里放宽到 GitHub-hosted job 6h 执行上限。
-    timeout-minutes: 360
+  # Builds the archives from the tag, with neither a secret nor a token that can write: building runs
+  # the project's code and its dependencies'.
+  build:
     strategy:
       fail-fast: false
       matrix:
+        # Per project: the systems the release ships for, each with the name its archive carries.
+        # The files keep the names Zap's auto-update, its remote server and q0wkp/pkgs look for:
+        # Zap-<dmg>.dmg and zap-macos-<arch>.tar.gz on macOS; on Linux Zap-x86_64.AppImage, the deb,
+        # rpm and Arch packages, and zap-linux-x86_64.tar.gz.
         include:
-          - arch: aarch64
-            dmg_name_suffix: arm64
-            runner: macos-26 # Pro standard arm64 (M2 Pro)
-          - arch: x86_64
-            dmg_name_suffix: intel
-            runner: macos-26-intel # Pro standard Intel
+          - os: macos-26
+            name: macos-arm64
+            arch: aarch64
+            dmg: arm64
+          - os: macos-26-intel
+            name: macos-intel
+            arch: x86_64
+            dmg: intel
+          # 22.04's glibc 2.35, not 24.04's 2.39: the AppImage and the packages link against the
+          # build system's glibc, so they run on Ubuntu 22.04, Debian 12 and later.
+          - os: ubuntu-22.04
+            name: linux-x86_64
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    # The macOS builds, without a cache, have taken over three hours on Intel.
+    timeout-minutes: 360
+    env:
+      GIT_RELEASE_TAG: ${{ github.ref_name }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.prepare_metadata.outputs.release_branch }}
+          persist-credentials: false
 
-      - uses: ./.github/actions/prepare_environment
+      # Per project: the steps that build the program from the tag and put it, with its license
+      # texts, into dist/ as one archive per system, named <project>-<tag>-<name>.
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          target_os: macos
-          cache_key: macos-${{ matrix.arch }}
-          is_self_hosted: false
-          install_release_deps: true
+          node-version: 20.9.0
+          # What is published is built from scratch, not from a cache another run wrote.
+          package-manager-cache: false
+      # Yarn, at the version the build of the command signatures asks for.
+      - name: Enable Corepack
+        run: corepack enable
 
-      - name: Ensure rust target is installed
-        run: rustup target add ${{ matrix.arch }}-apple-darwin
-        shell: bash
-
-      - name: Check ${{ matrix.arch }} release compile
-        run: |
-          script/bundle --check-only --channel "$CHANNEL" --arch ${{ matrix.arch }} --dmg-name-suffix "${{ matrix.dmg_name_suffix }}" --selfsign
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
-        with:
-          go-version: stable
-
-      - name: Install cargo-bundle
-        run: script/install_cargo_bundle
-
-      - name: Install create-dmg
-        run: brew install create-dmg
-
-      # 用 --selfsign 走 ad-hoc 签名(无 Apple Developer cert 时 fallback 到 `-`):
-      # 1. 让 .app 拥有 cdhash → UNUserNotificationCenter 才肯把 Zap 注册到
-      #    System Settings → Notifications(否则桌面通知静默失效,见 issue #40)。
-      # 2. ad-hoc + Hardened Runtime + Debug-Entitlements.plist(disable-library-validation
-      #    + get-task-allow)是合法组合,可在 macos-26 runner 上无凭证完成。
-      # 3. notarize 整段被 `script/macos/bundle` 的 CODESIGN=false 分支跳过;DMG 从
-      #    BUNDLE_DIR 直接 create-dmg,不进 codesign / staple 步骤。
-      # 4. 用户首次打开仍会触发 Gatekeeper 的「未识别开发者」对话框(无 Developer ID
-      #    notarize 的固有限制);issue #51 提供的 `xattr -rd com.apple.quarantine`
-      #    自助方案继续有效。
-      - name: Build ${{ matrix.arch }} bundle (ad-hoc signed)
-        id: bundle_app
-        run: |
-          script/bundle --channel "$CHANNEL" --arch ${{ matrix.arch }} --dmg-name-suffix "${{ matrix.dmg_name_suffix }}" --selfsign
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Upload DMG to the release
-        run: gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-          ASSET_PATH: ${{ steps.bundle_app.outputs.dmg_path }}
-
-      - name: Build CLI
-        id: bundle_cli
-        run: |
-          script/bundle --channel "$CHANNEL" --arch ${{ matrix.arch }} --artifact cli --nosign
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Package CLI tarball
-        run: |
-          cp "${{ steps.bundle_cli.outputs.binary_path }}" zap-oss
-          tar czf zap-macos-${{ matrix.arch }}.tar.gz \
-            zap-oss \
-            -C "$(dirname "${{ steps.bundle_cli.outputs.bundled_resources_dir }}")" resources
-        shell: bash
-
-      - name: Upload CLI to the release
-        run: gh release upload "$RELEASE_TAG" "zap-macos-${{ matrix.arch }}.tar.gz" --clobber
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-  release_windows:
-    name: Build Release (Windows x64)
-    runs-on: windows-latest
-    needs: prepare_metadata
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ needs.prepare_metadata.outputs.release_branch }}
-
-      - uses: ./.github/actions/prepare_environment
-        with:
-          target_os: windows
-          cache_key: x64
-          is_self_hosted: false
-          install_release_deps: true
-
-      - name: Build binary (unsigned)
-        id: build_binary
-        run: script/bundle -Channel $CHANNEL -skip_build_installer --arch x64
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Bundle app (unsigned installer)
-        id: bundle_app
-        run: script/bundle -Channel $CHANNEL -skip_build_binary --arch x64
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Upload installer to the release
-        run: gh release upload "$RELEASE_TAG" "$ASSET_PATH" --clobber
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-          ASSET_PATH: ${{ steps.bundle_app.outputs.installer_path }}
-
-  release_linux:
-    name: Build Release (Linux x86_64)
-    runs-on: ubuntu-22.04
-    needs: prepare_metadata
-    # 用 22.04 (glibc 2.35) 而不是 ubuntu-latest (24.04, glibc 2.39),
-    # AppImage 用 host glibc 链接,22.04 产物能在更多旧发行版上跑
-    # (需要 glibc >= 2.35,与 deb 的 libc6 依赖一致:Ubuntu 22.04 / Debian 12 起)。
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ needs.prepare_metadata.outputs.release_branch }}
-
-      # GitHub-hosted ubuntu runner 的 / 余量有限,而本 job 先后在同一磁盘产出
-      # release-lto(GUI/AppImage/deb/rpm/arch)与 release-cli(musl CLI)两份完整
-      # target,叠加 cargo registry / docker 镜像 / zig 工具链后会撑爆磁盘,musl CLI
-      # 步骤报 "No space left on device"(见 run 27593938453)。先删掉与本构建无关的
-      # 预装工具链(Android SDK / .NET / GHC / CodeQL / Swift),腾出 ~25GB。
+      # The Linux job builds the GUI and then the static CLI on one disk; the preinstalled
+      # toolchains it doesn't use would leave too little room for both.
       - name: Free up disk space
-        shell: bash
+        if: runner.os == 'Linux'
         run: |
-          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
-            /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift || true
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/share/swift
           df -h /
 
-      - uses: ./.github/actions/prepare_environment
-        with:
-          target_os: linux
-          is_self_hosted: false
-          install_release_deps: true
-
-      - name: Install extra dependencies for deb/rpm and build
+      - name: Install the build tools (Linux)
+        if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          # `rpm` 包提供 /usr/bin/rpmbuild,给后面的 RPM 打包步骤用。
+          sudo apt-get update -y
+          ./script/linux/install_build_deps
+          # rpmbuild and fakeroot for the rpm and deb packages.
           sudo apt-get install -y libdbus-1-dev fakeroot rpm
-        shell: bash
-
-      - name: Ensure rust target is installed
-        run: rustup target add x86_64-unknown-linux-gnu
-        shell: bash
-
-      - name: Check Linux release compile
-        run: script/bundle --check-only --channel "$CHANNEL" --arch x86_64 --packages appimage,deb
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      - name: Install linuxdeploy
-        # script/linux/install_linuxdeploy 不被 install_build_deps 调用,需手动跑;
-        # 它把 linuxdeploy AppImage 放到 ~/.local/bin,加到 PATH 里。
-        run: |
+          ./script/install_cargo_release_deps
           ./script/linux/install_linuxdeploy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-        shell: bash
 
-      - name: Build AppImage (unsigned)
-        id: bundle_app
-        run: script/bundle --channel "$CHANNEL" --arch x86_64 --packages appimage,deb
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-          # ubuntu-22.04 默认有 libfuse2 但 24.04 没有;统一开 EXTRACT_AND_RUN
-          # 让 linuxdeploy/appimagetool 不依赖 FUSE 内核模块,跨 runner 版本都稳。
-          APPIMAGE_EXTRACT_AND_RUN: 1
-
-      # RPM 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/zap-oss`,
-      # 不重新 `cargo build`。`--skip-build` 让 `script/bundle` 跳过编译与 strip,
-      # 直接进入 staging(`bundle_install` → 复制二进制 + resources)+ rpmbuild。
-      # 与 deb 同一台 ubuntu-22.04 runner 上跑,共享 host glibc 链接的产物;
-      # 用 Fedora 26+ / RHEL 8+ 上的 RPM 4.13+ 安装(spec 用了 boolean dep 语法)。
-      # continue-on-error: 即便 rpmbuild 失败也不应阻塞 AppImage/deb 已经成功的发布。
-      - name: Build RPM package (reuse release-lto binary)
-        continue-on-error: true
-        run: script/bundle --skip-build --channel "$CHANNEL" --arch x86_64 --packages rpm
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-
-      # Arch 包:复用上一步 release-lto 已经 strip 过的 `target/release-lto/zap-oss`,
-      # 不重新 `cargo build` 主二进制 —— `--skip-build` 让 `script/bundle` 跳过编译与 strip,
-      # 直接进入 staging(`bundle_install` → 复制二进制 + resources)+ makepkg。
-      #
-      # 为什么放容器里:`makepkg` 是 Arch 独有,Ubuntu runner 没有。
-      # 容器里只装 Arch 自带的 `rust` 和 `cargo-about`:
-      #   - SKIP_SETTINGS_SCHEMA=1 后,不再跑 `cargo run --bin generate_settings_schema`,
-      #     所以容器里 rustc 版本跟项目锁定版(1.92.x) 不一致也无所谓。
-      #   - `cargo about generate` 只读 Cargo.lock 元数据生成第三方 license,
-      #     不触发任何 Rust 代码编译。
-      # makepkg 拒绝 root 运行(EUID==0),必须切到非 root 用户。
-      # continue-on-error: Arch 工具链炸了不影响 AppImage/deb 发布。
-      - name: Build Arch package (reuse release-lto binary)
-        continue-on-error: true
+      - name: Install the build tools (macOS)
+        if: runner.os == 'macOS'
         run: |
-          set -euo pipefail
-          # 用 host runner 用户的 uid/gid 在容器里建 builder,免去 chown 整棵
-          # /work 与 ~/.cargo 的开销(makepkg 拒绝 root,但 uid != 0 即可,
-          # 用什么名字、什么具体 uid 都行)。
-          HOST_UID=$(id -u)
-          HOST_GID=$(id -g)
-          # 注意:不要把 GITHUB_ACTIONS=true 透传进容器。
-          # script/bundle 看到该变量后会 `echo ... >> "$GITHUB_OUTPUT"`,
-          # 而容器里没有 GITHUB_OUTPUT,redirect 到空字符串触发 `set -e` 退出,
-          # Arch 包根本就构建不出来(见 run 26153630745)。
-          # 我们也不需要该步骤的 step outputs —— 它 continue-on-error,
-          # packages_dir 由前面 AppImage 步骤的 bundle_app.outputs 提供。
-          docker run --rm \
-            -v "$PWD:/work" \
-            -v "$HOME/.cargo:/cargo-home" \
-            -w /work \
-            -e GIT_RELEASE_TAG="${{ needs.prepare_metadata.outputs.release_tag }}" \
-            -e SKIP_SETTINGS_SCHEMA=1 \
-            -e HOST_UID="$HOST_UID" \
-            -e HOST_GID="$HOST_GID" \
-            archlinux:latest bash -euxc '
-              # 预装 PKGBUILD `depends` 里的运行时依赖,避免 makepkg -s
-              # 在容器内调 `sudo pacman -S` 装缺包(builder 没有免密 sudo,
-              # 会因为读不到密码退出 8,Arch 包就此漏掉,见 run 26267606877)。
-              # `opengl-driver` 是虚拟包,装 libegl 时由 mesa 一并提供。
-              pacman -Sy --noconfirm --needed \
-                base-devel git sudo rust cargo-about \
-                alsa-lib curl default-cursors fontconfig libegl libx11 libxcb \
-                libxcursor libxi libxkbcommon-x11 wayland xdg-utils xz zlib &&
-              # 用 host uid/gid 建用户,挂进来的 /work 与 /cargo-home owner 就是它,
-              # 不用 chown,直接 sudo -u 即可读写。
+          ./script/install_cargo_release_deps
+          ./script/install_cargo_bundle
+          brew install create-dmg
+          # Homebrew has no Intel bottle of protobuf, and building it takes over an hour, so
+          # protoc comes from its own release, at the version script/linux/install_build_deps uses.
+          protoc_version=25.1
+          case "$(uname -m)" in
+            x86_64) protoc_arch=x86_64 ;;
+            arm64) protoc_arch=aarch_64 ;;
+          esac
+          curl -fsSL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v$protoc_version/protoc-$protoc_version-osx-$protoc_arch.zip"
+          unzip -q -o "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "PROTOC=$RUNNER_TEMP/protoc/bin/protoc" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+          # warpui compiles its shaders with metal, which Xcode 26 ships as a separate download.
+          xcodebuild -downloadComponent MetalToolchain
+
+      - name: Add the Rust target
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then rustup target add "$ARCH-apple-darwin"
+          else rustup target add "$ARCH-unknown-linux-gnu"; fi
+
+      # Signed ad hoc, as no Apple Developer certificate is at hand: macOS then lets the app send
+      # notifications, and Gatekeeper still asks on first launch (the Homebrew cask removes the
+      # quarantine attribute).
+      - name: Build the app (macOS)
+        id: app_macos
+        if: runner.os == 'macOS'
+        env:
+          ARCH: ${{ matrix.arch }}
+          DMG: ${{ matrix.dmg }}
+        run: script/bundle --channel "$CHANNEL" --arch "$ARCH" --dmg-name-suffix "$DMG" --selfsign
+
+      - name: Build the CLI (macOS)
+        id: cli_macos
+        if: runner.os == 'macOS'
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: script/bundle --channel "$CHANNEL" --arch "$ARCH" --artifact cli --nosign
+
+      - name: Pack (macOS)
+        if: runner.os == 'macOS'
+        env:
+          ARCH: ${{ matrix.arch }}
+          DMG_PATH: ${{ steps.app_macos.outputs.dmg_path }}
+          BINARY: ${{ steps.cli_macos.outputs.binary_path }}
+          RESOURCES: ${{ steps.cli_macos.outputs.bundled_resources_dir }}
+        run: |
+          mkdir -p dist
+          cp "$DMG_PATH" dist/
+          cp "$BINARY" zap-oss
+          tar czf "dist/zap-macos-$ARCH.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
+
+      - name: Build the AppImage and the deb package (Linux)
+        id: app_linux
+        if: runner.os == 'Linux'
+        env:
+          # linuxdeploy and appimagetool without FUSE.
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: script/bundle --channel "$CHANNEL" --arch x86_64 --packages appimage,deb
+
+      # From the binary the step above built and stripped, without building it again.
+      - name: Build the rpm package (Linux)
+        if: runner.os == 'Linux'
+        run: script/bundle --skip-build --channel "$CHANNEL" --arch x86_64 --packages rpm
+
+      # makepkg exists only on Arch, so in an Arch container, as a user other than root (makepkg
+      # refuses root) with the runner's uid, which owns the checkout. GITHUB_ACTIONS stays outside:
+      # script/bundle would write to a GITHUB_OUTPUT the container doesn't have.
+      - name: Build the Arch package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          docker run --rm --pull=always -v "$PWD:/work" -v "$HOME/.cargo:/cargo-home" -w /work \
+            -e GIT_RELEASE_TAG -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+            docker.io/library/archlinux:latest bash -euxc '
+              # The runtime dependencies first, since makepkg -s would ask for a sudo password.
+              pacman -Syu --noconfirm --needed base-devel git sudo rust cargo-about \
+                alsa-lib curl default-cursors fontconfig libegl libx11 libxcb libxcursor libxi \
+                libxkbcommon-x11 wayland xdg-utils xz zlib
               groupadd -g "$HOST_GID" builder 2>/dev/null || true
               useradd -u "$HOST_UID" -g "$HOST_GID" -m builder
-              # 显式给 HOME=/home/builder,否则 `sudo -E` 会保留外层 HOME=/root,
-              # 导致 `git config --global` 试图写 /root/.gitconfig 报 Permission denied。
-              sudo -u builder -E env \
-                HOME=/home/builder \
-                CARGO_HOME=/cargo-home \
+              sudo -u builder env HOME=/home/builder CARGO_HOME=/cargo-home \
                 PATH=/cargo-home/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin \
-                bash -c "
-                  git config --global --add safe.directory /work
-                  cd /work
-                  # 依赖已在外层 pacman 装好。带 --noconfirm:容器里没透传
-                  # GITHUB_ACTIONS,bundle_arch 里原生的那个分支不会生效。
-                  MAKEPKG_EXTRA_ARGS='\''--noconfirm'\'' \
-                    script/bundle --skip-build --channel oss --arch x86_64 --packages arch
-                "
+                GIT_RELEASE_TAG="$GIT_RELEASE_TAG" SKIP_SETTINGS_SCHEMA=1 MAKEPKG_EXTRA_ARGS=--noconfirm \
+                bash -c "git config --global --add safe.directory /work &&
+                  script/bundle --skip-build --channel oss --arch x86_64 --packages arch"
             '
-        shell: bash
 
-      # packages_dir 是 target/release-lto/bundle/linux,AppImage/deb/rpm/Arch 都落在这里
-      - name: Upload packages to the release
-        run: find "$PACKAGES_DIR" -maxdepth 1 -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
-        shell: bash
+      - name: Collect the packages (Linux)
+        if: runner.os == 'Linux'
         env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-          PACKAGES_DIR: ${{ steps.bundle_app.outputs.packages_dir }}
-
-      # release-lto 产物(GUI/deb/rpm/arch)已由上一步上传到 Release,本地不再需要;
-      # 下面的 musl CLI 走独立的 release-cli profile,删掉 release-lto 给它腾磁盘,
-      # 避免 "No space left on device"。
-      - name: Reclaim disk before musl CLI build
-        shell: bash
+          PACKAGES_DIR: ${{ steps.app_linux.outputs.packages_dir }}
         run: |
+          mkdir -p dist
+          find "$PACKAGES_DIR" -maxdepth 1 -type f -exec cp {} dist/ \;
+          ls -l dist
+          # The CLI below is built with another profile, and both don't fit on the disk.
           rm -rf target/release-lto
-          df -h /
 
-      # CLI/remote-server tarball 用静态 musl 链接,产物不依赖宿主 glibc,
-      # 可在任意 Linux x86_64 主机(含 CentOS 7 / Amazon Linux 2 等旧 glibc
-      # 以及 Alpine 等 musl 发行版)上运行。GUI AppImage/deb 仍走上面的
-      # glibc 链接构建,不受影响。
-      #
-      # 用 `cargo zigbuild` 做 musl 交叉编译:zig 自带完整的 C/C++ musl
-      # 工具链(`zig cc` / `zig c++`),不依赖宿主的 `musl-gcc` 或手写的
-      # `musl-g++` wrapper —— 历史上为 freetype-sys / harfbuzz-sys 等 *-sys
-      # 依赖准备的「宿主 g++ + musl specs」hack 因此整条移除。
-      # 本地 dev 自动构建路径(`ssh_transport.rs`)也优先用 zigbuild,两边
-      # 工具链统一。
-      - name: Install zig + cargo-zigbuild for static musl CLI build
+      # The CLI that Zap's remote server installs on other hosts: linked statically against musl
+      # with cargo zigbuild, so it runs on any x86_64 Linux whatever its libc.
+      - name: Install zig and cargo-zigbuild (Linux)
+        if: runner.os == 'Linux'
         run: |
-          set -euo pipefail
           rustup target add x86_64-unknown-linux-musl
-          # zig:用官方预编译 tarball,固定版本以保证构建可复现。
-          # 0.13.0 与 cargo-zigbuild >= 0.19 兼容。
-          ZIG_VERSION="0.13.0"
-          ZIG_DIR="$HOME/.local/zig-${ZIG_VERSION}"
-          if [ ! -x "${ZIG_DIR}/zig" ]; then
-            mkdir -p "${ZIG_DIR}"
-            curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz" \
-              | tar -xJ -C "${ZIG_DIR}" --strip-components=1
-          fi
-          echo "${ZIG_DIR}" >> "$GITHUB_PATH"
-          # cargo-zigbuild:走 cargo install,首次安装在缓存里之后会复用。
+          zig_version=0.13.0
+          mkdir -p "$HOME/.local/zig"
+          curl -fsSL "https://ziglang.org/download/$zig_version/zig-linux-x86_64-$zig_version.tar.xz" \
+            | tar -xJ -C "$HOME/.local/zig" --strip-components=1
+          echo "$HOME/.local/zig" >> "$GITHUB_PATH"
           cargo install --locked cargo-zigbuild --version ^0.19
-        shell: bash
 
-      - name: Build CLI (static musl via zigbuild)
-        id: bundle_cli
+      - name: Build the CLI (Linux)
+        id: cli_linux
+        if: runner.os == 'Linux'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          USE_ZIGBUILD: "true"
+          PKG_CONFIG_ALLOW_CROSS: 1
         run: |
           script/bundle --channel "$CHANNEL" --arch x86_64 --artifact cli --packages none \
             --target x86_64-unknown-linux-musl
-        shell: bash
-        env:
-          GIT_RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
-          APPIMAGE_EXTRACT_AND_RUN: 1
-          # 让 script/linux/bundle 把 `cargo build` 切到 `cargo zigbuild`。
-          USE_ZIGBUILD: "true"
-          # libc(musl)被 +crt-static 静态链接进二进制 —— 这是让产物摆脱
-          # 宿主 glibc 下限的关键。`libdbus-sys` 现在通过 keyring 的
-          # `vendored` feature 从源码内嵌编译(见 Cargo.toml),不再用 pkg-config
-          # 探测宿主 `dbus-1`;`PKG_CONFIG_ALLOW_CROSS=1` 保留作兜底,
-          # 万一某个新引入的 -sys crate 还在用 pkg-config 也不会卡。
-          PKG_CONFIG_ALLOW_CROSS: 1
 
-      - name: Package CLI tarball
+      - name: Pack the CLI (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BINARY: ${{ steps.cli_linux.outputs.executable_path }}
+          RESOURCES: ${{ steps.cli_linux.outputs.bundled_resources_dir }}
         run: |
-          cp "${{ steps.bundle_cli.outputs.executable_path }}" zap-oss
-          tar czf zap-linux-x86_64.tar.gz \
-            zap-oss \
-            -C "$(dirname "${{ steps.bundle_cli.outputs.bundled_resources_dir }}")" resources
-        shell: bash
+          cp "$BINARY" zap-oss
+          tar czf dist/zap-linux-x86_64.tar.gz zap-oss -C "$(dirname "$RESOURCES")" resources
 
-      - name: Upload CLI to the release
-        run: gh release upload "$RELEASE_TAG" zap-linux-x86_64.tar.gz --clobber
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.name }}
+          path: dist/
+          if-no-files-found: error
 
-  finalize_release:
-    name: Finalize GitHub Release
-    runs-on: ubuntu-latest
-    # always():就算某个平台失败也要跑,把缺的平台写进说明。
-    if: ${{ always() && needs.prepare_metadata.result == 'success' }}
-    needs:
-      - prepare_metadata
-      - release_macos
-      - release_windows
-      - release_linux
+  # Creates the release from the archives build made, and runs none of the project's code.
+  github-release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
-      # 这份清单只列自动更新和远程服务端要用的资产;deb/rpm/Arch 尽力而为,不算在内。
-      - name: Promote the release once every required asset is there
-        shell: bash
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist/
+
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.prepare_metadata.outputs.release_tag }}
+          TAG: ${{ github.ref_name }}
         run: |
-          set -euo pipefail
-          required=(
-            Zap-arm64.dmg Zap-intel.dmg
-            zap-macos-aarch64.tar.gz zap-macos-x86_64.tar.gz
-            ZapSetup.exe
-            Zap-x86_64.AppImage zap-linux-x86_64.tar.gz
-          )
-          assets=$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
-          missing=()
-          for name in "${required[@]}"; do
-            grep -qxF "$name" <<<"$assets" || missing+=("$name")
-          done
+          gh release create "$TAG" dist/* -R "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --generate-notes
 
-          # 去掉上一次运行写的提示,重跑后说明里不会堆积。
-          notes=$(gh release view "$RELEASE_TAG" --json body --jq .body \
-            | sed '/^> \*\*Incomplete release\.\*\*/d' | sed '/./,$!d')
-
-          if [ ${#missing[@]} -eq 0 ]; then
-            printf '%s\n' "$notes" \
-              | gh release edit "$RELEASE_TAG" --notes-file - --prerelease=false --latest
-          else
-            printf '> **Incomplete release.** Missing: %s\n\n%s\n' "${missing[*]}" "$notes" \
-              | gh release edit "$RELEASE_TAG" --notes-file -
-            echo "::warning::$RELEASE_TAG stays a prerelease, missing: ${missing[*]}"
-          fi
-
-  # Asks q0wkp/pkgs to package this release now, rather than on its daily run. The token is a
-  # fine-grained one of q0wkp's, for q0wkp/pkgs only, with Actions read and write: it can start the
-  # workflow but not change the repository. Without it this job does nothing.
+  # Asks q0wkp/pkgs to package this release, which nothing else does: its Sync workflow has no
+  # schedule. The token is a fine-grained one of q0wkp's, for q0wkp/pkgs only, with Actions read and
+  # write: it can start the workflow but not change the repository. Without it this job fails, so the
+  # failed run's mail says the release is waiting.
   pkgs:
-    # After the job that makes the release the latest one, which q0wkp/pkgs reads.
-    needs: finalize_release
+    # After the job that creates the release, which this one reads.
+    needs: github-release
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -572,7 +268,7 @@ jobs:
           GH_TOKEN: ${{ secrets.PKGS_DISPATCH_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs picks the release up on its daily run"
-            exit 0
+            echo "::error::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs won't package this release until its Sync workflow is run by hand"
+            exit 1
           fi
           gh workflow run sync.yml -R q0wkp/pkgs -f packages="zap"

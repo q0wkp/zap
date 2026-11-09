@@ -58,7 +58,8 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
 
 ### Packages
 
-zap's recipe lives in q0wkp/pkgs (`recipes/zap/`), whose Sync workflow publishes each release daily: `zap` for pacman,
-`zap-deb` for Pacstall, and the cask `zap-terminal` in q0wkp/homebrew-tap. Each goes out once the release has its own
-files (the `.pkg.tar.zst`, the `.deb`, the two DMGs), so a release missing one still reaches the others. The pkgs README
-says how publishing works.
+zap's recipe lives in q0wkp/pkgs (`recipes/zap/`), whose Sync workflow publishes each release, asked by the release
+workflow's `pkgs` job (Sync has no schedule; a release that job didn't reach waits for a run by hand): `zap` for
+pacman, `zap-deb` for Pacstall, and the cask `zap-terminal` in q0wkp/homebrew-tap. Each goes out once the release has
+its own files (the `.pkg.tar.zst`, the `.deb`, the two DMGs), so a release missing one still reaches the others. The
+pkgs README says how publishing works.

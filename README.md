@@ -20,14 +20,15 @@ maintainers of Zap or Warp.
   refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap)
 - **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
   remote server download point here, so a build of this fork never replaces itself with an upstream one. Tags are the
-  next upstream version plus `-mod.N` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`). Each platform is
-  uploaded as soon as it builds, and the release becomes the latest one only when every platform is there.
+  next upstream version plus `-mod.N` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`). A release is created
+  only once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no longer built.
 - **Linux packages**: the release builds the Arch package, which a wrong makepkg option had kept from ever being built,
   and both it and the `.deb` declare the libraries the binary links against (ALSA, liblzma), so they start on systems
   without them.
 - **Package managers**: `zap` for pacman, `zap-deb` for Pacstall and the cask `zap-terminal` for Homebrew, from
   [q0wkp/pkgs](https://github.com/q0wkp/pkgs), which says how to add them.
-- **Workflows**: upstream's website deploy and stale pull request workflows are gone.
+- **Workflows**: the release workflow is this fork's own, and asks q0wkp/pkgs to package each release once it is out;
+  upstream's other workflows, its issue and pull request templates and its Dependabot settings are gone.
 
 ## License
 
