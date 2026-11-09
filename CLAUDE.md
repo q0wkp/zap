@@ -56,6 +56,10 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
 
 - zap isn't rustfmt-clean: `cargo fmt -p warp` rewrites over a hundred unrelated files. Format only the files a change
   touches, and revert the rest if it happens.
+- `rustfmt <file>` also formats every module the file declares (`rustfmt app/src/workspace/view.rs` rewrites
+  `workspace/view/*`), and the repository toolchain's rustfmt (1.8.0, Rust 1.92.0) has no `skip_children`. Format
+  one file alone by piping it: `rustfmt --config-path .rustfmt.toml --emit stdout < <file>`, then take only the
+  hunks in your lines.
 - `cargo test -p warp --lib` has 79 failures on `upstream/main` 8954864e3 (seen 2026-11-03), including the two BYOP
   `smoke_*` tests in `agent_providers` (fixed by branch `fix/byop-smoke-test-setup`). Judge a branch by diffing its
   failing tests against that baseline, not by the exit code.
