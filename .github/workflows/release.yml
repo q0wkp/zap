@@ -556,3 +556,23 @@ jobs:
               | gh release edit "$RELEASE_TAG" --notes-file -
             echo "::warning::$RELEASE_TAG stays a prerelease, missing: ${missing[*]}"
           fi
+
+  # Asks q0wkp/pkgs to package this release now, rather than on its daily run. The token is a
+  # fine-grained one of q0wkp's, for q0wkp/pkgs only, with Actions read and write: it can start the
+  # workflow but not change the repository. Without it this job does nothing.
+  pkgs:
+    # After the job that makes the release the latest one, which q0wkp/pkgs reads.
+    needs: finalize_release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Ask q0wkp/pkgs to package the release
+        env:
+          GH_TOKEN: ${{ secrets.PKGS_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs picks the release up on its daily run"
+            exit 0
+          fi
+          gh workflow run sync.yml -R q0wkp/pkgs -f packages="zap"
