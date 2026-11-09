@@ -24,7 +24,8 @@ maintainers of Zap or Warp.
   only once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no longer built.
 - **Linux packages**: the release builds the Arch package, which a wrong makepkg option had kept from ever being built,
   and both it and the `.deb` declare the libraries the binary links against (ALSA, liblzma), so they start on systems
-  without them.
+  without them, and the oldest glibc the binary runs on, read from it when it is packaged, so that a system too old
+  for it refuses the package.
 - **Package managers**: `zap` for pacman, `zap-deb` for Pacstall and the cask `zap-terminal` for Homebrew, from
   [q0wkp/pkgs](https://github.com/q0wkp/pkgs), which says how to add them.
 - **Updates through package managers**: when Zap was installed with pacman from q0wkp/pkgs' `[q0wkp]`, with Pacstall

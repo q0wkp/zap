@@ -72,13 +72,16 @@ fi
 source "$WORKSPACE_ROOT_DIR/script/linux/bundle_install" "$PKGDIR/stage"
 tar cvf "$PKGDIR/data.tar" -C "$PKGDIR/stage" .
 
+# The oldest glibc that runs the packaged binaries, which the build system's glibc decides.
+GLIBC_VERSION="$("$WORKSPACE_ROOT_DIR/script/linux/min_glibc_version" "$PKGDIR/stage")"
+
 # Move the Arch-specific package metadata into the package directory.
 # Arch pkgver 不允许 - / : / / / 空白,完整 sanitize 并剩除 v 前缀。
 VERSION="$GIT_RELEASE_TAG"
 PKGVER="$(echo "$VERSION" | sed -E 's/^v//; s/[-:/[:space:]]+/_/g')"
 RELEASE=1
 sed \
-    "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; s#@@PACKAGE_NAME@@#$PACKAGE_NAME#g; s#@@OPT_DIR@@#$OPT_DIR#g; s#@@VERSION@@#$VERSION#g; s#@@PKGVER@@#$PKGVER#g; s#@@RELEASE@@#$RELEASE#g; s#@@ARCH@@#$ARCH#g; s#@@OUTDIR@@#$OUT_DIR#g; s#@@BINARY_NAME@@#$BINARY_NAME#g" \
+    "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; s#@@PACKAGE_NAME@@#$PACKAGE_NAME#g; s#@@OPT_DIR@@#$OPT_DIR#g; s#@@VERSION@@#$VERSION#g; s#@@PKGVER@@#$PKGVER#g; s#@@RELEASE@@#$RELEASE#g; s#@@ARCH@@#$ARCH#g; s#@@OUTDIR@@#$OUT_DIR#g; s#@@BINARY_NAME@@#$BINARY_NAME#g; s#@@GLIBC_VERSION@@#$GLIBC_VERSION#g" \
     < "$WORKSPACE_ROOT_DIR/resources/linux/arch/$ARTIFACT/PKGBUILD.template" \
     > "$PKGDIR/PKGBUILD"
 

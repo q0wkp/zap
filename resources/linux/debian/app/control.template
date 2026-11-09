@@ -1,7 +1,7 @@
 Package: @@PACKAGE_NAME@@
 Version: @@VERSION@@
 Section: devel
-Depends: fontconfig, libasound2t64 | libasound2, libc6 (>= 2.35), libegl1, libgcc-s1, liblzma5, libwayland-client0, libwayland-egl1, libx11-6, libxcb1, libxcursor1, libxi6, libxkbcommon-x11-0, zlib1g
+Depends: fontconfig, libasound2t64 | libasound2, libc6 (>= @@GLIBC_VERSION@@), libegl1, libgcc-s1, liblzma5, libwayland-client0, libwayland-egl1, libx11-6, libxcb1, libxcursor1, libxi6, libxkbcommon-x11-0, zlib1g
 Recommends: libgl1-mesa-dri, yaru-icon-theme | adwaita-icon-theme-full
 Priority: optional
 Architecture: @@ARCH@@

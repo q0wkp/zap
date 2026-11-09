@@ -1,7 +1,7 @@
 Package: @@PACKAGE_NAME@@
 Version: @@VERSION@@
 Section: devel
-Depends: zlib1g
+Depends: libc6 (>= @@GLIBC_VERSION@@), zlib1g
 Priority: optional
 Architecture: @@ARCH@@
 Maintainer: Zap Maintainers <zap-maintainers@localhost>
