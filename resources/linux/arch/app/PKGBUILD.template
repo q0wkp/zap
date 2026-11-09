@@ -10,6 +10,7 @@ depends=(
 	'curl'
 	'default-cursors'
 	'fontconfig'
+	'glibc>=@@GLIBC_VERSION@@'
 	'libegl'
 	'libx11'
 	'libxcb'

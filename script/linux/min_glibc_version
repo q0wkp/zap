@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# Prints the oldest glibc that can run the ELF files in the given files and directories (searched
+# recursively), e.g. "2.35": the highest GLIBC_x.y among the versions their version-needs sections
+# (readelf -V) ask for. Only versions of the form GLIBC_<number>... count, so GLIBC_PRIVATE,
+# GLIBC_ABI_DT_RELR, GLIBCXX_* and other libraries' versions are left out.
+#
+# The packages use it to declare the glibc they need, which the build system's glibc decides, so
+# that a package manager refuses to install them on an older system instead of installing a program
+# that can't start.
+#
+# Usage: min_glibc_version <file or directory>...
+
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <file or directory>..." >&2
+  exit 2
+fi
+if ! command -v readelf >/dev/null; then
+  echo "$0: readelf (from binutils) is needed to read the ELF files' glibc versions" >&2
+  exit 1
+fi
+
+versions=$(
+  find "$@" -type f -print0 | while IFS= read -r -d '' file; do
+    # Only ELF files, which start with \x7fELF.
+    [ "$(head -c 4 "$file")" = $'\177ELF' ] || continue
+    LC_ALL=C readelf -V --wide "$file" | awk '
+      /^Version needs section/ { needs = 1; next }
+      /^Version [a-z]+ section/ { needs = 0; next }
+      needs && match($0, /Name: GLIBC_[0-9][0-9.]*/) { print substr($0, RSTART + 12, RLENGTH - 12) }
+    '
+  done
+)
+if [ -z "$versions" ]; then
+  echo "$0: no ELF file in $* needs a version of glibc" >&2
+  exit 1
+fi
+sort -V <<<"$versions" | tail -n 1

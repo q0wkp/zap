@@ -85,12 +85,15 @@ mkdir -p "$PKGDIR"
 # locations.
 source "$WORKSPACE_ROOT_DIR/script/linux/bundle_install" "$PKGDIR"
 
+# The oldest glibc that runs the packaged binaries, which the build system's glibc decides.
+GLIBC_VERSION="$("$WORKSPACE_ROOT_DIR/script/linux/min_glibc_version" "$PKGDIR")"
+
 # Move the Debian-specific package metadata into the package directory.
 DEBIAN_DIR="$PKGDIR/DEBIAN"
 VERSION="$(echo "$GIT_RELEASE_TAG" | sed -E "s/^v//; s/([a-z]+)_/\1./")"
 mkdir "$DEBIAN_DIR"
 sed \
-    "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; s#@@PACKAGE_NAME@@#$PACKAGE_NAME#g; s#@@VERSION@@#$VERSION#g; s#@@ARCH@@#$ARCH#g" \
+    "s#@@CHANNEL_SUFFIX@@#$CHANNEL_SUFFIX#g; s#@@PACKAGE_NAME@@#$PACKAGE_NAME#g; s#@@VERSION@@#$VERSION#g; s#@@ARCH@@#$ARCH#g; s#@@GLIBC_VERSION@@#$GLIBC_VERSION#g" \
     < "$TEMPLATE_DIR/control.template" \
     > "$DEBIAN_DIR/control"
 sed \

@@ -43,6 +43,10 @@ This is q0wkp/zap, Tianyu Lu's own build of Zap, a terminal forked from Warp. Th
   partial upgrade Arch doesn't support), Pacstall with `pacstall -I zap-deb` (not `-Up`). Zap offers an update to a
   pacman, Pacstall or Homebrew install only once q0wkp/pkgs has published it there: its `versions/zap/<target>` on
   main holds the release's tag, and for pacman the release `x86_64` has the package and its `.sig`.
+- The Arch and deb packages declare the oldest glibc they run on (decided 2026-11-09): `glibc>=X.Y` and
+  `libc6 (>= X.Y)`, where X.Y is the highest `GLIBC_x.y` the packaged ELF files need, computed at bundle time by
+  `script/linux/min_glibc_version`, never hard-coded. A system too old for the build then refuses the package instead
+  of installing a Zap that can't start. The rpm needs nothing: rpmbuild adds versioned glibc requirements itself.
 
 ### Porting from Warp
 
@@ -68,8 +72,8 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
   overwrite each other's, and a checkout whose files are older reuses the other's as fresh: after building a branch
   that removed items from `warp_util`, `cargo test` in the main clone linked that branch's `warp_util` and failed in
   `app/build.rs`. Build a baseline of such a branch in a separate target dir.
-- The build machine is headless, with no xvfb, nextest, wgslfmt, shellcheck or clang-format, so UI changes can't be
-  checked there.
+- The build machine is headless, with no xvfb, nextest, wgslfmt or clang-format, so UI changes can't be checked
+  there. shellcheck 0.9.0 is installed (seen 2026-11-09).
 
 ### Packages
 
