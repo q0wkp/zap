@@ -98,14 +98,13 @@ mod appimage {
         const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
 
         let channel = ChannelState::channel();
+        // The AppImage of the release being installed, as the release workflow names it.
+        let asset = github::appimage_name(&version_info.version);
         // openWarp:从 GitHub Release 缓存里取真实下载 URL,绕开空的 releases_base_url。
         // 官方 channel 仍然走 release_assets_directory_url。
         let url = if matches!(channel, warp_core::channel::Channel::Oss) {
-            // OSS Linux AppImage 默认资产名 "Zap-x86_64.AppImage"。
-            // 已知 release 资产名固定在 GitHub Actions 里。
-            let asset = "Zap-x86_64.AppImage";
             if let Some(release) = crate::autoupdate::github::cached_release() {
-                if let Some(found) = release.find_asset(asset) {
+                if let Some(found) = release.find_asset(&asset) {
                     found.browser_download_url.clone()
                 } else {
                     log::warn!(
@@ -188,9 +187,7 @@ mod appimage {
         // 防御 CDN 中间人 / 网络损坏。其他 channel 跳过(有自家流程)。
         if matches!(channel, warp_core::channel::Channel::Oss) {
             let temp_path = new_appimage.path().to_path_buf();
-            if let Err(e) =
-                crate::autoupdate::verify_oss_asset_sha256(&temp_path, "Zap-x86_64.AppImage")
-            {
+            if let Err(e) = crate::autoupdate::verify_oss_asset_sha256(&temp_path, &asset) {
                 // 临时文件会随 NamedTempFile drop 自动清理,这里只需返回错误。
                 return Err(e);
             }

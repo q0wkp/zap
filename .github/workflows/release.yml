@@ -28,19 +28,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Per project: the systems the release ships for, each with the name its archive carries.
-        # The files keep the names Zap's auto-update, its remote server and q0wkp/pkgs look for:
-        # Zap-<dmg>.dmg and zap-macos-<arch>.tar.gz on macOS; on Linux Zap-x86_64.AppImage, the deb,
-        # rpm and Arch packages, and zap-linux-x86_64.tar.gz.
+        # Per project: the systems the release ships for, each with the name its files carry:
+        # zap-<version>-<name>.dmg and .tar.gz on macOS, .AppImage and .tar.gz on Linux, the version
+        # being the tag without its v. Zap's auto-update (app/src/autoupdate/github.rs), its remote
+        # server (crates/remote_server/src/setup.rs) and q0wkp/pkgs look for these names. The deb,
+        # rpm and Arch packages keep the names their package managers give them.
         include:
           - os: macos-26
-            name: macos-arm64
+            name: macos-aarch64
             arch: aarch64
-            dmg: arm64
           - os: macos-26-intel
-            name: macos-intel
+            name: macos-x86_64
             arch: x86_64
-            dmg: intel
           # 22.04's glibc 2.35, not 24.04's 2.39: the AppImage and the packages link against the
           # build system's glibc, so they run on Ubuntu 22.04, Debian 12 and later.
           - os: ubuntu-22.04
@@ -57,7 +56,7 @@ jobs:
           persist-credentials: false
 
       # Per project: the steps that build the program from the tag and put it, with its license
-      # texts, into dist/ as one archive per system, named <project>-<tag>-<name>.
+      # texts, into dist/ as the files of each system, named <project>-<version>-<name>.
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20.9.0
@@ -123,8 +122,7 @@ jobs:
         if: runner.os == 'macOS'
         env:
           ARCH: ${{ matrix.arch }}
-          DMG: ${{ matrix.dmg }}
-        run: script/bundle --channel "$CHANNEL" --arch "$ARCH" --dmg-name-suffix "$DMG" --selfsign
+        run: script/bundle --channel "$CHANNEL" --arch "$ARCH" --selfsign
 
       - name: Build the CLI (macOS)
         id: cli_macos
@@ -136,15 +134,16 @@ jobs:
       - name: Pack (macOS)
         if: runner.os == 'macOS'
         env:
-          ARCH: ${{ matrix.arch }}
+          NAME: ${{ matrix.name }}
           DMG_PATH: ${{ steps.app_macos.outputs.dmg_path }}
           BINARY: ${{ steps.cli_macos.outputs.binary_path }}
           RESOURCES: ${{ steps.cli_macos.outputs.bundled_resources_dir }}
         run: |
+          version="${GIT_RELEASE_TAG#v}"
           mkdir -p dist
-          cp "$DMG_PATH" dist/
+          cp "$DMG_PATH" "dist/zap-$version-$NAME.dmg"
           cp "$BINARY" zap-oss
-          tar czf "dist/zap-macos-$ARCH.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
+          tar czf "dist/zap-$version-$NAME.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
 
       - name: Build the AppImage and the deb package (Linux)
         id: app_linux
@@ -184,10 +183,14 @@ jobs:
       - name: Collect the packages (Linux)
         if: runner.os == 'Linux'
         env:
+          NAME: ${{ matrix.name }}
           PACKAGES_DIR: ${{ steps.app_linux.outputs.packages_dir }}
         run: |
+          version="${GIT_RELEASE_TAG#v}"
           mkdir -p dist
           find "$PACKAGES_DIR" -maxdepth 1 -type f -exec cp {} dist/ \;
+          # linuxdeploy names the AppImage after the app and the architecture.
+          mv dist/Zap-x86_64.AppImage "dist/zap-$version-$NAME.AppImage"
           ls -l dist
           # The CLI below is built with another profile, and both don't fit on the disk.
           rm -rf target/release-lto
@@ -219,11 +222,13 @@ jobs:
       - name: Pack the CLI (Linux)
         if: runner.os == 'Linux'
         env:
+          NAME: ${{ matrix.name }}
           BINARY: ${{ steps.cli_linux.outputs.executable_path }}
           RESOURCES: ${{ steps.cli_linux.outputs.bundled_resources_dir }}
         run: |
+          version="${GIT_RELEASE_TAG#v}"
           cp "$BINARY" zap-oss
-          tar czf dist/zap-linux-x86_64.tar.gz zap-oss -C "$(dirname "$RESOURCES")" resources
+          tar czf "dist/zap-$version-$NAME.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
