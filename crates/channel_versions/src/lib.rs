@@ -39,7 +39,7 @@ lazy_static! {
     // 让 is_current_version_ahead_of_latest_version / is_incoming_version_past_current
     // 能正确比较大小,从而识别回滚或本地构建超前 release 的场景。
     static ref OSS_VERSION_RE: Regex =
-        Regex::new(r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})(?:\.(\d+))?(?:-mod\.(\d+))?$").unwrap();
+        Regex::new(r"^v?(\d{4})\.(\d{1,2})\.(\d{1,2})(?:\.(\d+))?(?:-mod\.(\d+)(?:\.(\d+))?)?$").unwrap();
 
     // Cached mapping of version strings to semantic versions.
     static ref PARSED_VERSIONS_CACHE: MemoMap<String, ParsedVersion> = Default::default();
@@ -50,8 +50,13 @@ pub struct ParsedVersion {
     major: usize,
     date: NaiveDateTime,
     patch: usize,
-    /// N from a fork release tagged `-mod.N`, 0 otherwise.
+    /// X from a fork release tagged `-mod.X.Y` (or `-mod.X`, as the releases before the two-part
+    /// numbers were), 0 otherwise. A release that breaks compatibility with the one before it
+    /// raises X.
     mod_revision: usize,
+    /// Y from a fork release tagged `-mod.X.Y`, 0 otherwise.
+    #[serde(default)]
+    mod_minor: usize,
 }
 
 impl TryFrom<&str> for ParsedVersion {
@@ -80,6 +85,7 @@ fn parse_official(value: &str) -> Option<ParsedVersion> {
         date,
         patch: captures.get(4)?.as_str().parse().ok()?,
         mod_revision: 0,
+        mod_minor: 0,
     })
 }
 
@@ -98,6 +104,10 @@ fn parse_oss(value: &str) -> Option<ParsedVersion> {
         .get(5)
         .and_then(|m| m.as_str().parse::<usize>().ok())
         .unwrap_or(0);
+    let mod_minor: usize = captures
+        .get(6)
+        .and_then(|m| m.as_str().parse::<usize>().ok())
+        .unwrap_or(0);
     // OSS 没有 major 段;统一记为 0,这样和官方 tag(major>=0)用同一个 Ord 比较时
     // 不会发生 OSS 版本被错误判定"大于"官方版本的情况。
     Some(ParsedVersion {
@@ -105,17 +115,26 @@ fn parse_oss(value: &str) -> Option<ParsedVersion> {
         date,
         patch,
         mod_revision,
+        mod_minor,
     })
 }
 
 impl Ord for ParsedVersion {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (self.major, self.date, self.patch, self.mod_revision).cmp(&(
-            other.major,
-            other.date,
-            other.patch,
-            other.mod_revision,
-        ))
+        (
+            self.major,
+            self.date,
+            self.patch,
+            self.mod_revision,
+            self.mod_minor,
+        )
+            .cmp(&(
+                other.major,
+                other.date,
+                other.patch,
+                other.mod_revision,
+                other.mod_minor,
+            ))
     }
 }
 

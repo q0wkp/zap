@@ -3,20 +3,20 @@ use super::*;
 #[test]
 fn test_dmg_name() {
     assert_eq!(
-        dmg_name("2026.07.09.2-mod.4", true),
-        "zap-2026.07.09.2-mod.4-macos-aarch64.dmg"
+        dmg_name("2026.07.09.2-mod.1.1", true),
+        "zap-2026.07.09.2-mod.1.1-macos-aarch64.dmg"
     );
     assert_eq!(
-        dmg_name("2026.07.09.2-mod.4", false),
-        "zap-2026.07.09.2-mod.4-macos-x86_64.dmg"
+        dmg_name("2026.07.09.2-mod.1.1", false),
+        "zap-2026.07.09.2-mod.1.1-macos-x86_64.dmg"
     );
 }
 
 #[test]
 fn test_appimage_name() {
     assert_eq!(
-        appimage_name("2026.07.09.2-mod.4"),
-        "zap-2026.07.09.2-mod.4-linux-x86_64.AppImage"
+        appimage_name("2026.07.09.2-mod.1.1"),
+        "zap-2026.07.09.2-mod.1.1-linux-x86_64.AppImage"
     );
 }
 
@@ -24,17 +24,17 @@ fn test_appimage_name() {
 #[test]
 fn test_release_file_found_by_its_version() {
     let release: GithubRelease = serde_json::from_value(serde_json::json!({
-        "tag_name": "v2026.07.09.2-mod.4",
-        "html_url": "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.4",
+        "tag_name": "v2026.07.09.2-mod.1.1",
+        "html_url": "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1",
         "assets": [
             {
-                "name": "zap-2026.07.09.2-mod.4-linux-x86_64.AppImage",
-                "browser_download_url": "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.4/zap-2026.07.09.2-mod.4-linux-x86_64.AppImage",
+                "name": "zap-2026.07.09.2-mod.1.1-linux-x86_64.AppImage",
+                "browser_download_url": "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.1.1/zap-2026.07.09.2-mod.1.1-linux-x86_64.AppImage",
                 "size": 1,
             },
             {
-                "name": "zap-2026.07.09.2-mod.4-macos-aarch64.dmg",
-                "browser_download_url": "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.4/zap-2026.07.09.2-mod.4-macos-aarch64.dmg",
+                "name": "zap-2026.07.09.2-mod.1.1-macos-aarch64.dmg",
+                "browser_download_url": "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.1.1/zap-2026.07.09.2-mod.1.1-macos-aarch64.dmg",
                 "size": 1,
             },
         ],

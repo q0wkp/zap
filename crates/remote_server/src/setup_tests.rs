@@ -206,8 +206,8 @@ fn oss_binary_name_matches_zap_cli() {
 }
 
 /// A release tag, and the version its files carry.
-const RELEASE_TAG: &str = "v2026.07.09.2-mod.4";
-const RELEASE_VERSION: &str = "2026.07.09.2-mod.4";
+const RELEASE_TAG: &str = "v2026.07.09.2-mod.1.1";
+const RELEASE_VERSION: &str = "2026.07.09.2-mod.1.1";
 
 #[test]
 fn release_tarball_url_names_the_file_by_version() {
@@ -215,7 +215,7 @@ fn release_tarball_url_names_the_file_by_version() {
 
     assert_eq!(
         url,
-        "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.4/zap-2026.07.09.2-mod.4-linux-x86_64.tar.gz"
+        "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.1.1/zap-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz"
     );
     assert!(!url.contains("app.warp.dev"));
     assert!(!url.contains("/download/cli"));
@@ -237,7 +237,7 @@ fn download_tarball_url_names_the_platform() {
 #[test]
 fn release_tag_in_url_reads_the_release_page() {
     assert_eq!(
-        release_tag_in_url("https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.4\n"),
+        release_tag_in_url("https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1\n"),
         Some(RELEASE_TAG)
     );
     // Where `latest` redirects to in a repository without a release.
@@ -359,7 +359,7 @@ fn release_tarball_url_of_this_system() -> String {
 }
 
 /// Where GitHub redirects `latest` to while [`RELEASE_TAG`] is the newest release.
-const LATEST_LOCATION: &str = "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.4";
+const LATEST_LOCATION: &str = "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1";
 
 #[test]
 fn install_script_downloads_the_tarball_of_its_release_tag() {
