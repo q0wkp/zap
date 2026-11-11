@@ -49,9 +49,15 @@ This is q0wkp/zap, Tianyu Lu's own build of Zap, a terminal forked from Warp. Th
   of installing a Zap that can't start. The rpm needs nothing: rpmbuild adds versioned glibc requirements itself.
 - The files a release builds itself follow the user's naming rule with no exception (decided 2026-11-10):
   `zap-<version>-<system>`, the version without the tag's `v`, for the DMGs, the AppImage and the CLI archives
-  (`zap-2026.07.09.2-mod.4-macos-aarch64.dmg` for the tag `v2026.07.09.2-mod.4`). The `.deb`, `.rpm` and
+  (`zap-2026.07.09.2-mod.1.1-macos-aarch64.dmg` for the tag `v2026.07.09.2-mod.1.1`). The `.deb`, `.rpm` and
   `.pkg.tar.zst` keep the names their package managers give them. The earlier names (`Zap-arm64.dmg`,
   `Zap-x86_64.AppImage`, `zap-linux-x86_64.tar.gz`) are not published beside the new ones.
+- Release tags are the next upstream version plus `-mod.X.Y` (decided 2026-11-11): Y counts the releases, and X goes
+  up, with Y back at 1, when a release breaks compatibility with the one before it (file names, formats, settings).
+  The numbering restarted at `v2026.07.09.2-mod.1.1`: the releases `-mod.1` to `-mod.3` and their tags were deleted,
+  so nothing older sorts above it; the few machines that had them are reinstalled by hand. Still valid SemVer
+  pre-release syntax, which is why `-mod.` was chosen: it sorts after upstream's current release and before its next.
+  `crates/channel_versions` parses both parts.
 
 ### Porting from Warp
 

@@ -157,3 +157,16 @@ fn oss_versions_order_by_mod_revision() {
 
     assert!(older < newer);
 }
+
+#[test]
+fn oss_versions_order_by_both_parts_of_the_mod_number() {
+    let parse = |tag: &str| ParsedVersion::try_from(tag).unwrap();
+
+    assert!(parse("v2026.07.09.2-mod.1.1") < parse("v2026.07.09.2-mod.1.2"));
+    assert!(parse("v2026.07.09.2-mod.1.9") < parse("v2026.07.09.2-mod.1.10"));
+    assert!(parse("v2026.07.09.2-mod.1.10") < parse("v2026.07.09.2-mod.2.1"));
+    assert!(parse("v2026.07.09.2") < parse("v2026.07.09.2-mod.1.1"));
+    // A tag from before the two-part numbers reads as X.0.
+    assert!(parse("v2026.07.09.2-mod.1") < parse("v2026.07.09.2-mod.1.1"));
+    assert!(ParsedVersion::try_from("v2026.07.09.2-mod.1.1.1").is_err());
+}
