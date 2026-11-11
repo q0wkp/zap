@@ -89,6 +89,29 @@ pub(crate) fn release_tag(version: &str) -> String {
         .unwrap_or_else(|| format!("v{version}"))
 }
 
+/// The name of the file the release of `version` (a version without its `v`) has for `system`:
+/// `zap-<version>-<system>.<extension>`, as .github/workflows/release.yml names it.
+fn release_file_name(version: &str, system: &str, extension: &str) -> String {
+    format!("zap-{version}-{system}.{extension}")
+}
+
+/// The DMG of the release of `version`, for Apple silicon (`arm64`) or for Intel.
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn dmg_name(version: &str, arm64: bool) -> String {
+    let system = if arm64 {
+        "macos-aarch64"
+    } else {
+        "macos-x86_64"
+    };
+    release_file_name(version, system, "dmg")
+}
+
+/// The AppImage of the release of `version`, which is built for x86_64 only.
+#[cfg(any(target_os = "linux", test))]
+pub(crate) fn appimage_name(version: &str) -> String {
+    release_file_name(version, "linux-x86_64", "AppImage")
+}
+
 fn store_cached(release: GithubRelease) {
     if let Ok(mut guard) = LATEST_RELEASE.lock() {
         *guard = Some(release);
@@ -144,3 +167,7 @@ pub(crate) async fn fetch_release(
         .await
         .context("Failed to parse the GitHub Releases JSON")
 }
+
+#[cfg(test)]
+#[path = "github_test.rs"]
+mod tests;

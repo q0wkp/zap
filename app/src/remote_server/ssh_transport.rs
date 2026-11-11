@@ -498,9 +498,54 @@ async fn download_remote_server_tarball(download_url: &str, tarball_path: &Path)
     ))
 }
 
+/// The tag of Zap's newest release, which a build made without a release tag installs the remote
+/// server of: the tag in the URL that the releases' `latest` page redirects to.
+async fn latest_release_tag() -> Result<String> {
+    let output = async {
+        command::r#async::Command::new("curl")
+            .args(["-fsSLI", "--connect-timeout", "15", "-o", "/dev/null"])
+            .args(["-w", "%{url_effective}"])
+            .arg(remote_server::setup::LATEST_RELEASE_URL)
+            .kill_on_drop(true)
+            .output()
+            .await
+    }
+    .with_timeout(remote_server::setup::INSTALL_TIMEOUT)
+    .await
+    .map_err(|_| {
+        anyhow!(
+            "looking up the newest release timed out after {:?}",
+            remote_server::setup::INSTALL_TIMEOUT
+        )
+    })?
+    .map_err(|e| anyhow!("local curl failed to execute: {e}"))?;
+
+    if !output.status.success() {
+        let code = output.status.code().unwrap_or(-1);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!(
+            "looking up the newest release failed with code {code}: {stderr}"
+        ));
+    }
+
+    let url = String::from_utf8_lossy(&output.stdout);
+    remote_server::setup::release_tag_in_url(&url)
+        .map(str::to_owned)
+        .ok_or_else(|| {
+            anyhow!(
+                "{} did not redirect to a release, but to {url}",
+                remote_server::setup::LATEST_RELEASE_URL
+            )
+        })
+}
+
 async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     let platform = detect_remote_platform(socket_path).await?;
-    let download_url = remote_server::setup::download_tarball_url(&platform);
+    let tag = match remote_server::setup::release_tag() {
+        Some(tag) => tag.to_owned(),
+        None => latest_release_tag().await?,
+    };
+    let download_url = remote_server::setup::download_tarball_url(&tag, &platform);
     let remote_server_dir = remote_server::setup::remote_server_dir();
     let mkdir_cmd = format!("mkdir -p {remote_server_dir}");
     let mkdir_output = remote_server::ssh::run_ssh_command(

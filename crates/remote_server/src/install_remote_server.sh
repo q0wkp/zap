@@ -2,7 +2,11 @@
 # 在远端主机安装 Zap CLI 二进制,用于 remote-server-proxy。
 #
 # setup.rs 会在运行时替换这些占位符:
-#   {download_base_url}     - 例如 https://github.com/q0wkp/zap/releases/latest/download
+#   {release_tag}           - the release tag the client was built from, such as v1.2; empty for a
+#                             build without one, which installs the newest release's
+#   {latest_release_url}    - the page that redirects to the newest release, .../releases/latest
+#   {download_url}          - the release's tarball for this system, with shell variables:
+#                             .../releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz
 #   {install_dir}           - 例如 ~/.zap/remote-server
 #   {binary_name}           - 例如 zap-oss
 #   {version_suffix}        - 例如 -v0.2026...,没有 release tag 时为空
@@ -45,14 +49,46 @@ if [ -n "$staging_tarball_path" ]; then
   esac
   mv "$staging_tarball_path" "$tmpdir/zap.tar.gz"
 else
-  url="{download_base_url}/zap-$os_name-$arch_name.tar.gz"
   if command -v curl >/dev/null 2>&1; then
-    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap.tar.gz"
+    downloader=curl
   elif command -v wget >/dev/null 2>&1; then
-    wget -q -O "$tmpdir/zap.tar.gz" "$url"
+    downloader=wget
   else
     echo "error: neither curl nor wget is available" >&2
     exit 3
+  fi
+
+  release_tag="{release_tag}"
+  if [ -z "$release_tag" ]; then
+    # The newest release's tag ends the URL its page redirects to, .../releases/tag/<tag>, which
+    # both programs print in the response's Location header.
+    if [ "$downloader" = curl ]; then
+      headers=$(curl -sSI --connect-timeout 15 "{latest_release_url}") || true
+    else
+      headers=$(wget -S --spider "{latest_release_url}" 2>&1) || true
+    fi
+    release_tag=$(printf '%s\n' "$headers" | sed -n 's#^.*[Ll]ocation:.*/releases/tag/\([^[:space:]]*\).*$#\1#p' | head -n 1)
+    if [ -z "$release_tag" ]; then
+      echo "error: could not find the newest release of Zap: {latest_release_url} did not redirect to a release" >&2
+      exit 1
+    fi
+  fi
+  # A release's files carry its version, the tag without its v.
+  case "$release_tag" in
+    v?*) release_version="${release_tag#v}" ;;
+    *) echo "error: the release tag $release_tag is not a version tag (v<version>)" >&2; exit 1 ;;
+  esac
+
+  # The URL names the release with $release_version, and this system with $os_name and $arch_name.
+  url="{download_url}"
+  if [ "$downloader" = curl ]; then
+    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap.tar.gz" || download_status=$?
+  else
+    wget -q -O "$tmpdir/zap.tar.gz" "$url" || download_status=$?
+  fi
+  if [ -n "${download_status:-}" ]; then
+    echo "error: could not download $url" >&2
+    exit "$download_status"
   fi
 fi
 

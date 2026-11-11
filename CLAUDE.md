@@ -47,6 +47,11 @@ This is q0wkp/zap, Tianyu Lu's own build of Zap, a terminal forked from Warp. Th
   `libc6 (>= X.Y)`, where X.Y is the highest `GLIBC_x.y` the packaged ELF files need, computed at bundle time by
   `script/linux/min_glibc_version`, never hard-coded. A system too old for the build then refuses the package instead
   of installing a Zap that can't start. The rpm needs nothing: rpmbuild adds versioned glibc requirements itself.
+- The files a release builds itself follow the user's naming rule with no exception (decided 2026-11-10):
+  `zap-<version>-<system>`, the version without the tag's `v`, for the DMGs, the AppImage and the CLI archives
+  (`zap-2026.07.09.2-mod.4-macos-aarch64.dmg` for the tag `v2026.07.09.2-mod.4`). The `.deb`, `.rpm` and
+  `.pkg.tar.zst` keep the names their package managers give them. The earlier names (`Zap-arm64.dmg`,
+  `Zap-x86_64.AppImage`, `zap-linux-x86_64.tar.gz`) are not published beside the new ones.
 
 ### Porting from Warp
 
@@ -67,6 +72,11 @@ changes here: zap's tests live in `view_test.rs` (Warp: `view_tests.rs`), and so
 - `cargo test -p warp --lib` has 79 failures on `upstream/main` 8954864e3 (seen 2026-11-03), including the two BYOP
   `smoke_*` tests in `agent_providers` (fixed by branch `fix/byop-smoke-test-setup`). Judge a branch by diffing its
   failing tests against that baseline, not by the exit code.
+- The `warp` crate's unit tests can't be built in 8 GB of memory (rustc 1.92.0, seen 2026-11-10): under
+  `systemd-run -p MemoryMax=8G`, rustc passed 7.8 GB after 100 seconds of `cargo test -p warp --lib` and was killed,
+  with or without `CARGO_INCREMENTAL=0`. Within that limit, `CARGO_INCREMENTAL=0 cargo check -p warp --lib --profile
+  test` type-checks the library with its tests (5 GB at its peak); `cargo check -p warp --lib --tests` was killed
+  as well.
 - Share one `CARGO_TARGET_DIR` (this clone's `target`) between worktrees, so only the workspace crates rebuild.
   But cargo 1.92.0 names workspace-crate artifacts by their path relative to the workspace, so checkouts sharing it
   overwrite each other's, and a checkout whose files are older reuses the other's as fresh: after building a branch
@@ -82,6 +92,15 @@ workflow's `pkgs` job (Sync has no schedule; a release that job didn't reach wai
 pacman, `zap-deb` for Pacstall, and the cask `zap-terminal` in q0wkp/homebrew-tap. Each goes out once the release has
 its own files (the `.pkg.tar.zst`, the `.deb`, the two DMGs), so a release missing one still reaches the others. The
 pkgs README says how publishing works.
+
+A release's files are looked up by name in three places besides the release workflow that names them: Zap's updater
+(the DMGs, the AppImage), its remote-server installer (the CLI archives) and the recipe's `ASSETS` in
+`recipes/zap/package.conf` (the `.deb`, the `.pkg.tar.zst`, the DMGs). After a name changes in the workflow alone,
+the updater and the installer fail to download the file, and pkgs skips the release without an error.
+
+linuxdeploy (1-alpha-20240109-1) names the AppImage it writes itself, `Zap-x86_64.AppImage`, after the desktop
+file's `Name` and the architecture; `APPIMAGE_NAME` in `script/linux/bundle` only repeats that name, so the release
+workflow renames the file when it collects the packages.
 
 Pacstall 6.4.2 (read in its source): `pacstall -Up` takes no package names ("Invalid argument") and upgrades every
 Pacstall package; `pacstall -I <pkg>` of an installed package downloads its pacscript from the repository again and

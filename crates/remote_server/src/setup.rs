@@ -344,28 +344,46 @@ fn pinned_version() -> &'static str {
 }
 
 /// 安装脚本模板独立放在 `.sh` 文件里方便维护。
-/// `{download_base_url}` 等占位符由 [`install_script`] 替换。
+/// `{download_url}` 等占位符由 [`install_script`] 替换。
 const INSTALL_SCRIPT_TEMPLATE: &str = include_str!("install_remote_server.sh");
 
 /// 返回安装脚本。`staging_tarball_path` 非空时,脚本跳过远端下载,
 /// 改为解压客户端通过 SCP 预上传的 tarball。
 pub fn install_script(staging_tarball_path: Option<&str>) -> String {
+    install_script_for(ChannelState::app_version(), staging_tarball_path)
+}
+
+/// The install script of a build made from the release `tag`, or from no release: the script then
+/// looks up the newest release's tag.
+fn install_script_for(tag: Option<&str>, staging_tarball_path: Option<&str>) -> String {
     let version_suffix = version_suffix();
+    // The script fills in the release's version and the system it runs on.
+    let download_url = release_tarball_url("v$release_version", "$os_name", "$arch_name");
     INSTALL_SCRIPT_TEMPLATE
-        .replace("{download_base_url}", &download_url())
+        .replace("{release_tag}", tag.unwrap_or(""))
+        .replace("{latest_release_url}", LATEST_RELEASE_URL)
+        .replace("{download_url}", &download_url)
         .replace("{install_dir}", &remote_server_dir())
         .replace("{binary_name}", binary_name())
         .replace("{version_suffix}", &version_suffix)
         .replace("{staging_tarball_path}", staging_tarball_path.unwrap_or(""))
 }
 
-/// 构造 Zap CLI release 资产下载基址。
-fn download_url() -> String {
-    let release_path = match ChannelState::app_version() {
-        Some(tag) => format!("download/{tag}"),
-        None => "latest/download".to_string(),
-    };
-    format!("https://github.com/q0wkp/zap/releases/{release_path}")
+/// The URL of the CLI tarball that the release `tag` has for `os` and `arch`, named
+/// `zap-<version>-<os>-<arch>.tar.gz` by .github/workflows/release.yml, the version being the tag
+/// without its `v`.
+fn release_tarball_url(tag: &str, os: &str, arch: &str) -> String {
+    let version = tag.strip_prefix('v').unwrap_or(tag);
+    format!("https://github.com/q0wkp/zap/releases/download/{tag}/zap-{version}-{os}-{arch}.tar.gz")
+}
+
+/// The page that redirects to the newest release's page, `.../releases/tag/<tag>`.
+pub const LATEST_RELEASE_URL: &str = "https://github.com/q0wkp/zap/releases/latest";
+
+/// The tag of the release whose page `url` is, `.../releases/tag/<tag>`.
+pub fn release_tag_in_url(url: &str) -> Option<&str> {
+    let (_, tag) = url.trim().rsplit_once("/releases/tag/")?;
+    (!tag.is_empty() && !tag.contains('/')).then_some(tag)
 }
 
 fn version_suffix() -> String {
@@ -378,14 +396,15 @@ fn version_suffix() -> String {
     }
 }
 
-/// 返回指定远端平台对应的 Zap CLI tarball URL。
-pub fn download_tarball_url(platform: &RemotePlatform) -> String {
-    format!(
-        "{}/zap-{}-{}.tar.gz",
-        download_url(),
-        platform.os.as_str(),
-        platform.arch.as_str(),
-    )
+/// The release tag this build was made from. A build without one installs the remote server of
+/// the newest release, whose tag [`LATEST_RELEASE_URL`] redirects to.
+pub fn release_tag() -> Option<&'static str> {
+    ChannelState::app_version()
+}
+
+/// The URL of the CLI tarball that the release `tag` has for `platform`.
+pub fn download_tarball_url(tag: &str, platform: &RemotePlatform) -> String {
+    release_tarball_url(tag, platform.os.as_str(), platform.arch.as_str())
 }
 
 /// Zap fork:开发模式(DEBUG 源码构建,无 release tag)下,
@@ -408,7 +427,7 @@ pub const DEV_REMOTE_FEATURES: &str = "release_bundle,crash_reporting,standalone
 ///
 /// 默认条件:DEBUG 构建(`debug_assertions`)且没有注入 `GIT_RELEASE_TAG`
 /// (`app_version().is_none()`,即源码本地构建,非发行版)。这与
-/// `remote_server_binary()` / `download_url()` 中对「无 release tag」的
+/// `remote_server_binary()` / `release_tag()` 中对「无 release tag」的
 /// 判定保持同一标准。release 构建恒为 `false`,行为完全不变。
 ///
 /// 显式覆盖:设置 `WARP_REMOTE_SERVER_FROM_LOCAL=1` 强制走本地交叉编译路径

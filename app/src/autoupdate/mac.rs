@@ -473,7 +473,7 @@ async fn oss_download_dmg(
     // 故意不做 hdiutil mount / verify_code_signature:OSS 没有 Apple
     // codesign 也不需要把 .app 拷进当前 bundle。dmg 本身就是用户要"打开"的物件。
     // 但校验 GitHub Release 元数据里的 SHA-256,防御 CDN 中间人/资产损坏。
-    let asset_name = dmg_name(channel);
+    let asset_name = dmg_name(channel, &version_info.version);
     if let Err(e) = super::verify_oss_asset_sha256(&dmg_path_buf, &asset_name) {
         // 校验失败时立即删除已下载文件,避免用户点击"安装"后打开损坏的 dmg。
         let _ = async_fs::remove_file(&dmg_path_buf).await;
@@ -872,7 +872,7 @@ async fn mount_dmg(dmg_dir: &Path, update_id: &str) -> Result<PathBuf> {
 }
 
 fn update_url(channel: Channel, version: &str) -> String {
-    let asset = dmg_name(channel);
+    let asset = dmg_name(channel, version);
     if matches!(channel, Channel::Oss) {
         // OSS 走 GitHub Releases:优先用 fetch_latest_release 缓存里的真实
         // browser_download_url(以防仓库被 redirect / asset 改名)。缓存为空时
@@ -906,22 +906,18 @@ fn versioned_app_name(channel: Channel, version: &str) -> String {
     format!("{}({}).app", app_name_prefix(channel), version)
 }
 
-fn dmg_name(channel: Channel) -> String {
+/// The name of the DMG that holds `version` (a version without its `v`) for this Mac.
+fn dmg_name(channel: Channel, version: &str) -> String {
     // If the user is on an Apple Silicon Mac, download an arm64-only bundle.
     let is_arm64 = command::blocking::Command::new("uname")
         .arg("-m")
         .output()
         .is_ok_and(|output| output.stdout.starts_with(b"arm64"));
 
-    // openWarp GitHub Release 资产名固定使用 `Zap-arm64.dmg` / `Zap-intel.dmg`
-    // (来自 .github/workflows 的命名约定),与 `app_name_prefix("zap-oss")` 不一致。
-    // 这里只对 OSS 写死,不会影响官方 channel 的 universal 命名。
+    // A GitHub release names its DMGs after its version and the architecture, unlike the
+    // official channels below, whose names come from `app_name_prefix`.
     if matches!(channel, Channel::Oss) {
-        return if is_arm64 {
-            "Zap-arm64.dmg".to_string()
-        } else {
-            "Zap-intel.dmg".to_string()
-        };
+        return super::github::dmg_name(version, is_arm64);
     }
 
     if is_arm64 {

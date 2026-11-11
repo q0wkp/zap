@@ -22,6 +22,12 @@ maintainers of Zap or Warp.
   remote server download point here, so a build of this fork never replaces itself with an upstream one. Tags are the
   next upstream version plus `-mod.N` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1`). A release is created
   only once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no longer built.
+  The DMGs, the AppImage and the CLI archives carry the release's version, as `zap-<version>-<system>` (for example
+  `zap-2026.07.09.2-mod.4-linux-x86_64.AppImage`). A Zap up to `v2026.07.09.2-mod.3` that updates itself from a DMG
+  or the AppImage looks for the earlier names and can't update to a later release: download its file once from the
+  [releases](https://github.com/q0wkp/zap/releases/latest). A build made without a release tag installs the
+  remote server of the newest release, which may differ from its own source; a debug build, or any build started
+  with `WARP_REMOTE_SERVER_FROM_LOCAL=1`, builds and uploads its own instead.
 - **Linux packages**: the release builds the Arch package, which a wrong makepkg option had kept from ever being built,
   and both it and the `.deb` declare the libraries the binary links against (ALSA, liblzma), so they start on systems
   without them, and the oldest glibc the binary runs on, read from it when it is packaged, so that a system too old
