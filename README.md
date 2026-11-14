@@ -15,7 +15,9 @@ maintainers of Zap or Warp.
 
 - **zmx sessions**: CLI agents running inside a [zmx](https://github.com/neurosnap/zmx) session are detected, from
   the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
-  zmx session to attach to after connecting. ([#1](https://github.com/q0wkp/zap/pull/1))
+  zmx session to attach to after connecting ([#1](https://github.com/q0wkp/zap/pull/1)), and the host's editor
+  lists the sessions on the server, with a preview of each, to pick one from
+  ([#5](https://github.com/q0wkp/zap/pull/5)).
 - **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
   refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap)
 - **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
