@@ -2708,6 +2708,10 @@ workspace-left-panel-ssh-manager-startup-command = 起動コマンド
 workspace-left-panel-ssh-manager-startup-command-placeholder = 接続成功後に自動実行するコマンド
 workspace-left-panel-ssh-manager-zmx-session = zmx セッション
 workspace-left-panel-ssh-manager-zmx-session-placeholder = 接続成功後にこのセッションへアタッチします(サーバーに zmx が必要)
+workspace-left-panel-ssh-manager-zmx-listing = zmx セッションを取得中...
+workspace-left-panel-ssh-manager-zmx-no-sessions = このサーバーに zmx セッションはありません
+workspace-left-panel-ssh-manager-zmx-not-installed = このサーバーに zmx が見つかりません
+workspace-left-panel-ssh-manager-zmx-clients = 接続中のクライアント: { $count }
 workspace-left-panel-ssh-manager-notes = メモ
 workspace-left-panel-ssh-manager-notes-placeholder = メモ情報
 # TODO: review

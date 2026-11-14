@@ -211,7 +211,7 @@ fn build_ssh_args_does_not_emit_sshpass() {
 #[test]
 fn password_auth_args_no_keyboard_interactive() {
     let s = server();
-    let args = build_password_auth_cmd_args(&s);
+    let args = build_password_auth_cmd_args(&s, "echo ok");
     let joined = args.join(" ");
     assert!(
         !joined.contains("keyboard-interactive"),
@@ -240,7 +240,7 @@ fn password_auth_args_no_keyboard_interactive() {
 #[test]
 fn password_auth_args_disable_kbd_interactive() {
     let s = server();
-    let args = build_password_auth_cmd_args(&s);
+    let args = build_password_auth_cmd_args(&s, "echo ok");
     let joined = args.join(" ");
     assert!(
         joined.contains("KbdInteractiveAuthentication=no"),
@@ -254,7 +254,7 @@ fn password_auth_args_disable_kbd_interactive() {
 #[test]
 fn password_auth_args_ends_with_echo_ok_command() {
     let s = server();
-    let args = build_password_auth_cmd_args(&s);
+    let args = build_password_auth_cmd_args(&s, "echo ok");
     assert!(!args.is_empty(), "cmd_args is empty: {args:?}");
     let last = args.last().unwrap();
     assert_eq!(
@@ -275,7 +275,7 @@ fn password_auth_args_ends_with_echo_ok_command() {
 #[test]
 fn password_auth_args_destination_before_echo_ok_and_after_options() {
     let s = server();
-    let args = build_password_auth_cmd_args(&s);
+    let args = build_password_auth_cmd_args(&s, "echo ok");
     let joined = args.join(" ");
 
     // destination "alice@1.2.3.4" 必须出现在 "echo ok" 之前
@@ -303,7 +303,6 @@ fn password_auth_args_destination_before_echo_ok_and_after_options() {
 }
 
 /// 回归保护:key auth 路径的 `build_ssh_args` 也需 destination 在 -o 选项之后。
-/// 用 `build_ssh_args` + 手动追加选项的方式验证顺序,模拟 `test_key_auth` 的构建。
 /// author: logic
 /// date: 2026-06-01
 #[test]
@@ -312,21 +311,7 @@ fn key_auth_args_destination_comes_after_options() {
     s.auth_type = AuthType::Key;
     s.key_path = Some("/home/user/.ssh/id_rsa".into());
 
-    // 模拟 test_key_auth 的构建逻辑
-    let mut args = build_ssh_args(&s);
-    let target = args.pop().unwrap();
-    args.extend([
-        "-o".into(),
-        "BatchMode=yes".into(),
-        "-o".into(),
-        "ConnectTimeout=5".into(),
-        "-o".into(),
-        "StrictHostKeyChecking=no".into(),
-        "-o".into(),
-        "LogLevel=ERROR".into(),
-    ]);
-    args.push(target);
-    args.push("echo ok".into());
+    let args = build_key_auth_cmd_args(&s, "echo ok");
 
     let joined = args.join(" ");
     let dest_pos = joined

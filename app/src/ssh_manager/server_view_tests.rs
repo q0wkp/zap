@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use warp_core::ui::appearance::Appearance;
 use warpui::platform::WindowStyle;
-use warpui::{App, WindowInvalidation};
+use warpui::{App, WindowId, WindowInvalidation};
 
+use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::view_components::dropdown::DropdownAction;
 
@@ -327,4 +328,124 @@ fn selecting_onekey_dropdown_item_does_not_rebuild_dropdown_while_it_is_borrowed
             );
         });
     });
+}
+
+fn zmx_session(name: &str, preview: Option<&str>) -> ZmxSession {
+    ZmxSession {
+        name: name.to_string(),
+        clients: Some(1),
+        cwd: Some("/srv/app".to_string()),
+        command: None,
+        preview: preview.map(str::to_string),
+    }
+}
+
+/// 把窗口完整地布局并绘制一遍,渲染代码里的 panic 会在这里暴露。
+fn build_scene(app: &mut App, window_id: WindowId) {
+    let presenter = app.presenter(window_id).unwrap();
+    let mut updated = std::collections::HashSet::new();
+    updated.insert(app.root_view_id(window_id).unwrap());
+    app.update(|ctx| {
+        let mut presenter = presenter.borrow_mut();
+        presenter.invalidate(
+            WindowInvalidation {
+                updated,
+                ..Default::default()
+            },
+            ctx,
+        );
+        presenter.build_scene(vec2f(640., 480.), 1., None, ctx);
+    });
+}
+
+/// 开一个窗口,里面是一个 server 节点的编辑表单。
+fn open_server_view(app: &mut App) -> (WindowId, ViewHandle<SshServerView>) {
+    crate::i18n::init(Some("en"));
+    initialize_settings_for_tests(app);
+    app.add_singleton_model(|_| Appearance::mock());
+    app.add_singleton_model(|_| SshTreeChangedNotifier::new());
+    // 表单里的 editor 构造时要用它。
+    app.add_singleton_model(|_| KeybindingChangedNotifier::mock());
+    // 表单一构造就读 SSH 管理器的库:没有路径会 panic,给一个临时文件即可,
+    // 里面没有表,读不到节点只记一条日志。进程内只有第一次设置生效。
+    warp_ssh_manager::set_database_path(
+        std::env::temp_dir().join("warp_ssh_server_view_test.sqlite"),
+    );
+
+    app.add_window(WindowStyle::NotStealFocus, |ctx| {
+        let mut view = SshServerView::new("server-1".to_string(), ctx);
+        view.node = Some(SshNode {
+            id: "server-1".to_string(),
+            parent_id: None,
+            kind: NodeKind::Server,
+            name: "server".to_string(),
+            sort_order: 0,
+            created_at: chrono::Utc::now().naive_utc(),
+            updated_at: chrono::Utc::now().naive_utc(),
+            is_collapsed: false,
+        });
+        view
+    })
+}
+
+#[test]
+fn selecting_a_listed_zmx_session_fills_the_session_field() {
+    App::test((), |mut app| async move {
+        let (window_id, view) = open_server_view(&mut app);
+        view.update(&mut app, |view, ctx| {
+            view.zmx_session_row_states =
+                vec![MouseStateHandle::default(), MouseStateHandle::default()];
+            view.zmx_session_list = ZmxSessionList::Loaded(vec![
+                zmx_session("dev", None),
+                zmx_session("build", Some("$ make\n\nok")),
+            ]);
+            ctx.notify();
+        });
+        // 还没选中任何 session:只画列表。
+        build_scene(&mut app, window_id);
+
+        view.update(&mut app, |view, ctx| {
+            view.handle_action(&SshServerAction::SelectZmxSession(1), ctx);
+        });
+        // 选中之后多画一块预览。
+        build_scene(&mut app, window_id);
+
+        view.read(&app, |view, app| {
+            assert_eq!(view.current_text(&view.zmx_session_editor, app), "build");
+        });
+    });
+}
+
+#[test]
+fn zmx_session_states_other_than_a_list_render() {
+    App::test((), |mut app| async move {
+        let (window_id, view) = open_server_view(&mut app);
+
+        for list in [
+            ZmxSessionList::Loading,
+            ZmxSessionList::Failed("Permission denied (publickey).".to_string()),
+            ZmxSessionList::Loaded(Vec::new()),
+        ] {
+            view.update(&mut app, |view, ctx| {
+                view.zmx_session_list = list;
+                ctx.notify();
+            });
+            build_scene(&mut app, window_id);
+        }
+    });
+}
+
+#[test]
+fn zmx_session_subtitle_skips_what_the_session_does_not_have() {
+    // 客户端数那一项是翻译过的文案,这里只看拼接,所以不带它。
+    let mut session = zmx_session("dev", None);
+    session.clients = None;
+    session.command = Some("vim".to_string());
+    assert_eq!(zmx_session_subtitle(&session), "/srv/app · vim");
+
+    session.cwd = None;
+    assert_eq!(zmx_session_subtitle(&session), "vim");
+
+    session.command = None;
+    assert_eq!(zmx_session_subtitle(&session), "");
 }

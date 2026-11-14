@@ -2827,6 +2827,13 @@ workspace-left-panel-ssh-manager-startup-command = Startup Command
 workspace-left-panel-ssh-manager-startup-command-placeholder = Command to run after connection
 workspace-left-panel-ssh-manager-zmx-session = zmx Session
 workspace-left-panel-ssh-manager-zmx-session-placeholder = Session to attach to after connecting (requires zmx on the server)
+workspace-left-panel-ssh-manager-zmx-listing = Listing zmx sessions...
+workspace-left-panel-ssh-manager-zmx-no-sessions = No zmx sessions on this server
+workspace-left-panel-ssh-manager-zmx-not-installed = zmx was not found on this server
+workspace-left-panel-ssh-manager-zmx-clients = { $count } { $count ->
+        [one] client
+       *[other] clients
+    } attached
 workspace-left-panel-ssh-manager-notes = Notes
 workspace-left-panel-ssh-manager-notes-placeholder = Notes
 workspace-left-panel-ssh-manager-candidates-header = From { $path }

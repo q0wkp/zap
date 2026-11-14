@@ -9,6 +9,7 @@ pub mod ssh_command;
 pub mod ssh_config_parser;
 pub mod sync_provider;
 pub mod types;
+pub mod zmx_sessions;
 
 pub use db::{set_database_path, with_conn};
 pub use repository::{SshRepository, SshRepositoryError, SyncMetaRepository};
@@ -29,3 +30,4 @@ pub use types::{
     AuthType, NodeKind, OneKeyCredentialKind, ResolvedSshAuth, SshNode, SshOneKeyCredential,
     SshServerInfo,
 };
+pub use zmx_sessions::{ZmxSession, ZmxSessionsError, list_zmx_sessions};

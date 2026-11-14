@@ -116,23 +116,7 @@ pub async fn test_connection(
 }
 
 async fn test_key_auth(server: &SshServerInfo) -> Result<(), String> {
-    let mut args = build_ssh_args(server);
-    // build_ssh_args 末尾是 destination (user@host),-o 选项必须插在
-    // destination 之前,否则 SSH 把 -o 当作远程命令的一部分而非自身选项。
-    let target = args.pop().unwrap();
-    args.extend([
-        "-o".into(),
-        "BatchMode=yes".into(),
-        "-o".into(),
-        "ConnectTimeout=5".into(),
-        "-o".into(),
-        "StrictHostKeyChecking=no".into(),
-        "-o".into(),
-        "LogLevel=ERROR".into(),
-    ]);
-    args.push(target);
-    args.push("echo ok".into());
-    let cmd_args = args;
+    let cmd_args = build_key_auth_cmd_args(server, "echo ok");
 
     match tokio::time::timeout(TEST_TIMEOUT, run_ssh_test(&cmd_args)).await {
         Ok(Ok(output)) => {
@@ -155,21 +139,32 @@ async fn test_password_auth(
     let password = password.ok_or("Password not provided")?;
 
     // 构造 ssh 命令参数(注意 -o 选项必须插在 destination 之前,见该函数注释)
-    let cmd_args = build_password_auth_cmd_args(server);
+    let cmd_args = build_password_auth_cmd_args(server, "echo ok");
 
+    let output = run_password_auth(cmd_args, &password, TEST_TIMEOUT).await?;
+    finalize_password_test_result(&output)
+}
+
+/// 用密码认证跑 ssh 子进程并返回其输出。
+async fn run_password_auth(
+    cmd_args: Vec<String>,
+    password: &Zeroizing<String>,
+    timeout: Duration,
+) -> Result<std::process::Output, String> {
     // 平台分支:Windows 走 SSH_ASKPASS,其他平台走 stdin 注入
     #[cfg(windows)]
-    return test_password_auth_windows(cmd_args, &password).await;
+    return run_password_auth_windows(cmd_args, password, timeout).await;
     #[cfg(not(windows))]
-    test_password_auth_unix(cmd_args, &password).await
+    run_password_auth_unix(cmd_args, password, timeout).await
 }
 
 /// 非 Windows 平台:`ssh` 能从 pipe stdin 正常读密码。
 #[cfg(not(windows))]
-async fn test_password_auth_unix(
+async fn run_password_auth_unix(
     cmd_args: Vec<String>,
     password: &Zeroizing<String>,
-) -> Result<(), String> {
+    timeout: Duration,
+) -> Result<std::process::Output, String> {
     let stdin_bytes = build_password_auth_stdin(password);
 
     let mut child = command::r#async::Command::new("ssh")
@@ -188,21 +183,20 @@ async fn test_password_auth_unix(
             .map_err(|e| format!("Failed to write password: {e}"))?;
     }
 
-    let output = match tokio::time::timeout(TEST_TIMEOUT, child.output()).await {
-        Ok(Ok(out)) => out,
-        Ok(Err(e)) => return Err(format!("Failed to read ssh output: {e}")),
-        Err(_) => return Err("Connection timeout".into()),
-    };
-
-    finalize_password_test_result(&output)
+    match tokio::time::timeout(timeout, child.output()).await {
+        Ok(Ok(out)) => Ok(out),
+        Ok(Err(e)) => Err(format!("Failed to read ssh output: {e}")),
+        Err(_) => Err("Connection timeout".into()),
+    }
 }
 
 /// Windows 平台:用 SSH_ASKPASS 机制把密码递给 ssh,完全绕开 stdin/控制台。
 #[cfg(windows)]
-async fn test_password_auth_windows(
+async fn run_password_auth_windows(
     cmd_args: Vec<String>,
     password: &Zeroizing<String>,
-) -> Result<(), String> {
+    timeout: Duration,
+) -> Result<std::process::Output, String> {
     let askpass = AskpassSession::new(password).map_err(|e| format!("Failed to prepare askpass: {e}"))?;
 
     let mut cmd = command::r#async::Command::new("ssh");
@@ -218,14 +212,14 @@ async fn test_password_auth_windows(
 
     // timeout 命中时 child 被 drop → kill_on_drop 自动 kill ssh。
     // askpass 守卫在函数尾部 drop,清理临时文件。
-    let output = match tokio::time::timeout(TEST_TIMEOUT, child.output()).await {
+    let output = match tokio::time::timeout(timeout, child.output()).await {
         Ok(Ok(out)) => out,
         Ok(Err(e)) => return Err(format!("Failed to read ssh output: {e}")),
         Err(_) => return Err("Connection timeout".into()),
     };
     drop(askpass);
 
-    finalize_password_test_result(&output)
+    Ok(output)
 }
 
 /// 解析 ssh 子进程的输出,统一成功/失败判定逻辑(两平台共享)。
@@ -284,7 +278,7 @@ fn build_password_auth_stdin(password: &Zeroizing<String>) -> Zeroizing<Vec<u8>>
 /// 拼出 password 认证测试时给 ssh 子进程的完整 argv。
 ///
 /// 与 `build_ssh_args` 不同:这里跳过首项 `"ssh"`(我们用
-/// `Command::new("ssh")` 显式派生),追加测试用 `-o` 选项和 `echo ok` 远端命令。
+/// `Command::new("ssh")` 显式派生),追加测试用 `-o` 选项和远端命令。
 ///
 /// 关键选项含义:
 /// - `BatchMode=no`:允许 ssh 从 stdin / askpass 读密码(不走 askpass 时需要 stdin)
@@ -301,12 +295,12 @@ fn build_password_auth_stdin(password: &Zeroizing<String>) -> Zeroizing<Vec<u8>>
 ///   变化导致误报,真实终端连接走别的路径)。
 /// - `LogLevel=ERROR`:抑制 host key 提示 / banner 等噪音。
 ///
-/// `echo ok` 作为远端命令,严格匹配 stdout 判定成功(避免 banner / motd
-/// 末尾恰好含 "ok" 的误判)。
+/// 连接测试以 `echo ok` 作为远端命令,严格匹配 stdout 判定成功(避免 banner /
+/// motd 末尾恰好含 "ok" 的误判)。
 ///
 /// author: logic
 /// date: 2026-06-01
-fn build_password_auth_cmd_args(server: &SshServerInfo) -> Vec<String> {
+fn build_password_auth_cmd_args(server: &SshServerInfo, remote_command: &str) -> Vec<String> {
     // skip(1) 去掉 "ssh" 本身(Command::new 已指定),剩下
     // ["-p","2222","user@host"]。-o 选项必须插在 destination 之前,
     // 否则 SSH 把 -o 当作远程命令的一部分而非自身选项。
@@ -329,15 +323,69 @@ fn build_password_auth_cmd_args(server: &SshServerInfo) -> Vec<String> {
         "LogLevel=ERROR".into(),
     ]);
     args.push(target);
-    args.push("echo ok".into());
+    args.push(remote_command.into());
     args
+}
+
+/// 拼出密钥认证时给 ssh 子进程的 argv(不含首项 `"ssh"`),末尾是远端命令。
+fn build_key_auth_cmd_args(server: &SshServerInfo, remote_command: &str) -> Vec<String> {
+    // build_ssh_args 末尾是 destination (user@host),-o 选项必须插在
+    // destination 之前,否则 SSH 把 -o 当作远程命令的一部分而非自身选项。
+    let mut args: Vec<String> = build_ssh_args(server).into_iter().skip(1).collect();
+    let target = args.pop().unwrap();
+    args.extend([
+        "-o".into(),
+        "BatchMode=yes".into(),
+        "-o".into(),
+        "ConnectTimeout=5".into(),
+        "-o".into(),
+        "StrictHostKeyChecking=no".into(),
+        "-o".into(),
+        "LogLevel=ERROR".into(),
+    ]);
+    args.push(target);
+    args.push(remote_command.into());
+    args
+}
+
+/// 在服务器上跑一条远端命令并返回 ssh 子进程的输出,认证方式与
+/// `test_connection` 相同:密钥走 `BatchMode=yes`,密码经 stdin / askpass 注入。
+pub(crate) async fn run_remote_command(
+    server: &SshServerInfo,
+    password: Option<Zeroizing<String>>,
+    remote_command: &str,
+    timeout: Duration,
+) -> Result<std::process::Output, String> {
+    match server.auth_type {
+        AuthType::Key => {
+            let cmd_args = build_key_auth_cmd_args(server, remote_command);
+            let child = command::r#async::Command::new("ssh")
+                .args(&cmd_args)
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()
+                .map_err(|e| format!("Failed to start ssh: {e}"))?;
+            match tokio::time::timeout(timeout, child.output()).await {
+                Ok(Ok(out)) => Ok(out),
+                Ok(Err(e)) => Err(format!("Failed to read ssh output: {e}")),
+                Err(_) => Err("Connection timeout".into()),
+            }
+        }
+        AuthType::Password | AuthType::OneKey => {
+            let password = password.ok_or("Password not provided")?;
+            let cmd_args = build_password_auth_cmd_args(server, remote_command);
+            run_password_auth(cmd_args, &password, timeout).await
+        }
+    }
 }
 
 async fn run_ssh_test(args: &[String]) -> Result<String, std::io::Error> {
     // 统一走 command::r#async 派生子进程,Windows 上会带 CREATE_NO_WINDOW,
     // 避免闪出控制台窗口(见 .clippy.toml 对 tokio::process::Command 的禁用)。
-    let output = command::r#async::Command::new(&args[0])
-        .args(&args[1..])
+    let output = command::r#async::Command::new("ssh")
+        .args(args)
         .output()
         .await?;
 

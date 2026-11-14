@@ -16,6 +16,7 @@ use crate::view_components::dropdown::{Dropdown, DropdownItem};
 use pathfinder_geometry::vector::vec2f;
 use warp_core::ui::appearance::Appearance;
 use warp_core::ui::theme::color::internal_colors;
+use warp_core::ui::theme::Fill as ThemeFill;
 use warpui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Fill, Flex,
@@ -34,7 +35,7 @@ use warpui::{
 use warp_ssh_manager::{
     AuthType, ConnectionStatus, KeychainSecretStore, NodeKind, OneKeyCredentialKind, SecretKind,
     SshNode, SshOneKeyCredential, SshRepository, SshSecretStore, SshSecretStoreError,
-    SshServerInfo,
+    SshServerInfo, ZmxSession, ZmxSessionsError,
 };
 use zeroize::Zeroizing;
 
@@ -48,6 +49,7 @@ const AUTH_TOGGLE_PADDING_V: f32 = 6.0;
 const ONEKEY_MANAGER_WIDTH: f32 = 680.0;
 const ONEKEY_MANAGER_HEIGHT: f32 = 500.0;
 const ONEKEY_MANAGER_LIST_WIDTH: f32 = 220.0;
+const ZMX_PREVIEW_FONT_SIZE: f32 = 11.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SshServerAction {
@@ -71,6 +73,10 @@ pub enum SshServerAction {
     SetManagedOneKeyKey,
     SaveManagedOneKeyCredential,
     DeleteManagedOneKeyCredential,
+    /// 连到服务器,列出它上面的 zmx session。
+    ListZmxSessions,
+    /// 选中列出的第 index 个 session,把名字写入 zmx session editor。
+    SelectZmxSession(usize),
 }
 
 /// 一次性显示在 Save 按钮上方/下方的状态标签。
@@ -79,6 +85,16 @@ enum StatusBanner {
     Saved,
     Success(String),
     Error(String),
+}
+
+/// 列 zmx session 的进度和结果。
+#[derive(Debug, Clone)]
+enum ZmxSessionList {
+    /// 还没列过。
+    NotLoaded,
+    Loading,
+    Loaded(Vec<ZmxSession>),
+    Failed(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +147,8 @@ pub struct SshServerView {
     onekey_manager_key_btn_state: MouseStateHandle,
     onekey_key_path_picker_btn_state: MouseStateHandle,
     onekey_manager_row_states: Vec<MouseStateHandle>,
+    zmx_list_btn_state: MouseStateHandle,
+    zmx_session_row_states: Vec<MouseStateHandle>,
 
     /// 分组下拉选择器。
     group_dropdown: ViewHandle<Dropdown<SshServerAction>>,
@@ -151,6 +169,7 @@ pub struct SshServerView {
     connection_status: ConnectionStatus,
     latency_ms: Option<u64>,
     is_testing: bool,
+    zmx_session_list: ZmxSessionList,
     scroll_state: ClippedScrollStateHandle,
 }
 
@@ -239,6 +258,8 @@ impl SshServerView {
             onekey_manager_key_btn_state: MouseStateHandle::default(),
             onekey_key_path_picker_btn_state: MouseStateHandle::default(),
             onekey_manager_row_states: Vec::new(),
+            zmx_list_btn_state: MouseStateHandle::default(),
+            zmx_session_row_states: Vec::new(),
             group_dropdown,
             onekey_credential_dropdown,
             onekey_credentials: Vec::new(),
@@ -253,6 +274,7 @@ impl SshServerView {
             connection_status: ConnectionStatus::Unknown,
             latency_ms: None,
             is_testing: false,
+            zmx_session_list: ZmxSessionList::NotLoaded,
             scroll_state: ClippedScrollStateHandle::default(),
         };
         me.reload(ctx);
@@ -845,7 +867,12 @@ impl SshServerView {
         });
     }
 
-    fn on_test_connection(&mut self, ctx: &mut ViewContext<Self>) {
+    /// 按表单当前的内容(包括还没保存的修改)拼出要连的服务器和认证用的密码。
+    /// 表单不完整时在 status banner 里报错并返回 `None`。
+    fn form_server_and_password(
+        &mut self,
+        ctx: &mut ViewContext<Self>,
+    ) -> Option<(SshServerInfo, Option<Zeroizing<String>>)> {
         let host = self.current_text(&self.host_editor.clone(), ctx);
         let port_str = self.current_text(&self.port_editor.clone(), ctx);
         let user = self.current_text(&self.user_editor.clone(), ctx);
@@ -860,7 +887,7 @@ impl SshServerView {
                 "workspace-left-panel-ssh-manager-error-host-required"
             )));
             ctx.notify();
-            return;
+            return None;
         }
 
         let key_path = key_path_text.trim().to_string();
@@ -882,18 +909,24 @@ impl SshServerView {
             last_connected_at: None,
         };
 
-        let (server, password) = match resolve_test_server_and_password(
+        match resolve_test_server_and_password(
             server,
             &self.onekey_credentials,
             &password,
             &KeychainSecretStore,
         ) {
-            Ok(resolved) => resolved,
+            Ok(resolved) => Some(resolved),
             Err(message) => {
                 self.status = Some(StatusBanner::Error(message));
                 ctx.notify();
-                return;
+                None
             }
+        }
+    }
+
+    fn on_test_connection(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some((server, password)) = self.form_server_and_password(ctx) else {
+            return;
         };
 
         self.is_testing = true;
@@ -943,6 +976,52 @@ impl SshServerView {
                 ctx.notify();
             },
         );
+    }
+
+    /// 用表单当前的连接信息连到服务器,列出它上面的 zmx session。
+    fn on_list_zmx_sessions(&mut self, ctx: &mut ViewContext<Self>) {
+        if matches!(self.zmx_session_list, ZmxSessionList::Loading) {
+            return;
+        }
+        let Some((server, password)) = self.form_server_and_password(ctx) else {
+            return;
+        };
+
+        self.zmx_session_list = ZmxSessionList::Loading;
+        self.status = None;
+        ctx.notify();
+
+        ctx.spawn(
+            async move { warp_ssh_manager::list_zmx_sessions(&server, password).await },
+            |me, result, ctx| {
+                me.zmx_session_list = match result {
+                    Ok(sessions) => {
+                        me.zmx_session_row_states = sessions
+                            .iter()
+                            .map(|_| MouseStateHandle::default())
+                            .collect();
+                        ZmxSessionList::Loaded(sessions)
+                    }
+                    Err(ZmxSessionsError::NotInstalled) => ZmxSessionList::Failed(crate::t!(
+                        "workspace-left-panel-ssh-manager-zmx-not-installed"
+                    )),
+                    Err(ZmxSessionsError::Failed(message)) => ZmxSessionList::Failed(message),
+                };
+                ctx.notify();
+            },
+        );
+    }
+
+    fn on_select_zmx_session(&mut self, index: usize, ctx: &mut ViewContext<Self>) {
+        let ZmxSessionList::Loaded(sessions) = &self.zmx_session_list else {
+            return;
+        };
+        let Some(name) = sessions.get(index).map(|session| session.name.clone()) else {
+            return;
+        };
+        self.zmx_session_editor
+            .update(ctx, |editor, ctx| editor.set_buffer_text(&name, ctx));
+        ctx.notify();
     }
 
     /// 打开系统文件选择器选私钥文件,选完写入 key_path editor。回调 ctx
@@ -1321,6 +1400,216 @@ impl SshServerView {
         )
         .with_margin_bottom(FIELD_BLOCK_MARGIN_BOTTOM)
         .finish()
+    }
+
+    /// zmx session 字段:label + (输入框 + 列出按钮) 一行;列出之后,下面是服务器上
+    /// 的 session,以及输入框里那个 session 的输出预览。
+    fn render_zmx_session_field(
+        &self,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let text_input = appearance
+            .ui_builder()
+            .text_input(self.zmx_session_editor.clone())
+            .with_style(UiComponentStyles {
+                padding: Some(Coords {
+                    left: 10.,
+                    right: 10.,
+                    top: 6.,
+                    bottom: 6.,
+                }),
+                background: Some(theme.surface_2().into()),
+                border_color: Some(internal_colors::neutral_3(theme).into()),
+                border_width: Some(1.0),
+                border_radius: Some(CornerRadius::with_all(Radius::Pixels(4.0))),
+                ..Default::default()
+            })
+            .build()
+            .finish();
+
+        let icon =
+            warpui::elements::Icon::new("bundled/svg/refresh.svg", theme.active_ui_text_color());
+        let list_button = appearance
+            .ui_builder()
+            .button(ButtonVariant::Secondary, self.zmx_list_btn_state.clone())
+            .with_icon_label(icon)
+            .with_style(UiComponentStyles {
+                font_color: Some(theme.active_ui_text_color().into_solid()),
+                width: Some(34.0),
+                height: Some(34.0),
+                padding: Some(Coords::uniform(7.0)),
+                ..Default::default()
+            })
+            .build()
+            .on_click(move |ctx, _, _| ctx.dispatch_typed_action(SshServerAction::ListZmxSessions))
+            .finish();
+
+        let row = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_spacing(8.0)
+            .with_child(Shrinkable::new(1.0, text_input).finish())
+            .with_child(list_button)
+            .finish();
+
+        let mut col = Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_child(self.render_label(
+                &crate::t!("workspace-left-panel-ssh-manager-zmx-session"),
+                appearance,
+            ))
+            .with_child(row);
+
+        let sub_text_color = theme.sub_text_color(theme.background());
+        match &self.zmx_session_list {
+            ZmxSessionList::NotLoaded => {}
+            ZmxSessionList::Loading => col.add_child(self.render_zmx_note(
+                crate::t!("workspace-left-panel-ssh-manager-zmx-listing"),
+                sub_text_color,
+                appearance,
+            )),
+            ZmxSessionList::Failed(message) => col.add_child(self.render_zmx_note(
+                message.clone(),
+                theme.ui_error_color().into(),
+                appearance,
+            )),
+            ZmxSessionList::Loaded(sessions) if sessions.is_empty() => {
+                col.add_child(self.render_zmx_note(
+                    crate::t!("workspace-left-panel-ssh-manager-zmx-no-sessions"),
+                    sub_text_color,
+                    appearance,
+                ))
+            }
+            ZmxSessionList::Loaded(sessions) => {
+                let current = self.current_text(&self.zmx_session_editor, app);
+                let current = current.trim();
+                for (index, session) in sessions.iter().enumerate() {
+                    col.add_child(self.render_zmx_session_row(
+                        index,
+                        session,
+                        session.name == current,
+                        appearance,
+                    ));
+                }
+                let preview = sessions
+                    .iter()
+                    .find(|session| session.name == current)
+                    .and_then(|session| session.preview.as_deref());
+                if let Some(preview) = preview {
+                    col.add_child(self.render_zmx_preview(preview, appearance));
+                }
+            }
+        }
+
+        Container::new(col.finish())
+            .with_margin_bottom(FIELD_BLOCK_MARGIN_BOTTOM)
+            .finish()
+    }
+
+    /// zmx session 字段下方的一行说明:正在列出、没有 session,或出错的原因。
+    fn render_zmx_note(
+        &self,
+        text: String,
+        color: ThemeFill,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        Container::new(
+            Text::new_inline(text, appearance.ui_font_family(), appearance.ui_font_size())
+                .with_color(color.into())
+                .finish(),
+        )
+        .with_margin_top(6.0)
+        .finish()
+    }
+
+    /// 列出的一个 session:名字 + (客户端数 · 工作目录 · 命令)。点击后填进输入框。
+    fn render_zmx_session_row(
+        &self,
+        index: usize,
+        session: &ZmxSession,
+        is_selected: bool,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let bg = if is_selected {
+            theme.surface_3()
+        } else {
+            theme.surface_2()
+        };
+        let title_color = if is_selected {
+            theme.active_ui_text_color()
+        } else {
+            theme.main_text_color(theme.background())
+        };
+        let mut content = Flex::column()
+            .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
+            .with_child(
+                Text::new_inline(
+                    session.name.clone(),
+                    appearance.ui_font_family(),
+                    appearance.ui_font_size(),
+                )
+                .with_color(title_color.into())
+                .finish(),
+            );
+        let subtitle = zmx_session_subtitle(session);
+        if !subtitle.is_empty() {
+            content = content.with_child(
+                Text::new_inline(subtitle, appearance.ui_font_family(), 12.0)
+                    .with_color(theme.sub_text_color(theme.background()).into())
+                    .finish(),
+            );
+        }
+        let state = self
+            .zmx_session_row_states
+            .get(index)
+            .cloned()
+            .unwrap_or_default();
+        let row = Hoverable::new(state, {
+            let content = content.finish();
+            move |_| {
+                Container::new(content)
+                    .with_uniform_padding(8.0)
+                    .with_background(bg)
+                    .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.0)))
+                    .finish()
+            }
+        })
+        .with_cursor(Cursor::PointingHand)
+        .on_click(move |ctx, _, _| {
+            ctx.dispatch_typed_action(SshServerAction::SelectZmxSession(index))
+        })
+        .finish();
+        Container::new(row).with_margin_top(6.0).finish()
+    }
+
+    /// 选中 session 的输出预览:等宽字体,一行一个不换行的 Text,超出宽度的
+    /// 部分裁掉(终端里的内容折行之后没法看)。
+    fn render_zmx_preview(&self, preview: &str, appearance: &Appearance) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let color = theme.main_text_color(theme.surface_1());
+        let mut lines = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        for line in preview.lines() {
+            // 空行也要占一行的高度。
+            let line = if line.is_empty() { " " } else { line };
+            lines.add_child(
+                Text::new_inline(
+                    line.to_string(),
+                    appearance.monospace_font_family(),
+                    ZMX_PREVIEW_FONT_SIZE,
+                )
+                .with_color(color.into())
+                .finish(),
+            );
+        }
+        Container::new(lines.finish())
+            .with_uniform_padding(8.0)
+            .with_margin_top(6.0)
+            .with_background(theme.surface_1())
+            .with_border(Border::all(1.0).with_border_color(internal_colors::neutral_3(theme)))
+            .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.0)))
+            .finish()
     }
 
     fn render_auth_toggle(&self, appearance: &Appearance) -> Box<dyn Element> {
@@ -1948,6 +2237,21 @@ fn secret_kind_for_onekey_credential(kind: OneKeyCredentialKind) -> SecretKind {
     }
 }
 
+/// session 行的副标题:客户端数 · 工作目录 · 命令,没有的项略过。
+fn zmx_session_subtitle(session: &ZmxSession) -> String {
+    let clients = session.clients.map(|count| {
+        crate::t!(
+            "workspace-left-panel-ssh-manager-zmx-clients",
+            count = count
+        )
+    });
+    [clients, session.cwd.clone(), session.command.clone()]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
 fn auth_toggle_options() -> [AuthType; 3] {
     [AuthType::Password, AuthType::Key, AuthType::OneKey]
 }
@@ -2042,6 +2346,8 @@ impl TypedActionView for SshServerView {
             SshServerAction::DeleteManagedOneKeyCredential => {
                 self.on_delete_managed_onekey_credential(ctx)
             }
+            SshServerAction::ListZmxSessions => self.on_list_zmx_sessions(ctx),
+            SshServerAction::SelectZmxSession(index) => self.on_select_zmx_session(*index, ctx),
             SshServerAction::SelectGroup(index) => {
                 let new_group_id =
                     index.and_then(|i| self.folders.get(i).map(|(id, _)| id.clone()));
@@ -2212,11 +2518,7 @@ impl View for SshServerView {
             appearance,
         ));
         // zmx session
-        col.add_child(self.render_text_field(
-            &crate::t!("workspace-left-panel-ssh-manager-zmx-session"),
-            &self.zmx_session_editor,
-            appearance,
-        ));
+        col.add_child(self.render_zmx_session_field(appearance, app));
         // Root 密码
         col.add_child(self.render_text_field(
             &crate::t!("workspace-left-panel-ssh-manager-root-password"),
