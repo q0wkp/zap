@@ -945,6 +945,23 @@ fn zmx_foreground_lasts_until_the_attaching_block_finishes() {
 }
 
 #[test]
+fn zmx_session_follows_the_reports_until_the_attaching_block_finishes() {
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("zmx attach dev", "");
+    assert_eq!(model.zmx_session(), None);
+
+    model.process_bytes("\x1b]1337;SetUserVar=zmx_session=ZGV2\x07");
+    assert_eq!(model.zmx_session(), Some("dev"));
+
+    // The client was switched to another session.
+    model.process_bytes("\x1b]1337;SetUserVar=zmx_session=YnVpbGQ=\x07");
+    assert_eq!(model.zmx_session(), Some("build"));
+
+    model.finish_block();
+    assert_eq!(model.zmx_session(), None);
+}
+
+#[test]
 fn unknown_user_vars_are_ignored() {
     let mut model = TerminalModel::mock(None, None);
     model.simulate_long_running_block("zmx attach dev", "");

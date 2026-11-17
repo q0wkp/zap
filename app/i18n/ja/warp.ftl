@@ -2263,6 +2263,7 @@ menu-block-split-pane-left = ペインを左に分割
 menu-block-split-pane-down = ペインを下に分割
 menu-block-split-pane-up = ペインを上に分割
 menu-block-close-pane = ペインを閉じる
+menu-zmx-switch-session = zmx セッション { $name } に切り替え
 
 # --- input 右键菜单(terminal/view.rs) ---
 menu-input-cut = 切り取り

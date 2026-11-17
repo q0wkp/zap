@@ -300,6 +300,7 @@ impl ModelEventDispatcher {
                 ModelEvent::PluggableNotification { title, body }
             }
             Event::ZmxForegroundReported => ModelEvent::ZmxForegroundReported,
+            Event::ZmxSessionReported => ModelEvent::ZmxSessionReported,
             Event::ExitShell { session_id } => ModelEvent::ExitShell { session_id },
             _ => return,
         };
@@ -473,6 +474,8 @@ pub enum ModelEvent {
     },
     /// A zmx session reported its foreground process on attach.
     ZmxForegroundReported,
+    /// A zmx session reported its name: a client attached, or was switched to it.
+    ZmxSessionReported,
     /// Emitted when an SSH session's `InitShell` is intercepted by the
     /// `SshRemoteServer` feature flag. `RemoteServerController` subscribes to
     /// this instead of `Handler(InitShell)` so `PtyController` never sees it.

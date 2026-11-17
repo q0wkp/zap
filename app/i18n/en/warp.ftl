@@ -2358,6 +2358,7 @@ menu-block-split-pane-left = Split pane left
 menu-block-split-pane-down = Split pane down
 menu-block-split-pane-up = Split pane up
 menu-block-close-pane = Close pane
+menu-zmx-switch-session = Switch to zmx session { $name }
 
 # --- input 右键菜单(terminal/view.rs) ---
 menu-input-cut = Cut

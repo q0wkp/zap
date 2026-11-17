@@ -21,7 +21,8 @@ the original Zap or of Warp.
   the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
   zmx session to attach to after connecting ([#1](https://github.com/q0wkp/zap/pull/1)), and the host's editor
   lists the sessions on the server, with a preview of each, to pick one from
-  ([#5](https://github.com/q0wkp/zap/pull/5)).
+  ([#5](https://github.com/q0wkp/zap/pull/5)). A pane attached to a zmx session offers the host's other sessions
+  in its context menu, to switch to ([#7](https://github.com/q0wkp/zap/pull/7)).
 - **Fixes from Warp**: fixes and small features Warp made after Zap was forked from it: crashes of the terminal grid
   and of font loading, shell integration for bash, zsh and fish, file links after CJK punctuation and across wrapped
   lines, completions, the editor's find and Vim mode, the file tree and file search, a setting that gates OSC 52

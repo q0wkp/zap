@@ -286,6 +286,7 @@ use crate::terminal::view::block_onboarding::onboarding_prompt_block::Onboarding
 use crate::terminal::warpify::{
     render::render_subshell_separator, settings::WarpifySettings, SubshellSource,
 };
+use crate::terminal::zmx;
 use crate::terminal::ShellLaunchData;
 use crate::terminal::{element_size_at_last_frame, HistoryEntry};
 use crate::terminal::{height_in_range_approx, heights_approx_gt, SizeUpdate};
@@ -1369,6 +1370,10 @@ pub enum ContextMenuAction {
     EditPrompt,
     EditAgentToolbar,
     EditCLIAgentToolbar,
+    /// Move the zmx client running in the active block over to another session.
+    SwitchZmxSession {
+        session: String,
+    },
     /// Ask AI about the current context. Handled by blocklist AI if its feature flag is enabled and
     /// the AI assistant panel otherwise.
     AskAI(AskAISource),
@@ -1470,6 +1475,7 @@ impl fmt::Debug for ContextMenuAction {
             // CopyUrl's debug output is limited, since the URLs come from command output
             CopyUrl { .. } => f.write_str("CopyUrl"),
             EditPrompt => f.write_str("EditPrompt"),
+            SwitchZmxSession { .. } => f.write_str("SwitchZmxSession"),
             EditAgentToolbar => f.write_str("EditAgentToolbar"),
             EditCLIAgentToolbar => f.write_str("EditCLIAgentToolbar"),
             AskAI(_) => f.write_str("AskAIAssistant"),
@@ -2442,6 +2448,9 @@ pub struct TerminalView {
     focus_handle: Option<PaneFocusHandle>,
 
     sessions: ModelHandle<Sessions>,
+    /// The zmx sessions on the host where the active block is attached to one, as last listed.
+    /// The context menu offers to switch to them.
+    zmx_sessions: Vec<String>,
     active_block_metadata: Option<BlockMetadata>,
 
     block_text_selection_start_position: Option<Vector2F>,
@@ -3947,6 +3956,7 @@ impl TerminalView {
             pane_configuration,
             focus_handle: None,
             sessions,
+            zmx_sessions: Vec::new(),
             remote_server_shimmer_handle: ShimmeringTextStateHandle::new(),
             active_block_metadata: None,
             block_text_selection_start_position: None,
@@ -10791,6 +10801,7 @@ impl TerminalView {
                 };
                 ctx.emit(Event::LongRunningCommandAgentInteractionStateChanged { state });
             }
+            ModelEvent::ZmxSessionReported => self.refresh_zmx_sessions(ctx),
             ModelEvent::ZmxForegroundReported => {
                 // A slow connection can deliver this after the long-running timer has fired, so
                 // detect again. An earlier report is picked up by the timer itself.
@@ -14520,7 +14531,8 @@ impl TerminalView {
                 | BlockListMenuSource::OutsideBlockRightClick { .. }
         ) {
             let current_shell = model.shell_launch_state().available_shell();
-            let pane_context_menu_items = self.pane_context_menu_items(current_shell, ctx);
+            let pane_context_menu_items =
+                self.pane_context_menu_items(current_shell, model.zmx_session(), ctx);
             // Only add the separator if there's something before and after it.
             if !items.is_empty() && !pane_context_menu_items.is_empty() {
                 items.push(MenuItem::Separator);
@@ -14580,12 +14592,37 @@ impl TerminalView {
         items
     }
 
+    /// `zmx_session` is the zmx session the active block is attached to, if any.
     fn pane_context_menu_items(
         &self,
         shell: Option<AvailableShell>,
+        zmx_session: Option<&str>,
         ctx: &mut ViewContext<Self>,
     ) -> Vec<MenuItem<TerminalAction>> {
         let mut items = vec![];
+
+        if let Some(current) = zmx_session {
+            items.extend(
+                self.zmx_sessions
+                    .iter()
+                    .filter(|name| name.as_str() != current)
+                    .map(|name| {
+                        MenuItemFields::new(crate::t!(
+                            "menu-zmx-switch-session",
+                            name = name.as_str()
+                        ))
+                        .with_on_select_action(TerminalAction::ContextMenu(
+                            ContextMenuAction::SwitchZmxSession {
+                                session: name.clone(),
+                            },
+                        ))
+                        .into_item()
+                    }),
+            );
+            if !items.is_empty() {
+                items.push(MenuItem::Separator);
+            }
+        }
 
         if ContextFlag::CreateNewSession.is_enabled() {
             items.extend(vec![
@@ -14645,6 +14682,91 @@ impl TerminalView {
         }
 
         items
+    }
+
+    /// The session the active block runs in, when its commands run beside the terminal. One that
+    /// types them into its shell is no use while zmx is attached: the keystrokes would go to
+    /// the program in the zmx session.
+    fn out_of_band_session(&self, ctx: &AppContext) -> Option<Arc<Session>> {
+        let session = self
+            .active_block_session_id()
+            .and_then(|id| self.sessions.as_ref(ctx).get(id))?;
+        session.executes_commands_out_of_band().then_some(session)
+    }
+
+    /// Lists the zmx sessions of the host the active block is attached on, for the context menu.
+    /// zmx names the session whenever a client attaches or is switched, which is when the list
+    /// can have changed for this pane.
+    fn refresh_zmx_sessions(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(session) = self.out_of_band_session(ctx) else {
+            self.zmx_sessions.clear();
+            return;
+        };
+        ctx.spawn(
+            async move {
+                session
+                    .execute_command(&zmx::list_sessions_command(), None, None)
+                    .await
+            },
+            |me, output, ctx| {
+                let sessions = match output {
+                    Ok(output) => {
+                        zmx::parse_session_names(&String::from_utf8_lossy(&output.stdout))
+                    }
+                    Err(err) => {
+                        log::warn!("Failed to list zmx sessions: {err:#}");
+                        Vec::new()
+                    }
+                };
+                if sessions != me.zmx_sessions {
+                    me.zmx_sessions = sessions;
+                    me.refill_open_context_menu(ctx);
+                }
+            },
+        );
+    }
+
+    /// Fills the open context menu again, if it is one that offers the zmx sessions: it was
+    /// opened with the list as it was, and the list asked for at that moment has now arrived.
+    fn refill_open_context_menu(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(state) = self.context_menu_state else {
+            return;
+        };
+        let items = match state.menu_type {
+            ContextMenuType::BlockList { menu_source } => {
+                self.context_menu_items(&menu_source, ctx)
+            }
+            ContextMenuType::AltScreen { .. } => self.rebuild_alt_screen_context_menu_items(ctx),
+            ContextMenuType::Input { .. } => self.input_context_menu_items(ctx),
+            ContextMenuType::Prompt { .. }
+            | ContextMenuType::OneKeyPrompt
+            | ContextMenuType::SuRootPasswordConfirm
+            | ContextMenuType::AIBlockAttachedContext { .. }
+            | ContextMenuType::AIBlockOverflowMenu { .. } => return,
+        };
+        ctx.update_view(&self.context_menu, |context_menu, ctx| {
+            context_menu.set_items(items, ctx);
+        });
+        ctx.notify();
+    }
+
+    /// Asks the zmx client running in the active block to switch to the session `target`.
+    fn switch_zmx_session(&mut self, target: &str, ctx: &mut ViewContext<Self>) {
+        let Some(current) = self.model.lock().zmx_session().map(str::to_owned) else {
+            return;
+        };
+        let Some(session) = self.out_of_band_session(ctx) else {
+            return;
+        };
+        let command = zmx::switch_session_command(&current, target);
+        ctx.spawn(
+            async move { session.execute_command(&command, None, None).await },
+            |_, output, _| {
+                if let Err(err) = output {
+                    log::warn!("Failed to switch zmx session: {err:#}");
+                }
+            },
+        );
     }
 
     fn input_is_on_git_branch(&self, model: &TerminalModel) -> bool {
@@ -14893,7 +15015,8 @@ impl TerminalView {
         }
         // Section 5: All Pane related
         let current_shell = model.shell_launch_state().available_shell();
-        let pane_context_menu_items = self.pane_context_menu_items(current_shell, ctx);
+        let pane_context_menu_items =
+            self.pane_context_menu_items(current_shell, model.zmx_session(), ctx);
         if !pane_context_menu_items.is_empty() {
             items.push(MenuItem::Separator);
             items.extend(pane_context_menu_items);
@@ -15056,7 +15179,8 @@ impl TerminalView {
 
         // Zap:删除 session_sharing_context_menu_items(云端 shared session 入口)
         let current_shell = model.shell_launch_state().available_shell();
-        let mut pane_context_menu_items = self.pane_context_menu_items(current_shell, ctx);
+        let mut pane_context_menu_items =
+            self.pane_context_menu_items(current_shell, model.zmx_session(), ctx);
         if !menu_items.is_empty() && !pane_context_menu_items.is_empty() {
             menu_items.push(MenuItem::Separator);
         }
@@ -15442,6 +15566,17 @@ impl TerminalView {
         self.context_menu_state = Some(menu_state);
         ctx.focus(&self.context_menu);
         ctx.notify();
+
+        // The zmx sessions the menu offers are those listed at the last attach or switch. Ask
+        // again now, so that a session created since then shows up in this very menu.
+        // `try_lock`, since a caller may still hold the model; the list then stays as it is.
+        let attached_to_zmx = self
+            .model
+            .try_lock()
+            .is_some_and(|model| model.zmx_session().is_some());
+        if attached_to_zmx {
+            self.refresh_zmx_sessions(ctx);
+        }
 
         send_telemetry_from_ctx!(
             TelemetryEvent::OpenContextMenu {
@@ -22088,6 +22223,7 @@ impl TerminalView {
             ToggleBookmark => self.bookmark_selected_block(ctx),
             CopyPrompt { position, part } => self.copy_prompt(position, part, ctx),
             CopyRprompt => self.copy_rprompt(ctx),
+            SwitchZmxSession { session } => self.switch_zmx_session(session, ctx),
             EditPrompt => self.edit_prompt(ctx),
             EditAgentToolbar => {
                 if FeatureFlag::AgentToolbarEditor.is_enabled() {

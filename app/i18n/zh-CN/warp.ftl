@@ -2284,6 +2284,7 @@ menu-block-split-pane-left = 向左分割面板
 menu-block-split-pane-down = 向下分割面板
 menu-block-split-pane-up = 向上分割面板
 menu-block-close-pane = 关闭面板
+menu-zmx-switch-session = 切换到 zmx 会话 { $name }
 
 # --- input 右键菜单（terminal/view.rs） ---
 menu-input-cut = 剪切
