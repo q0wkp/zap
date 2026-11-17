@@ -568,7 +568,10 @@ async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     let tarball_path = tempdir.path().join("zap.tar.gz");
     download_remote_server_tarball(&download_url, &tarball_path).await?;
 
-    let remote_tarball_path = format!("{remote_server_dir}/zap-upload.tar.gz");
+    let remote_tarball_path = format!(
+        "{remote_server_dir}/{}",
+        remote_server::setup::SCP_UPLOAD_TARBALL_NAME
+    );
     remote_server::ssh::scp_upload(
         socket_path,
         &tarball_path,
@@ -659,19 +662,19 @@ impl RemoteTransport for SshTransport {
     fn check_has_old_binary(&self) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> {
         let socket_path = self.socket_path.clone();
         Box::pin(async move {
-            // Treat the existence of the remote-server install directory
-            // itself as evidence of a prior install. If `~/.warp-XX/remote-server`
-            // exists, something was installed there before, so any mismatch
-            // with the client's expected binary path should be auto-updated
-            // rather than surfaced as a first-time install prompt.
-            let cmd = format!("test -d {}", remote_server::setup::remote_server_dir());
+            // Treat what an earlier install left in `~/.zap/remote-server`
+            // as evidence of a prior install, so that any mismatch with the
+            // client's expected binary path is auto-updated rather than
+            // surfaced as a first-time install prompt. The directory alone is
+            // not enough: a failed first install leaves it behind.
+            let cmd = remote_server::setup::previous_install_check_command();
             let output = remote_server::ssh::run_ssh_command(
                 &socket_path,
                 &cmd,
                 remote_server::setup::CHECK_TIMEOUT,
             )
             .await?;
-            // `test -d` exits 0 when present, 1 when missing.
+            // The check exits 0 when a prior install is found, 1 when not.
             // Anything else is treated as a check failure.
             match output.status.code() {
                 Some(0) => Ok(true),
@@ -679,11 +682,11 @@ impl RemoteTransport for SshTransport {
                 Some(code) => {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     Err(anyhow::anyhow!(
-                        "remote-server dir check exited with code {code}: {stderr}"
+                        "remote-server previous install check exited with code {code}: {stderr}"
                     ))
                 }
                 None => Err(anyhow::anyhow!(
-                    "remote-server dir check terminated by signal"
+                    "remote-server previous install check terminated by signal"
                 )),
             }
         })

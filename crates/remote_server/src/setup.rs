@@ -335,6 +335,29 @@ pub fn binary_check_command() -> String {
     format!("{} --version", remote_server_binary())
 }
 
+/// Name of the tarball the SCP fallback uploads into [`remote_server_dir`]
+/// for the install script to extract.
+pub const SCP_UPLOAD_TARBALL_NAME: &str = "zap-upload.tar.gz";
+
+/// Returns the shell command that checks whether an earlier install set up
+/// the remote, so that a missing binary is installed as an update instead of
+/// prompting as a first install.
+///
+/// Exits 0 when [`remote_server_dir`] holds anything besides what a failed
+/// install leaves behind: the directory itself, the install script's
+/// `.install.*` staging directories and the SCP fallback's uploaded tarball.
+/// An earlier install leaves a binary, or the daemon's socket and data
+/// directories, which outlast the removal of a stale binary. Exits 1
+/// otherwise, also when the directory doesn't exist.
+pub fn previous_install_check_command() -> String {
+    // The directory stays unquoted so that the remote shell expands its `~`.
+    format!(
+        "find {} -mindepth 1 -maxdepth 1 ! -name '.install.*' \
+         ! -name '{SCP_UPLOAD_TARBALL_NAME}' | grep -q .",
+        remote_server_dir()
+    )
+}
+
 /// 返回用于版本化安装路径的版本号。优先使用编译时注入的
 /// `GIT_RELEASE_TAG`;没有 release tag 时回退到 `CARGO_PKG_VERSION`,
 /// 让需要版本化路径的 channel 保持确定性,并在缺少对应 release 资产时

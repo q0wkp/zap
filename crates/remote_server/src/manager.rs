@@ -347,8 +347,9 @@ pub enum RemoteServerManagerEvent {
         /// and falls open).
         preinstall_check: Option<PreinstallCheckResult>,
         /// `true` if the remote already has an existing install of the
-        /// remote-server binary, detected by probing whether the install
-        /// directory exists (see `RemoteTransport::check_has_old_binary`).
+        /// remote-server binary, detected by probing the install directory
+        /// for what an earlier install left there (see
+        /// `RemoteTransport::check_has_old_binary`).
         /// Combined with `result == Ok(false)`, this tells the controller
         /// it should auto-install as an update instead of prompting the
         /// user. `false` when no prior install was detected, or when the
