@@ -36,6 +36,8 @@ pub struct ZmxSession {
     pub cwd: Option<String>,
     /// 创建 session 时交给 `zmx attach` 的命令;直接开 shell 的 session 没有。
     pub command: Option<String>,
+    /// session 的 PTY 上现在处于前台的进程名;旧版本的 zmx 不报这一项。
+    pub foreground: Option<String>,
     /// session 输出的末尾若干行纯文本,取不到时为 `None`。
     pub preview: Option<String>,
 }
@@ -199,6 +201,7 @@ fn parse_session_line(line: &str) -> Option<ZmxSession> {
         clients: None,
         cwd: None,
         command: None,
+        foreground: None,
         preview: None,
     };
     for (key, value) in fields {
@@ -207,6 +210,10 @@ fn parse_session_line(line: &str) -> Option<ZmxSession> {
             // zmx 0.7.0 把这个字段叫 start_dir,值是不带 scheme 的路径。
             "cwd" | "start_dir" => session.cwd = decode_cwd(value),
             "cmd" => session.command = (!value.is_empty()).then(|| value.to_string()),
+            // zmx 自己的字段排在 label 前面,所以只认第一个 fg,后面同名的是 label。
+            "fg" if session.foreground.is_none() => {
+                session.foreground = (!value.is_empty()).then(|| value.to_string())
+            }
             // 其余是创建时间、任务状态(ended / exit_code)和用户自己加的 label,这里用不上。
             _ => {}
         }
