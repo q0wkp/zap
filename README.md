@@ -7,11 +7,15 @@
 [![License](https://img.shields.io/badge/License-AGPL--3.0--only%20AND%20MIT-blue.svg)](#license)
 [![Release](https://img.shields.io/github/v/release/q0wkp/zap)](https://github.com/q0wkp/zap/releases/latest)
 
-My own build of [Zap](https://github.com/zerx-lab/zap), the terminal forked from
-[Warp](https://github.com/warpdotdev/warp), kept for my personal use. It is not affiliated with or supported by the
-maintainers of Zap or Warp.
+A terminal forked from [Warp](https://github.com/warpdotdev/warp). It began as my own build of
+[zerx-lab/zap](https://github.com/zerx-lab/zap), the original Zap. Its author archived that repository on 2026-11-17,
+and since then this project is developed independently. It is not affiliated with or supported by the maintainers of
+the original Zap or of Warp.
 
-## Changes from Upstream
+## Changes from the Original Zap
+
+"Upstream" below is zerx-lab/zap as it was archived.
+
 
 - **zmx sessions**: CLI agents running inside a [zmx](https://github.com/neurosnap/zmx) session are detected, from
   the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
@@ -19,7 +23,8 @@ maintainers of Zap or Warp.
   lists the sessions on the server, with a preview of each, to pick one from
   ([#5](https://github.com/q0wkp/zap/pull/5)).
 - **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
-  refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap)
+  refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap, still
+  open when it was archived)
 - **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
   remote server download point here, so a build of this fork never replaces itself with an upstream one. Tags are the
   next upstream version plus `-mod.X.Y` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1.1`): Y counts the
