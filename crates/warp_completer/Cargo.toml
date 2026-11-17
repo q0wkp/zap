@@ -53,6 +53,9 @@ command = { path = "../command", features = ["test-util"] }
 anyhow.workspace = true
 # Enable the `test-util` feature for our own package when running tests.
 warp_completer = { path = ".", features = ["test-util"] }
+# warp_cli checks feature flags while building its clap command, which panics in debug builds unless flags are
+# initialized or test-util is on.
+warp_core = { workspace = true, features = ["test-util"] }
 
 [features]
 # Enables the completions-on-js implementation of the completion engine.
