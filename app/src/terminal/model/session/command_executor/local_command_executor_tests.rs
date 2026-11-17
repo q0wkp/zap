@@ -123,7 +123,6 @@ mod unix {
                 descendant_command(),
                 None,
                 Some(command_environment(temp_dir.path())),
-                ExecuteCommandOptions::default(),
             );
             let command = Abortable::new(command, abort_registration);
 
@@ -160,7 +159,6 @@ mod unix {
                 descendant_command(),
                 None,
                 Some(command_environment(temp_dir.path())),
-                ExecuteCommandOptions::default(),
             );
 
             let task_executor = async_executor::LocalExecutor::new();
@@ -198,7 +196,6 @@ mod unix {
                     detached_descendant_command(),
                     None,
                     Some(command_environment(temp_dir.path())),
-                    ExecuteCommandOptions::default(),
                 )
                 .await
                 .expect("complete wrapper command");
