@@ -336,6 +336,7 @@ fn zmx_session(name: &str, preview: Option<&str>) -> ZmxSession {
         clients: Some(1),
         cwd: Some("/srv/app".to_string()),
         command: None,
+        foreground: None,
         preview: preview.map(str::to_string),
     }
 }
@@ -442,6 +443,10 @@ fn zmx_session_subtitle_skips_what_the_session_does_not_have() {
     session.clients = None;
     session.command = Some("vim".to_string());
     assert_eq!(zmx_session_subtitle(&session), "/srv/app · vim");
+
+    session.foreground = Some("claude".to_string());
+    assert_eq!(zmx_session_subtitle(&session), "claude · /srv/app · vim");
+    session.foreground = None;
 
     session.cwd = None;
     assert_eq!(zmx_session_subtitle(&session), "vim");

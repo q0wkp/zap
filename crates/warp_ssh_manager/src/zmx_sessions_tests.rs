@@ -30,7 +30,7 @@ fn parses_sessions_with_their_previews() {
          \u{20}\u{20}\u{20}Compiling zap\n\
          \n\
          {M}:session\n\
-         → name=build\tpid=11\tclients=0\tcreated=1794486700\tcwd=file:///srv\tcmd=make -j8 V=1\n\
+         → name=build\tpid=11\tclients=0\tcreated=1794486700\tcwd=file:///srv\tcmd=make -j8 V=1\tfg=cc1\n\
          \n"
     ));
 
@@ -44,6 +44,7 @@ fn parses_sessions_with_their_previews() {
                 clients: Some(1),
                 cwd: Some("/home/me/my repo".into()),
                 command: None,
+                foreground: None,
                 preview: Some("$ cargo build\n   Compiling zap".into()),
             },
             ZmxSession {
@@ -51,6 +52,7 @@ fn parses_sessions_with_their_previews() {
                 clients: Some(0),
                 cwd: Some("/srv".into()),
                 command: Some("make -j8 V=1".into()),
+                foreground: Some("cc1".into()),
                 preview: None,
             },
         ]
@@ -157,6 +159,14 @@ fn session_line_ignores_labels_and_task_state() {
     assert_eq!(session.clients, Some(0));
     assert_eq!(session.cwd, None);
     assert_eq!(session.command, None);
+    assert_eq!(session.foreground, None);
+}
+
+#[test]
+fn session_line_reads_the_foreground_process_before_the_labels() {
+    let session =
+        parse_session_line("name=a\tpid=1\tclients=0\tcreated=0\tfg=vim\tfg=mine").unwrap();
+    assert_eq!(session.foreground.as_deref(), Some("vim"));
 }
 
 #[test]

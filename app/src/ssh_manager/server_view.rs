@@ -1523,7 +1523,7 @@ impl SshServerView {
         .finish()
     }
 
-    /// 列出的一个 session:名字 + (客户端数 · 工作目录 · 命令)。点击后填进输入框。
+    /// 列出的一个 session:名字 + (前台进程 · 客户端数 · 工作目录 · 命令)。点击后填进输入框。
     fn render_zmx_session_row(
         &self,
         index: usize,
@@ -2237,7 +2237,7 @@ fn secret_kind_for_onekey_credential(kind: OneKeyCredentialKind) -> SecretKind {
     }
 }
 
-/// session 行的副标题:客户端数 · 工作目录 · 命令,没有的项略过。
+/// session 行的副标题:前台进程 · 客户端数 · 工作目录 · 命令,没有的项略过。
 fn zmx_session_subtitle(session: &ZmxSession) -> String {
     let clients = session.clients.map(|count| {
         crate::t!(
@@ -2245,11 +2245,16 @@ fn zmx_session_subtitle(session: &ZmxSession) -> String {
             count = count
         )
     });
-    [clients, session.cwd.clone(), session.command.clone()]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
-        .join(" · ")
+    [
+        session.foreground.clone(),
+        clients,
+        session.cwd.clone(),
+        session.command.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" · ")
 }
 
 fn auth_toggle_options() -> [AuthType; 3] {
