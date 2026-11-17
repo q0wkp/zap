@@ -14620,8 +14620,8 @@ impl TerminalView {
                     .execute_command(&zmx::list_sessions_command(), None, None)
                     .await
             },
-            |me, output, _| {
-                me.zmx_sessions = match output {
+            |me, output, ctx| {
+                let sessions = match output {
                     Ok(output) => {
                         zmx::parse_session_names(&String::from_utf8_lossy(&output.stdout))
                     }
@@ -14630,8 +14630,36 @@ impl TerminalView {
                         Vec::new()
                     }
                 };
+                if sessions != me.zmx_sessions {
+                    me.zmx_sessions = sessions;
+                    me.refill_open_context_menu(ctx);
+                }
             },
         );
+    }
+
+    /// Fills the open context menu again, if it is one that offers the zmx sessions: it was
+    /// opened with the list as it was, and the list asked for at that moment has now arrived.
+    fn refill_open_context_menu(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(state) = self.context_menu_state else {
+            return;
+        };
+        let items = match state.menu_type {
+            ContextMenuType::BlockList { menu_source } => {
+                self.context_menu_items(&menu_source, ctx)
+            }
+            ContextMenuType::AltScreen { .. } => self.rebuild_alt_screen_context_menu_items(ctx),
+            ContextMenuType::Input { .. } => self.input_context_menu_items(ctx),
+            ContextMenuType::Prompt { .. }
+            | ContextMenuType::OneKeyPrompt
+            | ContextMenuType::SuRootPasswordConfirm
+            | ContextMenuType::AIBlockAttachedContext { .. }
+            | ContextMenuType::AIBlockOverflowMenu { .. } => return,
+        };
+        ctx.update_view(&self.context_menu, |context_menu, ctx| {
+            context_menu.set_items(items, ctx);
+        });
+        ctx.notify();
     }
 
     /// Asks the zmx client running in the active block to switch to the session `target`.
@@ -15450,6 +15478,17 @@ impl TerminalView {
         self.context_menu_state = Some(menu_state);
         ctx.focus(&self.context_menu);
         ctx.notify();
+
+        // The zmx sessions the menu offers are those listed at the last attach or switch. Ask
+        // again now, so that a session created since then shows up in this very menu.
+        // `try_lock`, since a caller may still hold the model; the list then stays as it is.
+        let attached_to_zmx = self
+            .model
+            .try_lock()
+            .is_some_and(|model| model.zmx_session().is_some());
+        if attached_to_zmx {
+            self.refresh_zmx_sessions(ctx);
+        }
 
         send_telemetry_from_ctx!(
             TelemetryEvent::OpenContextMenu {
