@@ -21,7 +21,8 @@ the original Zap or of Warp.
   the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
   zmx session to attach to after connecting ([#1](https://github.com/q0wkp/zap/pull/1)), and the host's editor
   lists the sessions on the server, with a preview of each, to pick one from
-  ([#5](https://github.com/q0wkp/zap/pull/5)).
+  ([#5](https://github.com/q0wkp/zap/pull/5)). A pane attached to a zmx session offers the host's other sessions
+  in its context menu, to switch to ([#7](https://github.com/q0wkp/zap/pull/7)).
 - **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
   refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap, still
   open when it was archived)

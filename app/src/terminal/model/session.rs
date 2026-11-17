@@ -985,6 +985,15 @@ impl Session {
         *self.command_executor.write() = executor;
     }
 
+    /// Whether `execute_command` runs beside the terminal, on a channel of its own. An in-band
+    /// executor types the command into the session's shell instead, where a program running in
+    /// the foreground would receive it.
+    pub fn executes_commands_out_of_band(&self) -> bool {
+        let executor = self.command_executor.read();
+        let executor = executor.as_ref().as_any();
+        !executor.is::<InBandCommandExecutor>() && !executor.is::<NoOpCommandExecutor>()
+    }
+
     /// Returns true if the session is employing in-band command execution to run generators.
     pub fn is_using_in_band_command_execution(&self) -> bool {
         self.command_executor
