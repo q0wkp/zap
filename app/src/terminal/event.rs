@@ -151,6 +151,8 @@ pub enum Event {
     },
     /// A zmx session reported its foreground process on attach.
     ZmxForegroundReported,
+    /// A zmx session reported its name: a client attached, or was switched to it.
+    ZmxSessionReported,
 }
 
 #[derive(Debug, Clone)]
@@ -484,6 +486,7 @@ impl Debug for Event {
             }
             Event::BootstrapPrecmdDone => write!(f, "BootstrapPrecmdDone"),
             Event::ZmxForegroundReported => write!(f, "ZmxForegroundReported"),
+            Event::ZmxSessionReported => write!(f, "ZmxSessionReported"),
             Event::PluggableNotification { title, body } => {
                 write!(f, "PluggableNotification(title: {title:?}, body: {body})")
             }

@@ -555,6 +555,9 @@ pub struct TerminalModel {
     /// The foreground process a zmx session reported for the active block, if any.
     zmx_foreground: Option<String>,
 
+    /// The zmx session the active block is attached to, as zmx last reported it, if any.
+    zmx_session: Option<String>,
+
     /// The shell type of the login shell for this session.
     shell_launch_state: ShellLaunchState,
 
@@ -1148,6 +1151,7 @@ impl TerminalModel {
             did_receive_rc_file_dcs: None,
             handled_exit: false,
             zmx_foreground: None,
+            zmx_session: None,
             env_var_collection_name: None,
             shell_launch_state: shell_state,
             obfuscate_secrets,
@@ -1877,6 +1881,11 @@ impl TerminalModel {
     /// The foreground process a zmx session reported for the active block, if any.
     pub fn zmx_foreground(&self) -> Option<&str> {
         self.zmx_foreground.as_deref()
+    }
+
+    /// The zmx session the active block is attached to, as zmx last reported it, if any.
+    pub fn zmx_session(&self) -> Option<&str> {
+        self.zmx_session.as_deref()
     }
 
     pub fn is_alt_screen_active(&self) -> bool {
@@ -2762,6 +2771,7 @@ impl ansi::Handler for TerminalModel {
 
     fn command_finished(&mut self, data: CommandFinishedValue) {
         self.zmx_foreground = None;
+        self.zmx_session = None;
 
         // If we ssh from a doesn't-understand-bracketed-paste shell into one
         // that enables it, then get disconnected, we'll be stuck in a state
@@ -3532,6 +3542,10 @@ impl ansi::Handler for TerminalModel {
             self.zmx_foreground = Some(value);
             self.event_proxy
                 .send_terminal_event(Event::ZmxForegroundReported);
+        } else if name == zmx::SESSION_USER_VAR {
+            self.zmx_session = Some(value);
+            self.event_proxy
+                .send_terminal_event(Event::ZmxSessionReported);
         }
     }
 
