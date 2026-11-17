@@ -11,6 +11,7 @@ use std::{collections::HashSet, io, io::Write, path::PathBuf};
 const HEX_ENCODED_JSON_DCS_START: &[u8] = &[0x1b, 0x50, 0x24, 0x64];
 const UNENCODED_JSON_DCS_START: &[u8] = &[0x1b, 0x50, 0x24, 0x66];
 const DCS_END: &[u8] = &[0x9c];
+const DCS_END_7BIT: &[u8] = &[0x1b, 0x5c];
 
 struct MockHandler {
     index: CharsetIndex,
@@ -666,6 +667,37 @@ fn parse_dcs_init_shell() {
 }
 
 #[test]
+fn parse_dcs_init_shell_7bit_st() {
+    let payload = r#"{
+                "hook": "InitShell",
+                "value": {
+                    "session_id": 167303092612201,
+                    "user": "andy",
+                    "hostname": "ubuntu-test",
+                    "shell": "bash"
+                }
+            }"#;
+    let encoded = hex::encode(payload).into_bytes();
+    let bytes = [HEX_ENCODED_JSON_DCS_START, &encoded, DCS_END_7BIT].concat();
+    let (_, handler) = parse_bytes(&bytes);
+
+    assert_eq!(handler.d_proto_hooks.len(), 1);
+    match handler.d_proto_hooks.first().unwrap() {
+        DProtoHook::InitShell { value } => assert_eq!(
+            *value,
+            InitShellValue {
+                session_id: SessionId::from(167303092612201),
+                user: "andy".to_owned(),
+                hostname: "ubuntu-test".to_owned(),
+                shell: "bash".to_string(),
+                ..Default::default()
+            }
+        ),
+        _ => panic!("incorrect dcs value"),
+    };
+}
+
+#[test]
 fn parse_dcs_input_buffer() {
     let bytes = hex_encoded_dcs_string(
         r#"{
@@ -848,6 +880,20 @@ fn parse_osc777_missing_parts_ignored() {
     let (_, handler) = parse_bytes(bytes);
 
     assert_eq!(handler.pluggable_notifications.len(), 0);
+}
+
+#[test]
+fn parse_osc1337_without_second_param_does_not_panic() {
+    // Regression for warpdotdev/warp#12817: a bare OSC 1337 with no second parameter
+    // (`ESC ] 1337 BEL`) used to index `params[1]` unconditionally and panic
+    // with "index out of bounds". Untrusted PTY output must never crash the
+    // parser; a malformed sequence should be ignored instead.
+    let bytes: &[u8] = b"\x1b]1337\x07";
+    let (_, _handler) = parse_bytes(bytes);
+
+    // Also exercise the ST-terminated form.
+    let bytes: &[u8] = b"\x1b]1337\x1b\\";
+    let (_, _handler) = parse_bytes(bytes);
 }
 
 #[test]

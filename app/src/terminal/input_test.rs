@@ -1140,7 +1140,127 @@ fn test_history_up_for_shared_session_executor() {
     });
 }
 
+fn selected_inline_history_command(
+    history_menu: &warpui::ViewHandle<super::inline_history::InlineHistoryMenuView>,
+    app: &App,
+) -> Option<String> {
+    history_menu.read(app, |view, ctx| {
+        view.model()
+            .as_ref(ctx)
+            .selected_item()
+            .and_then(|item| item.buffer_replacement_text().cloned())
+    })
+}
+
 #[test]
+fn history_up_does_not_reenter_inline_history_menu_update() {
+    let _inline_history_menu = FeatureFlag::InlineHistoryMenu.override_enabled(true);
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+
+        let terminal = add_window_with_bootstrapped_terminal(
+            &mut app,
+            Some(vec!["cd ~".to_string(), "ls".to_string()]),
+            None,
+        )
+        .await;
+        let input = terminal.read(&app, |view, _| view.input().clone());
+        let session_id = input
+            .read(&app, |input, _| input.active_block_session_id())
+            .expect("bootstrapped input should have a session id");
+        simulate_directory_for_completion(session_id, &terminal, &mut app, "/tmp");
+        input.update(&mut app, |input, ctx| input.open_inline_history_menu(ctx));
+        input.read(&app, |input, ctx| {
+            assert!(input
+                .suggestions_mode_model
+                .as_ref(ctx)
+                .is_inline_history_menu());
+        });
+
+        let inline_history_menu =
+            input.read(&app, |input, _| input.inline_history_menu_view.clone());
+        let result_count = inline_history_menu.read(&app, |view, ctx| view.result_count(ctx));
+        assert!(
+            result_count >= 2,
+            "inline history should list both seeded commands, got {result_count}"
+        );
+        let selected_before = selected_inline_history_command(&inline_history_menu, &app);
+        let buffer_before = input.read(&app, |input, ctx| input.buffer_text(ctx).to_owned());
+        assert_eq!(selected_before.as_deref(), Some("ls"));
+        assert_eq!(buffer_before, "ls");
+
+        inline_history_menu.update(&mut app, |_, ctx| {
+            input.update(ctx, |input, ctx| {
+                input.handle_action(&InputAction::Up, ctx);
+            });
+        });
+        input.read(&app, |input, ctx| {
+            assert!(
+                input
+                    .suggestions_mode_model
+                    .as_ref(ctx)
+                    .is_inline_history_menu(),
+                "History/Up must still show inline history after a nested checkout"
+            );
+            assert_eq!(input.buffer_text(ctx), "cd ~");
+        });
+        assert_eq!(
+            selected_inline_history_command(&inline_history_menu, &app).as_deref(),
+            Some("cd ~")
+        );
+
+        inline_history_menu.update(&mut app, |_, ctx| {
+            input.update(ctx, |input, ctx| input.editor_down(ctx));
+        });
+        input.read(&app, |input, ctx| {
+            assert!(input
+                .suggestions_mode_model
+                .as_ref(ctx)
+                .is_inline_history_menu());
+            assert_eq!(input.buffer_text(ctx), "ls");
+        });
+        assert_eq!(
+            selected_inline_history_command(&inline_history_menu, &app).as_deref(),
+            Some("ls")
+        );
+    });
+}
+
+#[test]
+fn editor_down_does_not_reenter_inline_history_menu_update() {
+    let _inline_history_menu = FeatureFlag::InlineHistoryMenu.override_enabled(true);
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+
+        let terminal = add_window_with_bootstrapped_terminal(&mut app, None, None).await;
+        let input = terminal.read(&app, |view, _| view.input().clone());
+        input.update(&mut app, |input, ctx| {
+            input.open_inline_history_menu(ctx);
+        });
+        input.read(&app, |input, ctx| {
+            assert!(input
+                .suggestions_mode_model
+                .as_ref(ctx)
+                .is_inline_history_menu());
+        });
+
+        let inline_history_menu =
+            input.read(&app, |input, _| input.inline_history_menu_view.clone());
+        inline_history_menu.update(&mut app, |_, ctx| {
+            input.update(ctx, |input, ctx| input.editor_down(ctx));
+        });
+        input.read(&app, |input, ctx| {
+            assert!(
+                !input
+                    .suggestions_mode_model
+                    .as_ref(ctx)
+                    .is_inline_history_menu(),
+                "Down on empty inline history must close the menu after the nested checkout ends"
+            );
+        });
+    });
+}
+
 fn test_history_up_multiline() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
@@ -5276,6 +5396,126 @@ fn test_tab_completions_menu_for_classic_completions_with_files() {
                 input.suggestions_mode_model.as_ref(ctx).mode(),
                 InputSuggestionsMode::CompletionSuggestions { menu_position, .. } if menu_position == &TabCompletionsMenuPosition::AtStartOfReplacementSpan
             ))
+        });
+    })
+}
+
+#[test]
+fn test_classic_tab_completions_close_after_user_backspace() {
+    let _flag = FeatureFlag::ClassicCompletions.override_enabled(true);
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let terminal = add_window_with_bootstrapped_terminal(&mut app, None, None).await;
+        let input = terminal.read(&app, |terminal, _| terminal.input().clone());
+        let editor = input.read(&app, |input, _| input.editor().clone());
+
+        app.update(|ctx| {
+            InputSettings::handle(ctx).update(ctx, |setting, ctx| {
+                setting
+                    .classic_completions_mode
+                    .toggle_and_save_value(ctx)
+                    .expect("Able to turn on classic completions");
+            })
+        });
+
+        input.update(&mut app, |input, ctx| {
+            input.clear_buffer_and_reset_undo_stack(ctx);
+            input.user_insert("cd Do", ctx);
+        });
+
+        input.update(&mut app, |input, ctx| {
+            input.input_tab(ctx);
+            input.handle_completion_suggestions_results(
+                build_suggestion_results(
+                    vec![file_suggestion("Downloads"), file_suggestion("Documents")],
+                    (3, 5),
+                    MatchStrategy::CaseInsensitive,
+                ),
+                CompletionsTrigger::Keybinding,
+                editor_model_snapshot(input, ctx),
+                ctx,
+            );
+            // Cycle to apply a candidate into the buffer. This is a system-applied
+            // edit, which must keep the result set alive.
+            input.input_tab(ctx);
+        });
+
+        // The user now backspaces all the way past the original completion query
+        // (`cd Do`). Once the buffer no longer starts with the original query, the
+        // stale result set must be discarded and the menu closed.
+        while input.read(&app, |input, ctx| input.buffer_text(ctx).len()) > "cd ".len() {
+            editor.update(&mut app, |editor, ctx| editor.backspace(ctx));
+        }
+
+        input.read(&app, |input, ctx| {
+            assert_eq!(input.buffer_text(ctx), "cd ");
+            // A closed menu is represented by `InputSuggestionsMode::Closed`; a closed
+            // menu is never rendered, so its stale result set is no longer shown. This
+            // mirrors the existing (non-classic) backspace-past-boundary behavior.
+            assert!(
+                matches!(
+                    input.suggestions_mode_model.as_ref(ctx).mode(),
+                    InputSuggestionsMode::Closed
+                ),
+                "completion menu should close after the user backspaces past the query"
+            );
+        });
+    })
+}
+
+#[test]
+fn test_classic_tab_completions_keep_menu_open_while_cycling() {
+    let _flag = FeatureFlag::ClassicCompletions.override_enabled(true);
+    App::test((), |mut app| async move {
+        initialize_app(&mut app);
+        let terminal = add_window_with_bootstrapped_terminal(&mut app, None, None).await;
+        let input = terminal.read(&app, |terminal, _| terminal.input().clone());
+
+        app.update(|ctx| {
+            InputSettings::handle(ctx).update(ctx, |setting, ctx| {
+                setting
+                    .classic_completions_mode
+                    .toggle_and_save_value(ctx)
+                    .expect("Able to turn on classic completions");
+            })
+        });
+
+        input.update(&mut app, |input, ctx| {
+            input.clear_buffer_and_reset_undo_stack(ctx);
+            input.user_insert("cd Do", ctx);
+        });
+
+        input.update(&mut app, |input, ctx| {
+            input.input_tab(ctx);
+            input.handle_completion_suggestions_results(
+                build_suggestion_results(
+                    vec![file_suggestion("Downloads"), file_suggestion("Documents")],
+                    (3, 5),
+                    MatchStrategy::CaseInsensitive,
+                ),
+                CompletionsTrigger::Keybinding,
+                editor_model_snapshot(input, ctx),
+                ctx,
+            );
+            // Cycling rewrites the buffer to each candidate in turn. These are
+            // system-applied edits and must keep the menu open even though the
+            // buffer no longer matches the original query.
+            input.input_tab(ctx);
+            input.input_tab(ctx);
+        });
+
+        input.read(&app, |input, ctx| {
+            assert!(
+                matches!(
+                    input.suggestions_mode_model.as_ref(ctx).mode(),
+                    InputSuggestionsMode::CompletionSuggestions { .. }
+                ),
+                "completion menu should stay open while cycling candidates"
+            );
+            assert!(
+                !input.input_suggestions.as_ref(ctx).items().is_empty(),
+                "result set should be preserved while cycling candidates"
+            );
         });
     })
 }

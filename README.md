@@ -23,6 +23,12 @@ the original Zap or of Warp.
   lists the sessions on the server, with a preview of each, to pick one from
   ([#5](https://github.com/q0wkp/zap/pull/5)). A pane attached to a zmx session offers the host's other sessions
   in its context menu, to switch to ([#7](https://github.com/q0wkp/zap/pull/7)).
+- **Fixes from Warp**: fixes and small features Warp made after Zap was forked from it: crashes of the terminal grid
+  and of font loading, shell integration for bash, zsh and fish, file links after CJK punctuation and across wrapped
+  lines, completions, the editor's find and Vim mode, the file tree and file search, a setting that gates OSC 52
+  clipboard access, and `podman` subshells. They come from the `dev` branch of
+  [grizmin/zap](https://github.com/grizmin/zap), which had adapted them to Zap, up to its commit `4cfe3e400`, without
+  what is only for Windows. ([#9](https://github.com/q0wkp/zap/pull/9))
 - **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
   refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap, still
   open when it was archived)

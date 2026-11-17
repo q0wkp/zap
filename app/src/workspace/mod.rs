@@ -93,6 +93,7 @@ use crate::workspace::view::{
     TOGGLE_NOTIFICATION_MAILBOX_BINDING_NAME, TOGGLE_PROJECT_EXPLORER_BINDING_NAME,
     TOGGLE_RIGHT_PANEL_BINDING_NAME, TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME,
     TOGGLE_VERTICAL_TABS_PANEL_BINDING_NAME, TOGGLE_WARP_DRIVE_BINDING_NAME,
+    TOGGLE_HIDDEN_FILES_BINDING_NAME,
 };
 pub use one_time_modal_model::OneTimeModalModel;
 pub use registry::WorkspaceRegistry;
@@ -431,22 +432,6 @@ pub fn init(app: &mut AppContext) {
         ]);
     }
 
-    app.register_fixed_bindings([
-        // Menu dispatch for the "Open File Picker" custom action.
-        FixedBinding::custom(
-            CustomAction::ToggleProjectExplorer,
-            WorkspaceAction::ToggleProjectExplorer,
-            BindingDescription::new(crate::t!(
-                "keybinding-desc-workspace-toggle-project-explorer"
-            ))
-            .with_custom_description(
-                bindings::MAC_MENUS_CONTEXT,
-                crate::t!("keybinding-desc-workspace-toggle-project-explorer-menu"),
-            ),
-            id!("Workspace") & id!(flags::SHOW_PROJECT_EXPLORER),
-        ),
-    ]);
-
     app.register_editable_bindings([
         EditableBinding::new(
             "workspace:show_theme_chooser",
@@ -572,13 +557,6 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(id!("Workspace"))
         .with_group(bindings::BindingGroup::Navigation.as_str())
         .with_custom_action(CustomAction::ActivateNextPane),
-        EditableBinding::new(
-            "workspace:toggle_mouse_reporting",
-            crate::t!("keybinding-desc-workspace-toggle-mouse-reporting"),
-            WorkspaceAction::ToggleMouseReporting,
-        )
-        .with_group(bindings::BindingGroup::Settings.as_str())
-        .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
             "workspace:create_personal_notebook",
             BindingDescription::new(crate::t!(
@@ -714,6 +692,15 @@ pub fn init(app: &mut AppContext) {
         .with_enabled(|| FeatureFlag::GlobalSearch.is_enabled())
         .with_custom_action(CustomAction::ToggleGlobalSearch),
         EditableBinding::new(
+            TOGGLE_HIDDEN_FILES_BINDING_NAME,
+            BindingDescription::new(crate::t!("keybinding-desc-workspace-toggle-hidden-files")),
+            WorkspaceAction::ToggleHiddenFiles,
+        )
+        .with_group(bindings::BindingGroup::Navigation.as_str())
+        .with_context_predicate(id!("Workspace") & id!(flags::SHOW_PROJECT_EXPLORER))
+        .with_mac_key_binding("cmd-shift->")
+        .with_linux_or_windows_key_binding("ctrl-shift->"),
+        EditableBinding::new(
             LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
             BindingDescription::new(crate::t!("keybinding-desc-workspace-left-panel-warp-drive")),
             WorkspaceAction::ToggleWarpDrive,
@@ -755,7 +742,10 @@ pub fn init(app: &mut AppContext) {
             ),
             WorkspaceAction::ToggleProjectExplorer,
         )
-        .with_context_predicate(id!("Workspace") & id!(flags::SHOW_PROJECT_EXPLORER)),
+        .with_context_predicate(id!("Workspace") & id!(flags::SHOW_PROJECT_EXPLORER))
+        .with_mac_key_binding("ctrl-2")
+        .with_linux_or_windows_key_binding("ctrl-shift-2")
+        .with_custom_action(CustomAction::ToggleProjectExplorer),
         EditableBinding::new(
             OPEN_GLOBAL_SEARCH_BINDING_NAME,
             BindingDescription::new(crate::t!("keybinding-desc-workspace-open-global-search"))

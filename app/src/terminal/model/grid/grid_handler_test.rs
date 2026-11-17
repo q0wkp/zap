@@ -1069,6 +1069,190 @@ fn test_possible_file_paths() {
 }
 
 #[test]
+fn test_possible_file_paths_across_wrapped_lines() {
+    let first_line = "src/modules/core/internal/utils/wrappers/adapters/";
+    let second_line = "interfaces/implementations/factories/README.md";
+    let full_path = format!("{first_line}{second_line}");
+    let expected_range = Point { row: 0, col: 0 }..=Point {
+        row: 1,
+        col: second_line.len() - 1,
+    };
+    let blockgrid = mock_blockgrid(&format!("{first_line}\n{second_line}"));
+
+    for hover_point in [
+        Point {
+            row: 0,
+            col: first_line.len() - 2,
+        },
+        Point { row: 1, col: 0 },
+    ] {
+        let possible_paths = blockgrid
+            .grid_handler
+            .possible_file_paths_at_point(hover_point);
+
+        assert!(
+            possible_paths.iter().any(|possible_path| {
+                possible_path.path.path.as_str() == full_path.as_str()
+                    && possible_path.path.line_and_column_num.is_none()
+                    && possible_path.range == expected_range
+            }),
+            "expected wrapped file path candidate at {hover_point:?} in {possible_paths:?}"
+        );
+    }
+}
+
+#[test]
+fn test_possible_file_paths_across_multiple_wrapped_lines() {
+    let first_line = "src/core/";
+    let second_line = "wrappers/";
+    let third_line = "adapters/";
+    let fourth_line = "README.md";
+    let full_path = format!("{first_line}{second_line}{third_line}{fourth_line}");
+    let blockgrid = mock_blockgrid(&format!(
+        "{first_line}\n{second_line}\n{third_line}\n{fourth_line}"
+    ));
+
+    for hover_point in [
+        Point { row: 0, col: 5 },
+        Point { row: 1, col: 8 },
+        Point { row: 2, col: 5 },
+        Point { row: 3, col: 5 },
+    ] {
+        let possible_paths = blockgrid
+            .grid_handler
+            .possible_file_paths_at_point(hover_point);
+
+        assert!(
+            possible_paths.iter().any(|possible_path| {
+                possible_path.path.path.as_str() == full_path.as_str()
+                    && possible_path.path.line_and_column_num.is_none()
+                    && possible_path.range.contains(&hover_point)
+            }),
+            "expected multi-line wrapped file path candidate at {hover_point:?} in {possible_paths:?}"
+        );
+    }
+}
+
+/// Regression test for issue #9193: a long file path that soft-wraps in a
+/// *wide* terminal must be detected end to end, even when the hover point is
+/// more than a single visual row away from the wrap boundary. The cross-wrap
+/// scan budget used to be smaller than one visual row, so detection stopped at
+/// the first wrap and the wrapped continuation (here `README.md`) was missed in
+/// realistic wide terminals (the earlier wrapped-line tests above only used a
+/// narrow grid, so they didn't catch this).
+#[test]
+fn test_possible_file_paths_across_wide_wrapped_line() {
+    // `first_line` is the widest row (so it sets the grid width) and is wider
+    // than the previous cross-wrap scan budget, mirroring a real wide terminal
+    // where a single visual row already exceeds that budget.
+    let first_line = "/home/user/workspace/projects/application/src/modules/core/";
+    let second_line = "internal/utils/wrappers/adapters/factories/README.md";
+    let full_path = format!("{first_line}{second_line}");
+    let expected_range = Point { row: 0, col: 0 }..=Point {
+        row: 1,
+        col: second_line.len() - 1,
+    };
+    let blockgrid = mock_blockgrid(&format!("{first_line}\n{second_line}"));
+
+    // Hover points deliberately far from the wrap boundary in both directions.
+    for hover_point in [
+        Point { row: 0, col: 5 },
+        Point {
+            row: 1,
+            col: second_line.len() - 1,
+        },
+    ] {
+        let possible_paths = blockgrid
+            .grid_handler
+            .possible_file_paths_at_point(hover_point);
+
+        assert!(
+            possible_paths.iter().any(|possible_path| {
+                possible_path.path.path.as_str() == full_path.as_str()
+                    && possible_path.path.line_and_column_num.is_none()
+                    && possible_path.range == expected_range
+            }),
+            "expected wide wrapped file path candidate at {hover_point:?} in {possible_paths:?}"
+        );
+    }
+}
+
+/// Regression test for issue #9193 covering the core purpose of the change: a
+/// path that soft-wraps across *more than two* visual rows in a *wide* terminal
+/// must be detected end to end. This combines both conditions that the other
+/// tests only exercise separately — `test_possible_file_paths_across_wide_wrapped_line`
+/// is wide but only 2 rows, and `test_possible_file_paths_across_multiple_wrapped_lines`
+/// is multi-row but narrow — so neither alone proves a wide, >2-row wrap works.
+#[test]
+fn test_possible_file_paths_across_wide_multiple_wrapped_lines() {
+    // The first two rows must be exactly the grid width (the widest row) so they
+    // are fully filled and soft-wrap into one another with no trailing empty
+    // cells; the last row is shorter. Each row is wider than the previous
+    // cross-wrap scan budget, so a single visual row already exceeds it.
+    let first_line = "/home/user/workspace/projects/applications/services/backend/";
+    let second_line = "components/internal/utilities/wrappers/adapters/factory/lib/";
+    let third_line = "implementations/interfaces/definitions/README.md";
+    // The two non-final rows must be equal length so both equal the grid width
+    // (otherwise the shorter one would leave separator-like empty cells and the
+    // path would not reconstruct across the wrap).
+    assert_eq!(
+        first_line.len(),
+        second_line.len(),
+        "non-final wrapped rows must be the same (max) width"
+    );
+    let full_path = format!("{first_line}{second_line}{third_line}");
+    let expected_range = Point { row: 0, col: 0 }..=Point {
+        row: 2,
+        col: third_line.len() - 1,
+    };
+    let blockgrid = mock_blockgrid(&format!("{first_line}\n{second_line}\n{third_line}"));
+
+    // Hover points on every row, deliberately far from the wrap boundaries.
+    for hover_point in [
+        Point { row: 0, col: 5 },
+        Point { row: 1, col: 30 },
+        Point { row: 2, col: 45 },
+    ] {
+        let possible_paths = blockgrid
+            .grid_handler
+            .possible_file_paths_at_point(hover_point);
+
+        assert!(
+            possible_paths.iter().any(|possible_path| {
+                possible_path.path.path.as_str() == full_path.as_str()
+                    && possible_path.path.line_and_column_num.is_none()
+                    && possible_path.range == expected_range
+            }),
+            "expected wide multi-line wrapped file path candidate at {hover_point:?} in {possible_paths:?}"
+        );
+    }
+}
+
+/// Perf guard for issue #9193: hovering over separator-dense content must not
+/// produce a candidate list that grows quadratically with the line length. The
+/// candidate search is O(prefix_fragments * suffix_fragments), so it is capped
+/// at `MAX_LINK_PATH_FRAGMENTS` fragments per side regardless of how many
+/// fragments the surrounding text has.
+#[test]
+fn test_possible_file_paths_candidate_count_is_bounded() {
+    // 300 single-character, space-separated fragments on each side of the point.
+    let line = "a ".repeat(300);
+    let blockgrid = mock_blockgrid(&line);
+    let possible_paths = blockgrid
+        .grid_handler
+        .possible_file_paths_at_point(Point { row: 0, col: 300 });
+
+    // Candidates = at most (kept prefix fragments + 1 dummy) * kept suffix
+    // fragments. Without the cap this would be on the order of 150 * 150.
+    let max_candidates = (MAX_LINK_PATH_FRAGMENTS + 1) * MAX_LINK_PATH_FRAGMENTS;
+    assert!(
+        possible_paths.len() <= max_candidates,
+        "expected at most {max_candidates} candidates, got {}",
+        possible_paths.len()
+    );
+}
+
+#[test]
 fn test_fragment_boundary_at_point() {
     let assert_fragment_boundary =
         |blockgrid: &BlockGrid,
@@ -1300,6 +1484,85 @@ fn test_emoji_variation_selector() {
     assert_eq!(grid[0][3].c, 'b');
     assert_eq!(grid[0][4].c, 'c');
 }
+
+#[test]
+fn emoji_variation_selector_wraps_width_promotion_at_last_column() {
+    let mut grid = GridHandler::new_for_test(2, 4);
+    grid.input('a');
+    grid.input('b');
+    grid.input('c');
+    grid.input('\u{26A0}');
+
+    grid.input('\u{FE0F}');
+
+    let storage = grid.grid_storage();
+    assert_eq!(storage[VisibleRow(0)][3].c, '\0');
+    assert!(storage[VisibleRow(0)][3]
+        .flags
+        .contains(Flags::LEADING_WIDE_CHAR_SPACER));
+    assert!(storage[VisibleRow(0)][3].flags.contains(Flags::WRAPLINE));
+    assert!(matches!(
+        storage[VisibleRow(1)][0].content_for_display(),
+        CharOrStr::Str("⚠️")
+    ));
+    assert!(storage[VisibleRow(1)][0].flags.contains(Flags::WIDE_CHAR));
+    assert!(storage[VisibleRow(1)][1]
+        .flags
+        .contains(Flags::WIDE_CHAR_SPACER));
+    assert_eq!(grid.cursor_point(), Point::new(1, 2));
+}
+
+#[test]
+fn emoji_variation_selector_drops_width_promotion_when_line_wrap_is_disabled() {
+    let mut grid = GridHandler::new_for_test(2, 4);
+    grid.unset_mode(ansi::Mode::LineWrap);
+    grid.input('a');
+    grid.input('b');
+    grid.input('c');
+    grid.input('\u{26A0}');
+
+    grid.input('\u{FE0F}');
+
+    let storage = grid.grid_storage();
+    assert!(matches!(
+        storage[VisibleRow(0)][3].content_for_display(),
+        CharOrStr::Char('⚠')
+    ));
+    assert!(!storage[VisibleRow(0)][3]
+        .flags
+        .intersects(Flags::WIDE_CHAR | Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER));
+    assert_eq!(grid.cursor_point(), Point::new(0, 3));
+}
+
+#[test]
+fn emoji_variation_selector_does_not_advance_already_wide_grapheme() {
+    let mut grid = GridHandler::new_for_test(2, 6);
+    grid.input('😀');
+
+    grid.input('\u{FE0F}');
+    grid.input('x');
+
+    let storage = grid.grid_storage();
+    assert!(matches!(
+        storage[VisibleRow(0)][0].content_for_display(),
+        CharOrStr::Str("😀️")
+    ));
+    assert!(storage[VisibleRow(0)][0].flags.contains(Flags::WIDE_CHAR));
+    assert!(storage[VisibleRow(0)][1]
+        .flags
+        .contains(Flags::WIDE_CHAR_SPACER));
+    assert_eq!(storage[VisibleRow(0)][2].c, 'x');
+    assert!(!storage[VisibleRow(0)][2]
+        .flags
+        .contains(Flags::WIDE_CHAR_SPACER));
+    assert_eq!(grid.cursor_point(), Point::new(0, 3));
+}
+
+// NOTE: Upstream also adds `wide_character_spacers_inherit_the_base_cell_hyperlink`
+// and `leading_wide_character_spacer_is_not_hyperlinked`. They are dropped in this
+// fork because Zap's grid cells have no OSC 8 hyperlink support (`CellExtra` lacks
+// a `hyperlink_id` field and there is no `input_hyperlinked` test helper), so the
+// behavior those tests cover does not exist here.
 
 #[test]
 pub fn test_grid_agnostic_point() {
@@ -2120,4 +2383,50 @@ fn content_len_equals_len_when_no_trailing_blanks() {
     grid.input_at_cursor("abc");
     let expected = grid.grid_storage().max_cursor_point.row.0 + grid.history_size() + 1;
     assert_eq!(grid.content_len(), expected);
+}
+
+// ─── Wide-character spacer truncated by a no-reflow column shrink ─────
+//
+// NOTE(warpdotdev/warp#12726 port): Upstream drives this regression through
+// `FullGridClearBehavior::Clear` (warpdotdev/warp#9877), which does not exist
+// in Zap. The only no-reflow (`reflow = false`) resize path Zap has is the alt
+// screen, so this test uses `new_for_alt_screen_test` to reach the same
+// `GridStorage::shrink_cols` code that the fix repairs.
+//
+// The upstream version also pushed the retained row through flat storage and
+// materialized it (`flat_storage.push_rows` / `pop_rows`), because that is what
+// made `RowIterator::next` panic. Alt-screen grids have no flat storage, so
+// here the orphaned wide character is asserted directly on grid storage instead.
+
+#[test]
+fn test_no_reflow_resize_shrink_cols_does_not_orphan_wide_char_at_boundary() {
+    use crate::terminal::model::ansi::{Color, NamedColor};
+
+    let old_cols = 6;
+    let new_cols = 5;
+    let num_rows = 1;
+
+    let mut grid = GridHandler::new_for_alt_screen_test(num_rows, old_cols);
+    for c in ['a', 'b', 'c', 'd', 'Ｗ'] {
+        grid.input(c);
+    }
+    grid.grid_storage_mut()[VisibleRow(0)][new_cols - 1].bg = Color::Named(NamedColor::Red);
+
+    assert!(grid.grid_storage()[VisibleRow(0)][new_cols - 1]
+        .flags
+        .contains(Flags::WIDE_CHAR));
+    assert!(grid.grid_storage()[VisibleRow(0)][new_cols]
+        .flags
+        .contains(Flags::WIDE_CHAR_SPACER));
+
+    grid.resize(SizeInfo::new_without_font_metrics(num_rows, new_cols));
+
+    assert_no_orphaned_wide_chars(&grid, VisibleRow(0));
+
+    // The split wide character must be reset to the resize-empty cell, keeping
+    // only its background color.
+    assert_eq!(
+        grid.grid_storage()[VisibleRow(0)][new_cols - 1],
+        Cell::from(Color::Named(NamedColor::Red))
+    );
 }

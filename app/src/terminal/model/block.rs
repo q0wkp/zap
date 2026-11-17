@@ -1953,10 +1953,16 @@ impl Block {
     /// Returns the offset, in pixels, at which the rprompt should be rendered
     /// relative to the prompt.
     pub fn rprompt_render_offset(&self, size: &SizeInfo) -> Vector2F {
+        let right_margin = match self.shell_host.as_ref().map(|shell| shell.shell_type) {
+            Some(ShellType::Fish | ShellType::PowerShell) => 0,
+            // TODO: Honor ZLE_RPROMPT_INDENT instead of assuming zsh's default.
+            Some(ShellType::Zsh | ShellType::Bash) | None => 1,
+        };
         let rprompt_width_cells = self.rprompt_grid.grid_storage().max_cursor_point.col;
         let rprompt_width_px = rprompt_width_cells as f32 * size.cell_width_px.as_f32();
         Vector2F::new(
-            (self.prompt_grid_columns().saturating_sub(1) as f32 * size.cell_width_px().as_f32())
+            (self.prompt_grid_columns().saturating_sub(right_margin) as f32
+                * size.cell_width_px().as_f32())
                 - rprompt_width_px,
             self.prompt_number_of_rows().saturating_sub(1) as f32 * size.cell_height_px().as_f32(),
         )
@@ -2165,6 +2171,14 @@ impl Block {
     pub fn output_to_string_force_full_grid_contents(&self) -> String {
         self.output_grid()
             .contents_to_string_force_full_grid_contents(false, None)
+    }
+
+    pub fn command_and_output_to_string(&self) -> String {
+        if self.honor_ps1() {
+            self.bounds_to_string(self.start_point(), self.end_point())
+        } else {
+            format!("{}\n{}", self.command_to_string(), self.output_to_string())
+        }
     }
 
     pub fn output_with_secrets_unobfuscated(&self) -> String {

@@ -1218,6 +1218,8 @@ settings-code-project-explorer = Обозреватель проекта
 settings-code-project-explorer-desc = Добавляет в панель инструментов слева обозреватель проекта / дерево файлов в стиле IDE.
 settings-code-global-search = Глобальный поиск по файлам
 settings-code-global-search-desc = Добавляет глобальный поиск по файлам в панель инструментов слева.
+settings-code-show-hidden-files = Показывать скрытые файлы в обозревателе проекта
+settings-code-show-hidden-files-desc = Показывает скрытые файлы (начинающиеся с .) в обозревателе проекта.
 
 # --- ANCHOR-SUB-EXEC-MODAL-BLOCKS (agent-settings-misc) ---
 # ---- execution_profile_view ----
@@ -1749,6 +1751,7 @@ keybinding-desc-workspace-toggle-vertical-tabs-menu = Показать/скры�
 keybinding-desc-workspace-left-panel-agent-conversations = Левая панель: диалоги с агентами
 keybinding-desc-workspace-left-panel-project-explorer = Левая панель: проводник проектов
 keybinding-desc-workspace-left-panel-global-search = Левая панель: глобальный поиск
+keybinding-desc-workspace-toggle-hidden-files = Переключить скрытые файлы в обозревателе проекта
 keybinding-desc-workspace-left-panel-warp-drive = Левая панель: Zap Drive
 keybinding-desc-workspace-left-panel-ssh-manager = Левая панель: менеджер SSH
 keybinding-desc-workspace-left-panel-skill-manager = Левая панель: менеджер навыков
@@ -2269,6 +2272,7 @@ toggle-suffix-left-option-meta = левую клавишу Option как Meta
 toggle-suffix-left-alt-meta = левую клавишу Alt как Meta
 toggle-suffix-right-option-meta = правую клавишу Option как Meta
 toggle-suffix-right-alt-meta = правую клавишу Alt как Meta
+toggle-suffix-mouse-reporting = отчеты о мыши
 toggle-suffix-scroll-reporting = отчеты о прокрутке
 toggle-suffix-completions-while-typing = автодополнение во время ввода
 toggle-suffix-command-corrections = исправление команд

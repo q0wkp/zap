@@ -338,6 +338,7 @@ use crate::{
 use crate::{send_telemetry_from_ctx, GlobalResourceHandles};
 
 use futures::Future;
+use instant::Instant;
 use itertools::Itertools;
 use parking_lot::FairMutex;
 use pathfinder_geometry::rect::RectF;
@@ -574,6 +575,7 @@ pub(crate) const TOGGLE_TAB_CONFIGS_MENU_BINDING_NAME: &str = "workspace:toggle_
 pub(crate) const LEFT_PANEL_PROJECT_EXPLORER_BINDING_NAME: &str =
     "workspace:left_panel_project_explorer";
 pub(crate) const LEFT_PANEL_GLOBAL_SEARCH_BINDING_NAME: &str = "workspace:left_panel_global_search";
+pub(crate) const TOGGLE_HIDDEN_FILES_BINDING_NAME: &str = "file_tree:toggle_hidden_files";
 pub(crate) const LEFT_PANEL_WARP_DRIVE_BINDING_NAME: &str = "workspace:left_panel_warp_drive";
 pub(crate) const LEFT_PANEL_AGENT_CONVERSATIONS_BINDING_NAME: &str =
     "workspace:left_panel_agent_conversations";
@@ -889,6 +891,7 @@ pub struct Workspace {
     import_modal: ViewHandle<ImportModal>,
     theme_chooser_view: ViewHandle<ThemeChooser>,
     previous_theme: Option<ThemeKind>,
+    background_image_animation_start_time: Instant,
     /// The per-window theme override selected for this window via the theme
     /// chooser's "This window" scope, if any. Source of truth that feeds
     /// `WindowSnapshot` at save time and is re-applied on restore. `None` when
@@ -2393,13 +2396,12 @@ impl Workspace {
         });
     }
 
-    /// Pushes the current settings-file error + banner-dismissal state into
-    /// the settings pane so its nav-rail footer ("Open settings file" button
-    /// or inline error alert) stays in sync with the workspace banner.
+    /// Mirrors the current settings-file error and banner-dismissal state into the settings pane's
+    /// nav-rail footer when the pane is available.
     fn sync_settings_error_state_into_settings_pane(&mut self, ctx: &mut ViewContext<Self>) {
         let error = self.settings_file_error.clone();
         let dismissed = self.settings_error_banner_dismissed;
-        self.settings_pane.update(ctx, |view, ctx| {
+        let _ = self.settings_pane.try_update(ctx, |view, ctx| {
             view.set_settings_error_state(error, dismissed, ctx);
         });
     }
@@ -2887,6 +2889,7 @@ impl Workspace {
             ctrl_tab_palette,
             mouse_states: Default::default(),
             previous_theme: None,
+            background_image_animation_start_time: Instant::now(),
             theme_override: None,
             previous_theme_override: None,
             settings_pane,
@@ -3265,7 +3268,7 @@ impl Workspace {
             .enumerate()
             .for_each(|(tab_index, tab_template)| {
                 self.add_tab_with_pane_layout(
-                    PanesLayout::Template(tab_template.layout.clone()),
+                    PanesLayout::Template(tab_template.layout_with_tab_commands()),
                     Arc::new(HashMap::new()),
                     tab_template.title.clone(),
                     ctx,
@@ -18366,6 +18369,10 @@ impl Workspace {
                 .insert(flags::EXTRA_META_KEYS_RIGHT_CONTEXT_FLAG);
         }
 
+        if *reporting_setings.mouse_reporting_enabled.value() {
+            context.set.insert(flags::MOUSE_REPORTING_CONTEXT_FLAG);
+        }
+
         if *reporting_setings.scroll_reporting_enabled.value() {
             context.set.insert(flags::SCROLL_REPORTING_CONTEXT_FLAG);
         }
@@ -20393,6 +20400,11 @@ impl TypedActionView for Workspace {
                     );
                 }
             }
+            ToggleHiddenFiles => {
+                CodeSettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.show_hidden_files.toggle_and_save_value(ctx));
+                });
+            }
             OpenGlobalSearch => {
                 if FeatureFlag::GlobalSearch.is_enabled()
                     && *CodeSettings::as_ref(ctx).show_global_search
@@ -20664,6 +20676,9 @@ impl View for Workspace {
         }
         if *CodeSettings::as_ref(app).show_global_search {
             context.set.insert(flags::SHOW_GLOBAL_SEARCH);
+        }
+        if *CodeSettings::as_ref(app).show_hidden_files {
+            context.set.insert(flags::SHOW_HIDDEN_FILES);
         }
 
         if self.auth_state.is_anonymous_or_logged_out() {
@@ -21651,6 +21666,9 @@ impl View for Workspace {
                         .cover()
                         .with_opacity(opacity_ratio)
                         .with_corner_radius(window_corner_radius)
+                        .enable_animation_with_start_time(
+                            self.background_image_animation_start_time,
+                        )
                         .finish(),
                 )
                 .finish(),

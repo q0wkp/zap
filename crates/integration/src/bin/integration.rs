@@ -185,6 +185,7 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_alias_guards_on_ps1_set);
     register_test!(test_ps1_value_not_null_or_exit);
     register_test!(test_custom_ps1_expansion_bash);
+    register_test!(test_bash_honor_ps1_expands_dynamic_prompt_once);
     register_test!(test_completions_with_autocd);
     register_test!(test_auto_title);
     register_test!(test_warp_auto_title_disabled);
@@ -238,6 +239,8 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_bash_bootstraps_with_prompt_command_array);
     register_test!(test_bash_bootstraps_with_prompt_command_array_that_sets_ps1);
     register_test!(test_zsh_bootstraps_with_nounset_option);
+    register_test!(test_pwsh_vi_edit_mode_does_not_corrupt_commands);
+    register_test!(test_zsh_cursor_mode_vi_bindings_do_not_corrupt_commands);
     register_test!(test_legacy_ssh_into_bash);
     register_test!(test_legacy_ssh_into_zsh);
     register_test!(test_tmux_ssh_into_bash);
@@ -251,7 +254,10 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_color_overrides_in_prompt_dont_crash);
     register_test!(test_copy_prompt_from_block_honor_ps1_disabled);
     register_test!(test_copy_prompt_from_block_honor_ps1_enabled);
+    register_test!(test_copy_block_command_and_output_honor_ps1_disabled);
+    register_test!(test_copy_block_command_and_output_honor_ps1_enabled);
     register_test!(test_copy_prompt_from_input_honor_ps1_disabled);
+    register_test!(test_warp_prompt_unsets_zsh_rprompt);
     register_test!(test_copy_prompt_from_input_honor_ps1_enabled);
     register_test!(test_copy_rprompt_from_input_honor_ps1_enabled);
     register_test!(test_rprompt_doesnt_show_when_not_enough_space);

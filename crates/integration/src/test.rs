@@ -5775,6 +5775,101 @@ function prompt {{
         )
 }
 
+pub fn test_copy_block_command_and_output_honor_ps1_disabled() -> Builder {
+    let command = "echo WARP_COPY_E2E_OUTPUT";
+    new_builder()
+        .use_tmp_filesystem_for_test_root_directory()
+        .with_step(wait_until_bootstrapped_single_pane_for_tab(0))
+        .with_step(execute_command_for_single_terminal_in_tab(
+            0,
+            command.into(),
+            ExpectedExitStatus::Success,
+            (),
+        ))
+        .with_step(
+            new_step_with_default_assertions("Select last block")
+                .with_keystrokes(&["cmdorctrl-up"])
+                .add_assertion(assert_selected_block_index_is_last_renderable()),
+        )
+        .with_steps(open_context_menu_for_selected_block())
+        .with_step(
+            new_step_with_default_assertions("Copy block copies command and output")
+                .with_click_on_saved_position("Copy")
+                .add_assertion(assert_clipboard_contains_string(format!(
+                    "{command}\nWARP_COPY_E2E_OUTPUT"
+                ))),
+        )
+}
+
+pub fn test_copy_block_command_and_output_honor_ps1_enabled() -> Builder {
+    let prompt_text = "this is my custom prompt";
+    let command = "echo WARP_PS1_COPY_E2E_OUTPUT";
+    new_builder()
+        // TODO(CORE-2732): Flakey on linux
+        .set_should_run_test(skip_if_powershell_core_2303)
+        .with_user_defaults(HashMap::from([(
+            HonorPS1::storage_key().to_owned(),
+            true.to_string(),
+        )]))
+        .with_setup(move |utils| {
+            let dir = utils.test_dir();
+            write_rc_files_for_test(
+                &dir,
+                format!(r#"export PS1="{prompt_text}""#),
+                [ShellRcType::Bash, ShellRcType::Zsh],
+            );
+            write_rc_files_for_test(
+                &dir,
+                format!(
+                    r#"
+function fish_prompt
+  echo -n "{prompt_text}"
+end
+"#
+                ),
+                [ShellRcType::Fish],
+            );
+            write_rc_files_for_test(
+                &dir,
+                format!(
+                    r#"
+function prompt {{
+    "{prompt_text}"
+}}
+"#
+                ),
+                [ShellRcType::PowerShell],
+            )
+        })
+        .with_step(
+            wait_until_bootstrapped_single_pane_for_tab(0).add_assertion(move |app, window_id| {
+                let input = single_input_view_for_tab(app, window_id, 0);
+                let input_text = input.read(app, |input, ctx| input.prompt_and_rprompt_text(ctx).0);
+
+                async_assert_eq!(input_text, prompt_text)
+            }),
+        )
+        .with_step(execute_command_for_single_terminal_in_tab(
+            0,
+            command.into(),
+            ExpectedExitStatus::Success,
+            (),
+        ))
+        .with_step(
+            new_step_with_default_assertions("Select last block")
+                .with_keystrokes(&["cmdorctrl-up"])
+                .add_assertion(assert_selected_block_index_is_last_renderable()),
+        )
+        .with_steps(open_context_menu_for_selected_block())
+        .with_step(
+            new_step_with_default_assertions("Copy block includes PS1 prompt, command, and output")
+                .with_click_on_saved_position("Copy")
+                .add_assertion(assert_clipboard_contains_string(format!(
+                    "{prompt_text}{command}\nWARP_PS1_COPY_E2E_OUTPUT"
+                ))),
+        )
+}
+
 pub fn test_copy_prompt_from_input_honor_ps1_disabled() -> Builder {
     new_builder()
         .use_tmp_filesystem_for_test_root_directory()
@@ -5795,6 +5890,28 @@ pub fn test_copy_prompt_from_input_honor_ps1_disabled() -> Builder {
                 .with_click_on_saved_position("Copy prompt")
                 .add_assertion(assert_clipboard_contains_string("~".into())),
         )
+}
+pub fn test_warp_prompt_unsets_zsh_rprompt() -> Builder {
+    new_builder()
+        .set_should_run_test(|| {
+            let (starter, _) = current_shell_starter_and_version();
+            starter.shell_type() == shell::ShellType::Zsh
+        })
+        .with_user_defaults(HashMap::from([(
+            HonorPS1::storage_key().to_owned(),
+            false.to_string(),
+        )]))
+        .with_setup(|utils| {
+            let dir = utils.test_dir();
+            write_rc_files_for_test(&dir, r#"export RPROMPT="right prompt""#, [ShellRcType::Zsh]);
+        })
+        .with_step(wait_until_bootstrapped_single_pane_for_tab(0))
+        .with_step(execute_command_for_single_terminal_in_tab(
+            0,
+            "print -r -- ${+RPROMPT}".into(),
+            ExpectedExitStatus::Success,
+            ExactLine::from("0"),
+        ))
 }
 
 pub fn test_copy_prompt_from_input_honor_ps1_enabled() -> Builder {

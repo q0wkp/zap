@@ -3,6 +3,7 @@ use std::{borrow::Cow, collections::VecDeque, sync::Arc};
 use async_channel::{Receiver, Sender};
 use parking_lot::FairMutex;
 use thiserror::Error;
+use warp_util::path::ShellFamily;
 use warpui::r#async::block_on;
 use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
@@ -382,8 +383,8 @@ impl<T: EventLoopSender> PtyController<T> {
 
         if let Some(write) = self.pending_writes.pop_front() {
             let is_command = matches!(write, PtyWrite::Command { .. });
-            self.send_write_to_event_loop(write, ctx);
-            if !is_command {
+            let did_write = self.send_write_to_event_loop(write, ctx);
+            if !is_command || !did_write {
                 self.execute_next_queued_write(ctx);
             }
         }
@@ -443,6 +444,19 @@ impl<T: EventLoopSender> PtyController<T> {
                 self.write_bytes(escape_sequences::BRACKETED_PASTE_END, ctx);
                 self.write_terminating_bootstrap_bytes(ctx);
             }
+        } else if bootstrap::is_container_subshell(pending_session_info) {
+            // Write in 4KB chunks with 50ms delays to avoid overwhelming
+            // PTY buffers in container exec sessions (podman/docker exec -it),
+            // where the double-PTY proxy drops data for large writes.
+            const CHUNK_SIZE: usize = 4096;
+            let bytes: Vec<u8> = bootstrap.into_owned();
+            let chunks: Vec<Vec<u8>> = bytes.chunks(CHUNK_SIZE).map(|c| c.to_vec()).collect();
+            for (i, chunk) in chunks.into_iter().enumerate() {
+                ctx.spawn(
+                    warpui::r#async::Timer::after(std::time::Duration::from_millis(i as u64 * 50)),
+                    move |me, _, ctx| me.write_bytes(chunk, ctx),
+                );
+            }
         } else {
             self.write_bytes(bootstrap, ctx);
         }
@@ -457,8 +471,6 @@ impl<T: EventLoopSender> PtyController<T> {
         shell_type: ShellType,
         ctx: &mut ModelContext<Self>,
     ) {
-        use warp_util::path::ShellFamily;
-
         // TODO(CORE-2099): Figure out a more robust solution here. Fish users
         // can redefine these functions via fish functions. Ideally this won't
         // break if the user redefines the `source` or `.` built-in.
@@ -630,55 +642,57 @@ impl<T: EventLoopSender> PtyController<T> {
     ///
     /// If the write corresponds to a command, this also calls
     /// [`LineEditorStatus::did_execute_command()`].
-    fn send_write_to_event_loop(&mut self, write: PtyWrite, ctx: &mut ModelContext<Self>) {
-        let (bytes_to_write, is_for_command, on_write_fn, raw_tmux_command) = match write {
-            PtyWrite::Command {
-                command,
-                shell_type,
-                before_write_fn: on_write_fn,
-                ..
-            } => (
-                Cow::Owned(bytes_to_execute_command(
-                    command.as_str(),
+    fn send_write_to_event_loop(&mut self, write: PtyWrite, ctx: &mut ModelContext<Self>) -> bool {
+        let (bytes_to_write, is_for_command, on_write_fn, raw_tmux_command, shell_type_for_split) =
+            match write {
+                PtyWrite::Command {
+                    command,
                     shell_type,
-                    self.is_bracketed_paste_enabled,
-                )),
-                true,
-                on_write_fn,
-                false,
-            ),
-            PtyWrite::AgentInput { bytes, mode } => {
-                let decorated_bytes =
-                    mode.decorate_bytes(bytes.into_owned(), self.is_bracketed_paste_enabled);
-                (decorated_bytes.into(), false, None, false)
-            }
-            PtyWrite::Bytes { bytes } => (bytes, false, None, false),
-            PtyWrite::TmuxCommand(command) => {
-                let command = command.get_command_string();
-                debug_assert!(
-                    command.ends_with('\n'),
-                    "Tmux commands must end in a newlines so they are executed"
-                );
-                debug_assert!(
-                    self.tmux_control_mode.is_some(),
-                    "Received tmux command outside of control mode."
-                );
-                (command.into_bytes().into(), false, None, true)
-            }
-            PtyWrite::RunNativeShellCompletions(state) => {
-                self.in_flight_native_completions_state = Some(state);
+                    before_write_fn: on_write_fn,
+                    ..
+                } => (
+                    Cow::Owned(bytes_to_execute_command(
+                        command.as_str(),
+                        shell_type,
+                        self.is_bracketed_paste_enabled,
+                    )),
+                    true,
+                    on_write_fn,
+                    false,
+                    Some(shell_type),
+                ),
+                PtyWrite::AgentInput { bytes, mode } => {
+                    let decorated_bytes =
+                        mode.decorate_bytes(bytes.into_owned(), self.is_bracketed_paste_enabled);
+                    (decorated_bytes.into(), false, None, false, None)
+                }
+                PtyWrite::Bytes { bytes } => (bytes, false, None, false, None),
+                PtyWrite::TmuxCommand(command) => {
+                    let command = command.get_command_string();
+                    debug_assert!(
+                        command.ends_with('\n'),
+                        "Tmux commands must end in a newlines so they are executed"
+                    );
+                    debug_assert!(
+                        self.tmux_control_mode.is_some(),
+                        "Received tmux command outside of control mode."
+                    );
+                    (command.into_bytes().into(), false, None, true, None)
+                }
+                PtyWrite::RunNativeShellCompletions(state) => {
+                    self.in_flight_native_completions_state = Some(state);
 
-                // Send a ^Y control code to trigger the right bindkey.  We
-                // then wait for an OSC-based signal from the shell before we
-                // send the text that needs to be completed.
-                let bytes = vec![0x19_u8];
-                (bytes.into(), false, None, false)
-            }
-        };
+                    // Send a ^Y control code to trigger the right bindkey.  We
+                    // then wait for an OSC-based signal from the shell before we
+                    // send the text that needs to be completed.
+                    let bytes = vec![0x19_u8];
+                    (bytes.into(), false, None, false, None)
+                }
+            };
 
         // The terminal hangs if we send 0 bytes through.
         if bytes_to_write.is_empty() {
-            return;
+            return false;
         }
 
         let bytes_to_write = match &mut self.tmux_control_mode {
@@ -686,7 +700,7 @@ impl<T: EventLoopSender> PtyController<T> {
             Some(_) if raw_tmux_command => bytes_to_write,
             Some(TmuxControlMode::Pending { buffer }) => {
                 buffer.extend_from_slice(&bytes_to_write);
-                return;
+                return true;
             }
             Some(TmuxControlMode::Active { primary_pane }) => {
                 crate::terminal::model::tmux::format_input(*primary_pane, &bytes_to_write)
@@ -703,11 +717,33 @@ impl<T: EventLoopSender> PtyController<T> {
                 });
         }
 
+        // The `warp` crate is edition 2021, which does not allow let chains, so this is written as
+        // a nested `if let` instead of upstream's single `if let ... && let ...` chain.
+        if let Some(shell_type) = shell_type_for_split {
+            if let Some((kill_buffer, rest)) = split_kill_buffer_write(&bytes_to_write, shell_type)
+            {
+                // PowerShell's kill-buffer chord is an ESC-prefixed sequence that PSReadLine can fail
+                // to disambiguate when it arrives in the same read as the command text; send the
+                // chord as its own PTY write. `on_write_fn` belongs to the command half of the
+                // write, so run it before dispatching it.
+                if let Some(on_write_fn) = on_write_fn {
+                    on_write_fn();
+                }
+                self.send_message_to_event_loop(
+                    Message::Input(Cow::Owned(kill_buffer.to_vec())),
+                    ctx,
+                );
+                self.send_message_to_event_loop(Message::Input(Cow::Owned(rest.to_vec())), ctx);
+                return true;
+            }
+        }
+
         if let Some(on_write_fn) = on_write_fn {
             on_write_fn();
         }
 
         self.send_message_to_event_loop(Message::Input(bytes_to_write), ctx);
+        true
     }
 
     /// Sends a message to the event loop. If the send fails with `SendError::Disconnected`, emits
@@ -755,6 +791,31 @@ impl<T: EventLoopSender> Entity for PtyController<T> {
     type Event = PtyControllerEvent;
 }
 
+/// Splits `shell_type`'s kill-buffer chord off the front of `bytes` (the output of
+/// `bytes_to_execute_command`, which prepends it), returning `Some((kill_buffer_bytes, rest))`, or
+/// `None` when there is nothing to split.
+///
+/// Only PowerShell needs this. Its kill-buffer chord is an ESC-prefixed sequence that PSReadLine
+/// can fail to disambiguate when it arrives in the same read as the command text, leaving the
+/// command typed on top of the buffer; writing the chord separately avoids it. The other three
+/// shells use a single unambiguous control byte. The prefix is validated rather than assumed: a
+/// non-matching prefix returns `None` (write whole) so a caller that passes something else is
+/// never mis-cut.
+fn split_kill_buffer_write(bytes: &[u8], shell_type: ShellType) -> Option<(&[u8], &[u8])> {
+    if shell_type != ShellType::PowerShell {
+        return None;
+    }
+    let kill_buffer = shell_type.kill_buffer_bytes();
+    if !bytes.starts_with(kill_buffer) {
+        return None;
+    }
+    let (kill_buffer_bytes, rest) = bytes.split_at(kill_buffer.len());
+    if rest.is_empty() {
+        return None;
+    }
+    Some((kill_buffer_bytes, rest))
+}
+
 /// Returns the shell-dependent array of bytes to be written to the PTY to execute `command`.
 fn bytes_to_execute_command(
     command: &str,
@@ -762,6 +823,11 @@ fn bytes_to_execute_command(
     is_bracketed_paste_enabled: bool,
 ) -> Vec<u8> {
     let mut command_bytes = shell_type.kill_buffer_bytes().to_vec();
+    let command = match ShellFamily::from(shell_type) {
+        ShellFamily::Posix if cfg!(windows) => LINEFEED_REGEX.replace_all(command, "\n"),
+        ShellFamily::PowerShell => LINEFEED_REGEX.replace_all(command, "\r"),
+        _ => Cow::Borrowed(command),
+    };
 
     // Only execute the command via bracketed paste if the command is not empty. Some ZSH
     // bracketed paste magic functions return errors if bracketed paste is used without text
@@ -798,11 +864,7 @@ fn bytes_to_execute_command(
         }
     } else {
         let command_without_escapes = command.replace(escape_sequences::C0::ESC as char, "");
-        // This is a fix for PLAT-770 to allow multi-line commands in Powershell.
-        // In general, shells without bracketed paste don't handle `\n` that well,
-        // and in the case of PowerShell, it is explicitly ignored.
-        let command_without_newlines = LINEFEED_REGEX.replace_all(&command_without_escapes, "\r");
-        command_bytes.extend(command_without_newlines.as_bytes());
+        command_bytes.extend(command_without_escapes.as_bytes());
     }
     command_bytes.extend(shell_type.execute_command_bytes().to_vec());
     command_bytes
@@ -817,6 +879,10 @@ fn wrap_bytes_in_bracketed_paste(bytes: impl IntoIterator<Item = u8>) -> impl It
         .chain(bytes)
         .chain(escape_sequences::BRACKETED_PASTE_END.iter().copied())
 }
+
+#[cfg(test)]
+#[path = "pty_controller_command_bytes_tests.rs"]
+mod command_bytes_tests;
 
 #[derive(Error, Debug)]
 pub enum EventLoopSendError {

@@ -29,6 +29,7 @@ test = false
 [dependencies]
 addr = "0.15.6"
 ai.workspace = true
+alphanumeric-sort = "1.5.7"
 anyhow.workspace = true
 arrayvec.workspace = true
 asset_cache.workspace = true
@@ -185,6 +186,7 @@ toml = "0.8.13"
 tracing.workspace = true
 ui_components.workspace = true
 unicase = "2.7.0"
+unicode-general-category.workspace = true
 unicode-width.workspace = true
 unindent = "0.1.7"
 url = { workspace = true, features = ["serde"] }

@@ -1047,6 +1047,10 @@ pub enum InputAction {
     CtrlR,
     CtrlD,
     Up,
+    /// Deferred so Up does not update InlineHistoryMenuView while it is already checked out.
+    SelectPreviousInlineHistoryItem,
+    /// Deferred so Down does not update InlineHistoryMenuView while it is already checked out.
+    SelectNextInlineHistoryItem,
     PageUp,
     PageDown,
     ClearScreen,
@@ -2378,7 +2382,9 @@ impl Input {
                     render_decorator_elements: Some(Box::new(
                         move |app| -> EditorDecoratorElements {
                             let terminal_model = model_clone.lock();
-                            let active_block = terminal_model.block_list().active_block();
+                            let prompt_block = terminal_model
+                                .prompt_block()
+                                .unwrap_or_else(|| terminal_model.block_list().active_block());
 
                             let mut editor_decorator_elements = EditorDecoratorElements::default();
 
@@ -2408,7 +2414,7 @@ impl Input {
                                 editor_decorator_elements.left_notch = lprompt_bottom;
                                 editor_decorator_elements.right_notch = rprompt;
                                 editor_decorator_elements.right_notch_offset_px = Some(
-                                    active_block.rprompt_render_offset(
+                                    prompt_block.rprompt_render_offset(
                                         &input_render_state_model_handle_clone
                                             .as_ref(app)
                                             .size_info,
@@ -7359,6 +7365,32 @@ impl Input {
         ctx.notify();
     }
 
+    fn select_previous_inline_history_item(&mut self, ctx: &mut ViewContext<Self>) {
+        if !self
+            .suggestions_mode_model
+            .as_ref(ctx)
+            .is_inline_history_menu()
+        {
+            return;
+        }
+
+        self.inline_history_menu_view
+            .update(ctx, |view, ctx| view.select_up(ctx));
+    }
+
+    fn select_next_inline_history_item(&mut self, ctx: &mut ViewContext<Self>) {
+        if !self
+            .suggestions_mode_model
+            .as_ref(ctx)
+            .is_inline_history_menu()
+        {
+            return;
+        }
+
+        self.inline_history_menu_view
+            .update(ctx, |view, ctx| view.select_down(ctx));
+    }
+
     fn editor_up(&mut self, ctx: &mut ViewContext<Self>) {
         // History and input suggestions are not available for
         // read-only viewers in a shared session
@@ -7433,9 +7465,7 @@ impl Input {
                 true
             }
             InputSuggestionsMode::InlineHistoryMenu { .. } => {
-                self.inline_history_menu_view.update(ctx, |view, ctx| {
-                    view.select_up(ctx);
-                });
+                ctx.dispatch_typed_action_deferred(InputAction::SelectPreviousInlineHistoryItem);
                 true
             }
             InputSuggestionsMode::IndexedReposMenu => {
@@ -7808,9 +7838,7 @@ impl Input {
             .as_ref(ctx)
             .is_inline_history_menu()
         {
-            self.inline_history_menu_view.update(ctx, |view, ctx| {
-                view.select_down(ctx);
-            });
+            ctx.dispatch_typed_action_deferred(InputAction::SelectNextInlineHistoryItem);
             return;
         }
 
@@ -8888,6 +8916,19 @@ impl Input {
                 // e.g., we don't want to sync EditorEvent::CmdUpOnFirstRow.
                 self.send_input_sync_event(edit_origin, ctx);
 
+                // Distinguish edits the completion system applied itself (accepting or
+                // cycling through a candidate) from edits the user made (typing,
+                // backspacing, pasting). System-applied edits are allowed to diverge from
+                // the original completion query so that classic cycling keeps working;
+                // user edits still have to be revalidated against that query.
+                let is_user_edit = !matches!(
+                    self.editor.as_ref(ctx).get_last_action(ctx),
+                    Some(
+                        PlainTextEditorViewAction::AcceptCompletionSuggestion
+                            | PlainTextEditorViewAction::CycleCompletionSuggestion
+                    )
+                );
+
                 let mode = self.suggestions_mode_model.as_ref(ctx).mode().clone();
                 match &mode {
                     InputSuggestionsMode::CompletionSuggestions {
@@ -8961,6 +9002,7 @@ impl Input {
                                 replacement_start,
                                 buffer_text_original.as_str(),
                                 &completion_results,
+                                is_user_edit,
                                 ctx,
                             );
                             if should_close {
@@ -9121,10 +9163,13 @@ impl Input {
                             let replacement_start = *replacement_start;
                             let buffer_text_original = buffer_text_original.clone();
                             let completion_results = completion_results.clone();
+                            // A selection change is a cursor move, not a buffer edit, so it
+                            // never counts as a user edit for invalidation purposes.
                             let should_close = self.update_tab_completion_menu(
                                 replacement_start,
                                 buffer_text_original.as_str(),
                                 &completion_results,
+                                /*is_user_edit=*/ false,
                                 ctx,
                             );
 
@@ -10035,6 +10080,7 @@ impl Input {
         replacement_start: usize,
         buffer_text_original: &str,
         completion_results: &SuggestionResults,
+        is_user_edit: bool,
         ctx: &mut ViewContext<Input>,
     ) -> bool {
         let editor_text = self.editor.as_ref(ctx).buffer_text(ctx);
@@ -10051,13 +10097,18 @@ impl Input {
         // then we should close the completion menu because the result set
         // was based on a different query.
         //
-        // For classic completions, this is a poor heuristic: when you cycle
-        // through fuzzy matches, the text up to the cursor might not start
-        // with the original buffer text anymore.
-        // TODO: there's a bug here where if you hit tab and backspace,
-        // the result set won't go away (stale).
+        // Classic completions get an exemption from this check, but only for
+        // system-applied edits: when the completion system cycles through fuzzy
+        // matches it rewrites the buffer to each candidate, and the text up to the
+        // cursor may no longer start with the original buffer text. Keeping the
+        // result set alive in that case is what lets cycling work.
+        //
+        // A user edit (typing, backspacing, pasting) that diverges from the original
+        // query must still invalidate the result set. Otherwise a Tab followed by
+        // Backspace past the replacement boundary would leave stale suggestions on
+        // screen (and an empty prefix would re-show the entire original result set).
         if !text_up_to_cursor.starts_with(buffer_text_original)
-            && !self.is_classic_completions_enabled(ctx)
+            && (!self.is_classic_completions_enabled(ctx) || is_user_edit)
         {
             // Close the input suggestions since the buffer was edited to no longer
             // contain the text that triggered tab completion.
@@ -13512,6 +13563,10 @@ impl TypedActionView for Input {
         match action {
             InputAction::FocusInputBox => self.focus_input_box(ctx),
             InputAction::Up => self.editor_up(ctx),
+            InputAction::SelectPreviousInlineHistoryItem => {
+                self.select_previous_inline_history_item(ctx)
+            }
+            InputAction::SelectNextInlineHistoryItem => self.select_next_inline_history_item(ctx),
             InputAction::PageUp => self.editor_page_up(ctx),
             InputAction::PageDown => self.editor_page_down(ctx),
             InputAction::CtrlD => self.ctrl_d(ctx),
