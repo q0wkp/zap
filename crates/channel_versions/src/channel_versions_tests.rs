@@ -170,3 +170,11 @@ fn oss_versions_order_by_both_parts_of_the_mod_number() {
     assert!(parse("v2026.07.09.2-mod.1") < parse("v2026.07.09.2-mod.1.1"));
     assert!(ParsedVersion::try_from("v2026.07.09.2-mod.1.1.1").is_err());
 }
+
+#[test]
+fn plain_versions_sort_above_the_last_mod_release() {
+    let parse = |tag: &str| ParsedVersion::try_from(tag).unwrap();
+
+    assert!(parse("v2026.07.09.2-mod.1.1") < parse("v2026.07.09.3"));
+    assert!(parse("v2026.07.09.2-mod.1.1") < parse("v2026.11.17.1"));
+}

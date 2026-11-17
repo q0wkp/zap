@@ -26,11 +26,13 @@ the original Zap or of Warp.
   refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap, still
   open when it was archived)
 - **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
-  remote server download point here, so a build of this fork never replaces itself with an upstream one. Tags are the
-  next upstream version plus `-mod.X.Y` (upstream's `v2026.07.09.1` becomes `v2026.07.09.2-mod.1.1`): Y counts the
-  releases, and X goes up, with Y back at 1, when a release breaks compatibility with the one before it. The releases up
-  to `v2026.07.09.2-mod.3`, numbered with one part, were withdrawn when this numbering began. A release is created only
-  once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no longer built. The
+  remote server download point here, so a build of this project never replaces itself with one of the original Zap. Tags
+  are the date of the release and a counter of that day's releases, `v<YYYY>.<MM>.<DD>.<N>`, the original Zap's own
+  numbering. The releases made before the project became independent carried upstream's next version plus `-mod.X.Y`
+  (`v2026.07.09.2-mod.1.1` was the last); every later release sorts above them, so a Zap of that release updates as
+  usual. The releases up to `v2026.07.09.2-mod.3`, numbered with one part, were withdrawn earlier. A release is
+  created only once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no
+  longer built. The
   DMGs, the AppImage and the CLI archives carry the release's version, as `zap-<version>-<system>` (for example
   `zap-2026.07.09.2-mod.1.1-linux-x86_64.AppImage`). A Zap of the withdrawn releases (up to `v2026.07.09.2-mod.3`) can't
   update itself to these, whose files it looks for under the earlier names and whose number its package managers read as

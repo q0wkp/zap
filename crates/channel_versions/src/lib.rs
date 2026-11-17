@@ -50,11 +50,11 @@ pub struct ParsedVersion {
     major: usize,
     date: NaiveDateTime,
     patch: usize,
-    /// X from a fork release tagged `-mod.X.Y` (or `-mod.X`, as the releases before the two-part
-    /// numbers were), 0 otherwise. A release that breaks compatibility with the one before it
-    /// raises X.
+    /// X from a release tagged `-mod.X.Y` (or `-mod.X`, as the releases before the two-part
+    /// numbers were), 0 otherwise. Releases up to `v2026.07.09.2-mod.1.1` carry the suffix; later
+    /// ones are plain `vYYYY.MM.DD.N`, and are still compared with those.
     mod_revision: usize,
-    /// Y from a fork release tagged `-mod.X.Y`, 0 otherwise.
+    /// Y from a release tagged `-mod.X.Y`, 0 otherwise.
     #[serde(default)]
     mod_minor: usize,
 }
