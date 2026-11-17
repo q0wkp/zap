@@ -5190,6 +5190,7 @@ impl PaneGroup {
             DefaultSessionModeBehavior::Apply
         ) && conversation_restoration.is_none()
             && AISettings::as_ref(ctx).default_session_mode(ctx) == DefaultSessionMode::Agent;
+        let default_cli_agent = AISettings::as_ref(ctx).default_cli_agent(ctx);
 
         let (pane_data, view) = self.create_terminal_pane_data(
             startup_directory,
@@ -5202,14 +5203,18 @@ impl PaneGroup {
 
         let _ = self.add_pane(direction, base_pane_id, Box::new(pane_data), true, ctx);
 
-        // Enter agent view if default session mode is Agent and AI is enabled
+        // Launch the default CLI agent, or without one enter agent view, if default session mode
+        // is Agent and AI is enabled
         if should_immediately_enter_agent_view {
-            view.update(ctx, |terminal_view, ctx| {
-                terminal_view.enter_agent_view_for_new_conversation(
+            view.update(ctx, |terminal_view, ctx| match default_cli_agent {
+                Some(agent) => {
+                    terminal_view.execute_command_or_set_pending(agent.command_prefix(), ctx)
+                }
+                None => terminal_view.enter_agent_view_for_new_conversation(
                     None,
                     AgentViewEntryOrigin::DefaultSessionMode,
                     ctx,
-                );
+                ),
             });
         }
 

@@ -348,6 +348,59 @@ fn test_toolbar_command_map_roundtrip() {
 }
 
 #[test]
+fn test_default_cli_agent_follows_default_session_mode() {
+    App::test((), |mut app| async move {
+        initialize_settings_for_tests(&mut app);
+
+        let current = |app: &App| {
+            app.read(|ctx| {
+                let settings = AISettings::as_ref(ctx);
+                (
+                    settings.default_session_mode(ctx),
+                    settings.default_cli_agent(ctx),
+                )
+            })
+        };
+        let set = |app: &mut App, mode, agent| {
+            AISettings::handle(app).update(app, |settings, ctx| {
+                settings.set_default_session_mode(mode, agent, ctx);
+            });
+        };
+
+        assert_eq!(current(&app).1, None);
+
+        set(&mut app, DefaultSessionMode::Agent, Some(CLIAgent::Codex));
+        assert_eq!(
+            current(&app),
+            (DefaultSessionMode::Agent, Some(CLIAgent::Codex))
+        );
+
+        // The built-in agent forgets the CLI agent chosen before.
+        set(&mut app, DefaultSessionMode::Agent, None);
+        assert_eq!(current(&app), (DefaultSessionMode::Agent, None));
+
+        // So does any other mode, even when given an agent.
+        set(&mut app, DefaultSessionMode::Agent, Some(CLIAgent::Claude));
+        set(
+            &mut app,
+            DefaultSessionMode::Terminal,
+            Some(CLIAgent::Claude),
+        );
+        assert_eq!(current(&app), (DefaultSessionMode::Terminal, None));
+        set(&mut app, DefaultSessionMode::Agent, None);
+        assert_eq!(current(&app).1, None);
+
+        // A stored name that isn't a known agent falls back to the built-in agent.
+        AISettings::handle(&app).update(&mut app, |settings, ctx| {
+            report_if_error!(settings
+                .default_cli_agent
+                .set_value("NotAnAgent".to_string(), ctx));
+        });
+        assert_eq!(current(&app), (DefaultSessionMode::Agent, None));
+    });
+}
+
+#[test]
 fn test_toolbar_command_map_matched_agent() {
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);

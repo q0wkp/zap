@@ -1840,9 +1840,7 @@ impl TypedActionView for FeaturesPageView {
             SetDefaultSessionMode(mode) => self.set_default_session_mode(mode, ctx),
             SetDefaultTabConfig(path) => {
                 AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
-                    report_if_error!(ai_settings
-                        .default_session_mode_internal
-                        .set_value(DefaultSessionMode::TabConfig, ctx));
+                    ai_settings.set_default_session_mode(DefaultSessionMode::TabConfig, None, ctx);
                     report_if_error!(ai_settings
                         .default_tab_config_path
                         .set_value(path.clone(), ctx));
@@ -3495,9 +3493,7 @@ impl FeaturesPageView {
         ctx: &mut ViewContext<Self>,
     ) {
         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
-            report_if_error!(ai_settings
-                .default_session_mode_internal
-                .set_value(*value, ctx));
+            ai_settings.set_default_session_mode(*value, None, ctx);
         });
     }
 
