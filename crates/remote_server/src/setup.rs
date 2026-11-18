@@ -385,6 +385,7 @@ fn install_script_for(tag: Option<&str>, staging_tarball_path: Option<&str>) -> 
     INSTALL_SCRIPT_TEMPLATE
         .replace("{release_tag}", tag.unwrap_or(""))
         .replace("{latest_release_url}", LATEST_RELEASE_URL)
+        .replace("{checksum_url}", &checksum_url(&download_url))
         .replace("{download_url}", &download_url)
         .replace("{install_dir}", &remote_server_dir())
         .replace("{binary_name}", binary_name())
@@ -398,6 +399,40 @@ fn install_script_for(tag: Option<&str>, staging_tarball_path: Option<&str>) -> 
 fn release_tarball_url(tag: &str, os: &str, arch: &str) -> String {
     let version = tag.strip_prefix('v').unwrap_or(tag);
     format!("https://github.com/q0wkp/zap/releases/download/{tag}/zap-{version}-{os}-{arch}.tar.gz")
+}
+
+/// The URL of the SHA-256 file that a release publishes beside the CLI tarball at `tarball_url`:
+/// the tarball's name with `.sha256` appended, holding a line of `sha256sum` output, as
+/// .github/workflows/release.yml writes it.
+pub fn checksum_url(tarball_url: &str) -> String {
+    format!("{tarball_url}.sha256")
+}
+
+/// The SHA-256 in a release's SHA-256 file, in lower-case hex: the first word of its first line.
+/// None when that isn't a SHA-256.
+pub fn parse_checksum_file(contents: &str) -> Option<String> {
+    let sha256 = contents.lines().next()?.split_whitespace().next()?;
+    (sha256.len() == 64 && sha256.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .then(|| sha256.to_ascii_lowercase())
+}
+
+/// Checks that the file at `path` has the SHA-256 that `checksum_file`, the contents of the
+/// release's SHA-256 file, holds. The error says which file it was, by `name`.
+pub fn verify_sha256(path: &std::path::Path, checksum_file: &str, name: &str) -> Result<()> {
+    use sha2::{Digest, Sha256};
+
+    let expected = parse_checksum_file(checksum_file)
+        .ok_or_else(|| anyhow!("the SHA-256 file of {name} holds no SHA-256"))?;
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    let actual = hex::encode(hasher.finalize());
+    if actual != expected {
+        return Err(anyhow!(
+            "SHA-256 mismatch for {name}: expected {expected}, got {actual}"
+        ));
+    }
+    Ok(())
 }
 
 /// The page that redirects to the newest release's page, `.../releases/tag/<tag>`.

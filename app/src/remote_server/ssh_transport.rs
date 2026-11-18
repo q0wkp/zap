@@ -465,7 +465,8 @@ async fn dev_install_local_binary(socket_path: &Path) -> Result<()> {
     verify_installed_binary(socket_path).await
 }
 
-async fn download_remote_server_tarball(download_url: &str, tarball_path: &Path) -> Result<()> {
+/// Downloads a file of a release, the remote server's tarball or its SHA-256 file.
+async fn download_release_file(download_url: &str, path: &Path) -> Result<()> {
     let output = async {
         command::r#async::Command::new("curl")
             .arg("-fSL")
@@ -473,7 +474,7 @@ async fn download_remote_server_tarball(download_url: &str, tarball_path: &Path)
             .arg("15")
             .arg(download_url)
             .arg("-o")
-            .arg(tarball_path.as_os_str())
+            .arg(path.as_os_str())
             .kill_on_drop(true)
             .output()
             .await
@@ -482,7 +483,7 @@ async fn download_remote_server_tarball(download_url: &str, tarball_path: &Path)
     .await
     .map_err(|_| {
         anyhow!(
-            "local tarball download timed out after {:?}",
+            "local download of {download_url} timed out after {:?}",
             remote_server::setup::SCP_INSTALL_TIMEOUT
         )
     })?
@@ -495,7 +496,7 @@ async fn download_remote_server_tarball(download_url: &str, tarball_path: &Path)
     let code = output.status.code().unwrap_or(-1);
     let stderr = String::from_utf8_lossy(&output.stderr);
     Err(anyhow!(
-        "local tarball download failed with code {code}: {stderr}"
+        "local download of {download_url} failed with code {code}: {stderr}"
     ))
 }
 
@@ -565,8 +566,21 @@ async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     }
 
     let tempdir = tempfile::tempdir()?;
+    // The SHA-256 the release publishes first: a release made before checksums were published has
+    // none, and its tarball isn't installed unverified.
+    let checksum_url = remote_server::setup::checksum_url(&download_url);
+    let checksum_path = tempdir.path().join("zap.tar.gz.sha256");
+    download_release_file(&checksum_url, &checksum_path)
+        .await
+        .map_err(|error| {
+            anyhow!("could not download the SHA-256 of the remote server: {error:#}")
+        })?;
+    let checksum_file = std::fs::read_to_string(&checksum_path)?;
     let tarball_path = tempdir.path().join("zap.tar.gz");
-    download_remote_server_tarball(&download_url, &tarball_path).await?;
+    download_release_file(&download_url, &tarball_path).await?;
+    // Uploaded, the tarball is extracted without another check: the remote host may have no
+    // program to compute a SHA-256 with.
+    remote_server::setup::verify_sha256(&tarball_path, &checksum_file, &download_url)?;
 
     let remote_tarball_path = format!(
         "{remote_server_dir}/{}",

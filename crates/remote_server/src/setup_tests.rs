@@ -280,55 +280,115 @@ enum Downloader {
 struct InstallScriptRun {
     exit_code: Option<i32>,
     stderr: String,
-    /// The command lines of the downloader's calls, in order.
+    /// The command lines of the downloader's and of shasum's calls, in order.
     calls: Vec<String>,
+    /// The home directory the script ran in.
+    home: tempfile::TempDir,
+}
+
+/// The remote host an install script runs on in [`run_install_script`].
+struct RemoteHost<'a> {
+    downloader: Downloader,
+    /// Where GitHub redirects the newest release's page to.
+    latest_location: &'a str,
+    /// The files the downloader can fetch, by the last part of their URL, with their contents.
+    served: Vec<(String, Vec<u8>)>,
+    /// The programs the host doesn't have, besides curl for [`Downloader::Wget`].
+    missing: &'a [&'a str],
+}
+
+impl<'a> RemoteHost<'a> {
+    fn new(downloader: Downloader, latest_location: &'a str) -> Self {
+        Self {
+            downloader,
+            latest_location,
+            served: Vec::new(),
+            missing: &[],
+        }
+    }
+
+    fn serving(mut self, name: impl Into<String>, contents: impl Into<Vec<u8>>) -> Self {
+        self.served.push((name.into(), contents.into()));
+        self
+    }
 }
 
 /// Runs `script` with `bash`, as the SSH transport does on the remote host, in an empty home
-/// directory and with a downloader that records its calls and fetches nothing: asked for the
-/// newest release, it answers as the real one does when GitHub redirects to `latest_location`
-/// (curl's and GNU Wget's output for q0wkp/zap, seen 2026-11-11); any other download fails.
-fn run_install_script(
-    script: &str,
-    downloader: Downloader,
-    latest_location: &str,
-) -> InstallScriptRun {
-    let dir = tempfile::tempdir().unwrap();
-    let calls_file = dir.path().join("calls");
-    let stubs = match downloader {
+/// directory and with a downloader that records its calls and fetches only what `host` serves:
+/// asked for the newest release, it answers as the real one does when GitHub redirects to
+/// `host.latest_location` (curl's and GNU Wget's output for q0wkp/zap, seen 2026-11-11); any
+/// other download fails.
+fn run_install_script(script: &str, host: RemoteHost) -> InstallScriptRun {
+    let home = tempfile::tempdir().unwrap();
+    // Outside the home directory, whose contents some tests look at.
+    let host_dir = tempfile::tempdir().unwrap();
+    let calls_file = host_dir.path().join("calls");
+    let served_dir = host_dir.path().join("served");
+    std::fs::create_dir(&served_dir).unwrap();
+    for (name, contents) in &host.served {
+        std::fs::write(served_dir.join(name), contents).unwrap();
+    }
+    let mut missing = host.missing.to_vec();
+    let downloader_stub = match host.downloader {
         Downloader::Curl => {
             r#"curl() {
   printf 'curl %s\n' "$*" >> "$CALLS_FILE"
   case "$*" in
-    *"$LATEST_RELEASE_URL"*) printf 'HTTP/2 302 \r\nlocation: %s\r\n\r\n' "$LATEST_LOCATION" ;;
-    *) return 22 ;;
+    *"$LATEST_RELEASE_URL"*) printf 'HTTP/2 302 \r\nlocation: %s\r\n\r\n' "$LATEST_LOCATION"; return ;;
   esac
+  serve "$@" || return 22
 }"#
         }
         Downloader::Wget => {
-            r#"command() {
-  if [ "$1" = -v ] && [ "$2" = curl ]; then return 1; fi
-  builtin command "$@"
-}
-wget() {
+            missing.push("curl");
+            r#"wget() {
   printf 'wget %s\n' "$*" >> "$CALLS_FILE"
   case "$*" in
     *"$LATEST_RELEASE_URL"*)
       printf '  HTTP/1.1 302 Found\n  Location: %s\nLocation: %s [following]\n  HTTP/1.1 200 OK\n' \
-        "$LATEST_LOCATION" "$LATEST_LOCATION" >&2 ;;
-    *) return 8 ;;
+        "$LATEST_LOCATION" "$LATEST_LOCATION" >&2
+      return ;;
   esac
+  serve "$@" || return 8
 }"#
         }
     };
+    // `serve` copies the served file that the URL among its arguments names to the path after
+    // -o or -O. shasum, which many Linux hosts lack, is computed with sha256sum.
+    let stubs = format!(
+        r#"command() {{
+  if [ "$1" = -v ]; then
+    case " $MISSING_COMMANDS " in *" $2 "*) return 1 ;; esac
+  fi
+  builtin command "$@"
+}}
+serve() {{
+  local arg url= out= previous=
+  for arg in "$@"; do
+    case "$previous" in -o|-O) out=$arg ;; esac
+    case "$arg" in https://*) url=$arg ;; esac
+    previous=$arg
+  done
+  [ -n "$url" ] && [ -n "$out" ] && [ -f "$SERVED_DIR/${{url##*/}}" ] || return 1
+  cp "$SERVED_DIR/${{url##*/}}" "$out"
+}}
+shasum() {{
+  printf 'shasum %s\n' "$*" >> "$CALLS_FILE"
+  [ "$*" = "-a 256" ] || return 1
+  builtin command sha256sum 2>/dev/null || builtin command shasum -a 256
+}}
+{downloader_stub}"#
+    );
 
     let output = command::blocking::Command::new("bash")
         .arg("-c")
         .arg(format!("{stubs}\n{script}"))
-        .env("HOME", dir.path())
+        .env("HOME", home.path())
         .env("CALLS_FILE", &calls_file)
+        .env("SERVED_DIR", &served_dir)
+        .env("MISSING_COMMANDS", missing.join(" "))
         .env("LATEST_RELEASE_URL", LATEST_RELEASE_URL)
-        .env("LATEST_LOCATION", latest_location)
+        .env("LATEST_LOCATION", host.latest_location)
         .output()
         .unwrap();
 
@@ -340,6 +400,7 @@ wget() {
             .lines()
             .map(str::to_owned)
             .collect(),
+        home,
     }
 }
 
@@ -361,20 +422,83 @@ fn release_tarball_url_of_this_system() -> String {
 /// Where GitHub redirects `latest` to while [`RELEASE_TAG`] is the newest release.
 const LATEST_LOCATION: &str = "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1";
 
+/// The last part of `url`, the name of the file it downloads.
+fn file_name_in_url(url: &str) -> &str {
+    url.rsplit_once('/').unwrap().1
+}
+
+/// The SHA-256 of `contents` in lower-case hex.
+fn sha256_hex(contents: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(contents))
+}
+
+/// A release's SHA-256 file for the file `name` with `contents`, as `sha256sum` writes it.
+fn checksum_file(name: &str, contents: &[u8]) -> String {
+    format!("{}  {name}\n", sha256_hex(contents))
+}
+
+/// A CLI tarball as the release workflow packs it, with the binary at its top.
+fn cli_tarball() -> Vec<u8> {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join(binary_name()), "#!/bin/sh\necho zap\n").unwrap();
+    std::fs::create_dir(dir.path().join("resources")).unwrap();
+    let tarball = dir.path().join("cli.tar.gz");
+    let status = command::blocking::Command::new("tar")
+        .arg("czf")
+        .arg(&tarball)
+        .arg("-C")
+        .arg(dir.path())
+        .arg(binary_name())
+        .arg("resources")
+        .status()
+        .unwrap();
+    assert!(status.success());
+    std::fs::read(tarball).unwrap()
+}
+
+/// Where the install script that ran in `home` installs the binary.
+fn installed_binary(home: &std::path::Path) -> std::path::PathBuf {
+    std::path::PathBuf::from(remote_server_binary().replacen('~', home.to_str().unwrap(), 1))
+}
+
+/// What the install directory in `home` holds besides the installed binary, such as a staging
+/// directory left behind.
+fn install_dir_leftovers(home: &std::path::Path) -> Vec<String> {
+    let install_dir =
+        std::path::PathBuf::from(remote_server_dir().replacen('~', home.to_str().unwrap(), 1));
+    let binary = installed_binary(home);
+    std::fs::read_dir(install_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| *path != binary)
+        .map(|path| path.display().to_string())
+        .collect()
+}
+
 #[test]
 fn install_script_downloads_the_tarball_of_its_release_tag() {
     let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
     // The newest release is another one, which a build with a tag doesn't ask for.
-    let run = run_install_script(
-        &script,
+    let host = RemoteHost::new(
         Downloader::Curl,
         "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.5",
-    );
+    )
+    .serving(format!("{name}.sha256"), checksum_file(name, b"tarball"));
+    let run = run_install_script(&script, host);
 
-    let url = release_tarball_url_of_this_system();
-    assert_eq!(run.calls.len(), 1, "{:?}", run.calls);
+    // The SHA-256 first, then the tarball.
+    assert_eq!(run.calls.len(), 2, "{:?}", run.calls);
+    let checksum_url = checksum_url(&url);
     assert!(
-        run.calls[0].split(' ').any(|arg| arg == url),
+        run.calls[0].split(' ').any(|arg| arg == checksum_url),
+        "{:?}",
+        run.calls
+    );
+    assert!(
+        run.calls[1].split(' ').any(|arg| arg == url),
         "{:?}",
         run.calls
     );
@@ -385,14 +509,17 @@ fn install_script_downloads_the_tarball_of_its_release_tag() {
 #[test]
 fn install_script_without_release_tag_downloads_the_newest_release_with_curl() {
     let script = install_script_for(None, None);
-    let run = run_install_script(&script, Downloader::Curl, LATEST_LOCATION);
-
     let url = release_tarball_url_of_this_system();
-    assert_eq!(run.calls.len(), 2, "{:?}", run.calls);
+    let name = file_name_in_url(&url);
+    let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+        .serving(format!("{name}.sha256"), checksum_file(name, b"tarball"));
+    let run = run_install_script(&script, host);
+
+    assert_eq!(run.calls.len(), 3, "{:?}", run.calls);
     assert!(run.calls[0].starts_with("curl "), "{:?}", run.calls);
     assert!(run.calls[0].contains(LATEST_RELEASE_URL), "{:?}", run.calls);
     assert!(
-        run.calls[1].split(' ').any(|arg| arg == url),
+        run.calls[2].split(' ').any(|arg| arg == url),
         "{:?}",
         run.calls
     );
@@ -402,14 +529,17 @@ fn install_script_without_release_tag_downloads_the_newest_release_with_curl() {
 #[test]
 fn install_script_without_release_tag_downloads_the_newest_release_with_wget() {
     let script = install_script_for(None, None);
-    let run = run_install_script(&script, Downloader::Wget, LATEST_LOCATION);
-
     let url = release_tarball_url_of_this_system();
-    assert_eq!(run.calls.len(), 2, "{:?}", run.calls);
+    let name = file_name_in_url(&url);
+    let host = RemoteHost::new(Downloader::Wget, LATEST_LOCATION)
+        .serving(format!("{name}.sha256"), checksum_file(name, b"tarball"));
+    let run = run_install_script(&script, host);
+
+    assert_eq!(run.calls.len(), 3, "{:?}", run.calls);
     assert!(run.calls[0].starts_with("wget "), "{:?}", run.calls);
     assert!(run.calls[0].contains(LATEST_RELEASE_URL), "{:?}", run.calls);
     assert!(
-        run.calls[1].split(' ').any(|arg| arg == url),
+        run.calls[2].split(' ').any(|arg| arg == url),
         "{:?}",
         run.calls
     );
@@ -424,7 +554,7 @@ fn install_script_without_release_tag_fails_when_no_release_is_found() {
     let no_release = "https://github.com/q0wkp/zap/releases";
 
     for downloader in [Downloader::Curl, Downloader::Wget] {
-        let run = run_install_script(&script, downloader, no_release);
+        let run = run_install_script(&script, RemoteHost::new(downloader, no_release));
 
         // Only the lookup, and no download.
         assert_eq!(run.calls.len(), 1, "{:?}", run.calls);
@@ -436,6 +566,227 @@ fn install_script_without_release_tag_fails_when_no_release_is_found() {
             run.stderr
         );
     }
+}
+
+#[test]
+fn install_script_installs_a_tarball_whose_sha256_matches() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+    let tarball = cli_tarball();
+
+    for downloader in [Downloader::Curl, Downloader::Wget] {
+        let host = RemoteHost::new(downloader, LATEST_LOCATION)
+            .serving(format!("{name}.sha256"), checksum_file(name, &tarball))
+            .serving(name, tarball.clone());
+        let run = run_install_script(&script, host);
+
+        assert_eq!(run.exit_code, Some(0), "{}", run.stderr);
+        assert!(installed_binary(run.home.path()).is_file());
+        assert!(
+            install_dir_leftovers(run.home.path()).is_empty(),
+            "{:?}",
+            install_dir_leftovers(run.home.path())
+        );
+    }
+}
+
+#[test]
+fn install_script_verifies_with_shasum_without_sha256sum() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+    let tarball = cli_tarball();
+
+    // As on macOS, which has shasum only.
+    let mut host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+        .serving(format!("{name}.sha256"), checksum_file(name, &tarball))
+        .serving(name, tarball);
+    host.missing = &["sha256sum"];
+    let run = run_install_script(&script, host);
+
+    assert_eq!(run.exit_code, Some(0), "{}", run.stderr);
+    assert!(
+        run.calls.iter().any(|call| call == "shasum -a 256"),
+        "{:?}",
+        run.calls
+    );
+    assert!(installed_binary(run.home.path()).is_file());
+
+    // A mismatch is found with shasum as well.
+    let mut host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+        .serving(
+            format!("{name}.sha256"),
+            checksum_file(name, b"another tarball"),
+        )
+        .serving(name, cli_tarball());
+    host.missing = &["sha256sum"];
+    let run = run_install_script(&script, host);
+    assert_eq!(run.exit_code, Some(6), "{}", run.stderr);
+}
+
+#[test]
+fn install_script_refuses_a_tarball_whose_sha256_differs() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+    let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+        .serving(
+            format!("{name}.sha256"),
+            checksum_file(name, b"another tarball"),
+        )
+        .serving(name, cli_tarball());
+    let run = run_install_script(&script, host);
+
+    assert_eq!(run.exit_code, Some(6), "{}", run.stderr);
+    assert!(run.stderr.contains("SHA-256 mismatch"), "{}", run.stderr);
+    assert!(run.stderr.contains(&url), "{}", run.stderr);
+    // Neither installed nor left behind extracted.
+    assert!(!installed_binary(run.home.path()).exists());
+    assert!(
+        install_dir_leftovers(run.home.path()).is_empty(),
+        "{:?}",
+        install_dir_leftovers(run.home.path())
+    );
+}
+
+#[test]
+fn install_script_refuses_a_release_without_sha256() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+
+    for downloader in [Downloader::Curl, Downloader::Wget] {
+        // As a release made before checksums were published.
+        let host = RemoteHost::new(downloader, LATEST_LOCATION).serving(name, cli_tarball());
+        let run = run_install_script(&script, host);
+
+        assert_eq!(run.exit_code, Some(5), "{}", run.stderr);
+        assert!(run.stderr.contains(&checksum_url(&url)), "{}", run.stderr);
+        // The tarball isn't downloaded.
+        assert_eq!(run.calls.len(), 1, "{:?}", run.calls);
+        assert!(!installed_binary(run.home.path()).exists());
+    }
+}
+
+#[test]
+fn install_script_refuses_a_sha256_file_without_sha256() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+
+    for contents in ["", "Not Found\n", "0123abcd  short\n"] {
+        let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+            .serving(format!("{name}.sha256"), contents)
+            .serving(name, cli_tarball());
+        let run = run_install_script(&script, host);
+
+        assert_eq!(run.exit_code, Some(5), "{contents:?}: {}", run.stderr);
+        assert!(run.stderr.contains("holds no SHA-256"), "{}", run.stderr);
+        assert!(!installed_binary(run.home.path()).exists());
+    }
+}
+
+#[test]
+fn install_script_without_sha256_program_downloads_nothing() {
+    let script = install_script_for(Some(RELEASE_TAG), None);
+    let mut host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION);
+    host.missing = &["sha256sum", "shasum"];
+    let run = run_install_script(&script, host);
+
+    // Not 2, so that the client downloads, verifies and uploads the tarball itself.
+    assert_eq!(run.exit_code, Some(4), "{}", run.stderr);
+    assert!(
+        run.stderr.contains("neither sha256sum nor shasum"),
+        "{}",
+        run.stderr
+    );
+    assert!(run.calls.is_empty(), "{:?}", run.calls);
+}
+
+#[test]
+fn install_script_extracts_an_uploaded_tarball_without_sha256_program() {
+    // The client verified the tarball it uploaded.
+    let fake_home = tempfile::tempdir().unwrap();
+    let uploaded = fake_home.path().join(SCP_UPLOAD_TARBALL_NAME);
+    std::fs::write(&uploaded, cli_tarball()).unwrap();
+    let script = install_script_for(Some(RELEASE_TAG), Some(uploaded.to_str().unwrap()));
+
+    let output = command::blocking::Command::new("bash")
+        .arg("-c")
+        .arg(format!(
+            "command() {{ case \"$1 $2\" in '-v sha256sum'|'-v shasum') return 1 ;; esac; builtin command \"$@\"; }}\n{script}"
+        ))
+        .env("HOME", fake_home.path())
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(installed_binary(fake_home.path()).is_file());
+}
+
+#[test]
+fn checksum_url_appends_sha256_to_the_tarball() {
+    let url = release_tarball_url(RELEASE_TAG, "linux", "x86_64");
+    assert_eq!(checksum_url(&url), format!("{url}.sha256"));
+    assert!(install_script_for(Some(RELEASE_TAG), None).contains(
+        "checksum_url=\"https://github.com/q0wkp/zap/releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz.sha256\""
+    ));
+}
+
+#[test]
+fn parse_checksum_file_reads_sha256sum_output() {
+    let sha256 = sha256_hex(b"tarball");
+    assert_eq!(
+        parse_checksum_file(&format!("{sha256}  zap.tar.gz\n")),
+        Some(sha256.clone())
+    );
+    // shasum's binary mode marker, and no name or newline at all.
+    assert_eq!(
+        parse_checksum_file(&format!("{sha256} *zap.tar.gz")),
+        Some(sha256.clone())
+    );
+    assert_eq!(
+        parse_checksum_file(&sha256.to_uppercase()),
+        Some(sha256.clone())
+    );
+    assert_eq!(parse_checksum_file(""), None);
+    assert_eq!(parse_checksum_file("Not Found"), None);
+    assert_eq!(parse_checksum_file(&sha256[1..]), None);
+    assert_eq!(parse_checksum_file(&format!("{sha256}0")), None);
+}
+
+#[test]
+fn verify_sha256_accepts_only_the_published_sha256() {
+    let dir = tempfile::tempdir().unwrap();
+    let tarball = dir.path().join("zap.tar.gz");
+    std::fs::write(&tarball, b"tarball").unwrap();
+
+    verify_sha256(
+        &tarball,
+        &checksum_file("zap.tar.gz", b"tarball"),
+        "zap.tar.gz",
+    )
+    .unwrap();
+
+    let error = verify_sha256(
+        &tarball,
+        &checksum_file("zap.tar.gz", b"other"),
+        "zap.tar.gz",
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("SHA-256 mismatch for zap.tar.gz"), "{error}");
+    assert!(error.contains(&sha256_hex(b"tarball")), "{error}");
+
+    let error = verify_sha256(&tarball, "Not Found", "zap.tar.gz")
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("holds no SHA-256"), "{error}");
 }
 
 /// Runs [`previous_install_check_command`] against `fake_home` and returns
