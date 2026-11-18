@@ -938,8 +938,10 @@ fn make_new_elements_menu_items(ctx: &AppContext) -> Vec<MenuItem> {
                 let (is_any_ai_enabled, is_default_session_mode_agent) = AISettings::handle(ctx)
                     .read(ctx, |ai_settings, ctx| {
                         let enabled = ai_settings.is_any_ai_enabled(ctx);
+                        // A default CLI agent takes the new tab binding instead.
                         let agent = enabled
-                            && ai_settings.default_session_mode(ctx) == DefaultSessionMode::Agent;
+                            && ai_settings.default_session_mode(ctx) == DefaultSessionMode::Agent
+                            && ai_settings.default_cli_agent(ctx).is_none();
                         (enabled, agent)
                     });
                 if !is_any_ai_enabled {

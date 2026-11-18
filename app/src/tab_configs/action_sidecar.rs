@@ -13,8 +13,11 @@ use warpui::{
 };
 
 use crate::{
-    appearance::Appearance, settings::ai::DefaultSessionMode, tab_configs::TabConfig,
-    terminal::available_shells::AvailableShell, workspace::WorkspaceAction,
+    appearance::Appearance,
+    settings::ai::DefaultSessionMode,
+    tab_configs::TabConfig,
+    terminal::{available_shells::AvailableShell, CLIAgent},
+    workspace::WorkspaceAction,
 };
 
 pub(crate) const SIDECAR_WIDTH: f32 = 260.;
@@ -23,11 +26,13 @@ const SIDECAR_PADDING: f32 = 12.;
 /// Describes what the sidecar is showing, which determines which buttons appear.
 #[derive(Clone, Debug)]
 pub(crate) enum SidecarItemKind {
-    /// A built-in item (Terminal, a specific shell, Agent, Ambient Agent).
+    /// A built-in item (Terminal, a specific shell, Agent, a CLI agent, Ambient Agent).
     BuiltIn {
         name: String,
         default_mode: DefaultSessionMode,
         shell: Option<AvailableShell>,
+        /// The CLI agent an `Agent` item launches; `None` for the built-in agent view.
+        cli_agent: Option<CLIAgent>,
     },
     /// A user-created tab config loaded from disk.
     UserTabConfig { config: TabConfig },
@@ -110,16 +115,19 @@ pub(crate) fn render_action_sidecar(
         SidecarItemKind::BuiltIn {
             default_mode,
             shell,
+            cli_agent,
             ..
         } => WorkspaceAction::TabConfigSidecarMakeDefault {
             mode: *default_mode,
             tab_config_path: None,
             shell: shell.clone(),
+            cli_agent: *cli_agent,
         },
         SidecarItemKind::UserTabConfig { config } => WorkspaceAction::TabConfigSidecarMakeDefault {
             mode: DefaultSessionMode::TabConfig,
             tab_config_path: config.source_path.clone(),
             shell: None,
+            cli_agent: None,
         },
     };
 

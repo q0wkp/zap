@@ -1747,6 +1747,19 @@ define_settings_group!(AISettings, settings: [
         toml_path: "general.default_tab_config_path",
     }
 
+    // The CLI agent (a serialized CLIAgent name such as "Codex") that new sessions launch when
+    // default_session_mode_internal is Agent. Empty means the built-in agent view.
+    // Machine-local (installed CLI agents vary per machine), so never synced to cloud.
+    default_cli_agent: DefaultCLIAgent {
+        type: String,
+        default: String::new(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        private: false,
+        toml_path: "agents.third_party.default_cli_agent",
+        description: "The CLI agent new sessions launch when the default session mode is Agent.",
+    }
+
     // Whether file-based MCP servers from third-party AI tools (e.g. Claude, Codex) should
     // be automatically detected and spawned. Zap-native config files (.warp/.mcp.json) are
     // always detected and spawned, regardless of this setting.
@@ -2028,6 +2041,35 @@ impl AISettings {
                 }
             }
         }
+    }
+
+    /// The CLI agent new sessions launch instead of the agent view, when the effective default
+    /// session mode is `Agent` and a CLI agent was made the default.
+    pub fn default_cli_agent(&self, app: &AppContext) -> Option<CLIAgent> {
+        if self.default_session_mode(app) != DefaultSessionMode::Agent {
+            return None;
+        }
+        match CLIAgent::from_serialized_name(&self.default_cli_agent) {
+            CLIAgent::Unknown => None,
+            agent => Some(agent),
+        }
+    }
+
+    /// Sets the default session mode together with the CLI agent it launches. `cli_agent` is
+    /// kept only for `Agent`, so that choosing any other default (or the built-in agent)
+    /// forgets a CLI agent chosen before.
+    pub fn set_default_session_mode(
+        &mut self,
+        mode: DefaultSessionMode,
+        cli_agent: Option<CLIAgent>,
+        ctx: &mut ModelContext<Self>,
+    ) {
+        let cli_agent = cli_agent
+            .filter(|_| mode == DefaultSessionMode::Agent)
+            .map(|agent| agent.to_serialized_name())
+            .unwrap_or_default();
+        report_if_error!(self.default_session_mode_internal.set_value(mode, ctx));
+        report_if_error!(self.default_cli_agent.set_value(cli_agent, ctx));
     }
 
     /// Returns the stored default tab config path (only meaningful when mode is `TabConfig`).

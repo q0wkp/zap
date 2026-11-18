@@ -101,9 +101,7 @@ fn apply_agent_settings(agent_settings: &AgentDevelopmentSettings, app: &mut App
         SessionDefault::Terminal => DefaultSessionMode::Terminal,
     };
     AISettings::handle(app).update(app, |settings, ctx| {
-        report_if_error!(settings
-            .default_session_mode_internal
-            .set_value(default_mode, ctx));
+        settings.set_default_session_mode(default_mode, None, ctx);
     });
 
     let workspace_autonomy_settings = UserWorkspaces::as_ref(app).ai_autonomy_settings();
