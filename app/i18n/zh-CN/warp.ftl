@@ -88,6 +88,7 @@ common-recommended = 推荐
 common-enabled = 启用
 common-disabled = 停用
 common-free = 免费
+common-stop = 停止
 common-subscribe = 订阅
 common-list-prefix = {" - "}
 common-current-directory = 当前目录

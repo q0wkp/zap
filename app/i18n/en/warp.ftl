@@ -92,6 +92,7 @@ common-recommended = Recommended
 common-enabled = Enabled
 common-disabled = Disabled
 common-free = Free
+common-stop = Stop
 common-list-prefix = {" - "}
 common-current-directory = the current directory
 

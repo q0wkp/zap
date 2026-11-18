@@ -2958,6 +2958,11 @@ impl AIBlock {
             RequestedCommandViewEvent::Rejected => {
                 self.cancel_action(action_id, ctx);
             }
+            RequestedCommandViewEvent::Stopped => {
+                ctx.emit(AIBlockEvent::StopRequestedCommand {
+                    action_id: action_id.clone(),
+                });
+            }
             RequestedCommandViewEvent::UpdatedExpansionState { is_expanded } => {
                 // We only care about expansion state updates when the command
                 // is running or finished (i.e. when it has a block).
@@ -3107,8 +3112,10 @@ impl AIBlock {
                 self.enable_autoexecute_override(ctx);
             }
             // There's nothing to do here for MCP tool calls; their expanded state
-            // doesn't change the blocklist like it does for requested commands.
-            RequestedCommandViewEvent::UpdatedExpansionState { .. } => {}
+            // doesn't change the blocklist like it does for requested commands, and they
+            // never show a Stop button.
+            RequestedCommandViewEvent::UpdatedExpansionState { .. }
+            | RequestedCommandViewEvent::Stopped => {}
             RequestedCommandViewEvent::OpenActiveAgentProfileEditor => {
                 ctx.emit(AIBlockEvent::OpenActiveAgentProfileEditor);
             }
@@ -5177,6 +5184,10 @@ pub enum AIBlockEvent {
         is_auto_open: bool,
     },
     OpenActiveAgentProfileEditor,
+    /// The user asked to interrupt the running command requested by the given action.
+    StopRequestedCommand {
+        action_id: AIAgentActionId,
+    },
     /// Run the configured AWS auth refresh command to fix expired Bedrock credentials
     RunAwsLoginCommand,
     /// Emitted when a passive code diff has loaded its diffs and is ready to display.

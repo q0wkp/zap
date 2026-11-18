@@ -193,6 +193,7 @@ pub enum RequestedCommandViewEvent {
     Accepted,
     EnableAutoexecuteMode,
     Rejected,
+    Stopped,
     UpdatedExpansionState { is_expanded: bool },
     TextSelected,
     CopiedEmptyText,
@@ -207,6 +208,7 @@ pub enum RequestedCommandViewAction {
     ToggleAcceptMenu,
     Reject,
     Explain,
+    Stop,
     OpenEditMode,
     CloseEditMode,
     FocusEditor,
@@ -261,6 +263,8 @@ pub struct RequestedCommandView {
     /// What Explain found out about the command, shown while the user decides on it.
     explanation: ExplanationState,
     explanation_request: Option<SpawnedFutureHandle>,
+    /// Interrupts the command while it runs.
+    stop_button: CompactibleActionButton,
 
     // Split accept button and menu state
     accept_and_autoexecute_split_button: CompactibleSplitActionButton,
@@ -366,6 +370,16 @@ impl RequestedCommandView {
             ButtonSize::InlineActionHeader,
             RequestedCommandViewAction::CloseEditMode,
             Icon::ArrowBlockLeft,
+            Arc::new(NakedTheme),
+            ctx,
+        );
+
+        let stop_button = CompactibleActionButton::new(
+            crate::t!("common-stop"),
+            None,
+            ButtonSize::InlineActionHeader,
+            RequestedCommandViewAction::Stop,
+            Icon::StopFilled,
             Arc::new(NakedTheme),
             ctx,
         );
@@ -518,6 +532,7 @@ impl RequestedCommandView {
             explain_button,
             explanation: ExplanationState::None,
             explanation_request: None,
+            stop_button,
             accept_and_autoexecute_split_button,
             is_accept_split_button_menu_open: false,
             accept_split_button_menu: accept_menu,
@@ -1449,9 +1464,17 @@ impl RequestedCommandView {
                 });
             }
             Some(AIActionStatus::RunningAsync) if self.action_type.is_requested_command() => {
-                config = config.with_interaction_mode(InteractionMode::ManuallyExpandable(
-                    self.get_expansion_config(requested_command_block, app),
-                ));
+                let mut expansion_config = self.get_expansion_config(requested_command_block, app);
+                // The status bar hides its Stop button while the command's output is shown, so
+                // the card offers one until the command finishes.
+                if !requested_command_block.is_some_and(|block| block.finished()) {
+                    expansion_config = expansion_config.with_action_buttons(
+                        vec![Rc::new(self.stop_button.clone())],
+                        SMALL_SIZE_SWITCH_THRESHOLD,
+                    );
+                }
+                config = config
+                    .with_interaction_mode(InteractionMode::ManuallyExpandable(expansion_config));
             }
             Some(AIActionStatus::Finished(result)) => {
                 // Determine if command should be expandable based on whether it actually executed
@@ -1845,6 +1868,7 @@ impl TypedActionView for RequestedCommandView {
                 ctx.emit(RequestedCommandViewEvent::Rejected)
             }
             RequestedCommandViewAction::Explain => self.explain(ctx),
+            RequestedCommandViewAction::Stop => ctx.emit(RequestedCommandViewEvent::Stopped),
             RequestedCommandViewAction::OpenEditMode => self.open_edit_mode(ctx),
             RequestedCommandViewAction::CloseEditMode => self.close_edit_mode(ctx),
             RequestedCommandViewAction::FocusEditor => {

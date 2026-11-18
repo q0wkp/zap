@@ -92,6 +92,7 @@ common-recommended = おすすめ
 common-enabled = 有効
 common-disabled = 無効
 common-free = 無料
+common-stop = 停止
 common-subscribe = 購読
 common-list-prefix = {" - "}
 common-current-directory = 現在のディレクトリ
