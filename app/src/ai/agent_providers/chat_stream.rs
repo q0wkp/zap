@@ -1860,8 +1860,21 @@ fn should_replace_tool_response(existing: &ToolResponse, candidate: &ToolRespons
         || !is_placeholder_tool_response_content(&candidate.content)
 }
 
+/// Whether BYOP diagnostics may write conversation content (queries, tool results, the full
+/// request) to the log. Off by default: zap.log is a plain file, and the content carries whatever
+/// the terminal and the files showed. `ZAP_BYOP_DIAG=1` turns it on for debugging a provider.
+fn byop_content_diag_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("ZAP_BYOP_DIAG").is_ok_and(|value| !value.is_empty() && value != "0")
+    })
+}
+
 fn snippet_for_log(s: &str, max_chars: usize) -> String {
     use std::fmt::Write as _;
+    if !byop_content_diag_enabled() {
+        return format!("<{} chars; ZAP_BYOP_DIAG=1 logs content>", s.chars().count());
+    }
 
     let mut out = String::new();
     for (idx, ch) in s.chars().enumerate() {
@@ -3709,7 +3722,9 @@ pub async fn generate_byop_output(
     }))
     .unwrap_or_default();
     log::info!("[byop] diag_body_approx_len={}", diag_body_json.len());
-    log::info!("[byop-diag] full_request_json={diag_body_json}");
+    if byop_content_diag_enabled() {
+        log::info!("[byop-diag] full_request_json={diag_body_json}");
+    }
 
     // 主动扫描原始文本里的"可疑反斜杠序列":serde_json 把源字符串里的字面
     // `\` 序列化为 `\\`,所以 wire body 里出现"两个连续反斜杠 + u/x" 才意味着
@@ -4069,12 +4084,16 @@ pub async fn generate_byop_output(
                     if let Some(call) = inspector_call.take() {
                         call.fail(&err_text);
                     }
-                    log::error!("[byop-diag] full_request_json_on_error={diag_body_json}");
+                    if byop_content_diag_enabled() {
+                        log::error!("[byop-diag] full_request_json_on_error={diag_body_json}");
+                    }
                     // 从错误消息里 parse "column N",dump diag_body_json 该位置 ±200 char 上下文 + 字节 hex。
+                    // 只在开了 ZAP_BYOP_DIAG 时 dump:上下文是请求原文。
                     if let Some(col) = err_text
                         .split("column ")
                         .nth(1)
                         .and_then(|s| s.chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse::<usize>().ok())
+                        .filter(|_| byop_content_diag_enabled())
                     {
                         let body = &diag_body_json;
                         let byte_len = body.len();
