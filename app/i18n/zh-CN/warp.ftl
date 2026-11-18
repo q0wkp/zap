@@ -272,6 +272,10 @@ ai-block-compaction-summary-compacting = 正在压缩对话…
 ai-block-compaction-summary-compacted = 对话已压缩
 ai-block-compaction-summary-compacted-auto = 对话已自动压缩
 ai-block-compaction-summary-stopped = 对话压缩已中止
+ai-block-show-full-output = { $lines ->
+    [0] 显示完整输出
+   *[other] 显示完整输出（还有 { $lines } 行）
+}
 ai-block-resume-conversation = 继续对话
 ai-block-continue-conversation = 继续对话
 ai-block-fork-conversation = Fork 对话

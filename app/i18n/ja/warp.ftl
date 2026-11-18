@@ -230,6 +230,10 @@ ai-block-compaction-summary-compacting = 会話を圧縮しています…
 ai-block-compaction-summary-compacted = 会話を圧縮しました
 ai-block-compaction-summary-compacted-auto = 会話を自動的に圧縮しました
 ai-block-compaction-summary-stopped = 会話の圧縮が中断されました
+ai-block-show-full-output = { $lines ->
+    [0] 出力をすべて表示
+   *[other] 出力をすべて表示（残り { $lines } 行）
+}
 ai-block-resume-conversation = 会話を再開
 ai-block-continue-conversation = 会話を続ける
 ai-block-fork-conversation = 会話をフォーク

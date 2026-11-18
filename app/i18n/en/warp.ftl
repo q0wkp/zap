@@ -277,6 +277,10 @@ ai-block-compaction-summary-compacting = Compacting conversation…
 ai-block-compaction-summary-compacted = Conversation compacted
 ai-block-compaction-summary-compacted-auto = Conversation compacted automatically
 ai-block-compaction-summary-stopped = Conversation compaction stopped
+ai-block-show-full-output = { $lines ->
+    [0] Show full output
+   *[other] Show full output ({ $lines } more lines)
+}
 ai-block-resume-conversation = Resume conversation
 ai-block-continue-conversation = Continue conversation
 ai-block-fork-conversation = Fork conversation

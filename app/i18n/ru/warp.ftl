@@ -275,6 +275,10 @@ ai-block-compaction-summary-compacting = Сжатие разговора…
 ai-block-compaction-summary-compacted = Разговор сжат
 ai-block-compaction-summary-compacted-auto = Разговор сжат автоматически
 ai-block-compaction-summary-stopped = Сжатие разговора прервано
+ai-block-show-full-output = { $lines ->
+    [0] Показать весь вывод
+   *[other] Показать весь вывод (ещё строк: { $lines })
+}
 ai-block-resume-conversation = Возобновить диалог
 ai-block-continue-conversation = Продолжить диалог
 ai-block-fork-conversation = Ответвить диалог

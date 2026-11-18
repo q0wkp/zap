@@ -67,8 +67,8 @@ use crate::{
             icons::red_stop_icon, AIAgentAction, AIAgentActionType, AIAgentAttachment,
             AIAgentInput, AIAgentOutputMessageType, AIAgentTextSection, AgentOutputImage,
             AgentOutputImageLayout, AgentOutputMermaidDiagram, AgentOutputTable,
-            AgentOutputTableRendering, DriveObjectPayload, ProgrammingLanguage, RenderableAIError,
-            SummarizationType, WebSearchStatus,
+            AgentOutputTableRendering, DriveObjectPayload, FormattedTextLineWrapper,
+            ProgrammingLanguage, RenderableAIError, SummarizationType, WebSearchStatus,
         },
         blocklist::{
             block::{
@@ -1092,6 +1092,137 @@ pub struct TextSectionsProps<'a, V, A: 'static> {
     pub resolved_code_block_paths: Option<&'a HashMap<PathBuf, Option<PathBuf>>>,
     #[cfg(feature = "local_fs")]
     pub resolved_blocklist_image_sources: Option<&'a ResolvedBlocklistImageSources>,
+    /// Cuts the sections short when they are too long to render. `None` renders them in full.
+    pub length_cap: Option<OutputLengthCap<A>>,
+}
+
+/// Rendering lays out every line of an answer on each frame, so a very long answer stalls the
+/// UI. Past these limits the rest of it is hidden until the user asks to see it.
+const MAX_RENDERED_OUTPUT_LINES: usize = 2_000;
+const MAX_RENDERED_OUTPUT_BYTES: usize = 256 * 1024;
+
+/// How [`render_text_sections`] caps the length of what it renders.
+pub struct OutputLengthCap<A: 'static> {
+    /// The user asked to see the whole output: nothing is cut.
+    pub show_full_output: bool,
+    pub show_full_output_action_factory: &'static dyn Fn() -> A,
+    pub button_mouse_state: MouseStateHandle,
+}
+
+/// Where rendered text sections are cut short.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OutputCut {
+    /// The offset of the first section that is not shown in full.
+    section_offset: usize,
+    /// How many formatted lines of that section are shown.
+    kept_lines: usize,
+    /// How many lines are hidden, in that section and the ones after it.
+    hidden_lines: usize,
+}
+
+/// Where to cut `sections` so that no more than `max_lines` lines and about `max_bytes` bytes
+/// are rendered, or `None` if they fit. Formatted text is cut between lines; any other section
+/// is shown whole as long as the limits aren't reached before it.
+fn find_output_cut(
+    sections: &[AIAgentTextSection],
+    max_lines: usize,
+    max_bytes: usize,
+) -> Option<OutputCut> {
+    let mut lines_left = max_lines;
+    let mut bytes_left = max_bytes;
+    let mut cut: Option<OutputCut> = None;
+    for (offset, section) in sections.iter().enumerate() {
+        if let Some(cut) = cut.as_mut() {
+            cut.hidden_lines += section_line_count(section);
+            continue;
+        }
+        if lines_left == 0 || bytes_left == 0 {
+            cut = Some(OutputCut {
+                section_offset: offset,
+                kept_lines: 0,
+                hidden_lines: section_line_count(section),
+            });
+            continue;
+        }
+        if let Some(lines) = formatted_lines(section) {
+            let mut kept_lines = 0;
+            for line in lines {
+                if lines_left == 0 || bytes_left == 0 {
+                    break;
+                }
+                kept_lines += 1;
+                lines_left -= 1;
+                // Count the line break too, so that empty lines use up the budget.
+                bytes_left = bytes_left.saturating_sub(line.raw_text().len() + 1);
+            }
+            if kept_lines < lines.len() {
+                cut = Some(OutputCut {
+                    section_offset: offset,
+                    kept_lines,
+                    hidden_lines: lines.len() - kept_lines,
+                });
+            }
+        } else {
+            let (lines, bytes) = section_size(section);
+            lines_left = lines_left.saturating_sub(lines);
+            bytes_left = bytes_left.saturating_sub(bytes);
+        }
+    }
+    cut
+}
+
+/// The parsed lines of a text section, the only kind of section that is cut between lines.
+fn formatted_lines(section: &AIAgentTextSection) -> Option<&[FormattedTextLineWrapper]> {
+    match section {
+        AIAgentTextSection::PlainText { text } => text
+            .formatted_lines
+            .as_ref()
+            .map(|formatted_text| formatted_text.lines()),
+        AIAgentTextSection::Code { .. }
+        | AIAgentTextSection::Table { .. }
+        | AIAgentTextSection::Image { .. }
+        | AIAgentTextSection::MermaidDiagram { .. } => None,
+    }
+}
+
+fn section_line_count(section: &AIAgentTextSection) -> usize {
+    match formatted_lines(section) {
+        Some(lines) => lines.len(),
+        None => section_size(section).0,
+    }
+}
+
+/// The lines and bytes a section counts for against the length cap.
+fn section_size(section: &AIAgentTextSection) -> (usize, usize) {
+    match section {
+        AIAgentTextSection::PlainText { text } => (text.text().lines().count(), text.text().len()),
+        AIAgentTextSection::Code { code, .. } => (code.lines().count(), code.len()),
+        AIAgentTextSection::Table { table } => (
+            table.markdown_source.lines().count(),
+            table.markdown_source.len(),
+        ),
+        AIAgentTextSection::Image { .. } | AIAgentTextSection::MermaidDiagram { .. } => (1, 0),
+    }
+}
+
+/// The section and line of the focused find match, if it is in this block's output text.
+fn focused_output_match(find_context: Option<FindContext<'_>>) -> Option<(usize, usize)> {
+    let find_context = find_context?;
+    let match_id = match find_context.model.block_list_find_run()?.focused_match()? {
+        BlockListMatch::RichContent { match_id, .. } => *match_id,
+        BlockListMatch::CommandBlock(_) => return None,
+    };
+    match find_context
+        .state
+        .location_for_match(match_id)?
+        .text_location
+    {
+        TextLocation::Output {
+            section_index,
+            line_index,
+        } => Some((section_index, line_index)),
+        TextLocation::Query { .. } | TextLocation::Action { .. } => None,
+    }
 }
 
 pub fn render_text_sections<V: View, A: Action>(
@@ -1112,9 +1243,48 @@ pub fn render_text_sections<V: View, A: Action>(
         props.resolved_blocklist_image_sources,
         app,
     );
+    // A focused find match in the hidden part lifts the cap, so that it can be shown.
+    let cut = props
+        .length_cap
+        .as_ref()
+        .filter(|cap| !cap.show_full_output)
+        .and_then(|_| {
+            find_output_cut(
+                props.sections,
+                MAX_RENDERED_OUTPUT_LINES,
+                MAX_RENDERED_OUTPUT_BYTES,
+            )
+        })
+        .filter(|cut| {
+            focused_output_match(props.find_context).is_none_or(|focused_match| {
+                focused_match
+                    < (
+                        starting_text_section_index + cut.section_offset,
+                        cut.kept_lines,
+                    )
+            })
+        });
     let mut indexed_section_offset = 0;
     while indexed_section_offset < indexed_sections.len() {
         let (section_index, section) = indexed_sections[indexed_section_offset];
+        let is_hidden = cut.is_some_and(|cut| {
+            indexed_section_offset > cut.section_offset
+                || (indexed_section_offset == cut.section_offset && cut.kept_lines == 0)
+        });
+        if is_hidden {
+            // Skip the hidden sections, but count them so that the sections of later messages
+            // still find their handles.
+            for (_, section) in &indexed_sections[indexed_section_offset..] {
+                match section {
+                    AIAgentTextSection::Code { .. } => *props.starting_code_section_index += 1,
+                    AIAgentTextSection::Table { .. } => *props.starting_table_section_index += 1,
+                    AIAgentTextSection::Image { .. } => *props.starting_image_section_index += 1,
+                    AIAgentTextSection::PlainText { .. }
+                    | AIAgentTextSection::MermaidDiagram { .. } => {}
+                }
+            }
+            break;
+        }
         if let AIAgentTextSection::Image { image } = section {
             let image_group = collect_renderable_image_group(
                 &indexed_sections,
@@ -1176,10 +1346,23 @@ pub fn render_text_sections<V: View, A: Action>(
 
                 match &text.formatted_lines {
                     Some(formatted_text) => {
+                        let mut formatted_text = formatted_text.formatted_text_arc();
+                        if let Some(cut) =
+                            cut.filter(|cut| cut.section_offset == indexed_section_offset)
+                        {
+                            formatted_text = Arc::new(FormattedText::new(
+                                formatted_text
+                                    .lines
+                                    .iter()
+                                    .take(cut.kept_lines)
+                                    .cloned()
+                                    .collect::<Vec<_>>(),
+                            ));
+                        }
                         column.add_child(render_rich_text_output_text_section(
                             RichTextSectionProps {
                                 is_restored: props.model.is_restored(),
-                                formatted_text: formatted_text.formatted_text_arc(),
+                                formatted_text,
                                 text_color: props.text_color,
                                 is_ai_input_enabled: props.is_ai_input_enabled,
                                 section_index,
@@ -1296,7 +1479,42 @@ pub fn render_text_sections<V: View, A: Action>(
         }
         indexed_section_offset += 1;
     }
+    if let (Some(cut), Some(cap)) = (cut, props.length_cap.as_ref()) {
+        column.add_child(render_show_full_output_button(cap, cut.hidden_lines, app));
+    }
     column.finish()
+}
+
+fn render_show_full_output_button<A: Action>(
+    cap: &OutputLengthCap<A>,
+    hidden_lines: usize,
+    app: &AppContext,
+) -> Box<dyn Element> {
+    let appearance = Appearance::as_ref(app);
+    let theme = appearance.theme();
+    let show_full_output_action_factory = cap.show_full_output_action_factory;
+    let button = appearance
+        .ui_builder()
+        .button(
+            warpui::ui_components::button::ButtonVariant::Outlined,
+            cap.button_mouse_state.clone(),
+        )
+        .with_style(UiComponentStyles {
+            border_color: Some(internal_colors::neutral_4(theme).into()),
+            ..Default::default()
+        })
+        .with_hovered_styles(UiComponentStyles {
+            background: Some(internal_colors::fg_overlay_2(theme).into()),
+            ..Default::default()
+        })
+        .with_text_label(crate::t!("ai-block-show-full-output", lines = hidden_lines))
+        .with_cursor(Some(Cursor::PointingHand))
+        .build()
+        .on_click(move |ctx, _, _| {
+            ctx.dispatch_typed_action(show_full_output_action_factory());
+        })
+        .finish();
+    Flex::row().with_child(button).finish()
 }
 
 fn text_sections_with_indices(
