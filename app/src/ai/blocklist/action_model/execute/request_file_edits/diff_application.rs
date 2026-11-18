@@ -9,7 +9,7 @@ use std::{
 
 use ai::diff_validation::{
     fuzzy_match_diffs, fuzzy_match_v4a_diffs, AIRequestedCodeDiff, AmbiguousMatch, DiffDelta,
-    DiffMatchFailures, DiffType, ParsedDiff, SearchAndReplace, V4AHunk,
+    DiffMatchFailures, DiffType, LooseMatch, LooseMatchKind, ParsedDiff, SearchAndReplace, V4AHunk,
 };
 use itertools::Itertools;
 use vec1::Vec1;
@@ -161,6 +161,43 @@ impl DiffApplicationError {
                 })
                 .to_string()
         }
+    }
+}
+
+/// Remarks for the model on the search blocks of `diffs` that were applied where the file did
+/// not match them exactly, so that it checks the result instead of assuming its search matched.
+pub(crate) fn match_notes(diffs: &[AIRequestedCodeDiff]) -> Vec<String> {
+    diffs
+        .iter()
+        .flat_map(|diff| {
+            diff.failures
+                .iter()
+                .flat_map(|failures| &failures.loose_matches)
+                .map(|loose_match| loose_match_note(&diff.file_name, loose_match))
+        })
+        .collect()
+}
+
+fn loose_match_note(file: &str, loose_match: &LooseMatch) -> String {
+    let LooseMatch {
+        block_number,
+        lines,
+        kind,
+    } = loose_match;
+    let lines = match lines.end.saturating_sub(lines.start) {
+        0 | 1 => format!("line {}", lines.start),
+        _ => format!("lines {}-{}", lines.start, lines.end - 1),
+    };
+    match kind {
+        LooseMatchKind::IgnoringIndentation => format!(
+            "{file}: search block {block_number} matched {lines} only when leading whitespace is \
+             ignored, and was replaced there with your replacement as written. Check the \
+             indentation of the result."
+        ),
+        LooseMatchKind::Approximate => format!(
+            "{file}: search block {block_number} did not match exactly; it replaced {lines}, \
+             the closest match. Check that this is the place you meant."
+        ),
     }
 }
 

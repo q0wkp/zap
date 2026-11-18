@@ -152,6 +152,7 @@ impl AIRequestedCodeDiff {
                 missing_line_numbers: _,
                 ambiguous_matches,
                 ambiguous_match_details: _,
+                loose_matches: _,
             }) => {
                 let update_deltas_empty = match &self.diff_type {
                     DiffType::Update { deltas, .. } => deltas.is_empty(),
@@ -313,6 +314,30 @@ pub struct DiffMatchFailures {
     /// The blocks counted in `ambiguous_matches` and where they matched. Skipped for telemetry.
     #[serde(skip)]
     pub ambiguous_match_details: Vec<AmbiguousMatch>,
+    /// Not failures: blocks that were applied where the file matched them only loosely, which
+    /// the model is told about. Skipped for telemetry.
+    #[serde(skip)]
+    pub loose_matches: Vec<LooseMatch>,
+}
+
+/// A search block that was applied where the file did not match it exactly.
+///
+/// `block_number` is 1-based, like [`AmbiguousMatch::block_number`]. `lines` is the 1-indexed,
+/// end-exclusive range of the file it replaced.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LooseMatch {
+    pub block_number: usize,
+    pub lines: Range<usize>,
+    pub kind: LooseMatchKind,
+}
+
+/// How loosely a [`LooseMatch`] matched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LooseMatchKind {
+    /// The lines match once leading whitespace is ignored.
+    IgnoringIndentation,
+    /// The lines are only similar to the search block.
+    Approximate,
 }
 
 /// A search block that was not applied because it matched more than one place in the file.
@@ -356,6 +381,7 @@ pub fn fuzzy_match_diffs(
     let failures = if failures.fuzzy_match_failures > 0
         || failures.ambiguous_matches > 0
         || failures.missing_line_numbers > 0
+        || !failures.loose_matches.is_empty()
         || (failures.noop_deltas > 0 && update_deltas_empty)
     {
         Some(failures)
@@ -505,6 +531,8 @@ fn fuzzy_match_file_diffs(
         }
 
         // Find similar sections in the file content using the matching strategies.
+        // `loose_match_kind` says how loosely the strategy that found the block matches.
+        let mut loose_match_kind = None;
         let fuzzy_match_line_numbers = if line_range == Some(0..0) {
             // An empty line range indicates prepending to the file.
             BlockMatch::Found(0..0)
@@ -532,6 +560,7 @@ fn fuzzy_match_file_diffs(
             );
             if matched == BlockMatch::NotFound {
                 // If there's no exact match, try ignoring whitespace.
+                loose_match_kind = Some(LooseMatchKind::IgnoringIndentation);
                 matched = match_diff(
                     &search,
                     line_range.clone(),
@@ -545,6 +574,8 @@ fn fuzzy_match_file_diffs(
             // disambiguate.  Without a hint, short prefix searches like `fn main() {`
             // could match many windows in the file and silently pick the wrong one.
             if matched == BlockMatch::NotFound && line_range.is_some() {
+                // The rescued line keeps its unmatched tail, so the edit is as intended.
+                loose_match_kind = None;
                 matched = match_diff(
                     &search,
                     line_range.clone(),
@@ -556,6 +587,7 @@ fn fuzzy_match_file_diffs(
             }
 
             if matched == BlockMatch::NotFound {
+                loose_match_kind = Some(LooseMatchKind::Approximate);
                 matched = match_diff(
                     &search,
                     line_range.clone(),
@@ -613,6 +645,13 @@ fn fuzzy_match_file_diffs(
                     {
                         insertion.push_str(suffix);
                     }
+                }
+                if let Some(kind) = loose_match_kind {
+                    failures.loose_matches.push(LooseMatch {
+                        block_number: block_index + 1,
+                        lines: range.clone(),
+                        kind,
+                    });
                 }
                 deltas.push(DiffDelta {
                     replacement_line_range: range.start..range.end,

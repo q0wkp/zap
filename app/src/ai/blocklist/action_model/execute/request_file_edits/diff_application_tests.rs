@@ -569,6 +569,7 @@ fn test_format_match_error() {
             missing_line_numbers: 0,
             ambiguous_matches: 0,
             ambiguous_match_details: Vec::new(),
+            loose_matches: Vec::new(),
         },
     };
 
@@ -585,6 +586,7 @@ fn test_format_match_error() {
             missing_line_numbers: 0,
             ambiguous_matches: 0,
             ambiguous_match_details: Vec::new(),
+            loose_matches: Vec::new(),
         },
     };
 
@@ -601,6 +603,7 @@ fn test_format_match_error() {
             missing_line_numbers: 0,
             ambiguous_matches: 0,
             ambiguous_match_details: Vec::new(),
+            loose_matches: Vec::new(),
         },
     };
 
@@ -623,6 +626,7 @@ fn test_format_ambiguous_match_error_caps_listed_lines() {
                 block_number: 2,
                 start_lines: (1..=12).collect(),
             }],
+            loose_matches: Vec::new(),
         },
     };
 
@@ -646,6 +650,7 @@ fn test_format_multiple_errors() {
                 missing_line_numbers: 0,
                 ambiguous_matches: 0,
                 ambiguous_match_details: Vec::new(),
+                loose_matches: Vec::new(),
             },
         },
     ];
@@ -1259,4 +1264,53 @@ fn test_apply_v4a_rename_to_existing_file_no_deltas() {
             other => panic!("Expected Update diff_type for target, got {other:?}"),
         }
     });
+}
+
+/// A search block applied where it matched only loosely gives the model a note to check it.
+#[test]
+fn test_loose_matches_are_noted() {
+    let diff = |file_name: &str, loose_matches| AIRequestedCodeDiff {
+        file_name: file_name.to_string(),
+        diff_type: DiffType::Update {
+            deltas: Vec::new(),
+            rename: None,
+        },
+        failures: Some(DiffMatchFailures {
+            loose_matches,
+            ..Default::default()
+        }),
+        original_content: String::new(),
+    };
+    let diffs = [
+        diff(
+            "a.rs",
+            vec![LooseMatch {
+                block_number: 2,
+                lines: 3..5,
+                kind: LooseMatchKind::IgnoringIndentation,
+            }],
+        ),
+        diff("b.rs", Vec::new()),
+        diff(
+            "c.rs",
+            vec![LooseMatch {
+                block_number: 1,
+                lines: 7..8,
+                kind: LooseMatchKind::Approximate,
+            }],
+        ),
+    ];
+
+    assert_eq!(
+        match_notes(&diffs),
+        vec![
+            "a.rs: search block 2 matched lines 3-4 only when leading whitespace is ignored, and \
+             was replaced there with your replacement as written. Check the indentation of the \
+             result."
+                .to_string(),
+            "c.rs: search block 1 did not match exactly; it replaced line 7, the closest match. \
+             Check that this is the place you meant."
+                .to_string(),
+        ]
+    );
 }

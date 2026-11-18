@@ -155,7 +155,8 @@ pub fn serialize_result(result: &api::message::ToolCallResult) -> String {
 pub fn serialize_action_result(action: &AIAgentActionResult) -> Option<String> {
     let msg_side = action_result_to_msg_result(action)?;
     for t in REGISTRY {
-        if let Some(json) = (t.result_to_json)(&msg_side) {
+        if let Some(mut json) = (t.result_to_json)(&msg_side) {
+            edit::add_match_notes(&mut json, action);
             return Some(serde_json::to_string(&json).unwrap_or_else(|_| "{}".to_owned()));
         }
     }

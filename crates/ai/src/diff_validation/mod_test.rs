@@ -863,3 +863,69 @@ impl ActionButtonTheme for DefaultWeightAgentInputButtonTheme {\n\
         "The surviving delta should be the deletion"
     );
 }
+
+/// A block applied where the file matches it only once indentation is ignored is reported.
+#[test]
+fn test_match_ignoring_indentation_is_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "only_here();".to_string(),
+        replace: "there();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, "fn a() {\n    only_here();\n}\n");
+    assert_eq!(deltas(&diff).len(), 1);
+    assert!(!diff.warrants_failure());
+    let failures = diff
+        .failures
+        .expect("Expected the loose match to be tracked");
+    assert_eq!(
+        failures.loose_matches,
+        vec![LooseMatch {
+            block_number: 1,
+            lines: 2..3,
+            kind: LooseMatchKind::IgnoringIndentation,
+        }]
+    );
+}
+
+/// A block applied to lines that are only similar to it is reported as approximate.
+#[test]
+fn test_approximate_match_is_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "let total = compute_totl(items);".to_string(),
+        replace: "let total = sum(items);".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs(
+        "test.rs",
+        &input_diffs,
+        "fn a() {\nlet total = compute_total(items);\n}\n",
+    );
+    assert_eq!(deltas(&diff).len(), 1);
+    let failures = diff
+        .failures
+        .expect("Expected the loose match to be tracked");
+    assert_eq!(
+        failures.loose_matches,
+        vec![LooseMatch {
+            block_number: 1,
+            lines: 2..3,
+            kind: LooseMatchKind::Approximate,
+        }]
+    );
+}
+
+/// An exact match is not reported.
+#[test]
+fn test_exact_match_is_not_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "    only_here();".to_string(),
+        replace: "    there();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, "fn a() {\n    only_here();\n}\n");
+    assert_eq!(deltas(&diff).len(), 1);
+    assert!(diff
+        .failures
+        .is_none_or(|failures| failures.loose_matches.is_empty()));
+}

@@ -15,6 +15,7 @@ use serde_json::{json, Value};
 use warp_multi_agent_api as api;
 
 use super::OpenAiTool;
+use crate::ai::agent::{AIAgentActionResult, AIAgentActionResultType, RequestFileEditsResult};
 
 #[derive(Debug, Deserialize)]
 struct Args {
@@ -151,6 +152,24 @@ fn result_to_json(result: &api::message::tool_call_result::Result) -> Option<Val
         None => json!({ "status": "cancelled_or_rejected" }),
     };
     Some(value)
+}
+
+/// Adds the remarks on how the search blocks matched (`RequestFileEditsResult::Success::notes`)
+/// to the JSON of a successful edit. They exist only for the result of the current turn: the
+/// stored conversation keeps the result without them.
+pub(crate) fn add_match_notes(json: &mut Value, action: &AIAgentActionResult) {
+    let AIAgentActionResultType::RequestFileEdits(RequestFileEditsResult::Success {
+        notes, ..
+    }) = &action.result
+    else {
+        return;
+    };
+    if notes.is_empty() {
+        return;
+    }
+    if let Some(object) = json.as_object_mut() {
+        object.insert("notes".to_owned(), json!(notes));
+    }
 }
 
 pub static APPLY_FILE_DIFFS: OpenAiTool = OpenAiTool {
