@@ -915,6 +915,24 @@ if [[ -z $WARP_BOOTSTRAPPED ]]; then
           # and use printf to convert back to plaintext
           local zsh_env_script=$(printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; WARP_SESSION_ID="$(command -p date +%s)$RANDOM"; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || command -p uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $WARP_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d '"'"' \n'"'"'); printf '"'"'\e]9278;d;%s\x07'"'"' $_msg; unset _hostname _user _msg' | command -p od -An -v -tx1 | command -p tr -d ' \n')
 
+          # ssh sends no keepalives while ServerAliveInterval is 0, its default, so a NAT or
+          # firewall that drops idle connections cuts an idle session without either side
+          # noticing. Where the configuration `ssh -G` resolves leaves the interval at 0, probe
+          # the server every 30 seconds, and give up after 6 unanswered probes unless
+          # ServerAliveCountMax was changed from its default of 3. Other values, from ssh_config
+          # or -o, are kept. WARP_SSH_KEEPALIVE=0 turns this off.
+          local -a keepalive_options
+          if [[ "$WARP_SSH_KEEPALIVE" != "0" ]]; then
+              local ssh_config
+              ssh_config=$(command ssh -G "${@:1}" 2>/dev/null)
+              if [[ "$(printf '%s\n' "$ssh_config" | command -p sed -n 's/^serveraliveinterval //p')" == "0" ]]; then
+                  keepalive_options+=(-o ServerAliveInterval=30)
+                  if [[ "$(printf '%s\n' "$ssh_config" | command -p sed -n 's/^serveralivecountmax //p')" == "3" ]]; then
+                      keepalive_options+=(-o ServerAliveCountMax=6)
+                  fi
+              fi
+          fi
+
           # Keep remote commands up-to-date with shell.rs & bash.sh.
           # Note that in this command, we're passing a string to the remote shell. Any variable expansions need to be
           # escaped with "''" to avoid the local shell from expanding them before they're passed to the remote shell.
@@ -923,7 +941,7 @@ if [[ -z $WARP_BOOTSTRAPPED ]]; then
           # the remote shell is the Bourne shell to avoid asking it to parse later lines that use syntax it doesn't
           # support.
           command ssh -o ControlMaster=yes -o ControlPath=$SSH_SOCKET_DIR/$WARP_SESSION_ID \
-          -t "${@:1}" \
+          "${keepalive_options[@]}" -t "${@:1}" \
 "
 export TERM_PROGRAM='WarpTerminal'
 # Mark the remote side of a Warp-managed SSH session so the bootstrap

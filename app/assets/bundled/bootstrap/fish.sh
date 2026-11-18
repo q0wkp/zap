@@ -561,6 +561,25 @@ if test "$WARP_IS_LOCAL_SHELL_SESSION" = "1"
         # and use printf to convert back to plaintext
         set -l zsh_env_script (printf '%s' 'unsetopt ZLE; unset RCS; unset GLOBAL_RCS; WARP_SESSION_ID="$(command -p date +%s)$RANDOM"; WARP_HONOR_PS1='$WARP_HONOR_PS1'; _hostname=$(command -pv hostname >/dev/null 2>&1 && command -p hostname 2>/dev/null || uname -n); _user=$(command -pv whoami >/dev/null 2>&1 && command -p whoami 2>/dev/null || echo $USER); _msg=$(printf "{\"hook\": \"InitShell\", \"value\": {\"session_id\": $WARP_SESSION_ID, \"shell\": \"zsh\", \"user\": \"%s\", \"hostname\": \"%s\"}}" "$_user" "$_hostname" | command -p od -An -v -tx1 | command -p tr -d " \n"); printf '"'"'\x1b\x50\x24\x64%s\x1b\x5c'"'"' $_msg; unset _hostname _user _msg' | command od -An -v -tx1 | command tr -d ' \n')
 
+        # ssh sends no keepalives while ServerAliveInterval is 0, its default, so a NAT or
+        # firewall that drops idle connections cuts an idle session without either side
+        # noticing. Where the configuration `ssh -G` resolves leaves the interval at 0, probe
+        # the server every 30 seconds, and give up after 6 unanswered probes unless
+        # ServerAliveCountMax was changed from its default of 3. Other values, from ssh_config
+        # or -o, are kept. WARP_SSH_KEEPALIVE=0 turns this off.
+        set -l keepalive_options
+        if test "$WARP_SSH_KEEPALIVE" != "0"
+            set -l ssh_config (command ssh -G $argv 2>/dev/null)
+            set -l server_alive_interval (printf '%s\n' $ssh_config | command sed -n 's/^serveraliveinterval //p')
+            if test "$server_alive_interval" = "0"
+                set -a keepalive_options -o ServerAliveInterval=30
+                set -l server_alive_count_max (printf '%s\n' $ssh_config | command sed -n 's/^serveralivecountmax //p')
+                if test "$server_alive_count_max" = "3"
+                    set -a keepalive_options -o ServerAliveCountMax=6
+                end
+            end
+        end
+
         # Note that in this command, we're passing a string to the remote shell. Any variable expansions need to be
         # escaped with "''" to avoid the local shell from expanding them before they're passed to the remote shell.
         # We check the SHELL env var and use shell string manipulation to get the contents after the last slash to
@@ -568,7 +587,7 @@ if test "$WARP_IS_LOCAL_SHELL_SESSION" = "1"
         # the remote shell is the Bourne shell to avoid asking it to parse later lines that use syntax it doesn't
         # support.
         command ssh -o ControlMaster=yes -o ControlPath=$SSH_SOCKET_DIR/$WARP_SESSION_ID \
-        -t $argv \
+        $keepalive_options -t $argv \
 "
 export TERM_PROGRAM='WarpTerminal'
 test -n '$WARP_CLIENT_VERSION' && export WARP_CLIENT_VERSION='$WARP_CLIENT_VERSION'

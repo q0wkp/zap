@@ -570,7 +570,7 @@ impl TerminalManager {
     fn create_pty(
         startup_directory: Option<PathBuf>,
         shell_starter: ShellStarter,
-        env_vars: HashMap<OsString, OsString>,
+        mut env_vars: HashMap<OsString, OsString>,
         model: Arc<FairMutex<TerminalModel>>,
         ctx: &mut AppContext,
     ) -> anyhow::Result<Pty> {
@@ -589,6 +589,14 @@ impl TerminalManager {
         } else {
             *SshSettings::as_ref(ctx).enable_legacy_ssh_wrapper.value()
         };
+
+        // Read by the SSH wrapper, which adds keepalives to connections whose SSH
+        // configuration sets none unless this is "0".
+        let default_ssh_keepalive = *SshSettings::as_ref(ctx).default_keepalive.value();
+        env_vars.insert(
+            OsString::from("WARP_SSH_KEEPALIVE"),
+            OsString::from(if default_ssh_keepalive { "1" } else { "0" }),
+        );
 
         let size: crate::terminal::SizeInfo = model.lock().block_list().size().to_owned();
         let options = PtyOptions {

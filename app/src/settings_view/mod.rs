@@ -352,6 +352,7 @@ pub mod flags {
     pub const LEGACY_SSH_WRAPPER_CONTEXT_FLAG: &str = "SSH_Wrapper";
     pub const SSH_TMUX_WRAPPER_CONTEXT_FLAG: &str = "SSH_Tmux_Wrapper";
     pub const SSH_AUTO_DISCOVERY_CONTEXT_FLAG: &str = "SSH_Auto_Discovery";
+    pub const SSH_DEFAULT_KEEPALIVE_CONTEXT_FLAG: &str = "SSH_Default_Keepalive";
     pub const NOTIFICATIONS_CONTEXT_FLAG: &str = "Notifications_Enabled";
     pub const LINK_TOOLTIP_CONTEXT_FLAG: &str = "Link_Tooltip";
     pub const COMPACT_MODE_CONTEXT_FLAG: &str = "Compact_Mode_Enabled";

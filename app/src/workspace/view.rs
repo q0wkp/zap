@@ -18415,6 +18415,12 @@ impl Workspace {
             context.set.insert(flags::SSH_AUTO_DISCOVERY_CONTEXT_FLAG);
         }
 
+        if *ssh_settings.default_keepalive.value() {
+            context
+                .set
+                .insert(flags::SSH_DEFAULT_KEEPALIVE_CONTEXT_FLAG);
+        }
+
         if *warpify_settings.use_ssh_tmux_wrapper.value() {
             context.set.insert(flags::SSH_TMUX_WRAPPER_CONTEXT_FLAG);
         }
