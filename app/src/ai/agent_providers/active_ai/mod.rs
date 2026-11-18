@@ -22,6 +22,7 @@ use super::oneshot::{
     byop_oneshot_completion, resolve_active_ai_oneshot, resolve_next_command_oneshot,
     OneshotConfig, OneshotOptions,
 };
+use super::request_inspector::CallKind;
 use crate::ai::predict::generate_am_query_suggestions::GenerateAMQuerySuggestionsResponse;
 
 pub mod parsing;
@@ -189,6 +190,7 @@ pub mod prompt_suggestions {
             system,
             user,
             opts: OneshotOptions {
+                kind: CallKind::PromptSuggestions,
                 response_format_json: true,
                 max_chars: Some(6000),
                 ..Default::default()
@@ -247,6 +249,7 @@ pub mod nld_predict {
             system,
             user,
             opts: OneshotOptions {
+                kind: CallKind::InputPrediction,
                 response_format_json: false,
                 max_chars: Some(4000),
                 ..Default::default()
@@ -311,6 +314,7 @@ pub mod relevant_files {
                 system,
                 user,
                 opts: OneshotOptions {
+                    kind: CallKind::RelevantFiles,
                     response_format_json: true,
                     max_chars: Some(12000),
                     ..Default::default()
@@ -372,6 +376,7 @@ pub mod workflow_metadata {
             system,
             user,
             opts: OneshotOptions {
+                kind: CallKind::WorkflowMetadata,
                 response_format_json: true,
                 max_chars: Some(4000),
                 ..Default::default()
@@ -450,6 +455,7 @@ pub mod next_command {
             },
         );
         let opts = OneshotOptions {
+            kind: CallKind::NextCommand,
             response_format_json: false,
             max_chars: Some(8000),
             ..Default::default()

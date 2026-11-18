@@ -217,6 +217,8 @@ pub enum WorkspaceAction {
     /// the chosen path. Used by the "Export logs" link on the About page.
     #[cfg(not(target_family = "wasm"))]
     ExportLogsToPath,
+    /// Open the BYOP request inspector in a split pane of the active tab.
+    OpenByopRequestInspector,
     ChangeCursor(Cursor),
     ToggleBlockSnackbar,
     ToggleErrorUnderlining,
@@ -872,6 +874,8 @@ impl WorkspaceAction {
             ViewLogs => false,
             #[cfg(not(target_family = "wasm"))]
             ExportLogsToPath => false,
+            // The inspector pane is not persisted.
+            OpenByopRequestInspector => false,
             #[cfg(target_os = "macos")]
             SampleProcess => false,
             #[cfg(target_os = "macos")]

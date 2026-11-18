@@ -1447,6 +1447,12 @@ fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
         )
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
+            "workspace:open_byop_request_inspector",
+            crate::t!("keybinding-desc-workspace-open-byop-request-inspector"),
+            WorkspaceAction::OpenByopRequestInspector,
+        )
+        .with_context_predicate(id!("Workspace")),
+        EditableBinding::new(
             "workspace:link_to_privacy_policy",
             crate::t!("keybinding-desc-workspace-link-to-privacy-policy"),
             WorkspaceAction::ViewPrivacyPolicy,

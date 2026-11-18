@@ -5383,6 +5383,31 @@ impl Workspace {
         });
     }
 
+    /// Opens the BYOP request inspector in a split pane of the active tab, or focuses the one
+    /// already there.
+    fn open_byop_request_inspector(&mut self, ctx: &mut ViewContext<Self>) {
+        use crate::pane_group::pane::request_inspector_pane::RequestInspectorPane;
+        use crate::pane_group::pane::IPaneType;
+        self.active_tab_pane_group().update(ctx, |pane_group, ctx| {
+            let open_inspector = pane_group
+                .pane_ids()
+                .find(|pane_id| matches!(pane_id.pane_type(), IPaneType::RequestInspector));
+            if let Some(pane_id) = open_inspector {
+                pane_group.focus_pane_by_id(pane_id, ctx);
+                return;
+            }
+            let pane = RequestInspectorPane::new(ctx);
+            let smart_split_direction =
+                pane_group.smart_split_direction(ctx, WORKFLOW_AND_ENV_VAR_SPLIT_RATIO);
+            pane_group.add_pane_with_direction(
+                smart_split_direction,
+                pane,
+                true, /* focus_new_pane */
+                ctx,
+            );
+        });
+    }
+
     /// 在中央区域打开给定 SSH 节点的 SFTP 文件浏览器 pane。
     pub fn open_sftp_pane(&mut self, node_id: String, ctx: &mut ViewContext<Self>) {
         use crate::pane_group::pane::sftp_pane::SftpPane;
@@ -8189,6 +8214,11 @@ impl Workspace {
         items.push(
             MenuItemFields::new(crate::t!("workspace-menu-view-warp-logs"))
                 .with_on_select_action(WorkspaceAction::ViewLogs)
+                .into_item(),
+        );
+        items.push(
+            MenuItemFields::new(crate::t!("workspace-menu-byop-request-inspector"))
+                .with_on_select_action(WorkspaceAction::OpenByopRequestInspector)
                 .into_item(),
         );
 
@@ -19220,6 +19250,7 @@ impl TypedActionView for Workspace {
             ViewLogs => self.view_logs(ctx),
             #[cfg(not(target_family = "wasm"))]
             ExportLogsToPath => self.export_logs_to_path(ctx),
+            OpenByopRequestInspector => self.open_byop_request_inspector(ctx),
             ChangeCursor(cursor) => self.change_cursor(*cursor, ctx),
             ToggleErrorUnderlining => self.toggle_error_underlining(ctx),
             ToggleSyntaxHighlighting => self.toggle_syntax_highlighting(ctx),
