@@ -123,6 +123,7 @@ struct ProviderRow {
     sync_models_dev_button_state: MouseStateHandle,
     save_button_state: MouseStateHandle,
     remove_button_state: MouseStateHandle,
+    toggle_enabled_button_state: MouseStateHandle,
     add_model_button_state: MouseStateHandle,
     header_rows: Vec<HeaderRow>,
     add_header_button_state: MouseStateHandle,
@@ -561,6 +562,7 @@ impl AgentProvidersWidget {
             sync_models_dev_button_state: MouseStateHandle::default(),
             save_button_state: MouseStateHandle::default(),
             remove_button_state: MouseStateHandle::default(),
+            toggle_enabled_button_state: MouseStateHandle::default(),
             add_model_button_state: MouseStateHandle::default(),
             header_rows,
             add_header_button_state,
@@ -980,6 +982,9 @@ impl AgentProvidersWidget {
                 .finish();
             }
         };
+        if !provider.enabled {
+            return Self::render_disabled_provider_card(provider, row, label_color, appearance);
+        }
         let draft_editors = ProviderDraftEditors::from_row(provider.id.clone(), row);
 
         let name_field = field_block(
@@ -1237,6 +1242,16 @@ impl AgentProvidersWidget {
             },
             appearance,
         );
+        // Saves the card's draft first, so disabling doesn't drop unsaved edits.
+        let disable_button = Self::render_card_button_preserving_draft(
+            crate::t!("settings-agent-providers-disable"),
+            row.toggle_enabled_button_state.clone(),
+            draft_editors.clone(),
+            AISettingsPageAction::ToggleAgentProviderEnabled {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
 
         // ---- 保存按钮:在 on_click 闭包里现场读取所有表单 buffer。
         // 这里不能预先 build action(表单值随输入变化),所以过 draft editor handle
@@ -1280,6 +1295,11 @@ impl AgentProvidersWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(Container::new(save_button).with_margin_right(8.).finish())
+                        .with_child(
+                            Container::new(disable_button)
+                                .with_margin_right(8.)
+                                .finish(),
+                        )
                         .with_child(remove_button)
                         .finish(),
                 )
@@ -1311,6 +1331,78 @@ impl AgentProvidersWidget {
                         .finish(),
                 )
                 .with_child(Container::new(bottom_row).with_margin_top(10.).finish())
+                .finish(),
+        )
+        .with_background(appearance.theme().surface_1())
+        .with_uniform_padding(12.)
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.)))
+        .with_margin_bottom(8.)
+        .finish()
+    }
+
+    /// A disabled provider shows as one line: its name, a "Disabled" note, and the Enable
+    /// and Remove buttons. Its settings and API key are kept; enabling it brings the full
+    /// card back.
+    fn render_disabled_provider_card(
+        provider: &AgentProvider,
+        row: &ProviderRow,
+        label_color: warp_core::ui::theme::Fill,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let dim = appearance.theme().disabled_ui_text_color();
+        let label = if provider.name.trim().is_empty() {
+            provider.id.clone()
+        } else {
+            provider.name.clone()
+        };
+        let name = Text::new(
+            label,
+            appearance.ui_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(label_color.into())
+        .finish();
+        let note = Container::new(
+            Text::new(
+                crate::t!("settings-agent-providers-disabled-note"),
+                appearance.ui_font_family(),
+                appearance.ui_font_size(),
+            )
+            .with_color(dim.into())
+            .soft_wrap(true)
+            .finish(),
+        )
+        .with_margin_left(8.)
+        .finish();
+        let enable_button = Self::render_card_button(
+            crate::t!("settings-agent-providers-enable"),
+            row.toggle_enabled_button_state.clone(),
+            AISettingsPageAction::ToggleAgentProviderEnabled {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
+        let remove_button = Self::render_card_button(
+            crate::t!("settings-agent-providers-remove"),
+            row.remove_button_state.clone(),
+            AISettingsPageAction::RemoveAgentProvider {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
+
+        Container::new(
+            Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(name)
+                .with_child(Expanded::new(1., note).finish())
+                .with_child(
+                    Container::new(enable_button)
+                        .with_margin_left(16.)
+                        .with_margin_right(8.)
+                        .finish(),
+                )
+                .with_child(remove_button)
                 .finish(),
         )
         .with_background(appearance.theme().surface_1())

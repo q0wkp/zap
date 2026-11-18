@@ -1570,6 +1570,9 @@ settings-agent-providers-add-model = + Add model
 settings-agent-providers-fetch-from-api = Fetch from API
 settings-agent-providers-sync-models-dev = Sync from models.dev
 settings-agent-providers-remove = Remove
+settings-agent-providers-disable = Disable
+settings-agent-providers-enable = Enable
+settings-agent-providers-disabled-note = Disabled: its models are hidden from the model picker. Settings and API key are kept.
 settings-agent-providers-save = Save
 settings-agent-providers-saved-toast = Saved
 

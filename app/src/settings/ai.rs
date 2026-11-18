@@ -828,6 +828,12 @@ pub struct AgentProvider {
     /// `api_key` 仍走 `Authorization: Bearer` 标准路径。
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_headers: Vec<(String, String)>,
+
+    /// Whether the provider serves models. A disabled provider keeps its settings and its
+    /// API key, but its models leave the model pickers and no request is sent to it. A
+    /// settings file without the field (one written before it existed) reads as enabled.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub enabled: bool,
 }
 
 impl AgentProvider {
@@ -845,6 +851,7 @@ impl AgentProvider {
             base_url: String::new(),
             models: Vec::new(),
             extra_headers: Vec::new(),
+            enabled: true,
         }
     }
 }

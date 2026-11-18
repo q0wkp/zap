@@ -21,6 +21,7 @@ fn sample_provider(id: &str) -> AgentProvider {
         base_url: "http://localhost:11434".to_owned(),
         models: vec![AgentProviderModel::from_id("llama3.2".to_owned())],
         extra_headers: Vec::new(),
+        enabled: true,
     }
 }
 
@@ -138,6 +139,43 @@ fn smoke_lookup_byop_returns_none_for_unknown_id() {
         app.read(|ctx| {
             assert!(lookup_byop(ctx, &LLMId::from("byop:missing:model")).is_none());
             assert!(lookup_byop(ctx, &LLMId::from("not-byop")).is_none());
+        });
+    });
+}
+
+#[test]
+fn disabled_provider_offers_no_models_and_does_not_resolve() {
+    App::test((), |mut app| async move {
+        init_byop_test_app(&mut app);
+
+        app.update(|ctx| {
+            AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                let mut disabled = sample_provider("provider-disabled");
+                disabled.enabled = false;
+                let _ = settings
+                    .agent_providers
+                    .set_value(vec![disabled, sample_provider("provider-enabled")], ctx);
+            });
+        });
+
+        app.read(|ctx| {
+            let choices: Vec<_> = LLMPreferences::as_ref(ctx)
+                .get_base_llm_choices_for_agent_mode()
+                .collect();
+            assert_eq!(
+                choices.len(),
+                1,
+                "only the enabled provider's model is offered"
+            );
+            assert_eq!(
+                choices[0].id.as_str(),
+                llm_id::encode("provider-enabled", "llama3.2").as_str()
+            );
+            assert!(
+                lookup_byop(ctx, &llm_id::encode("provider-disabled", "llama3.2")).is_none(),
+                "a disabled provider must not resolve, so no request goes to it"
+            );
+            assert!(lookup_byop(ctx, &llm_id::encode("provider-enabled", "llama3.2")).is_some());
         });
     });
 }

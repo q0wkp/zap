@@ -822,6 +822,7 @@ fn extra_headers_skip_when_empty() {
         base_url: "https://api.example.com/v1".to_string(),
         models: Vec::new(),
         extra_headers: Vec::new(),
+        enabled: true,
     };
     let serialized = toml::to_string(&provider).expect("should serialize");
     assert!(
@@ -840,4 +841,31 @@ fn extra_headers_round_trip() {
     let serialized = toml::to_string(&provider).expect("should serialize");
     let deserialized: AgentProvider = toml::from_str(&serialized).expect("should deserialize");
     assert_eq!(provider.extra_headers, deserialized.extra_headers);
+}
+
+#[test]
+fn provider_without_enabled_field_is_enabled() {
+    let toml_str = r#"
+        id = "test-id"
+        name = "Test Provider"
+        base_url = "https://api.example.com/v1"
+    "#;
+    let provider: AgentProvider = toml::from_str(toml_str).expect("should deserialize");
+    assert!(provider.enabled);
+}
+
+#[test]
+fn provider_enabled_field_written_only_when_disabled() {
+    let mut provider = AgentProvider::new_empty();
+    let serialized = toml::to_string(&provider).expect("should serialize");
+    assert!(
+        !serialized.contains("enabled"),
+        "an enabled provider should not write the field"
+    );
+
+    provider.enabled = false;
+    let serialized = toml::to_string(&provider).expect("should serialize");
+    assert!(serialized.contains("enabled = false"));
+    let deserialized: AgentProvider = toml::from_str(&serialized).expect("should deserialize");
+    assert!(!deserialized.enabled);
 }

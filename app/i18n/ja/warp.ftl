@@ -1506,6 +1506,9 @@ settings-agent-providers-add-model = + モデル追加
 settings-agent-providers-fetch-from-api = API から取得
 settings-agent-providers-sync-models-dev = models.dev から同期
 settings-agent-providers-remove = 削除
+settings-agent-providers-disable = 無効化
+settings-agent-providers-enable = 有効化
+settings-agent-providers-disabled-note = 無効: このプロバイダーのモデルはモデル選択に表示されません。設定と API キーは保持されます。
 
 # ---- AI page (settings_view/ai_page.rs) ----
 settings-ai-title = AI

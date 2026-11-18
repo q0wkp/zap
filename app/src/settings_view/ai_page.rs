@@ -2268,6 +2268,11 @@ pub enum AISettingsPageAction {
     RemoveAgentProvider {
         provider_id: String,
     },
+    /// Turns a provider on or off. A disabled provider keeps its settings and API key but
+    /// offers no models.
+    ToggleAgentProviderEnabled {
+        provider_id: String,
+    },
     UpdateAgentProviderName {
         provider_id: String,
         name: String,
@@ -3096,6 +3101,16 @@ impl TypedActionView for AISettingsPageView {
                 );
                 super::agent_providers_widget::clear_expanded_models_for_provider(provider_id);
                 self.rebuild_current_page(ctx);
+            }
+            AISettingsPageAction::ToggleAgentProviderEnabled { provider_id } => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let mut providers = settings.agent_providers.value().clone();
+                    if let Some(p) = providers.iter_mut().find(|p| p.id == *provider_id) {
+                        p.enabled = !p.enabled;
+                    }
+                    let _ = settings.agent_providers.set_value(providers, ctx);
+                });
+                ctx.notify();
             }
             AISettingsPageAction::UpdateAgentProviderName { provider_id, name } => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {

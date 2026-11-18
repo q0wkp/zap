@@ -1545,6 +1545,9 @@ settings-agent-providers-add-model = + 添加模型
 settings-agent-providers-fetch-from-api = 从 API 抓取
 settings-agent-providers-sync-models-dev = 从 models.dev 同步
 settings-agent-providers-remove = 移除
+settings-agent-providers-disable = 停用
+settings-agent-providers-enable = 启用
+settings-agent-providers-disabled-note = 已停用：它的模型不出现在模型选择器中。设置和 API 密钥均保留。
 settings-agent-providers-save = 保存
 settings-agent-providers-saved-toast = 已保存
 
