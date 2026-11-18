@@ -73,6 +73,7 @@ use crate::settings::AgentProviderApiType;
 use ai::agent::convert::ConvertToAPITypeError;
 
 use super::openai_compatible::OpenAiCompatibleError;
+use super::request_inspector::{self, CallKind, CallOrigin};
 use super::tools;
 
 // ---------------------------------------------------------------------------
@@ -3705,6 +3706,16 @@ pub async fn generate_byop_output(
         }
 
         log::info!("[byop] opening stream: model={model_id}");
+        // The request inspector captures the request here, as it is about to be sent.
+        let mut inspector_call = request_inspector::begin(
+            CallOrigin::new(CallKind::AgentTurn).in_conversation(&task_id),
+            &client,
+            &model_id,
+            &chat_req,
+            &chat_opts,
+            true,
+        )
+        .await;
         let mut sdk_stream = match client
             .exec_chat_stream(&model_id, chat_req, Some(&chat_opts))
             .await
@@ -3716,6 +3727,9 @@ pub async fn generate_byop_output(
             Err(e) => {
                 let mapped = map_genai_error(e);
                 log::error!("[byop] open stream failed: {mapped:#}");
+                if let Some(call) = inspector_call.take() {
+                    call.fail(&mapped);
+                }
                 yield Err(Arc::new(AIApiError::Other(anyhow::anyhow!(
                     "BYOP open stream failed: {mapped}"
                 ))));
@@ -3784,6 +3798,9 @@ pub async fn generate_byop_output(
                     let mapped = map_genai_error(e);
                     let err_text = format!("{mapped:#}");
                     log::error!("[byop] stream chunk error: {err_text}");
+                    if let Some(call) = inspector_call.take() {
+                        call.fail(&err_text);
+                    }
                     log::error!("[byop-diag] full_request_json_on_error={diag_body_json}");
                     // 从错误消息里 parse "column N",dump diag_body_json 该位置 ±200 char 上下文 + 字节 hex。
                     if let Some(col) = err_text
@@ -3821,6 +3838,9 @@ pub async fn generate_byop_output(
                     chunk_count += 1;
                     chunk_bytes += c.content.len();
                     streamed_assistant_text.push_str(&c.content);
+                    if let Some(call) = &inspector_call {
+                        call.text(&c.content);
+                    }
                     if use_think_extraction {
                         // <think> 标签流式提取:仅对 THINK_TAG_IN_CONTENT_MODELS 白名单内的模型激活。
                         // 把 /delta/content 中的 <think>...</think> 段路由到 reasoning 通道,
@@ -3910,6 +3930,9 @@ pub async fn generate_byop_output(
                 ChatStreamEvent::ReasoningChunk(c) if !c.content.is_empty() => {
                     reasoning_count += 1;
                     reasoning_bytes += c.content.len();
+                    if let Some(call) = &inspector_call {
+                        call.reasoning(&c.content);
+                    }
                     // 运行时 latch:该 (api_type, model_id) 发过 reasoning chunk →
                     // 标记下一轮起强制 echo reasoning_content,覆盖 INTERLEAVED_RULES
                     // 静态表外的任意国产/第三方 thinking 模型(对齐 opencode 数据驱动思路,
@@ -3928,6 +3951,9 @@ pub async fn generate_byop_output(
                 ChatStreamEvent::ReasoningChunk(_) => {}
                 ChatStreamEvent::ToolCallChunk(tc) => {
                     tool_chunk_count += 1;
+                    if let Some(inspected) = &inspector_call {
+                        inspected.tool_call(&tc.tool_call);
+                    }
                     let mut call = tc.tool_call;
                     // 极个别 provider(自建 ollama 代理等)不发 call_id,本地 uuid 兜底。
                     if call.call_id.is_empty() {
@@ -4011,6 +4037,11 @@ pub async fn generate_byop_output(
                 }
                 ChatStreamEvent::End(end) => {
                     end_count += 1;
+                    if let (Some(call), Some(usage)) =
+                        (&inspector_call, end.captured_usage.as_ref())
+                    {
+                        call.usage(usage);
+                    }
                     // genai >= 0.4.0 的 captured_content 含 tool_calls。
                     // 优先用 captured_content 里的 tool_calls(更完整),
                     // 否则用 streaming 中累积的 tool_bufs。
@@ -4068,6 +4099,10 @@ pub async fn generate_byop_output(
                     // 当前 BYOP 不持久化 thought_signatures,接受降级)
                 }
             }
+        }
+
+        if let Some(call) = inspector_call.take() {
+            call.complete();
         }
 
         // Zap:content→tool 提取 fallback 只对 Ollama 生效,与 :1412 的历史过滤对称——
@@ -4560,6 +4595,7 @@ pub async fn generate_byop_output(
 pub(crate) async fn generate_title_via_byop(
     tg: &TitleGenInput,
     user_query: &str,
+    root_task_id: &str,
 ) -> Result<Option<String>, anyhow::Error> {
     let cfg = super::oneshot::OneshotConfig {
         base_url: tg.base_url.clone(),
@@ -4577,6 +4613,8 @@ pub(crate) async fn generate_title_via_byop(
     let opts = super::oneshot::OneshotOptions {
         max_chars: Some(1000),
         temperature: Some(0.5),
+        kind: CallKind::Title,
+        conversation: Some(root_task_id.to_owned()),
         ..Default::default()
     };
     let raw = super::oneshot::byop_oneshot_completion(&cfg, system, &user_prompt, &opts).await?;

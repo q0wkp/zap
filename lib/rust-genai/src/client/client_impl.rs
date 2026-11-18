@@ -1,6 +1,6 @@
 use crate::adapter::{AdapterDispatcher, AdapterKind, ServiceType, WebRequestData};
 use crate::chat::{ChatOptions, ChatOptionsSet, ChatRequest, ChatResponse, ChatStreamResponse};
-use crate::client::ModelSpec;
+use crate::client::{ChatWebRequest, ModelSpec};
 use crate::embed::{EmbedOptions, EmbedOptionsSet, EmbedRequest, EmbedResponse};
 use crate::resolver::AuthData;
 use crate::{Client, Error, ModelIden, Result, ServiceTarget};
@@ -179,6 +179,35 @@ impl Client {
 		Ok(res)
 	}
 
+	/// Builds the URL and body that `exec_chat` (or `exec_chat_stream`, when `stream` is true)
+	/// would send for the same arguments, without sending anything.
+	///
+	/// Headers are left out: they carry the credentials.
+	pub async fn chat_web_request(
+		&self,
+		model: impl Into<ModelSpec>,
+		chat_req: ChatRequest,
+		options: Option<&ChatOptions>,
+		stream: bool,
+	) -> Result<ChatWebRequest> {
+		let options_set = ChatOptionsSet::default()
+			.with_chat_options(options)
+			.with_client_options(self.config().chat_options());
+
+		let target = self.config().resolve_model_spec(model.into()).await?;
+		let auth_data = target.auth.clone();
+		let service_type = if stream { ServiceType::ChatStream } else { ServiceType::Chat };
+
+		let WebRequestData { mut url, payload, .. } =
+			AdapterDispatcher::to_web_request_data(target, service_type, chat_req, options_set)?;
+
+		if let AuthData::RequestOverride { url: override_url, .. } = auth_data {
+			url = override_url;
+		}
+
+		Ok(ChatWebRequest { url, payload })
+	}
+
 	/// Creates embeddings for a single input string.
 	///
 	/// Accepts any type that implements `Into<ModelSpec>` for the model parameter.
@@ -241,3 +270,53 @@ impl Client {
 		Ok(res)
 	}
 }
+
+// region:    --- Tests
+
+#[cfg(test)]
+mod tests {
+	use crate::adapter::AdapterKind;
+	use crate::chat::{ChatMessage, ChatOptions, ChatRequest};
+	use crate::resolver::{AuthData, Endpoint, ServiceTargetResolver};
+	use crate::{Client, ModelIden, ServiceTarget};
+
+	fn client_for(endpoint: &'static str) -> Client {
+		let resolver = ServiceTargetResolver::from_resolver_fn(
+			move |target: ServiceTarget| -> Result<ServiceTarget, crate::resolver::Error> {
+				Ok(ServiceTarget {
+					endpoint: Endpoint::from_static(endpoint),
+					auth: AuthData::from_single("secret-key"),
+					model: ModelIden::new(AdapterKind::OpenAI, target.model.model_name),
+				})
+			},
+		);
+		Client::builder().with_service_target_resolver(resolver).build()
+	}
+
+	#[tokio::test]
+	async fn chat_web_request_builds_the_body_without_sending() {
+		let client = client_for("http://127.0.0.1:9/v1/");
+		let chat_req = ChatRequest::from_messages(vec![ChatMessage::user("hello")]).with_system("be brief");
+		let options = ChatOptions::default().with_temperature(0.25);
+
+		let streamed = client
+			.chat_web_request("some-model", chat_req.clone(), Some(&options), true)
+			.await
+			.expect("request builds");
+		assert_eq!(streamed.url, "http://127.0.0.1:9/v1/chat/completions");
+		assert_eq!(streamed.payload["model"], "some-model");
+		assert_eq!(streamed.payload["stream"], true);
+		assert_eq!(streamed.payload["temperature"], 0.25);
+		let body = streamed.payload.to_string();
+		assert!(body.contains("be brief") && body.contains("hello"));
+		assert!(!body.contains("secret-key"), "credentials stay out of the body");
+
+		let single = client
+			.chat_web_request("some-model", chat_req, Some(&options), false)
+			.await
+			.expect("request builds");
+		assert_ne!(single.payload["stream"], true);
+	}
+}
+
+// endregion: --- Tests

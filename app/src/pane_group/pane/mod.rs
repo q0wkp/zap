@@ -23,6 +23,7 @@ pub(super) mod image_pane;
 #[cfg(not(target_family = "wasm"))]
 pub(super) mod local_harness_launch;
 pub(super) mod notebook_pane;
+pub(crate) mod request_inspector_pane;
 pub(super) mod settings_pane;
 pub(crate) mod sftp_pane;
 pub(crate) mod ssh_server_pane;
@@ -34,6 +35,7 @@ pub mod workflow_pane;
 
 use std::{any::Any, fmt::Display};
 
+use crate::ai::agent_providers::request_inspector::view::RequestInspectorView;
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::get_started_view::GetStartedView;
 use crate::ssh_manager::server_view::SshServerView;
@@ -154,6 +156,7 @@ pub(crate) enum IPaneType {
     GetStarted,
     SshServer,
     Sftp,
+    RequestInspector,
     Welcome,
     DeferredPlaceholder,
     /// A pane type only for tests.
@@ -180,6 +183,7 @@ impl Display for IPaneType {
             IPaneType::GetStarted => write!(f, "GetStarted"),
             IPaneType::SshServer => write!(f, "SSH Server"),
             IPaneType::Sftp => write!(f, "SFTP"),
+            IPaneType::RequestInspector => write!(f, "Request Inspector"),
             IPaneType::Welcome => write!(f, "Welcome"),
             IPaneType::DeferredPlaceholder => write!(f, "Placeholder"),
             #[cfg(test)]
@@ -287,6 +291,12 @@ impl PaneId {
         Self::new_from_ctx(IPaneType::Sftp, ctx)
     }
 
+    pub fn from_request_inspector_pane_ctx(
+        ctx: &ViewContext<PaneView<RequestInspectorView>>,
+    ) -> Self {
+        Self::new_from_ctx(IPaneType::RequestInspector, ctx)
+    }
+
     /// Creates a [`PaneId`] from a [`PaneView<TerminalView>`] entity ID.
     pub fn from_terminal_pane_view(
         terminal_pane_view: &ViewHandle<terminal_pane::TerminalPaneView>,
@@ -386,6 +396,12 @@ impl PaneId {
         sftp_pane_view: &ViewHandle<PaneView<SftpBrowserView>>,
     ) -> Self {
         Self::new(IPaneType::Sftp, sftp_pane_view)
+    }
+
+    pub fn from_request_inspector_pane_view(
+        request_inspector_pane_view: &ViewHandle<PaneView<RequestInspectorView>>,
+    ) -> Self {
+        Self::new(IPaneType::RequestInspector, request_inspector_pane_view)
     }
 
     pub fn from_welcome_pane_view(welcome_pane_view: &ViewHandle<PaneView<WelcomeView>>) -> Self {
@@ -512,6 +528,9 @@ impl PaneId {
             }
             IPaneType::Sftp => {
                 ChildView::<PaneView<SftpBrowserView>>::with_id(self.0.pane_view_id).finish()
+            }
+            IPaneType::RequestInspector => {
+                ChildView::<PaneView<RequestInspectorView>>::with_id(self.0.pane_view_id).finish()
             }
             IPaneType::Welcome => {
                 ChildView::<PaneView<WelcomeView>>::with_id(self.0.pane_view_id).finish()

@@ -3220,6 +3220,7 @@ impl BlocklistAIController {
                 let result = crate::ai::agent_providers::chat_stream::generate_title_via_byop(
                     &pending_title_generation.input,
                     &pending_title_generation.user_query,
+                    &pending_title_generation.task_id,
                 )
                 .await;
                 (pending_title_generation.task_id, result)

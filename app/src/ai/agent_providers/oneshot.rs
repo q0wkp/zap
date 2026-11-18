@@ -21,6 +21,7 @@ use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatStreamEvent};
 use warpui::{AppContext, EntityId, SingletonEntity as _};
 
 use super::chat_stream;
+use super::request_inspector::{self, CallKind, CallOrigin};
 use crate::ai::llms::LLMPreferences;
 use crate::settings::{AgentProviderApiType, ReasoningEffortSetting};
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
@@ -50,6 +51,10 @@ pub struct OneshotOptions {
     pub response_format_json: bool,
     /// 是否允许触发 reasoning。默认 `false`(主动 AI 都是低延迟轻量调用)。
     pub allow_reasoning: bool,
+    /// What the call is for, as the request inspector labels and filters it.
+    pub kind: CallKind,
+    /// The root task id of the conversation the call belongs to, if any.
+    pub conversation: Option<String>,
 }
 
 const DEFAULT_MAX_CHARS: usize = 8000;
@@ -107,13 +112,50 @@ pub async fn byop_oneshot_completion(
 ) -> anyhow::Result<String> {
     let client = chat_stream::build_client(cfg.api_type, &cfg.base_url, cfg.api_key.clone());
     let (chat_req, chat_opts) = build_oneshot_request(cfg, system, user, opts);
+    let capture = request_inspector::begin(
+        call_origin(opts),
+        &client,
+        &cfg.model_id,
+        &chat_req,
+        &chat_opts,
+        false,
+    )
+    .await;
 
     let resp = client
         .exec_chat(&cfg.model_id, chat_req, Some(&chat_opts))
         .await
-        .with_context(|| format!("byop oneshot exec_chat failed (model={})", cfg.model_id))?;
+        .with_context(|| format!("byop oneshot exec_chat failed (model={})", cfg.model_id));
+    let resp = match resp {
+        Ok(resp) => resp,
+        Err(err) => {
+            if let Some(capture) = capture {
+                capture.fail(&err);
+            }
+            return Err(err);
+        }
+    };
+    if let Some(capture) = capture {
+        if let Some(reasoning) = &resp.reasoning_content {
+            capture.reasoning(reasoning);
+        }
+        capture.text(resp.first_text().unwrap_or(""));
+        for call in resp.tool_calls() {
+            capture.tool_call(call);
+        }
+        capture.usage(&resp.usage);
+        capture.complete();
+    }
 
     Ok(resp.first_text().unwrap_or("").to_owned())
+}
+
+fn call_origin(opts: &OneshotOptions) -> CallOrigin<'_> {
+    let origin = CallOrigin::new(opts.kind);
+    match &opts.conversation {
+        Some(conversation) => origin.in_conversation(conversation),
+        None => origin,
+    }
 }
 
 /// 发送一次 BYOP 流式 chat completion,聚合所有文本 chunk 后返回。
@@ -128,7 +170,16 @@ pub async fn byop_oneshot_streaming_completion(
 ) -> anyhow::Result<String> {
     let client = chat_stream::build_client(cfg.api_type, &cfg.base_url, cfg.api_key.clone());
     let (chat_req, chat_opts) = build_oneshot_request(cfg, system, user, opts);
-    let mut resp = client
+    let capture = request_inspector::begin(
+        call_origin(opts),
+        &client,
+        &cfg.model_id,
+        &chat_req,
+        &chat_opts,
+        true,
+    )
+    .await;
+    let mut resp = match client
         .exec_chat_stream(&cfg.model_id, chat_req, Some(&chat_opts))
         .await
         .with_context(|| {
@@ -136,26 +187,59 @@ pub async fn byop_oneshot_streaming_completion(
                 "byop oneshot exec_chat_stream failed (model={})",
                 cfg.model_id
             )
-        })?
-        .stream;
+        }) {
+        Ok(resp) => resp.stream,
+        Err(err) => {
+            if let Some(capture) = capture {
+                capture.fail(&err);
+            }
+            return Err(err);
+        }
+    };
 
     let mut text = String::new();
     while let Some(event) = resp.next().await {
-        match event.with_context(|| {
+        let event = match event.with_context(|| {
             format!(
                 "byop oneshot exec_chat_stream event failed (model={})",
                 cfg.model_id
             )
-        })? {
+        }) {
+            Ok(event) => event,
+            Err(err) => {
+                if let Some(capture) = capture {
+                    capture.fail(&err);
+                }
+                return Err(err);
+            }
+        };
+        match event {
             ChatStreamEvent::Chunk(chunk) => {
+                if let Some(capture) = &capture {
+                    capture.text(&chunk.content);
+                }
                 text.push_str(&chunk.content);
             }
-            ChatStreamEvent::Start
-            | ChatStreamEvent::ReasoningChunk(_)
-            | ChatStreamEvent::ThoughtSignatureChunk(_)
-            | ChatStreamEvent::ToolCallChunk(_)
-            | ChatStreamEvent::End(_) => {}
+            ChatStreamEvent::ReasoningChunk(chunk) => {
+                if let Some(capture) = &capture {
+                    capture.reasoning(&chunk.content);
+                }
+            }
+            ChatStreamEvent::ToolCallChunk(chunk) => {
+                if let Some(capture) = &capture {
+                    capture.tool_call(&chunk.tool_call);
+                }
+            }
+            ChatStreamEvent::End(end) => {
+                if let (Some(capture), Some(usage)) = (&capture, &end.captured_usage) {
+                    capture.usage(usage);
+                }
+            }
+            ChatStreamEvent::Start | ChatStreamEvent::ThoughtSignatureChunk(_) => {}
         }
+    }
+    if let Some(capture) = capture {
+        capture.complete();
     }
 
     Ok(text)

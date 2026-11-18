@@ -157,6 +157,9 @@ pub enum LeafContents {
     Sftp {
         node_id: String,
     },
+    /// The BYOP request inspector. **Not persisted**: what it captured lives only as long as
+    /// the pane.
+    RequestInspector,
 }
 
 #[cfg(feature = "local_fs")]
@@ -178,6 +181,8 @@ impl LeafContents {
             LeafContents::SshServer { .. } => false,
             // SFTP 浏览器:远端文件系统依赖活跃 SSH 连接,pane 不可恢复。
             LeafContents::Sftp { .. } => false,
+            // The request inspector holds only what it captured while open.
+            LeafContents::RequestInspector => false,
             // Image viewer panes are intentionally not persisted: they render in-session but
             // are not restored after restart.
             LeafContents::Image { .. } => false,

@@ -49,6 +49,17 @@ impl Client {
 
 // endregion: --- Client Getters
 
+// region:    --- ChatWebRequest
+
+/// The URL and JSON body of a chat request, as built by [`Client::chat_web_request`].
+#[derive(Debug, Clone)]
+pub struct ChatWebRequest {
+	pub url: String,
+	pub payload: serde_json::Value,
+}
+
+// endregion: --- ChatWebRequest
+
 // region:    --- ClientInner
 
 #[derive(Debug)]

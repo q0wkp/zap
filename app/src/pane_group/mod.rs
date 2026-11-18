@@ -1820,6 +1820,13 @@ impl PaneGroup {
                     "Image pane should not have been persisted, as it is not restorable"
                 ))
             }
+            LeafContents::RequestInspector => {
+                // Not persisted (see `LeafContents::is_persisted`), so this should be
+                // unreachable.
+                Err(anyhow::anyhow!(
+                    "Request inspector pane should not have been persisted, as it is not restorable"
+                ))
+            }
             LeafContents::GetStarted => {
                 if !FeatureFlag::GetStartedTab.is_enabled() {
                     Err(anyhow::anyhow!("GetStarted pane not supported"))
