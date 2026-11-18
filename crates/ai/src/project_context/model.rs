@@ -318,6 +318,12 @@ impl ProjectContextModel {
                                         path: rule.path.clone(),
                                     })
                                 }))
+                                .chain(rule_files.rules.iter().filter_map(|rule| {
+                                    rule.claude_md.as_ref().map(|rule| ProjectRulePath {
+                                        project_root: root_clone.clone(),
+                                        path: rule.path.clone(),
+                                    })
+                                }))
                                 .collect(),
                             deleted_rules: Default::default(),
                         };
