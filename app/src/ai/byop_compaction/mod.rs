@@ -14,6 +14,7 @@ pub mod message_view;
 pub mod overflow;
 pub mod prompt;
 pub mod state;
+pub mod summary_marker;
 pub mod token;
 
 pub use config::CompactionConfig;

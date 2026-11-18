@@ -288,6 +288,29 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                         AIAgentOutputMessageType::Text(AIAgentText { sections })
                             if !are_all_text_sections_empty(sections) =>
                         {
+                            // A BYOP compaction summary is not the agent's answer: show it as a
+                            // collapsed marker that expands to the summary.
+                            if let Some(marker) = props.model.compaction_summary_marker(
+                                &output_message.id,
+                                status.is_streaming(),
+                                app,
+                            ) {
+                                if let Some(element) = render_collapsible_block(
+                                    output_message,
+                                    marker.header_text(),
+                                    sections,
+                                    true,
+                                    props,
+                                    &mut has_rendered_first_text_section,
+                                    &mut text_section_index,
+                                    &mut code_section_index,
+                                    app,
+                                ) {
+                                    output_items.add_child(element);
+                                    continue;
+                                }
+                            }
+
                             let theme = appearance.theme();
                             let text_color = blended_colors::text_main(theme, theme.surface_1());
 

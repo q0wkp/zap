@@ -4,9 +4,10 @@ use crate::{
     ai::{
         agent::{
             conversation::AIConversation, AIAgentAction, AIAgentActionId, AIAgentActionType,
-            AIAgentInput, AIAgentOutputMessageType, SummarizationType,
+            AIAgentInput, AIAgentOutputMessageType, MessageId, SummarizationType,
         },
         blocklist::BlocklistAIActionModel,
+        byop_compaction::summary_marker::SummaryMarker,
     },
     BlocklistAIHistoryModel,
 };
@@ -36,6 +37,15 @@ pub trait AIBlockModelHelper {
     ) -> bool;
 
     fn is_conversation_summarization_active(&self, app: &AppContext) -> bool;
+
+    /// The marker to show in place of the output message `message_id` if it is a BYOP
+    /// compaction summary. `is_streaming` is whether this block's output is still streaming.
+    fn compaction_summary_marker(
+        &self,
+        message_id: &MessageId,
+        is_streaming: bool,
+        app: &AppContext,
+    ) -> Option<SummaryMarker>;
 
     fn blocked_action(
         &self,
@@ -142,6 +152,25 @@ impl<T: ?Sized + AIBlockModel> AIBlockModelHelper for T {
                 }
             )
         })
+    }
+
+    fn compaction_summary_marker(
+        &self,
+        message_id: &MessageId,
+        is_streaming: bool,
+        app: &AppContext,
+    ) -> Option<SummaryMarker> {
+        let in_summarize_exchange = self
+            .inputs_to_render(app)
+            .iter()
+            .any(|input| matches!(input, AIAgentInput::SummarizeConversation { .. }));
+        SummaryMarker::for_message(
+            self.conversation(app)
+                .map(|conversation| &conversation.compaction_state),
+            message_id,
+            in_summarize_exchange,
+            is_streaming,
+        )
     }
 
     fn blocked_action(
