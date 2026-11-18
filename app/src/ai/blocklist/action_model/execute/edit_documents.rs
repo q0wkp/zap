@@ -85,6 +85,11 @@ impl EditDocumentsExecutor {
                             "Could not apply diff to document {}: content mismatch",
                             diff.document_id
                         )
+                    } else if failures.ambiguous_matches > 0 {
+                        format!(
+                            "Could not apply diff to document {}: the search text matches more than one place, include more of the surrounding text so that it matches only one",
+                            diff.document_id
+                        )
                     } else if failures.noop_deltas > 0 {
                         format!("Changes to document {} were already made", diff.document_id)
                     } else {

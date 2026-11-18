@@ -150,13 +150,17 @@ impl AIRequestedCodeDiff {
                 fuzzy_match_failures,
                 noop_deltas,
                 missing_line_numbers: _,
+                ambiguous_matches,
+                ambiguous_match_details: _,
             }) => {
                 let update_deltas_empty = match &self.diff_type {
                     DiffType::Update { deltas, .. } => deltas.is_empty(),
                     DiffType::Create { .. } | DiffType::Delete { .. } => false,
                 };
 
-                *fuzzy_match_failures > 0 || (*noop_deltas > 0 && update_deltas_empty)
+                *fuzzy_match_failures > 0
+                    || *ambiguous_matches > 0
+                    || (*noop_deltas > 0 && update_deltas_empty)
             }
             None => false,
         }
@@ -295,7 +299,7 @@ fn remove_extra_line_num_prefix(replace: String) -> String {
         .join("\n")
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize)]
 pub struct DiffMatchFailures {
     /// Failures to perform a fuzzy match with content.
     pub fuzzy_match_failures: u8,
@@ -303,6 +307,23 @@ pub struct DiffMatchFailures {
     pub noop_deltas: u8,
     /// Search blocks that are missing line numbers.
     pub missing_line_numbers: u8,
+    /// Search blocks without line numbers that matched several places equally well, so that
+    /// applying them would have meant guessing which place was meant.
+    pub ambiguous_matches: u8,
+    /// The blocks counted in `ambiguous_matches` and where they matched. Skipped for telemetry.
+    #[serde(skip)]
+    pub ambiguous_match_details: Vec<AmbiguousMatch>,
+}
+
+/// A search block that was not applied because it matched more than one place in the file.
+///
+/// `block_number` is 1-based and refers to the block's position among all blocks for the file in
+/// the original tool call. `start_lines` are the 1-indexed first lines of the places it matched,
+/// in file order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AmbiguousMatch {
+    pub block_number: usize,
+    pub start_lines: Vec<usize>,
 }
 
 /// Fix two common issues with responses from the models that request code actions:
@@ -333,6 +354,7 @@ pub fn fuzzy_match_diffs(
     // In particular, noop diffs are only considered failures if they result in no applied deltas.
     let update_deltas_empty = deltas.is_empty();
     let failures = if failures.fuzzy_match_failures > 0
+        || failures.ambiguous_matches > 0
         || failures.missing_line_numbers > 0
         || (failures.noop_deltas > 0 && update_deltas_empty)
     {
@@ -464,7 +486,7 @@ fn fuzzy_match_file_diffs(
 
     let target_lines: Vec<&str> = lines(file_content).collect();
 
-    for diff in diffs {
+    for (block_index, diff) in diffs.iter().enumerate() {
         #[cfg(debug_assertions)]
         log::debug!("{diff:#?}");
 
@@ -485,7 +507,7 @@ fn fuzzy_match_file_diffs(
         // Find similar sections in the file content using the matching strategies.
         let fuzzy_match_line_numbers = if line_range == Some(0..0) {
             // An empty line range indicates prepending to the file.
-            line_range
+            BlockMatch::Found(0..0)
         } else {
             line_range = line_range.filter(|range| {
                 log::debug!("Parsed line range: {range:?}");
@@ -499,28 +521,30 @@ fn fuzzy_match_file_diffs(
             });
 
             // First, search for an exact match, then fall back to ignoring whitespace if needed.
+            // A search that matches several places stops here: a looser strategy would only
+            // pick one of them too.
             let mut matched = match_diff(
                 &search,
                 line_range.clone(),
                 &target_lines,
                 SECTION_MATCH_THRESHOLD,
                 MakeExactMatch,
-            )
-            .or_else(|| {
+            );
+            if matched == BlockMatch::NotFound {
                 // If there's no exact match, try ignoring whitespace.
-                match_diff(
+                matched = match_diff(
                     &search,
                     line_range.clone(),
                     &target_lines,
                     SECTION_MATCH_THRESHOLD,
                     MakeIndentationAgnosticMatch,
-                )
-            });
+                );
+            }
 
             // Prefix-tail rescue: only attempt when we have a line-number hint to
             // disambiguate.  Without a hint, short prefix searches like `fn main() {`
             // could match many windows in the file and silently pick the wrong one.
-            if matched.is_none() && line_range.is_some() {
+            if matched == BlockMatch::NotFound && line_range.is_some() {
                 matched = match_diff(
                     &search,
                     line_range.clone(),
@@ -531,7 +555,7 @@ fn fuzzy_match_file_diffs(
                 );
             }
 
-            if matched.is_none() {
+            if matched == BlockMatch::NotFound {
                 matched = match_diff(
                     &search,
                     line_range.clone(),
@@ -547,7 +571,7 @@ fn fuzzy_match_file_diffs(
         log::debug!("fuzzy match result: {fuzzy_match_line_numbers:?}");
 
         match fuzzy_match_line_numbers {
-            Some(range) => {
+            BlockMatch::Found(range) => {
                 #[cfg(debug_assertions)]
                 {
                     log::debug!("Matched content in file:");
@@ -595,7 +619,14 @@ fn fuzzy_match_file_diffs(
                     insertion,
                 });
             }
-            None => {
+            BlockMatch::Ambiguous(start_lines) => {
+                failures.ambiguous_matches += 1;
+                failures.ambiguous_match_details.push(AmbiguousMatch {
+                    block_number: block_index + 1,
+                    start_lines,
+                });
+            }
+            BlockMatch::NotFound => {
                 failures.fuzzy_match_failures += 1;
             }
         }
@@ -933,7 +964,7 @@ cfg_if! {
                 file_content: &[&str],
                 strategy: SearchReplaceMatchStrategy,
             ) -> Option<Range<usize>> {
-                match strategy {
+                let matched = match strategy {
                     SearchReplaceMatchStrategy::Exact => match_diff(
                         search,
                         line_range,
@@ -955,6 +986,10 @@ cfg_if! {
                         SECTION_MATCH_THRESHOLD,
                         MakeJaroWinklerMatch,
                     ),
+                };
+                match matched {
+                    BlockMatch::Found(range) => Some(range),
+                    BlockMatch::Ambiguous(_) | BlockMatch::NotFound => None,
                 }
             }
         }
@@ -963,17 +998,47 @@ cfg_if! {
     }
 }
 
+/// Where [`match_diff`] found a search block in the target file contents.
+#[derive(Debug, PartialEq)]
+enum BlockMatch {
+    /// The 1-indexed range of lines that matched best.
+    Found(Range<usize>),
+    /// There was no line-number hint, and several places matched equally well. Holds their
+    /// 1-indexed start lines, in file order.
+    Ambiguous(Vec<usize>),
+    /// Nothing matched well enough.
+    NotFound,
+}
+
+impl BlockMatch {
+    /// The matched range, taking the first of several equally good places. For callers that
+    /// narrow down where to search by other means.
+    fn first_range(self, search_line_count: usize) -> Option<Range<usize>> {
+        match self {
+            BlockMatch::Found(range) => Some(range),
+            BlockMatch::Ambiguous(start_lines) => start_lines
+                .first()
+                .map(|start| *start..start + search_line_count),
+            BlockMatch::NotFound => None,
+        }
+    }
+}
+
 /// Given a search block and a scoring function, find the most likely matching range of lines from target file contents.
 ///
 /// The result will be 1-indexed to match how we represent line numbers. An empty search string
 /// corresponds to the line range 0..0, which is how we represent prepending to the file.
+///
+/// Without a line-number hint, a block that matches several places equally well is reported as
+/// [`BlockMatch::Ambiguous`] instead of resolved to one of them, since nothing tells which of
+/// them was meant.
 fn match_diff<S: MakeScorer>(
     search: &str,
     line_range: Option<Range<usize>>,
     file_content: &[&str],
     threshold: f64,
     factory: S,
-) -> Option<Range<usize>> {
+) -> BlockMatch {
     let search_length = lines(search).count();
     let scorer = factory.for_search(search);
 
@@ -998,7 +1063,7 @@ fn match_diff<S: MakeScorer>(
                 log::debug!(
                     "Line numbers approximately correct. Parsed: {start}-{end} Matched {local_start}-{local_end} with {factory}",
                 );
-                return Some(local_start..local_end);
+                return BlockMatch::Found(local_start..local_end);
             }
         }
     }
@@ -1012,6 +1077,22 @@ fn match_diff<S: MakeScorer>(
         &scorer,
     );
     if let Some(m) = matches.first() {
+        if line_range.is_none() {
+            // Matches are sorted by similarity, so the ties for the best one come first.
+            let mut best_starts = matches
+                .iter()
+                .take_while(|other| other.similarity >= m.similarity)
+                .map(|other| other.start_line)
+                .collect_vec();
+            if best_starts.len() > 1 {
+                best_starts.sort_unstable();
+                log::debug!(
+                    "Search matched {} places equally well with {factory}",
+                    best_starts.len()
+                );
+                return BlockMatch::Ambiguous(best_starts);
+            }
+        }
         match line_range {
             Some(Range { start, end }) => {
                 log::debug!(
@@ -1024,9 +1105,9 @@ fn match_diff<S: MakeScorer>(
                 log::debug!("Missing line numbers fixed by matching with {factory}");
             }
         }
-        return Some(m.start_line..m.end_line);
+        return BlockMatch::Found(m.start_line..m.end_line);
     }
-    None
+    BlockMatch::NotFound
 }
 
 /// Given a search string, try to parse the line number range from it.
@@ -1165,6 +1246,10 @@ fn find_v4a_match(edit: &V4AHunk, file_lines: &[&str]) -> Option<Range<usize>> {
     .concat()
     .join("\n");
 
+    // The context already narrowed the search down, so take the first of several equally good
+    // places.
+    let combined_search_lines = lines(&combined_search).count();
+
     // Try exact match first
     if let Some(range) = match_diff(
         &combined_search,
@@ -1172,7 +1257,9 @@ fn find_v4a_match(edit: &V4AHunk, file_lines: &[&str]) -> Option<Range<usize>> {
         search_lines,
         1.0, // Exact match requires perfect score
         MakeExactMatch,
-    ) {
+    )
+    .first_range(combined_search_lines)
+    {
         return calculate_old_range(search_start, range, &pre_context_lines, &old_lines);
     }
 
@@ -1183,7 +1270,9 @@ fn find_v4a_match(edit: &V4AHunk, file_lines: &[&str]) -> Option<Range<usize>> {
         search_lines,
         1.0,
         MakeIndentationAgnosticMatch,
-    ) {
+    )
+    .first_range(combined_search_lines)
+    {
         log::debug!("V4A match found using indentation-agnostic matching");
         return calculate_old_range(search_start, range, &pre_context_lines, &old_lines);
     }
@@ -1195,7 +1284,9 @@ fn find_v4a_match(edit: &V4AHunk, file_lines: &[&str]) -> Option<Range<usize>> {
         search_lines,
         SECTION_MATCH_THRESHOLD,
         MakeJaroWinklerMatch,
-    ) {
+    )
+    .first_range(combined_search_lines)
+    {
         log::debug!("V4A match found using JaroWinkler fuzzy matching");
         return calculate_old_range(search_start, range, &pre_context_lines, &old_lines);
     }

@@ -381,6 +381,57 @@ fn test_apply_diffs_fails_with_only_noop() {
     });
 }
 
+/// A search block that matches several places fails the whole edit instead of changing one of
+/// them, and tells the model where it matched.
+#[test]
+fn test_apply_diffs_fails_with_ambiguous_search() {
+    App::test((), |app| async move {
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temporary file");
+        let file_path = temp_file.path().to_string_lossy().to_string();
+        write!(
+            temp_file,
+            "fn a() {{\n    x();\n}}\n\nfn b() {{\n    x();\n}}\n"
+        )
+        .unwrap();
+
+        let ambiguous_diff = ParsedDiff::StrReplaceEdit {
+            file: Some(file_path.clone()),
+            search: Some("    x();".to_string()),
+            replace: Some("    y();".to_string()),
+        };
+
+        let result = apply_edits(
+            vec![FileEdit::Edit(ambiguous_diff)],
+            &SessionContext::new_for_test(),
+            &AIIdentifiers::default(),
+            app.background_executor(),
+            Arc::new(AuthState::new_for_test()),
+            false,
+            |path| async move { FileReadResult::from(std::fs::read_to_string(path)) },
+        )
+        .await;
+
+        let errors = result.expect_err("Expected an error due to an ambiguous search");
+        match &errors[..] {
+            [DiffApplicationError::UnmatchedDiffs {
+                file,
+                match_failures,
+            }] => {
+                assert_eq!(*file, file_path);
+                assert_eq!(match_failures.ambiguous_matches, 1);
+                assert_eq!(match_failures.fuzzy_match_failures, 0);
+            }
+            other => panic!("Expected a single UnmatchedDiffs error, got {other:?}"),
+        }
+        assert_eq!(
+            DiffApplicationError::error_for_conversation(&errors),
+            format!(
+                "Could not apply all diffs to {file_path}. The following search blocks matched more than one place, so it is unclear which one to change. Include more of the surrounding lines in each, so that it matches only one place:\nSearch block 1 matched 2 places, starting at lines 2, 6."
+            )
+        );
+    });
+}
+
 #[test]
 fn test_multiple_file_create_edits_for_same_path() {
     App::test((), |app| async move {
@@ -516,6 +567,8 @@ fn test_format_match_error() {
             fuzzy_match_failures: 1,
             noop_deltas: 0,
             missing_line_numbers: 0,
+            ambiguous_matches: 0,
+            ambiguous_match_details: Vec::new(),
         },
     };
 
@@ -530,6 +583,8 @@ fn test_format_match_error() {
             fuzzy_match_failures: 0,
             noop_deltas: 1,
             missing_line_numbers: 0,
+            ambiguous_matches: 0,
+            ambiguous_match_details: Vec::new(),
         },
     };
 
@@ -544,12 +599,36 @@ fn test_format_match_error() {
             fuzzy_match_failures: 2,
             noop_deltas: 2,
             missing_line_numbers: 0,
+            ambiguous_matches: 0,
+            ambiguous_match_details: Vec::new(),
         },
     };
 
     assert_eq!(
         err.to_conversation_message(),
         "Could not apply all diffs to file.txt. The changes to file.txt were already made."
+    );
+}
+
+#[test]
+fn test_format_ambiguous_match_error_caps_listed_lines() {
+    let err = DiffApplicationError::UnmatchedDiffs {
+        file: "file.txt".to_string(),
+        match_failures: DiffMatchFailures {
+            fuzzy_match_failures: 0,
+            noop_deltas: 0,
+            missing_line_numbers: 0,
+            ambiguous_matches: 1,
+            ambiguous_match_details: vec![AmbiguousMatch {
+                block_number: 2,
+                start_lines: (1..=12).collect(),
+            }],
+        },
+    };
+
+    assert_eq!(
+        err.to_conversation_message(),
+        "Could not apply all diffs to file.txt. The following search blocks matched more than one place, so it is unclear which one to change. Include more of the surrounding lines in each, so that it matches only one place:\nSearch block 2 matched 12 places, starting at lines 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 and 2 more."
     );
 }
 
@@ -565,6 +644,8 @@ fn test_format_multiple_errors() {
                 fuzzy_match_failures: 1,
                 noop_deltas: 0,
                 missing_line_numbers: 0,
+                ambiguous_matches: 0,
+                ambiguous_match_details: Vec::new(),
             },
         },
     ];

@@ -8,8 +8,8 @@ use std::{
 };
 
 use ai::diff_validation::{
-    fuzzy_match_diffs, fuzzy_match_v4a_diffs, AIRequestedCodeDiff, DiffDelta, DiffMatchFailures,
-    DiffType, ParsedDiff, SearchAndReplace, V4AHunk,
+    fuzzy_match_diffs, fuzzy_match_v4a_diffs, AIRequestedCodeDiff, AmbiguousMatch, DiffDelta,
+    DiffMatchFailures, DiffType, ParsedDiff, SearchAndReplace, V4AHunk,
 };
 use itertools::Itertools;
 use vec1::Vec1;
@@ -105,13 +105,20 @@ impl DiffApplicationError {
             } => {
                 use std::fmt::Write;
                 let mut message = String::new();
-                if match_failures.fuzzy_match_failures > 0 {
+                if match_failures.fuzzy_match_failures > 0 || match_failures.ambiguous_matches > 0
+                {
                     let _ = write!(message, "Could not apply all diffs to {file}.");
                 }
+                append_ambiguous_match_details(&mut message, match_failures);
 
                 if match_failures.noop_deltas > 0 {
                     if !message.is_empty() {
-                        message.push(' ');
+                        if match_failures.ambiguous_match_details.is_empty() {
+                            message.push(' ');
+                        } else {
+                            // Ambiguous matches render as a multi-line message, so add a newline.
+                            message.push('\n');
+                        }
                     }
                     let _ = write!(message, "The changes to {file} were already made.");
                 }
@@ -157,6 +164,47 @@ impl DiffApplicationError {
     }
 }
 
+/// The most start lines listed for one ambiguous search block.
+const MAX_LISTED_AMBIGUOUS_MATCH_LINES: usize = 10;
+
+fn append_ambiguous_match_details(message: &mut String, match_failures: &DiffMatchFailures) {
+    if match_failures.ambiguous_match_details.is_empty() {
+        return;
+    }
+
+    message.push_str(
+        " The following search blocks matched more than one place, so it is unclear which one to \
+         change. Include more of the surrounding lines in each, so that it matches only one place:",
+    );
+    for ambiguous in &match_failures.ambiguous_match_details {
+        message.push('\n');
+        append_ambiguous_match(message, ambiguous);
+    }
+}
+
+fn append_ambiguous_match(message: &mut String, ambiguous: &AmbiguousMatch) {
+    use std::fmt::Write;
+    let count = ambiguous.start_lines.len();
+    let listed = ambiguous
+        .start_lines
+        .iter()
+        .take(MAX_LISTED_AMBIGUOUS_MATCH_LINES)
+        .join(", ");
+    let _ = write!(
+        message,
+        "Search block {} matched {count} places, starting at lines {listed}",
+        ambiguous.block_number
+    );
+    if count > MAX_LISTED_AMBIGUOUS_MATCH_LINES {
+        let _ = write!(
+            message,
+            " and {} more",
+            count - MAX_LISTED_AMBIGUOUS_MATCH_LINES
+        );
+    }
+    message.push('.');
+}
+
 /// Given a list of suggested edits from the server API, parse it into applicable diffs to be shown
 /// to the user as a series of code diffs.
 ///
@@ -191,7 +239,7 @@ where
                     auth_state,
                     RequestFileEditsTelemetryEvent::DiffMatchFailed(DiffMatchFailedEvent {
                         identifiers: ai_identifiers.clone(),
-                        failures: *match_failures,
+                        failures: match_failures.clone(),
                         passive_diff,
                     }),
                     background_executor
@@ -583,7 +631,7 @@ async fn apply_search_replace<F, Fut>(
                     );
                     result.errors.push(DiffApplicationError::UnmatchedDiffs {
                         file: file_path.clone(),
-                        match_failures: *failures,
+                        match_failures: failures.clone(),
                     });
                 }
             }
@@ -676,7 +724,7 @@ async fn apply_v4a_update<F, Fut>(
                 );
                 result.errors.push(DiffApplicationError::UnmatchedDiffs {
                     file: file_path.clone(),
-                    match_failures: *failures,
+                    match_failures: failures.clone(),
                 });
             }
             return;
@@ -737,7 +785,7 @@ async fn apply_v4a_update<F, Fut>(
                 );
                 result.errors.push(DiffApplicationError::UnmatchedDiffs {
                     file: file_path.clone(),
-                    match_failures: *failures,
+                    match_failures: failures.clone(),
                 });
             }
         }
