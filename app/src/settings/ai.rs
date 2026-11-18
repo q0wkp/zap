@@ -828,6 +828,12 @@ pub struct AgentProvider {
     /// `api_key` 仍走 `Authorization: Bearer` 标准路径。
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_headers: Vec<(String, String)>,
+
+    /// Whether the provider serves models. A disabled provider keeps its settings and its
+    /// API key, but its models leave the model pickers and no request is sent to it. A
+    /// settings file without the field (one written before it existed) reads as enabled.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub enabled: bool,
 }
 
 impl AgentProvider {
@@ -845,6 +851,7 @@ impl AgentProvider {
             base_url: String::new(),
             models: Vec::new(),
             extra_headers: Vec::new(),
+            enabled: true,
         }
     }
 }
@@ -903,6 +910,12 @@ pub struct AgentProviderModel {
     /// 是否支持音频输入(audio/* MIME)。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio: Option<bool>,
+
+    /// Whether the model is offered in the model pickers. Turning it off curates a large
+    /// fetched catalog without deleting entries that a later fetch would only add back.
+    /// Written only when false, so entries without it are offered.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub enabled: bool,
 }
 
 fn is_zero_u32(v: &u32) -> bool {
@@ -930,7 +943,19 @@ impl AgentProviderModel {
             image: None,
             pdf: None,
             audio: None,
+            enabled: true,
         }
+    }
+
+    /// Whether the model matches a filter query: every whitespace-separated term of the
+    /// query occurs in the display name or the id, ignoring case. A blank query matches.
+    pub fn matches_filter(&self, query: &str) -> bool {
+        let name = self.name.to_lowercase();
+        let id = self.id.to_lowercase();
+        query
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .all(|term| name.contains(&term) || id.contains(&term))
     }
 }
 
@@ -961,6 +986,8 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                 pdf: Option<bool>,
                 #[serde(default)]
                 audio: Option<bool>,
+                #[serde(default = "default_true")]
+                enabled: bool,
             },
         }
         match Either::deserialize(deserializer)? {
@@ -975,6 +1002,7 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                 image,
                 pdf,
                 audio,
+                enabled,
             } => {
                 let name = if name.is_empty() { id.clone() } else { name };
                 Ok(AgentProviderModel {
@@ -987,6 +1015,7 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                     image,
                     pdf,
                     audio,
+                    enabled,
                 })
             }
         }
@@ -1860,6 +1889,30 @@ define_settings_group!(AISettings, settings: [
         private: false,
         toml_path: "agents.warp_agent.providers",
         description: "User-configured custom Agent providers (OpenAI-compatible).",
+    }
+
+    // Whether the agent providers page downloads the models.dev catalog. When off, the last
+    // downloaded copy or the catalog built into Zap is used, and nothing is requested.
+    models_dev_download: ModelsDevDownload {
+        type: bool,
+        default: true,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        private: false,
+        toml_path: "agents.byop.models_dev.download",
+        description: "Download the models.dev model catalog. When off, the last downloaded copy or the catalog built into Zap is used.",
+    }
+
+    // Where the models.dev catalog is downloaded from, for a mirror or a copy of one's own.
+    // Blank means the default.
+    models_dev_url: ModelsDevUrl {
+        type: String,
+        default: crate::ai::agent_providers::models_dev::DEFAULT_CATALOG_URL.to_owned(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        private: false,
+        toml_path: "agents.byop.models_dev.url",
+        description: "The URL the models.dev model catalog is downloaded from.",
     }
 
     // Zap BYOP 本地会话压缩 — 1:1 对齐 opencode `Config.compaction.auto`。

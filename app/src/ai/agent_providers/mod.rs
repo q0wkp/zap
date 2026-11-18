@@ -16,6 +16,7 @@ pub mod content_tool_calls;
 pub mod custom_prompts;
 pub mod llm_id;
 pub mod models_dev;
+pub mod ollama;
 pub mod oneshot;
 pub mod openai_compatible;
 pub mod prompt_renderer;
@@ -69,6 +70,10 @@ fn build_byop_llm_infos(app: &AppContext) -> Vec<LLMInfo> {
     let mut out = Vec::new();
 
     for provider in providers {
+        // A disabled provider keeps its configuration but offers no models.
+        if !provider.enabled {
+            continue;
+        }
         if provider.base_url.trim().is_empty() {
             continue;
         }
@@ -83,7 +88,8 @@ fn build_byop_llm_infos(app: &AppContext) -> Vec<LLMInfo> {
         };
 
         for model in &provider.models {
-            if model.id.trim().is_empty() {
+            // Models the user turned off stay in the settings but leave the picker.
+            if model.id.trim().is_empty() || !model.enabled {
                 continue;
             }
             let display_name = if model.name.trim().is_empty() {
@@ -175,6 +181,20 @@ pub fn lookup_byop(app: &AppContext, id: &ai::LLMId) -> Option<(AgentProvider, S
     let (provider_id, model_id) = llm_id::decode(id)?;
     let providers = AISettings::as_ref(app).agent_providers.value().clone();
     let provider = providers.into_iter().find(|p| p.id == provider_id)?;
+    // A disabled provider resolves like a removed one, so nothing is sent to it even when a
+    // conversation still refers to one of its models.
+    if !provider.enabled {
+        return None;
+    }
+    // The same holds for a model the user turned off.
+    if provider
+        .models
+        .iter()
+        .find(|m| m.id == model_id)
+        .is_some_and(|m| !m.enabled)
+    {
+        return None;
+    }
     // API key 可选:无 key 时返回空字符串,下游 build_client 会传给 genai
     // `AuthData::from_single("")` —— 不附带 `Authorization`,适配 ollama 等本地无认证服务。
     let api_key = AgentProviderSecrets::as_ref(app)

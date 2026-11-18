@@ -2897,7 +2897,7 @@ fn effective_adapter_kind_for(
 ///
 /// Anthropic 额外容错:用户若粘贴完整 endpoint(`…/v1/messages`),剥掉尾部的
 /// `messages` 段,避免 genai 再拼一次变成 `…/messages/messages`。
-fn normalize_endpoint_url(api_type: AgentProviderApiType, base_url: &str) -> String {
+pub(super) fn normalize_endpoint_url(api_type: AgentProviderApiType, base_url: &str) -> String {
     let trimmed = base_url.trim();
     if trimmed.is_empty() {
         return api_type.default_base_url().to_owned();

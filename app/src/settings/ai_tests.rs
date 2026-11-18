@@ -822,6 +822,7 @@ fn extra_headers_skip_when_empty() {
         base_url: "https://api.example.com/v1".to_string(),
         models: Vec::new(),
         extra_headers: Vec::new(),
+        enabled: true,
     };
     let serialized = toml::to_string(&provider).expect("should serialize");
     assert!(
@@ -840,4 +841,79 @@ fn extra_headers_round_trip() {
     let serialized = toml::to_string(&provider).expect("should serialize");
     let deserialized: AgentProvider = toml::from_str(&serialized).expect("should deserialize");
     assert_eq!(provider.extra_headers, deserialized.extra_headers);
+}
+
+#[test]
+fn provider_without_enabled_field_is_enabled() {
+    let toml_str = r#"
+        id = "test-id"
+        name = "Test Provider"
+        base_url = "https://api.example.com/v1"
+    "#;
+    let provider: AgentProvider = toml::from_str(toml_str).expect("should deserialize");
+    assert!(provider.enabled);
+}
+
+#[test]
+fn provider_enabled_field_written_only_when_disabled() {
+    let mut provider = AgentProvider::new_empty();
+    let serialized = toml::to_string(&provider).expect("should serialize");
+    assert!(
+        !serialized.contains("enabled"),
+        "an enabled provider should not write the field"
+    );
+
+    provider.enabled = false;
+    let serialized = toml::to_string(&provider).expect("should serialize");
+    assert!(serialized.contains("enabled = false"));
+    let deserialized: AgentProvider = toml::from_str(&serialized).expect("should deserialize");
+    assert!(!deserialized.enabled);
+}
+
+#[test]
+fn model_without_enabled_field_is_enabled() {
+    let plain = r#"
+        name = "Test Provider"
+        base_url = "https://api.example.com/v1"
+        models = ["plain-id"]
+    "#;
+    let full = r#"
+        name = "Test Provider"
+        base_url = "https://api.example.com/v1"
+
+        [[models]]
+        id = "full-entry"
+    "#;
+    for toml_str in [plain, full] {
+        let provider: AgentProvider = toml::from_str(toml_str).expect("should deserialize");
+        assert_eq!(provider.models.len(), 1);
+        assert!(provider.models[0].enabled);
+    }
+}
+
+#[test]
+fn model_enabled_field_written_only_when_disabled() {
+    let mut model = AgentProviderModel::from_id("m".to_string());
+    let serialized = toml::to_string(&model).expect("should serialize");
+    assert!(!serialized.contains("enabled"));
+
+    model.enabled = false;
+    let serialized = toml::to_string(&model).expect("should serialize");
+    assert!(serialized.contains("enabled = false"));
+    let deserialized: AgentProviderModel = toml::from_str(&serialized).expect("should deserialize");
+    assert!(!deserialized.enabled);
+}
+
+#[test]
+fn model_filter_matches_every_term_in_name_or_id() {
+    let mut model = AgentProviderModel::from_id("anthropic/claude-sonnet-4.5".to_string());
+    model.name = "Claude Sonnet 4.5".to_string();
+
+    assert!(model.matches_filter(""));
+    assert!(model.matches_filter("   "));
+    assert!(model.matches_filter("SONNET"));
+    assert!(model.matches_filter("anthropic sonnet"));
+    assert!(model.matches_filter("claude 4.5"));
+    assert!(!model.matches_filter("claude opus"));
+    assert!(!model.matches_filter("gpt"));
 }

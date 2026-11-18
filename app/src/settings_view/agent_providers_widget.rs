@@ -51,6 +51,8 @@ const CARD_BUTTON_PADDING: f32 = 6.0;
 const FIELD_LABEL_MARGIN_TOP: f32 = 6.0;
 const FIELD_LABEL_MARGIN_BOTTOM: f32 = 2.0;
 const MODEL_ROW_GAP: f32 = 6.0;
+/// A provider with at least this many models gets a filter box over its model list.
+const MODEL_FILTER_MIN_MODELS: usize = 10;
 
 // ---------------------------------------------------------------------------
 // 模型行展开状态(process-local,thread_local 单线程 UI 安全;不持久化)
@@ -87,6 +89,46 @@ pub(super) fn clear_expanded_models_for_provider(provider_id: &str) {
     });
 }
 
+// The model filter of each provider card and whether its hidden models are listed. Kept
+// for the process like the expanded rows above, so a page rebuild doesn't reset them.
+std::thread_local! {
+    static MODEL_FILTERS: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+    static HIDDEN_MODELS_LISTED: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+}
+
+pub(super) fn model_filter(provider_id: &str) -> String {
+    MODEL_FILTERS.with(|f| f.borrow().get(provider_id).cloned().unwrap_or_default())
+}
+
+pub(super) fn set_model_filter(provider_id: &str, query: String) {
+    MODEL_FILTERS.with(|f| {
+        f.borrow_mut().insert(provider_id.to_string(), query);
+    });
+}
+
+fn hidden_models_listed(provider_id: &str) -> bool {
+    HIDDEN_MODELS_LISTED.with(|l| l.borrow().contains(provider_id))
+}
+
+pub(super) fn toggle_hidden_models_listed(provider_id: &str) {
+    HIDDEN_MODELS_LISTED.with(|l| {
+        let mut listed = l.borrow_mut();
+        if !listed.remove(provider_id) {
+            listed.insert(provider_id.to_string());
+        }
+    });
+}
+
+/// Forgets a removed provider's filter and hidden-models state.
+pub(super) fn clear_model_filter_for_provider(provider_id: &str) {
+    MODEL_FILTERS.with(|f| {
+        f.borrow_mut().remove(provider_id);
+    });
+    HIDDEN_MODELS_LISTED.with(|l| {
+        l.borrow_mut().remove(provider_id);
+    });
+}
+
 /// 一条模型条目(name + id + context + output)的可编辑 view handle。
 struct ModelRow {
     name_editor: ViewHandle<EditorView>,
@@ -106,6 +148,8 @@ struct ModelRow {
     /// detail panel 内 reasoning / tool_call 两个 bool toggle 的状态。
     reasoning_chip_state: MouseStateHandle,
     tool_call_chip_state: MouseStateHandle,
+    /// The row's button that offers the model in the picker or hides it.
+    enabled_toggle_state: MouseStateHandle,
 }
 
 struct HeaderRow {
@@ -123,12 +167,17 @@ struct ProviderRow {
     sync_models_dev_button_state: MouseStateHandle,
     save_button_state: MouseStateHandle,
     remove_button_state: MouseStateHandle,
+    toggle_enabled_button_state: MouseStateHandle,
     add_model_button_state: MouseStateHandle,
     header_rows: Vec<HeaderRow>,
     add_header_button_state: MouseStateHandle,
     /// 5 个 ApiType chip 各自的鼠标状态。HashMap 由 chip 显示名映射。
     api_type_chip_states: RefCell<HashMap<AgentProviderApiType, MouseStateHandle>>,
     model_rows: Vec<ModelRow>,
+    model_filter_editor: ViewHandle<EditorView>,
+    show_matching_button_state: MouseStateHandle,
+    hide_matching_button_state: MouseStateHandle,
+    hidden_models_toggle_state: MouseStateHandle,
 }
 
 type ModelDraftEditorHandles = (
@@ -267,6 +316,7 @@ impl ProviderDraftEditors {
 pub(super) struct AgentProvidersWidget {
     add_button_state: MouseStateHandle,
     refresh_catalog_button_state: MouseStateHandle,
+    catalog_download_button_state: MouseStateHandle,
     expand_chips_button_state: MouseStateHandle,
     /// 快速添加 chip 行的搜索框。
     search_editor: ViewHandle<EditorView>,
@@ -314,6 +364,7 @@ impl AgentProvidersWidget {
         Self {
             add_button_state: MouseStateHandle::default(),
             refresh_catalog_button_state: MouseStateHandle::default(),
+            catalog_download_button_state: MouseStateHandle::default(),
             expand_chips_button_state: MouseStateHandle::default(),
             search_editor,
             quick_add_button_states: RefCell::new(HashMap::new()),
@@ -424,6 +475,7 @@ impl AgentProvidersWidget {
             audio_chip_state: MouseStateHandle::default(),
             reasoning_chip_state: MouseStateHandle::default(),
             tool_call_chip_state: MouseStateHandle::default(),
+            enabled_toggle_state: MouseStateHandle::default(),
         }
     }
 
@@ -553,6 +605,34 @@ impl AgentProvidersWidget {
             .collect();
         let add_header_button_state = MouseStateHandle::default();
 
+        // ---- Model filter ----
+        let initial_filter = model_filter(&provider_id);
+        let model_filter_editor = ctx.add_typed_action_view(move |ctx| {
+            let appearance = Appearance::handle(ctx).as_ref(ctx);
+            let options = single_line_editor_options(appearance, false);
+            let mut editor = EditorView::single_line(options, ctx);
+            editor.set_placeholder_text(
+                crate::t!("settings-agent-providers-model-filter-placeholder"),
+                ctx,
+            );
+            if !initial_filter.is_empty() {
+                editor.set_buffer_text(&initial_filter, ctx);
+            }
+            editor
+        });
+        let filter_provider_id = provider_id.clone();
+        ctx.subscribe_to_view(&model_filter_editor, move |_, editor, event, ctx| {
+            if matches!(event, EditorEvent::Edited(_)) {
+                let query = editor.as_ref(ctx).buffer_text(ctx);
+                ctx.dispatch_typed_action_deferred(
+                    AISettingsPageAction::SetAgentProviderModelFilter {
+                        provider_id: filter_provider_id.clone(),
+                        query,
+                    },
+                );
+            }
+        });
+
         ProviderRow {
             name_editor,
             base_url_editor,
@@ -561,11 +641,16 @@ impl AgentProvidersWidget {
             sync_models_dev_button_state: MouseStateHandle::default(),
             save_button_state: MouseStateHandle::default(),
             remove_button_state: MouseStateHandle::default(),
+            toggle_enabled_button_state: MouseStateHandle::default(),
             add_model_button_state: MouseStateHandle::default(),
             header_rows,
             add_header_button_state,
             api_type_chip_states: RefCell::new(HashMap::new()),
             model_rows,
+            model_filter_editor,
+            show_matching_button_state: MouseStateHandle::default(),
+            hide_matching_button_state: MouseStateHandle::default(),
+            hidden_models_toggle_state: MouseStateHandle::default(),
         }
     }
 
@@ -719,8 +804,24 @@ impl AgentProvidersWidget {
             },
             appearance,
         );
+        // ● offers the model in the picker, ○ hides it there.
+        let enabled_toggle = Self::render_card_button_preserving_draft(
+            if model.enabled { "●" } else { "○" },
+            row.enabled_toggle_state.clone(),
+            draft_editors.clone(),
+            AISettingsPageAction::ToggleAgentProviderModelEnabled {
+                provider_id: provider.id.clone(),
+                model_index: index,
+            },
+            appearance,
+        );
         let row_controls = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(
+                Container::new(enabled_toggle)
+                    .with_margin_right(MODEL_ROW_GAP)
+                    .finish(),
+            )
             .with_child(
                 Container::new(chevron_button)
                     .with_margin_right(MODEL_ROW_GAP)
@@ -980,6 +1081,9 @@ impl AgentProvidersWidget {
                 .finish();
             }
         };
+        if !provider.enabled {
+            return Self::render_disabled_provider_card(provider, row, label_color, appearance);
+        }
         let draft_editors = ProviderDraftEditors::from_row(provider.id.clone(), row);
 
         let name_field = field_block(
@@ -1076,12 +1180,22 @@ impl AgentProvidersWidget {
         headers_column.add_child(add_header_button);
 
         // ---- 模型列表区 ----
+        let hidden_count = provider.models.iter().filter(|m| !m.enabled).count();
+        let models_label_text = if hidden_count == 0 {
+            crate::t!(
+                "settings-agent-providers-models-label",
+                count = provider.models.len()
+            )
+        } else {
+            crate::t!(
+                "settings-agent-providers-models-label-with-hidden",
+                count = provider.models.len(),
+                hidden = hidden_count
+            )
+        };
         let models_label = Container::new(
             Text::new(
-                crate::t!(
-                    "settings-agent-providers-models-label",
-                    count = provider.models.len()
-                ),
+                models_label_text,
                 appearance.ui_font_family(),
                 appearance.ui_font_size(),
             )
@@ -1167,6 +1281,19 @@ impl AgentProvidersWidget {
                                 .finish(),
                             )
                             .with_child(
+                                Container::new(
+                                    Text::new(
+                                        "  ".to_string(),
+                                        appearance.ui_font_family(),
+                                        appearance.ui_font_size(),
+                                    )
+                                    .with_color(dim.into())
+                                    .finish(),
+                                )
+                                .with_margin_right(MODEL_ROW_GAP)
+                                .finish(),
+                            )
+                            .with_child(
                                 Text::new(
                                     "  ".to_string(),
                                     appearance.ui_font_family(),
@@ -1181,8 +1308,29 @@ impl AgentProvidersWidget {
             )
             .with_margin_bottom(2.)
             .finish();
+
+            // Large catalogs get a filter box; the query only applies while it is shown.
+            let show_filter = provider.models.len() >= MODEL_FILTER_MIN_MODELS;
+            let query = if show_filter {
+                model_filter(&provider.id)
+            } else {
+                String::new()
+            };
+            if show_filter {
+                models_column.add_child(self.render_model_filter_bar(
+                    provider,
+                    row,
+                    &query,
+                    draft_editors.clone(),
+                    appearance,
+                ));
+            }
             models_column.add_child(header);
 
+            // Offered models first; the hidden ones go into a group of their own, folded
+            // unless the user opens it.
+            let mut hidden_matches = Vec::new();
+            let mut any_match = false;
             for (idx, m_row) in row.model_rows.iter().enumerate() {
                 let model = match provider.models.get(idx) {
                     Some(m) => m,
@@ -1190,6 +1338,14 @@ impl AgentProvidersWidget {
                     // 长度暂时不一致;跳过避免 panic,下一帧会自然修正。
                     None => continue,
                 };
+                if !model.matches_filter(&query) {
+                    continue;
+                }
+                any_match = true;
+                if !model.enabled {
+                    hidden_matches.push((idx, model, m_row));
+                    continue;
+                }
                 models_column.add_child(Self::render_model_row(
                     provider,
                     idx,
@@ -1198,6 +1354,70 @@ impl AgentProvidersWidget {
                     draft_editors.clone(),
                     appearance,
                 ));
+            }
+
+            if !any_match {
+                models_column.add_child(
+                    Container::new(
+                        Text::new(
+                            crate::t!(
+                                "settings-agent-providers-models-no-match",
+                                query = query.trim()
+                            ),
+                            appearance.ui_font_family(),
+                            appearance.ui_font_size(),
+                        )
+                        .with_color(dim.into())
+                        .finish(),
+                    )
+                    .with_margin_bottom(MODEL_ROW_GAP)
+                    .finish(),
+                );
+            }
+
+            if !hidden_matches.is_empty() {
+                let listed = hidden_models_listed(&provider.id);
+                let toggle_label = if listed {
+                    crate::t!(
+                        "settings-agent-providers-hidden-models-collapse",
+                        count = hidden_matches.len()
+                    )
+                } else {
+                    crate::t!(
+                        "settings-agent-providers-hidden-models-expand",
+                        count = hidden_matches.len()
+                    )
+                };
+                models_column.add_child(
+                    Container::new(
+                        Flex::row()
+                            .with_main_axis_alignment(MainAxisAlignment::Start)
+                            .with_child(Self::render_card_button(
+                                toggle_label,
+                                row.hidden_models_toggle_state.clone(),
+                                AISettingsPageAction::ToggleAgentProviderHiddenModelsListed {
+                                    provider_id: provider.id.clone(),
+                                },
+                                appearance,
+                            ))
+                            .finish(),
+                    )
+                    .with_margin_top(2.)
+                    .with_margin_bottom(MODEL_ROW_GAP)
+                    .finish(),
+                );
+                if listed {
+                    for (idx, model, m_row) in hidden_matches {
+                        models_column.add_child(Self::render_model_row(
+                            provider,
+                            idx,
+                            model,
+                            m_row,
+                            draft_editors.clone(),
+                            appearance,
+                        ));
+                    }
+                }
             }
         }
 
@@ -1233,6 +1453,16 @@ impl AgentProvidersWidget {
             crate::t!("settings-agent-providers-remove"),
             row.remove_button_state.clone(),
             AISettingsPageAction::RemoveAgentProvider {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
+        // Saves the card's draft first, so disabling doesn't drop unsaved edits.
+        let disable_button = Self::render_card_button_preserving_draft(
+            crate::t!("settings-agent-providers-disable"),
+            row.toggle_enabled_button_state.clone(),
+            draft_editors.clone(),
+            AISettingsPageAction::ToggleAgentProviderEnabled {
                 provider_id: provider.id.clone(),
             },
             appearance,
@@ -1280,6 +1510,11 @@ impl AgentProvidersWidget {
                     Flex::row()
                         .with_cross_axis_alignment(CrossAxisAlignment::Center)
                         .with_child(Container::new(save_button).with_margin_right(8.).finish())
+                        .with_child(
+                            Container::new(disable_button)
+                                .with_margin_right(8.)
+                                .finish(),
+                        )
                         .with_child(remove_button)
                         .finish(),
                 )
@@ -1311,6 +1546,150 @@ impl AgentProvidersWidget {
                         .finish(),
                 )
                 .with_child(Container::new(bottom_row).with_margin_top(10.).finish())
+                .finish(),
+        )
+        .with_background(appearance.theme().surface_1())
+        .with_uniform_padding(12.)
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.)))
+        .with_margin_bottom(8.)
+        .finish()
+    }
+
+    /// The filter box over a large model list, with buttons that offer or hide every model
+    /// the filter matches (every model while the filter is empty).
+    fn render_model_filter_bar(
+        &self,
+        provider: &AgentProvider,
+        row: &ProviderRow,
+        query: &str,
+        draft_editors: ProviderDraftEditors,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let (mut to_show, mut to_hide) = (0, 0);
+        for model in provider.models.iter().filter(|m| m.matches_filter(query)) {
+            if model.enabled {
+                to_hide += 1;
+            } else {
+                to_show += 1;
+            }
+        }
+
+        let mut bar = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_child(
+                Expanded::new(
+                    1.,
+                    Container::new(ChildView::new(&row.model_filter_editor).finish())
+                        .with_margin_right(MODEL_ROW_GAP)
+                        .finish(),
+                )
+                .finish(),
+            );
+        if to_show > 0 {
+            bar.add_child(
+                Container::new(Self::render_card_button_preserving_draft(
+                    crate::t!(
+                        "settings-agent-providers-models-show-matching",
+                        count = to_show
+                    ),
+                    row.show_matching_button_state.clone(),
+                    draft_editors.clone(),
+                    AISettingsPageAction::SetAgentProviderModelsEnabled {
+                        provider_id: provider.id.clone(),
+                        query: query.to_string(),
+                        enabled: true,
+                    },
+                    appearance,
+                ))
+                .with_margin_right(MODEL_ROW_GAP)
+                .finish(),
+            );
+        }
+        if to_hide > 0 {
+            bar.add_child(Self::render_card_button_preserving_draft(
+                crate::t!(
+                    "settings-agent-providers-models-hide-matching",
+                    count = to_hide
+                ),
+                row.hide_matching_button_state.clone(),
+                draft_editors,
+                AISettingsPageAction::SetAgentProviderModelsEnabled {
+                    provider_id: provider.id.clone(),
+                    query: query.to_string(),
+                    enabled: false,
+                },
+                appearance,
+            ));
+        }
+
+        Container::new(bar.finish())
+            .with_margin_bottom(MODEL_ROW_GAP)
+            .finish()
+    }
+
+    /// A disabled provider shows as one line: its name, a "Disabled" note, and the Enable
+    /// and Remove buttons. Its settings and API key are kept; enabling it brings the full
+    /// card back.
+    fn render_disabled_provider_card(
+        provider: &AgentProvider,
+        row: &ProviderRow,
+        label_color: warp_core::ui::theme::Fill,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let dim = appearance.theme().disabled_ui_text_color();
+        let label = if provider.name.trim().is_empty() {
+            provider.id.clone()
+        } else {
+            provider.name.clone()
+        };
+        let name = Text::new(
+            label,
+            appearance.ui_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(label_color.into())
+        .finish();
+        let note = Container::new(
+            Text::new(
+                crate::t!("settings-agent-providers-disabled-note"),
+                appearance.ui_font_family(),
+                appearance.ui_font_size(),
+            )
+            .with_color(dim.into())
+            .soft_wrap(true)
+            .finish(),
+        )
+        .with_margin_left(8.)
+        .finish();
+        let enable_button = Self::render_card_button(
+            crate::t!("settings-agent-providers-enable"),
+            row.toggle_enabled_button_state.clone(),
+            AISettingsPageAction::ToggleAgentProviderEnabled {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
+        let remove_button = Self::render_card_button(
+            crate::t!("settings-agent-providers-remove"),
+            row.remove_button_state.clone(),
+            AISettingsPageAction::RemoveAgentProvider {
+                provider_id: provider.id.clone(),
+            },
+            appearance,
+        );
+
+        Container::new(
+            Flex::row()
+                .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                .with_child(name)
+                .with_child(Expanded::new(1., note).finish())
+                .with_child(
+                    Container::new(enable_button)
+                        .with_margin_left(16.)
+                        .with_margin_right(8.)
+                        .finish(),
+                )
+                .with_child(remove_button)
                 .finish(),
         )
         .with_background(appearance.theme().surface_1())
@@ -1419,7 +1798,7 @@ impl AgentProvidersWidget {
     fn render_models_dev_section(
         &self,
         appearance: &Appearance,
-        _app: &AppContext,
+        app: &AppContext,
     ) -> Box<dyn Element> {
         use crate::ai::agent_providers::models_dev;
 
@@ -1434,10 +1813,16 @@ impl AgentProvidersWidget {
         .with_color(label_color.into())
         .finish();
 
-        let refresh_button = Self::render_card_button(
-            crate::t!("settings-agent-providers-refresh-catalog"),
-            self.refresh_catalog_button_state.clone(),
-            AISettingsPageAction::RefreshModelsDev,
+        let download_enabled = *AISettings::as_ref(app).models_dev_download.value();
+        let download_label = crate::t!("settings-agent-providers-catalog-download");
+        let download_button = Self::render_card_button(
+            if download_enabled {
+                format!("● {download_label}")
+            } else {
+                format!("○ {download_label}")
+            },
+            self.catalog_download_button_state.clone(),
+            AISettingsPageAction::ToggleModelsDevDownload,
             appearance,
         );
 
@@ -1446,12 +1831,25 @@ impl AgentProvidersWidget {
             .with_margin_right(8.)
             .finish();
 
-        let header_row = Flex::row()
+        let mut header_row = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(title)
-            .with_child(Expanded::new(1., search_box).finish())
-            .with_child(refresh_button)
-            .finish();
+            .with_child(Expanded::new(1., search_box).finish());
+        // Refreshing means downloading, so the button goes away while downloads are off.
+        if download_enabled {
+            header_row.add_child(
+                Container::new(Self::render_card_button(
+                    crate::t!("settings-agent-providers-refresh-catalog"),
+                    self.refresh_catalog_button_state.clone(),
+                    AISettingsPageAction::RefreshModelsDev,
+                    appearance,
+                ))
+                .with_margin_right(6.)
+                .finish(),
+            );
+        }
+        header_row.add_child(download_button);
+        let header_row = header_row.finish();
 
         let mut body = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
         body.add_child(header_row);
@@ -1584,6 +1982,23 @@ impl AgentProvidersWidget {
             }
         }
 
+        if let Some(status) = catalog_status(download_enabled) {
+            body.add_child(
+                Container::new(
+                    Text::new(
+                        status,
+                        appearance.ui_font_family(),
+                        appearance.ui_font_size(),
+                    )
+                    .with_color(dim_color.into())
+                    .soft_wrap(true)
+                    .finish(),
+                )
+                .with_margin_top(6.)
+                .finish(),
+            );
+        }
+
         Container::new(body.finish())
             .with_background(appearance.theme().surface_1())
             .with_uniform_padding(10.)
@@ -1591,6 +2006,51 @@ impl AgentProvidersWidget {
             .with_margin_bottom(10.)
             .finish()
     }
+}
+
+/// The line under the quick-add chips saying which catalog is shown when it isn't a fresh
+/// download: the built-in one, or a saved one while downloading is off or has failed.
+fn catalog_status(download_enabled: bool) -> Option<String> {
+    use crate::ai::agent_providers::models_dev::{self, CatalogSource};
+
+    let (source, taken_at) = models_dev::loaded_from()?;
+    let download_failed = download_enabled && models_dev::last_fetch_failed();
+    let date = taken_at
+        .map(|t| {
+            chrono::DateTime::<chrono::Local>::from(t)
+                .format("%Y-%m-%d")
+                .to_string()
+        })
+        .unwrap_or_else(|| "?".to_string());
+    let catalog = match source {
+        CatalogSource::Downloaded => return None,
+        CatalogSource::Cache if download_enabled && !download_failed => return None,
+        CatalogSource::Cache => {
+            crate::t!(
+                "settings-agent-providers-catalog-saved",
+                date = date.as_str()
+            )
+        }
+        CatalogSource::Bundled => {
+            crate::t!(
+                "settings-agent-providers-catalog-builtin",
+                date = date.as_str()
+            )
+        }
+    };
+    let reason = if !download_enabled {
+        Some(crate::t!("settings-agent-providers-catalog-download-off"))
+    } else if download_failed {
+        Some(crate::t!(
+            "settings-agent-providers-catalog-download-failed"
+        ))
+    } else {
+        None
+    };
+    Some(match reason {
+        Some(reason) => format!("{reason} {catalog}"),
+        None => catalog,
+    })
 }
 
 impl SettingsWidget for AgentProvidersWidget {
