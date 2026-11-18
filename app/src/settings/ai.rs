@@ -910,6 +910,12 @@ pub struct AgentProviderModel {
     /// 是否支持音频输入(audio/* MIME)。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audio: Option<bool>,
+
+    /// Whether the model is offered in the model pickers. Turning it off curates a large
+    /// fetched catalog without deleting entries that a later fetch would only add back.
+    /// Written only when false, so entries without it are offered.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub enabled: bool,
 }
 
 fn is_zero_u32(v: &u32) -> bool {
@@ -937,7 +943,19 @@ impl AgentProviderModel {
             image: None,
             pdf: None,
             audio: None,
+            enabled: true,
         }
+    }
+
+    /// Whether the model matches a filter query: every whitespace-separated term of the
+    /// query occurs in the display name or the id, ignoring case. A blank query matches.
+    pub fn matches_filter(&self, query: &str) -> bool {
+        let name = self.name.to_lowercase();
+        let id = self.id.to_lowercase();
+        query
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .all(|term| name.contains(&term) || id.contains(&term))
     }
 }
 
@@ -968,6 +986,8 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                 pdf: Option<bool>,
                 #[serde(default)]
                 audio: Option<bool>,
+                #[serde(default = "default_true")]
+                enabled: bool,
             },
         }
         match Either::deserialize(deserializer)? {
@@ -982,6 +1002,7 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                 image,
                 pdf,
                 audio,
+                enabled,
             } => {
                 let name = if name.is_empty() { id.clone() } else { name };
                 Ok(AgentProviderModel {
@@ -994,6 +1015,7 @@ impl<'de> Deserialize<'de> for AgentProviderModel {
                     image,
                     pdf,
                     audio,
+                    enabled,
                 })
             }
         }

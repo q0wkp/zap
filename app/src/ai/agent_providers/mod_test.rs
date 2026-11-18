@@ -179,3 +179,34 @@ fn disabled_provider_offers_no_models_and_does_not_resolve() {
         });
     });
 }
+
+#[test]
+fn disabled_model_leaves_the_picker_and_does_not_resolve() {
+    App::test((), |mut app| async move {
+        init_byop_test_app(&mut app);
+
+        let provider_id = "provider-curated";
+        app.update(|ctx| {
+            AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                let mut provider = sample_provider(provider_id);
+                let mut hidden = AgentProviderModel::from_id("hidden-model".to_owned());
+                hidden.enabled = false;
+                provider.models.push(hidden);
+                let _ = settings.agent_providers.set_value(vec![provider], ctx);
+            });
+        });
+
+        app.read(|ctx| {
+            let choices: Vec<_> = LLMPreferences::as_ref(ctx)
+                .get_base_llm_choices_for_agent_mode()
+                .collect();
+            assert_eq!(choices.len(), 1, "only the enabled model is offered");
+            assert_eq!(
+                choices[0].id.as_str(),
+                llm_id::encode(provider_id, "llama3.2").as_str()
+            );
+            assert!(lookup_byop(ctx, &llm_id::encode(provider_id, "hidden-model")).is_none());
+            assert!(lookup_byop(ctx, &llm_id::encode(provider_id, "llama3.2")).is_some());
+        });
+    });
+}

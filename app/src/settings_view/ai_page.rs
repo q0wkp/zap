@@ -2404,6 +2404,27 @@ pub enum AISettingsPageAction {
         provider_id: String,
         model_index: usize,
     },
+    /// Offers one model in the model pickers or hides it there.
+    ToggleAgentProviderModelEnabled {
+        provider_id: String,
+        model_index: usize,
+    },
+    /// Sets the filter over a provider's model list.
+    SetAgentProviderModelFilter {
+        provider_id: String,
+        query: String,
+    },
+    /// Offers or hides every model of a provider that `query` matches (all of them when
+    /// it is blank).
+    SetAgentProviderModelsEnabled {
+        provider_id: String,
+        query: String,
+        enabled: bool,
+    },
+    /// Folds or unfolds the list of a provider's hidden models.
+    ToggleAgentProviderHiddenModelsListed {
+        provider_id: String,
+    },
 }
 
 /// model detail panel 三态 capability chip 的种类。
@@ -3100,6 +3121,7 @@ impl TypedActionView for AISettingsPageView {
                     },
                 );
                 super::agent_providers_widget::clear_expanded_models_for_provider(provider_id);
+                super::agent_providers_widget::clear_model_filter_for_provider(provider_id);
                 self.rebuild_current_page(ctx);
             }
             AISettingsPageAction::ToggleAgentProviderEnabled { provider_id } => {
@@ -3633,6 +3655,45 @@ impl TypedActionView for AISettingsPageView {
                     let _ = settings.agent_providers.set_value(providers, ctx);
                 });
                 self.rebuild_current_page(ctx);
+            }
+            AISettingsPageAction::ToggleAgentProviderModelEnabled {
+                provider_id,
+                model_index,
+            } => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let mut providers = settings.agent_providers.value().clone();
+                    if let Some(p) = providers.iter_mut().find(|p| p.id == *provider_id) {
+                        if let Some(m) = p.models.get_mut(*model_index) {
+                            m.enabled = !m.enabled;
+                        }
+                    }
+                    let _ = settings.agent_providers.set_value(providers, ctx);
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::SetAgentProviderModelFilter { provider_id, query } => {
+                super::agent_providers_widget::set_model_filter(provider_id, query.clone());
+                ctx.notify();
+            }
+            AISettingsPageAction::SetAgentProviderModelsEnabled {
+                provider_id,
+                query,
+                enabled,
+            } => {
+                AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    let mut providers = settings.agent_providers.value().clone();
+                    if let Some(p) = providers.iter_mut().find(|p| p.id == *provider_id) {
+                        for m in p.models.iter_mut().filter(|m| m.matches_filter(query)) {
+                            m.enabled = *enabled;
+                        }
+                    }
+                    let _ = settings.agent_providers.set_value(providers, ctx);
+                });
+                ctx.notify();
+            }
+            AISettingsPageAction::ToggleAgentProviderHiddenModelsListed { provider_id } => {
+                super::agent_providers_widget::toggle_hidden_models_listed(provider_id);
+                ctx.notify();
             }
         }
     }

@@ -87,7 +87,8 @@ fn build_byop_llm_infos(app: &AppContext) -> Vec<LLMInfo> {
         };
 
         for model in &provider.models {
-            if model.id.trim().is_empty() {
+            // Models the user turned off stay in the settings but leave the picker.
+            if model.id.trim().is_empty() || !model.enabled {
                 continue;
             }
             let display_name = if model.name.trim().is_empty() {
@@ -182,6 +183,15 @@ pub fn lookup_byop(app: &AppContext, id: &ai::LLMId) -> Option<(AgentProvider, S
     // A disabled provider resolves like a removed one, so nothing is sent to it even when a
     // conversation still refers to one of its models.
     if !provider.enabled {
+        return None;
+    }
+    // The same holds for a model the user turned off.
+    if provider
+        .models
+        .iter()
+        .find(|m| m.id == model_id)
+        .is_some_and(|m| !m.enabled)
+    {
         return None;
     }
     // API key 可选:无 key 时返回空字符串,下游 build_client 会传给 genai
