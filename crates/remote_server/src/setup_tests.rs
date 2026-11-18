@@ -437,3 +437,68 @@ fn install_script_without_release_tag_fails_when_no_release_is_found() {
         );
     }
 }
+
+/// Runs [`previous_install_check_command`] against `fake_home` and returns
+/// whether it found a prior install.
+fn run_previous_install_check(fake_home: &std::path::Path) -> bool {
+    let output = command::blocking::Command::new("bash")
+        .arg("-c")
+        .arg(previous_install_check_command())
+        .env("HOME", fake_home)
+        .output()
+        .expect("failed to run previous install check");
+    match output.status.code() {
+        Some(0) => true,
+        Some(1) => false,
+        code => panic!(
+            "previous install check exited with {code:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ),
+    }
+}
+
+#[test]
+fn previous_install_check_ignores_what_a_failed_install_leaves() {
+    let fake_home = tempfile::tempdir().unwrap();
+    let resolve_remote_path =
+        |path: String| path.replacen('~', fake_home.path().to_str().unwrap(), 1);
+    let install_dir = std::path::PathBuf::from(resolve_remote_path(remote_server_dir()));
+
+    assert!(!run_previous_install_check(fake_home.path()));
+
+    // An install whose tarball never arrived fails after creating the
+    // install directory.
+    let missing_tarball = fake_home.path().join("missing.tar.gz");
+    let install_output = command::blocking::Command::new("bash")
+        .arg("-c")
+        .arg(install_script(Some(missing_tarball.to_str().unwrap())))
+        .env("HOME", fake_home.path())
+        .output()
+        .expect("failed to run install script");
+    assert!(!install_output.status.success());
+    assert!(install_dir.is_dir());
+    assert!(!run_previous_install_check(fake_home.path()));
+
+    // Interrupted installs can also leave a staging directory and the
+    // uploaded tarball behind.
+    std::fs::create_dir(install_dir.join(".install.AbC123")).unwrap();
+    std::fs::write(install_dir.join(SCP_UPLOAD_TARBALL_NAME), "").unwrap();
+    assert!(!run_previous_install_check(fake_home.path()));
+
+    // The daemon's directories outlast the removal of a stale binary.
+    std::fs::create_dir(install_dir.join(remote_server_identity_dir_name("identity"))).unwrap();
+    assert!(run_previous_install_check(fake_home.path()));
+}
+
+#[test]
+fn previous_install_check_finds_an_installed_binary() {
+    let fake_home = tempfile::tempdir().unwrap();
+    let binary = std::path::PathBuf::from(remote_server_binary().replacen(
+        '~',
+        fake_home.path().to_str().unwrap(),
+        1,
+    ));
+    std::fs::create_dir_all(binary.parent().unwrap()).unwrap();
+    std::fs::write(&binary, "#!/bin/sh\n").unwrap();
+    assert!(run_previous_install_check(fake_home.path()));
+}
