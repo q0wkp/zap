@@ -8,6 +8,10 @@ ssh2 = "0.9"
 openssl-sys = { version = "*", features = ["vendored"] }
 smol = "2"
 thiserror = "2"
+base64 = { workspace = true }
+dirs = { workspace = true }
+hmac = "0.12"
+sha1 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"

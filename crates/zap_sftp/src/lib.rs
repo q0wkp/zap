@@ -8,6 +8,7 @@
 pub mod dir;
 pub mod error;
 pub mod file;
+mod known_hosts;
 pub mod session;
 pub mod sftp;
 pub mod types;

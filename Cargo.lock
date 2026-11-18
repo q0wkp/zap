@@ -16993,7 +16993,11 @@ dependencies = [
 name = "zap_sftp"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
+ "dirs 6.0.0",
+ "hmac 0.12.1",
  "openssl-sys",
+ "sha1",
  "smol",
  "ssh2",
  "tempfile",
