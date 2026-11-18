@@ -1,7 +1,7 @@
 # The release of prebuilt archives: pushing a version tag runs ci.yml, then builds the archives on
 # each system, and creates the GitHub release with them. This file holds all of the project's
 # releasing; what is marked Per project is this project's own. By hand: the same build commands,
-# then gh release create with the archives.
+# sha256sum of each CLI archive into its .sha256, then gh release create with the archives.
 name: Release
 
 on:
@@ -30,8 +30,9 @@ jobs:
       matrix:
         # Per project: the systems the release ships for, each with the name its files carry:
         # zap-<version>-<name>.dmg and .tar.gz on macOS, .AppImage and .tar.gz on Linux, the version
-        # being the tag without its v. Zap's auto-update (app/src/autoupdate/github.rs), its remote
-        # server (crates/remote_server/src/setup.rs) and q0wkp/pkgs look for these names. The deb,
+        # being the tag without its v, and github-release adds each .tar.gz's .tar.gz.sha256. Zap's
+        # auto-update (app/src/autoupdate/github.rs), its remote server
+        # (crates/remote_server/src/setup.rs) and q0wkp/pkgs look for these names. The deb,
         # rpm and Arch packages keep the names their package managers give them.
         include:
           - os: macos-26
@@ -249,6 +250,25 @@ jobs:
           pattern: release-*
           merge-multiple: true
           path: dist/
+
+      # The remote server installs a CLI archive on another host only once its SHA-256 matches
+      # the one in zap-<version>-<name>.tar.gz.sha256 (crates/remote_server/src/setup.rs), a line
+      # of sha256sum's output. Computed here, from the files the release gets.
+      - name: Write the SHA-256 of the CLI archives
+        working-directory: dist
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          found=
+          for archive in zap-"$version"-*.tar.gz; do
+            [ -f "$archive" ] || continue
+            sha256sum "$archive" > "$archive.sha256"
+            cat "$archive.sha256"
+            found=1
+          done
+          if [ -z "$found" ]; then
+            echo "::error::no CLI archive zap-$version-*.tar.gz to write the SHA-256 of"
+            exit 1
+          fi
 
       - name: Create the release
         env:

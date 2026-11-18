@@ -7,10 +7,21 @@
 #   {latest_release_url}    - the page that redirects to the newest release, .../releases/latest
 #   {download_url}          - the release's tarball for this system, with shell variables:
 #                             .../releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz
+#   {checksum_url}          - the tarball's SHA-256 file that the release publishes beside it, {download_url}.sha256
 #   {install_dir}           - 例如 ~/.zap/remote-server
 #   {binary_name}           - 例如 zap-oss
 #   {version_suffix}        - 例如 -v0.2026...,没有 release tag 时为空
 #   {staging_tarball_path}  - SCP fallback 预上传 tarball 路径,常规下载路径为空
+#
+# A downloaded tarball is extracted only once its SHA-256 matches the one its release publishes.
+# The exit codes for that, besides 1 (any other error), 2 (unsupported system), 3 (no downloader)
+# and the downloader's own when the tarball can't be downloaded:
+#   4 - neither sha256sum nor shasum is available to verify the tarball
+#   5 - the release's SHA-256 file can't be downloaded or holds no SHA-256: releases made before
+#       checksums were published have none, and are not installed
+#   6 - the tarball's SHA-256 differs from the published one
+# None of them stops the client's SCP fallback, which downloads the tarball and verifies it on
+# the client: a tarball it uploads is extracted without a check here.
 set -e
 
 arch=$(uname -m)
@@ -49,6 +60,16 @@ if [ -n "$staging_tarball_path" ]; then
   esac
   mv "$staging_tarball_path" "$tmpdir/zap.tar.gz"
 else
+  # sha256sum on Linux (also BusyBox's), shasum on macOS.
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256_tool=sha256sum
+  elif command -v shasum >/dev/null 2>&1; then
+    sha256_tool=shasum
+  else
+    echo "error: neither sha256sum nor shasum is available to verify the download of Zap's remote server" >&2
+    exit 4
+  fi
+
   if command -v curl >/dev/null 2>&1; then
     downloader=curl
   elif command -v wget >/dev/null 2>&1; then
@@ -81,6 +102,29 @@ else
 
   # The URL names the release with $release_version, and this system with $os_name and $arch_name.
   url="{download_url}"
+
+  # The SHA-256 first, so that a release without one isn't downloaded for nothing.
+  checksum_url="{checksum_url}"
+  if [ "$downloader" = curl ]; then
+    curl -fsSL --connect-timeout 15 "$checksum_url" -o "$tmpdir/zap.tar.gz.sha256" || checksum_status=$?
+  else
+    wget -q -O "$tmpdir/zap.tar.gz.sha256" "$checksum_url" || checksum_status=$?
+  fi
+  if [ -n "${checksum_status:-}" ]; then
+    echo "error: could not download the SHA-256 of the remote server, $checksum_url (exit $checksum_status); a release made before checksums were published has none, and its tarball is not installed unverified" >&2
+    exit 5
+  fi
+  # The file is sha256sum's output: the SHA-256 in hex, then the file's name.
+  read -r expected_sha256 _ < "$tmpdir/zap.tar.gz.sha256" || true
+  expected_sha256=$(printf '%s' "${expected_sha256:-}" | tr 'A-F' 'a-f')
+  case "$expected_sha256" in
+    *[!0-9a-f]*|"") expected_sha256= ;;
+  esac
+  if [ "${#expected_sha256}" -ne 64 ]; then
+    echo "error: $checksum_url holds no SHA-256" >&2
+    exit 5
+  fi
+
   if [ "$downloader" = curl ]; then
     curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap.tar.gz" || download_status=$?
   else
@@ -89,6 +133,18 @@ else
   if [ -n "${download_status:-}" ]; then
     echo "error: could not download $url" >&2
     exit "$download_status"
+  fi
+
+  # From standard input, as the output then holds no path that the program could escape.
+  if [ "$sha256_tool" = sha256sum ]; then
+    actual_sha256=$(sha256sum < "$tmpdir/zap.tar.gz")
+  else
+    actual_sha256=$(shasum -a 256 < "$tmpdir/zap.tar.gz")
+  fi
+  actual_sha256=$(printf '%s' "${actual_sha256%% *}" | tr 'A-F' 'a-f')
+  if [ "$actual_sha256" != "$expected_sha256" ]; then
+    echo "error: SHA-256 mismatch for $url: expected $expected_sha256, got $actual_sha256; the tarball is not installed" >&2
+    exit 6
   fi
 fi
 
