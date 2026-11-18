@@ -14,74 +14,10 @@ the original Zap or of Warp.
 
 ## Changes from the Original Zap
 
-"Upstream" below is zerx-lab/zap as it was archived.
-
-
-- **zmx sessions**: CLI agents running inside a [zmx](https://github.com/neurosnap/zmx) session are detected, from
-  the variables zmx sets, the foreground process it reports on attach, or the attach command line. SSH hosts can name a
-  zmx session to attach to after connecting ([#1](https://github.com/q0wkp/zap/pull/1)), and the host's editor
-  lists the sessions on the server, with a preview of each, to pick one from
-  ([#5](https://github.com/q0wkp/zap/pull/5)). A pane attached to a zmx session offers the host's other sessions
-  in its context menu, to switch to ([#7](https://github.com/q0wkp/zap/pull/7)).
-- **Fixes from Warp**: fixes and small features Warp made after Zap was forked from it: crashes of the terminal grid
-  and of font loading, shell integration for bash, zsh and fish, file links after CJK punctuation and across wrapped
-  lines, completions, the editor's find and Vim mode, the file tree and file search, a setting that gates OSC 52
-  clipboard access, and `podman` subshells. They come from the `dev` branch of
-  [grizmin/zap](https://github.com/grizmin/zap), which had adapted them to Zap, up to its commit `4cfe3e400`, without
-  what is only for Windows. ([#9](https://github.com/q0wkp/zap/pull/9))
-- **Tab key setting**: the settings dropdown no longer shows "User defined" for the Tab key behavior after it is
-  refreshed. ([#2](https://github.com/q0wkp/zap/pull/2); also proposed upstream as PR 345 in zerx-lab/zap, still
-  open when it was archived)
-- **Default CLI agent**: making a CLI agent such as Codex the default in the new session menu now launches it in new
-  tabs and panes, instead of the built-in agent view ([#11](https://github.com/q0wkp/zap/pull/11)).
-- **BYOP agent providers**: with secret redaction on, secrets are masked in every request sent to a provider, not
-  only on screen ([#13](https://github.com/q0wkp/zap/pull/13)); a request inspector pane shows what is sent to a
-  provider and what comes back ([#14](https://github.com/q0wkp/zap/pull/14)); a profile can replace each prompt with a
-  built-in or a custom template from `~/.zap/prompts`, re-read on every request
-  ([#15](https://github.com/q0wkp/zap/pull/15)); a provider can be disabled and its models filtered, a copy of the
-  models.dev catalog is built in for when it can't be downloaded, and an Ollama provider's models get their context
-  windows from Ollama ([#16](https://github.com/q0wkp/zap/pull/16)).
-- **Agent**: an edit whose search text matches more than one place is refused rather than applied to one of them, and
-  a loose match is reported to the model; a running command's card has a Stop button, a command waiting for approval
-  an Explain button; a tool call with invalid arguments shows as a failed call
-  ([#18](https://github.com/q0wkp/zap/pull/18)). A very long answer is cut short behind a button that shows the rest,
-  a BYOP compaction summary shows as a collapsed marker, and a long multi-line command that the shell would run line
-  by line asks first ([#20](https://github.com/q0wkp/zap/pull/20)).
-- **SSH**: connections through the `ssh` wrapper get keepalives when none is configured, and splitting a pane that is
-  in an SSH session opens the new pane on the same host ([#19](https://github.com/q0wkp/zap/pull/19)). The SSH
-  extension asks before installing on a host where a first install failed, instead of installing silently as an
-  update ([#12](https://github.com/q0wkp/zap/pull/12)), and checks the SHA-256 of what it downloads, which only
-  releases made since publish ([#17](https://github.com/q0wkp/zap/pull/17)).
-- **Releases and auto-update**: releases are published from this repository, and auto-update, the about page and the
-  remote server download point here, so a build of this project never replaces itself with one of the original Zap. Tags
-  are the date of the release and a counter of that day's releases, `v<YYYY>.<MM>.<DD>.<N>`, the original Zap's own
-  numbering. The releases made before the project became independent carried upstream's next version plus `-mod.X.Y`
-  (`v2026.07.09.2-mod.1.1` was the last); every later release sorts above them, so a Zap of that release updates as
-  usual. The releases up to `v2026.07.09.2-mod.3`, numbered with one part, were withdrawn earlier. A release is
-  created only once every platform has built, for macOS (Apple silicon and Intel) and Linux x86_64; Windows is no
-  longer built. The
-  DMGs, the AppImage and the CLI archives carry the release's version, as `zap-<version>-<system>` (for example
-  `zap-2026.07.09.2-mod.1.1-linux-x86_64.AppImage`). A Zap of the withdrawn releases (up to `v2026.07.09.2-mod.3`) can't
-  update itself to these, whose files it looks for under the earlier names and whose number its package managers read as
-  older: install the new one once, with the package manager or from the
-  [releases](https://github.com/q0wkp/zap/releases/latest). A build made without a release tag installs the remote
-  server of the newest release, which may differ from its own source; a debug build, or any build started with
-  `WARP_REMOTE_SERVER_FROM_LOCAL=1`, builds and uploads its own instead.
-- **Linux packages**: the release builds the Arch package, which a wrong makepkg option had kept from ever being built,
-  and both it and the `.deb` declare the libraries the binary links against (ALSA, liblzma), so they start on systems
-  without them, and the oldest glibc the binary runs on, read from it when it is packaged, so that a system too old
-  for it refuses the package.
-- **Package managers**: `zap` for pacman, `zap-deb` for Pacstall and the cask `zap-terminal` for Homebrew, from
-  [q0wkp/pkgs](https://github.com/q0wkp/pkgs), which says how to add them.
-- **Updates through package managers**: when Zap was installed with pacman from q0wkp/pkgs' `[q0wkp]`, with Pacstall
-  or with the Homebrew cask, updating opens a tab that upgrades Zap alone, with `sudo pacman -U` of the release's
-  package from q0wkp/pkgs, `pacstall -I zap-deb` or `brew upgrade --cask --greedy zap-terminal`, and Zap offers to
-  restart once the new version is installed. Zap offers an update there only once q0wkp/pkgs has published it for
-  that package manager, which can take up to a day after the release. A `.deb` or `.rpm` installed by hand, an AUR
-  package or one from another pacman repository shows the command that installs the new one; the AppImage and the DMG
-  update themselves.
-- **Workflows**: the release workflow is this fork's own, and asks q0wkp/pkgs to package each release once it is out;
-  upstream's other workflows, its issue and pull request templates and its Dependabot settings are gone.
+[CHANGES.csv](CHANGES.csv) lists what this project changed since [zerx-lab/zap](https://github.com/zerx-lab/zap) as
+it was archived, one feature per row, with the commits and pull requests that carry it. Changes taken from other
+projects (Warp's fixes, most of them as [grizmin/zap](https://github.com/grizmin/zap) adapted them to Zap) name their
+authors, where they come from and their license, with thanks.
 
 ## License
 
