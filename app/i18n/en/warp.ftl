@@ -2566,6 +2566,10 @@ rewind-dialog-body = Are you sure you want to rewind? This will restore your cod
 rewind-dialog-info = Rewinding does not affect files edited manually or via shell commands.
 rewind-dialog-cancel = Cancel
 rewind-dialog-confirm = Rewind
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = Run { $count } lines as separate commands?
+multiline-command-dialog-body = This shell isn't using bracketed paste, so it will run each line as its own command, one after another.
+multiline-command-dialog-run = Run
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)

@@ -2471,6 +2471,10 @@ rewind-dialog-body = 巻き戻してもよろしいですか? コードと会話
 rewind-dialog-info = 巻き戻しは手動またはシェルコマンドで編集されたファイルには影響しません。
 rewind-dialog-cancel = キャンセル
 rewind-dialog-confirm = 巻き戻し
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = { $count } 行を個別のコマンドとして実行しますか?
+multiline-command-dialog-body = このシェルはブラケットペーストを使用していないため、各行を個別のコマンドとして順番に実行します。
+multiline-command-dialog-run = 実行
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)

@@ -6714,6 +6714,21 @@ fn test_input_config_transitions() {
 }
 
 #[test]
+fn test_exceeds_multiline_command_threshold() {
+    let three_lines = "echo one\necho two\necho three";
+    assert!(exceeds_multiline_command_threshold(three_lines, 2));
+    assert!(!exceeds_multiline_command_threshold(three_lines, 3));
+    // A trailing newline doesn't add a line.
+    assert!(!exceeds_multiline_command_threshold(
+        "echo one\necho two\n",
+        2
+    ));
+    assert!(!exceeds_multiline_command_threshold("echo one", 1));
+    // 0 turns the confirmation off.
+    assert!(!exceeds_multiline_command_threshold(three_lines, 0));
+}
+
+#[test]
 fn test_should_show_completions_in_ai_input() {
     // Test cases where the function should return true
     // i.e. we should trigger completions-as-you-type in AI input.

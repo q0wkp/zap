@@ -177,6 +177,17 @@ define_settings_group!(InputSettings,
             toml_path: "terminal.input.show_terminal_input_message_bar",
             description: "Whether the terminal input message bar is shown.",
         },
+        // Lines a shell command may have before running it in a shell without bracketed paste,
+        // which runs each line as a separate command, asks for confirmation.
+        multiline_command_confirmation_threshold: MultilineCommandConfirmationThreshold {
+            type: usize,
+            default: 50,
+            supported_platforms: SupportedPlatforms::ALL,
+            sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
+            private: false,
+            toml_path: "terminal.input.multiline_command_confirmation_threshold",
+            description: "Asks for confirmation before running a command with more lines than this in a shell that runs each line as a separate command. 0 turns the confirmation off.",
+        },
         // Per-menu custom content heights set by drag-to-resize. Not user-visible.
         inline_menu_custom_content_heights: InlineMenuCustomContentHeights {
             type: HashMap<InlineMenuType, f32>,

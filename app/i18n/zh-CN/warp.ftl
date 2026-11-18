@@ -2492,6 +2492,10 @@ rewind-dialog-body = 确定要倒回吗？这会将你的代码和对话恢复�
 rewind-dialog-info = 倒回不会影响手动编辑或通过 shell 命令编辑的文件。
 rewind-dialog-cancel = 取消
 rewind-dialog-confirm = 倒回
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = 将 { $count } 行作为单独的命令运行？
+multiline-command-dialog-body = 此 shell 未使用括号粘贴模式（bracketed paste），因此会把每一行当作单独的命令依次运行。
+multiline-command-dialog-run = 运行
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # 搜索面板（app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs）

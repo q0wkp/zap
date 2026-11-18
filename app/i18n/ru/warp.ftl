@@ -2552,6 +2552,10 @@ rewind-dialog-body = Вы уверены, что хотите выполнить
 rewind-dialog-info = Откат не затрагивает файлы, измененные вручную или через команды shell.
 rewind-dialog-cancel = Отмена
 rewind-dialog-confirm = Откатить
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = Выполнить { $count } строк как отдельные команды?
+multiline-command-dialog-body = Эта оболочка не использует bracketed paste, поэтому выполнит каждую строку как отдельную команду, одну за другой.
+multiline-command-dialog-run = Выполнить
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)
