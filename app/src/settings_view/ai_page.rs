@@ -2378,6 +2378,8 @@ pub enum AISettingsPageAction {
     },
     /// 折叠/展开 "快速添加" chip 行。
     ToggleModelsDevChipsExpanded,
+    /// Turns the models.dev catalog download on or off.
+    ToggleModelsDevDownload,
     /// 设置 "快速添加" chip 行的搜索 query(子串过滤 provider name/id)。
     SetModelsDevSearchQuery(String),
 
@@ -3432,32 +3434,38 @@ impl TypedActionView for AISettingsPageView {
             }
             AISettingsPageAction::EnsureModelsDevLoaded => {
                 use crate::ai::agent_providers::models_dev;
-                let had_disk = models_dev::load_from_disk();
-                if !had_disk || models_dev::is_stale() {
-                    let client = http_client::Client::new();
-                    ctx.spawn(
-                        async move { models_dev::fetch_and_cache(client).await },
-                        |view, result, ctx| match result {
-                            Ok(()) => {
-                                models_dev::set_fetch_failed(false);
-                                view.rebuild_current_page(ctx);
-                            }
-                            Err(e) => {
-                                log::warn!("[models.dev] 拉取失败: {e}");
-                                models_dev::set_fetch_failed(true);
-                                ctx.notify();
-                            }
-                        },
-                    );
-                } else {
-                    ctx.notify();
-                }
+                let settings = AISettings::as_ref(ctx);
+                let download = *settings.models_dev_download.value();
+                let url = models_dev::catalog_url(settings.models_dev_url.value()).to_owned();
+                let client = http_client::Client::new();
+                // Loading the local catalog reads and parses files, so it runs in the
+                // background along with the download.
+                ctx.spawn(
+                    async move { models_dev::ensure_loaded(client, download, url).await },
+                    |view, result, ctx| match result {
+                        Ok(true) => {
+                            models_dev::set_fetch_failed(false);
+                            view.rebuild_current_page(ctx);
+                        }
+                        Ok(false) => ctx.notify(),
+                        Err(e) => {
+                            log::warn!("[models.dev] 拉取失败: {e}");
+                            models_dev::set_fetch_failed(true);
+                            ctx.notify();
+                        }
+                    },
+                );
             }
             AISettingsPageAction::RefreshModelsDev => {
                 use crate::ai::agent_providers::models_dev;
+                let settings = AISettings::as_ref(ctx);
+                if !*settings.models_dev_download.value() {
+                    return;
+                }
+                let url = models_dev::catalog_url(settings.models_dev_url.value()).to_owned();
                 let client = http_client::Client::new();
                 ctx.spawn(
-                    async move { models_dev::fetch_and_cache(client).await },
+                    async move { models_dev::refresh(client, url).await },
                     |view, result, ctx| match result {
                         Ok(()) => {
                             models_dev::set_fetch_failed(false);
@@ -3587,6 +3595,18 @@ impl TypedActionView for AISettingsPageView {
                 use crate::ai::agent_providers::models_dev;
                 models_dev::toggle_chips_expanded();
                 ctx.notify();
+            }
+            AISettingsPageAction::ToggleModelsDevDownload => {
+                let enabled = AISettings::handle(ctx).update(ctx, |settings, ctx| {
+                    report_if_error!(settings.models_dev_download.toggle_and_save_value(ctx));
+                    *settings.models_dev_download.value()
+                });
+                if enabled {
+                    // Catch up on a download skipped while it was off.
+                    self.handle_action(&AISettingsPageAction::EnsureModelsDevLoaded, ctx);
+                } else {
+                    ctx.notify();
+                }
             }
             AISettingsPageAction::SetModelsDevSearchQuery(q) => {
                 use crate::ai::agent_providers::models_dev;

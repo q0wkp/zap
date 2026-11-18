@@ -316,6 +316,7 @@ impl ProviderDraftEditors {
 pub(super) struct AgentProvidersWidget {
     add_button_state: MouseStateHandle,
     refresh_catalog_button_state: MouseStateHandle,
+    catalog_download_button_state: MouseStateHandle,
     expand_chips_button_state: MouseStateHandle,
     /// 快速添加 chip 行的搜索框。
     search_editor: ViewHandle<EditorView>,
@@ -363,6 +364,7 @@ impl AgentProvidersWidget {
         Self {
             add_button_state: MouseStateHandle::default(),
             refresh_catalog_button_state: MouseStateHandle::default(),
+            catalog_download_button_state: MouseStateHandle::default(),
             expand_chips_button_state: MouseStateHandle::default(),
             search_editor,
             quick_add_button_states: RefCell::new(HashMap::new()),
@@ -1796,7 +1798,7 @@ impl AgentProvidersWidget {
     fn render_models_dev_section(
         &self,
         appearance: &Appearance,
-        _app: &AppContext,
+        app: &AppContext,
     ) -> Box<dyn Element> {
         use crate::ai::agent_providers::models_dev;
 
@@ -1811,10 +1813,16 @@ impl AgentProvidersWidget {
         .with_color(label_color.into())
         .finish();
 
-        let refresh_button = Self::render_card_button(
-            crate::t!("settings-agent-providers-refresh-catalog"),
-            self.refresh_catalog_button_state.clone(),
-            AISettingsPageAction::RefreshModelsDev,
+        let download_enabled = *AISettings::as_ref(app).models_dev_download.value();
+        let download_label = crate::t!("settings-agent-providers-catalog-download");
+        let download_button = Self::render_card_button(
+            if download_enabled {
+                format!("● {download_label}")
+            } else {
+                format!("○ {download_label}")
+            },
+            self.catalog_download_button_state.clone(),
+            AISettingsPageAction::ToggleModelsDevDownload,
             appearance,
         );
 
@@ -1823,12 +1831,25 @@ impl AgentProvidersWidget {
             .with_margin_right(8.)
             .finish();
 
-        let header_row = Flex::row()
+        let mut header_row = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(title)
-            .with_child(Expanded::new(1., search_box).finish())
-            .with_child(refresh_button)
-            .finish();
+            .with_child(Expanded::new(1., search_box).finish());
+        // Refreshing means downloading, so the button goes away while downloads are off.
+        if download_enabled {
+            header_row.add_child(
+                Container::new(Self::render_card_button(
+                    crate::t!("settings-agent-providers-refresh-catalog"),
+                    self.refresh_catalog_button_state.clone(),
+                    AISettingsPageAction::RefreshModelsDev,
+                    appearance,
+                ))
+                .with_margin_right(6.)
+                .finish(),
+            );
+        }
+        header_row.add_child(download_button);
+        let header_row = header_row.finish();
 
         let mut body = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
         body.add_child(header_row);
@@ -1961,6 +1982,23 @@ impl AgentProvidersWidget {
             }
         }
 
+        if let Some(status) = catalog_status(download_enabled) {
+            body.add_child(
+                Container::new(
+                    Text::new(
+                        status,
+                        appearance.ui_font_family(),
+                        appearance.ui_font_size(),
+                    )
+                    .with_color(dim_color.into())
+                    .soft_wrap(true)
+                    .finish(),
+                )
+                .with_margin_top(6.)
+                .finish(),
+            );
+        }
+
         Container::new(body.finish())
             .with_background(appearance.theme().surface_1())
             .with_uniform_padding(10.)
@@ -1968,6 +2006,51 @@ impl AgentProvidersWidget {
             .with_margin_bottom(10.)
             .finish()
     }
+}
+
+/// The line under the quick-add chips saying which catalog is shown when it isn't a fresh
+/// download: the built-in one, or a saved one while downloading is off or has failed.
+fn catalog_status(download_enabled: bool) -> Option<String> {
+    use crate::ai::agent_providers::models_dev::{self, CatalogSource};
+
+    let (source, taken_at) = models_dev::loaded_from()?;
+    let download_failed = download_enabled && models_dev::last_fetch_failed();
+    let date = taken_at
+        .map(|t| {
+            chrono::DateTime::<chrono::Local>::from(t)
+                .format("%Y-%m-%d")
+                .to_string()
+        })
+        .unwrap_or_else(|| "?".to_string());
+    let catalog = match source {
+        CatalogSource::Downloaded => return None,
+        CatalogSource::Cache if download_enabled && !download_failed => return None,
+        CatalogSource::Cache => {
+            crate::t!(
+                "settings-agent-providers-catalog-saved",
+                date = date.as_str()
+            )
+        }
+        CatalogSource::Bundled => {
+            crate::t!(
+                "settings-agent-providers-catalog-builtin",
+                date = date.as_str()
+            )
+        }
+    };
+    let reason = if !download_enabled {
+        Some(crate::t!("settings-agent-providers-catalog-download-off"))
+    } else if download_failed {
+        Some(crate::t!(
+            "settings-agent-providers-catalog-download-failed"
+        ))
+    } else {
+        None
+    };
+    Some(match reason {
+        Some(reason) => format!("{reason} {catalog}"),
+        None => catalog,
+    })
 }
 
 impl SettingsWidget for AgentProvidersWidget {

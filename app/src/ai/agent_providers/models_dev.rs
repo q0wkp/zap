@@ -15,9 +15,15 @@
 //! 设计取舍:**同步缓存读、异步网络拉**。读侧给 UI 用,要快;
 //! 拉侧后台 spawn,失败不弹错只 log,缓存读不到就给空数据,UI 展示
 //! "暂未拉取到 models.dev,请检查网络"。
+//!
+//! A copy of the catalog is built into the binary (`app/resources/models_dev/`, written by
+//! `script/update_models_dev_catalog`). It stands in when nothing was downloaded yet, when
+//! the download fails, and when downloading is turned off
+//! (`agents.byop.models_dev.download`); the download URL is `agents.byop.models_dev.url`.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 use std::sync::RwLock;
@@ -26,7 +32,12 @@ use std::time::{Duration, SystemTime};
 use http_client::Client;
 use serde::{Deserialize, Serialize};
 
-const MODELS_DEV_URL: &str = "https://models.dev/api.json";
+/// Where the catalog is downloaded from unless `agents.byop.models_dev.url` says otherwise.
+pub const DEFAULT_CATALOG_URL: &str = "https://models.dev/api.json";
+/// The built-in catalog: the fields of [`Catalog`] that Zap reads, as gzipped JSON.
+const BUNDLED_CATALOG_GZ: &[u8] = include_bytes!("../../../resources/models_dev/catalog.json.gz");
+/// `key=value` lines saying where and when the built-in catalog was taken.
+const BUNDLED_CATALOG_INFO: &str = include_str!("../../../resources/models_dev/catalog.txt");
 const CACHE_FILENAME: &str = "models-dev.json";
 const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
@@ -111,12 +122,32 @@ pub struct ModelLimit {
 
 // ── 进程内单例缓存 ──────────────────────────────────────────────────────────
 
+/// Where the loaded catalog came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CatalogSource {
+    /// Downloaded in this session.
+    Downloaded,
+    /// The disk cache of an earlier download.
+    Cache,
+    /// The copy built into the binary.
+    Bundled,
+}
+
 #[derive(Debug, Default)]
 struct State {
     /// 已加载的 catalog。`None` 表示从未加载成功。
     catalog: Option<Catalog>,
-    /// 缓存最后修改时间(用于判断是否过期)。
+    /// 缓存最后修改时间(用于判断是否过期)。For the built-in catalog, the time it was taken.
     loaded_at: Option<SystemTime>,
+    source: Option<CatalogSource>,
+}
+
+fn install(catalog: Catalog, loaded_at: Option<SystemTime>, source: CatalogSource) {
+    if let Ok(mut s) = state().write() {
+        s.catalog = Some(catalog);
+        s.loaded_at = loaded_at;
+        s.source = Some(source);
+    }
 }
 
 fn state() -> &'static RwLock<State> {
@@ -134,6 +165,90 @@ fn cache_path() -> PathBuf {
 /// 没数据返回 `None`,UI 应展示 "正在拉取" / 重试按钮。
 pub fn cached() -> Option<Catalog> {
     state().read().ok().and_then(|s| s.catalog.clone())
+}
+
+fn is_loaded() -> bool {
+    state().read().is_ok_and(|s| s.catalog.is_some())
+}
+
+/// Where the loaded catalog came from and when it was taken, for the settings page.
+pub fn loaded_from() -> Option<(CatalogSource, Option<SystemTime>)> {
+    let s = state().read().ok()?;
+    s.source.map(|source| (source, s.loaded_at))
+}
+
+/// The download URL for the `agents.byop.models_dev.url` setting; blank means the default.
+pub fn catalog_url(configured: &str) -> &str {
+    match configured.trim() {
+        "" => DEFAULT_CATALOG_URL,
+        url => url,
+    }
+}
+
+/// Parses a catalog, refusing anything that would leave the page with no providers: a
+/// download that returns an error page or an empty object never replaces a real catalog.
+fn parse_catalog(bytes: &[u8]) -> Result<Catalog, String> {
+    let catalog: Catalog =
+        serde_json::from_slice(bytes).map_err(|e| format!("JSON parsing failed: {e}"))?;
+    if catalog.is_empty() {
+        return Err("the catalog has no providers".to_owned());
+    }
+    Ok(catalog)
+}
+
+fn parse_bundled() -> Result<Catalog, String> {
+    let mut json = Vec::new();
+    flate2::read::GzDecoder::new(BUNDLED_CATALOG_GZ)
+        .read_to_end(&mut json)
+        .map_err(|e| format!("the built-in catalog doesn't decompress: {e}"))?;
+    parse_catalog(&json)
+}
+
+/// When the built-in catalog was taken (`taken_at` in its catalog.txt).
+fn bundled_taken_at() -> Option<SystemTime> {
+    let value = BUNDLED_CATALOG_INFO
+        .lines()
+        .find_map(|line| line.strip_prefix("taken_at="))?;
+    chrono::DateTime::parse_from_rfc3339(value.trim())
+        .ok()
+        .map(SystemTime::from)
+}
+
+/// Whether the built-in catalog is newer than the disk cache, or there is no cache.
+fn prefer_bundled(cache_time: Option<SystemTime>, bundled_time: Option<SystemTime>) -> bool {
+    match (cache_time, bundled_time) {
+        (None, _) => true,
+        (Some(_), None) => false,
+        (Some(cache), Some(bundled)) => cache < bundled,
+    }
+}
+
+/// Loads the built-in catalog. Decompressing and parsing it takes a moment, so this runs
+/// in a background task.
+fn load_bundled() -> bool {
+    match parse_bundled() {
+        Ok(catalog) => {
+            install(catalog, bundled_taken_at(), CatalogSource::Bundled);
+            true
+        }
+        Err(e) => {
+            log::error!("[models.dev] {e}");
+            false
+        }
+    }
+}
+
+/// Loads the newest catalog this machine has without downloading: the disk cache, or the
+/// built-in catalog when there is no cache, the cache doesn't parse, or the build's copy
+/// is newer. Returns false only if neither could be loaded. Reads and parses files, so it
+/// runs in a background task.
+pub fn load_local() -> bool {
+    let path = cache_path();
+    let cache_time = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
+    if !prefer_bundled(cache_time, bundled_taken_at()) && load_cache(&path) {
+        return true;
+    }
+    load_bundled()
 }
 
 /// 一个模型从 models.dev 抽出的能力快照,用于 BYOP UI / chat_stream 决策附件类型。
@@ -178,23 +293,17 @@ pub fn lookup_caps(provider_id: &str, model_id: &str) -> Option<ModelCaps> {
     None
 }
 
-/// 把磁盘缓存读进内存(同步,非阻塞;只在 process 启动或 UI 第一次需要时调用)。
-/// 如果磁盘缓存不存在或解析失败,返回 false,调用方应触发一次网络拉取。
-pub fn load_from_disk() -> bool {
-    let path = cache_path();
-    let bytes = match std::fs::read(&path) {
+/// 把磁盘缓存读进内存。
+/// 如果磁盘缓存不存在或解析失败,返回 false。
+fn load_cache(path: &Path) -> bool {
+    let bytes = match std::fs::read(path) {
         Ok(b) => b,
         Err(_) => return false,
     };
-    let mtime = std::fs::metadata(&path)
-        .ok()
-        .and_then(|m| m.modified().ok());
-    match serde_json::from_slice::<Catalog>(&bytes) {
+    let mtime = std::fs::metadata(path).ok().and_then(|m| m.modified().ok());
+    match parse_catalog(&bytes) {
         Ok(catalog) => {
-            if let Ok(mut s) = state().write() {
-                s.catalog = Some(catalog);
-                s.loaded_at = mtime;
-            }
+            install(catalog, mtime, CatalogSource::Cache);
             true
         }
         Err(e) => {
@@ -205,25 +314,31 @@ pub fn load_from_disk() -> bool {
 }
 
 /// 缓存是否过期 — 不存在或超过 TTL。
-pub fn is_stale() -> bool {
-    let s = match state().read() {
-        Ok(s) => s,
-        Err(_) => return true,
-    };
-    match s.loaded_at {
-        Some(t) => SystemTime::now()
-            .duration_since(t)
-            .map(|d| d > CACHE_TTL)
-            .unwrap_or(true),
+fn is_stale_at(loaded_at: Option<SystemTime>, now: SystemTime) -> bool {
+    match loaded_at {
+        Some(t) => now.duration_since(t).map(|d| d > CACHE_TTL).unwrap_or(true),
         None => true,
     }
 }
 
+/// Whether a download is due: never while downloading is off, otherwise when the loaded
+/// catalog is missing or older than the TTL.
+fn download_due(download_enabled: bool, loaded_at: Option<SystemTime>, now: SystemTime) -> bool {
+    download_enabled && is_stale_at(loaded_at, now)
+}
+
+/// Whether the settings page should download the catalog now (see [`download_due`]).
+pub fn needs_download(download_enabled: bool) -> bool {
+    let loaded_at = state().read().ok().and_then(|s| s.loaded_at);
+    download_due(download_enabled, loaded_at, SystemTime::now())
+}
+
 /// 异步拉取 models.dev 并写入磁盘缓存与内存缓存。
 /// 失败仅 log,不向上 propagate(UI 调用方按 `cached()` 是否为 `Some` 决定显示)。
-pub async fn fetch_and_cache(client: Client) -> Result<(), String> {
+/// The response is checked before it is written, so a bad one leaves the cache alone.
+pub async fn fetch_and_cache(client: Client, url: String) -> Result<(), String> {
     let resp = client
-        .get(MODELS_DEV_URL)
+        .get(url.as_str())
         .timeout(FETCH_TIMEOUT)
         .send()
         .await
@@ -238,8 +353,7 @@ pub async fn fetch_and_cache(client: Client) -> Result<(), String> {
         .await
         .map_err(|e| format!("Failed to read the response body: {e}"))?;
 
-    let catalog: Catalog =
-        serde_json::from_slice(&bytes).map_err(|e| format!("JSON parsing failed: {e}"))?;
+    let catalog = parse_catalog(&bytes)?;
 
     // 写盘 — 失败不算致命,只 log。
     let path = cache_path();
@@ -250,11 +364,34 @@ pub async fn fetch_and_cache(client: Client) -> Result<(), String> {
         log::warn!("[models.dev] 写磁盘缓存失败 ({path:?}): {e}");
     }
 
-    if let Ok(mut s) = state().write() {
-        s.catalog = Some(catalog);
-        s.loaded_at = Some(SystemTime::now());
-    }
+    install(catalog, Some(SystemTime::now()), CatalogSource::Downloaded);
     Ok(())
+}
+
+/// Opening the settings page: loads the local catalog if none is loaded yet, then
+/// downloads a new one when [`needs_download`] says so. Returns whether it downloaded.
+pub async fn ensure_loaded(
+    client: Client,
+    download_enabled: bool,
+    url: String,
+) -> Result<bool, String> {
+    if !is_loaded() {
+        load_local();
+    }
+    if !needs_download(download_enabled) {
+        return Ok(false);
+    }
+    fetch_and_cache(client, url).await.map(|()| true)
+}
+
+/// The Refresh button: downloads the catalog regardless of its age, falling back to the
+/// local catalog when the download fails and nothing is loaded yet.
+pub async fn refresh(client: Client, url: String) -> Result<(), String> {
+    let result = fetch_and_cache(client, url).await;
+    if result.is_err() && !is_loaded() {
+        load_local();
+    }
+    result
 }
 
 // ── chip 行折叠/展开状态(进程级,避免 widget rebuild 丢) ─────────────────
@@ -345,3 +482,7 @@ pub fn into_agent_provider_model(model: &Model) -> crate::settings::AgentProvide
         enabled: true,
     }
 }
+
+#[cfg(test)]
+#[path = "models_dev_tests.rs"]
+mod tests;

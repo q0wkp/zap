@@ -1891,6 +1891,30 @@ define_settings_group!(AISettings, settings: [
         description: "User-configured custom Agent providers (OpenAI-compatible).",
     }
 
+    // Whether the agent providers page downloads the models.dev catalog. When off, the last
+    // downloaded copy or the catalog built into Zap is used, and nothing is requested.
+    models_dev_download: ModelsDevDownload {
+        type: bool,
+        default: true,
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        private: false,
+        toml_path: "agents.byop.models_dev.download",
+        description: "Download the models.dev model catalog. When off, the last downloaded copy or the catalog built into Zap is used.",
+    }
+
+    // Where the models.dev catalog is downloaded from, for a mirror or a copy of one's own.
+    // Blank means the default.
+    models_dev_url: ModelsDevUrl {
+        type: String,
+        default: crate::ai::agent_providers::models_dev::DEFAULT_CATALOG_URL.to_owned(),
+        supported_platforms: SupportedPlatforms::ALL,
+        sync_to_cloud: SyncToCloud::Never,
+        private: false,
+        toml_path: "agents.byop.models_dev.url",
+        description: "The URL the models.dev model catalog is downloaded from.",
+    }
+
     // Zap BYOP 本地会话压缩 — 1:1 对齐 opencode `Config.compaction.auto`。
     // true 时按 token-overflow 自动触发摘要;false 仅手动 /compact /compact-and 触发。
     byop_compaction_auto: ByopCompactionAuto {

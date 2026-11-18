@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Refresh the models.dev catalog built into Zap.
+
+Usage: script/update_models_dev_catalog [--source <URL or file>]
+
+Downloads the catalog (https://models.dev/api.json unless --source says otherwise), checks
+that it has the shape app/src/ai/agent_providers/models_dev.rs reads, keeps only the fields
+that file reads, and writes:
+
+  app/resources/models_dev/catalog.json.gz  the catalog, minified and gzipped
+  app/resources/models_dev/catalog.txt      where and when it was taken
+
+The output depends only on the catalog's content, so running it again without upstream
+changes rewrites the same bytes (apart from the date in catalog.txt). Commit both files.
+"""
+
+import argparse
+import datetime
+import gzip
+import json
+import pathlib
+import sys
+import urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+OUT_DIR = ROOT / "app" / "resources" / "models_dev"
+DEFAULT_SOURCE = "https://models.dev/api.json"
+
+# The fields of models_dev::Provider, models_dev::Model and their nested structs, with
+# the type each must have. Every other field is dropped.
+PROVIDER_FIELDS = {"id": str, "name": str, "api": (str, type(None)), "env": list, "doc": str}
+MODEL_FIELDS = {
+    "id": str,
+    "name": str,
+    "family": str,
+    "release_date": str,
+    "reasoning": bool,
+    "tool_call": bool,
+    "attachment": bool,
+    "status": str,
+}
+U32_MAX = 2**32 - 1
+
+
+def fail(message):
+    sys.exit(f"update_models_dev_catalog: {message}")
+
+
+def pick(entry, fields, where):
+    out = {}
+    for key, kind in fields.items():
+        if key not in entry:
+            continue
+        value = entry[key]
+        if not isinstance(value, kind):
+            fail(f"{where}.{key} has type {type(value).__name__}")
+        out[key] = value
+    return out
+
+
+def trim_model(model, where):
+    if not isinstance(model, dict):
+        fail(f"{where} is not an object")
+    out = pick(model, MODEL_FIELDS, where)
+    modalities = model.get("modalities")
+    if isinstance(modalities, dict):
+        out["modalities"] = {
+            k: [m for m in modalities.get(k, []) if isinstance(m, str)]
+            for k in ("input", "output")
+        }
+    limit = model.get("limit")
+    if isinstance(limit, dict):
+        kept = {}
+        for key in ("context", "output"):
+            value = limit.get(key)
+            if value is None:
+                continue
+            if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= U32_MAX:
+                fail(f"{where}.limit.{key} is not a u32: {value!r}")
+            kept[key] = value
+        out["limit"] = kept
+    return out
+
+
+def trim(catalog):
+    if not isinstance(catalog, dict) or not catalog:
+        fail("the source is not a non-empty JSON object")
+    out = {}
+    for provider_id, provider in catalog.items():
+        where = f"providers[{provider_id!r}]"
+        if not isinstance(provider, dict):
+            fail(f"{where} is not an object")
+        trimmed = pick(provider, PROVIDER_FIELDS, where)
+        if any(not isinstance(e, str) for e in trimmed.get("env", [])):
+            fail(f"{where}.env holds a non-string")
+        models = provider.get("models", {})
+        if not isinstance(models, dict):
+            fail(f"{where}.models is not an object")
+        trimmed["models"] = {
+            model_id: trim_model(model, f"{where}.models[{model_id!r}]")
+            for model_id, model in models.items()
+        }
+        out[provider_id] = trimmed
+    return out
+
+
+def read_source(source):
+    if source.startswith(("http://", "https://")):
+        request = urllib.request.Request(source, headers={"User-Agent": "zap-catalog-update"})
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return response.read()
+    return pathlib.Path(source).read_bytes()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--source", default=DEFAULT_SOURCE, help="URL or file to read")
+    args = parser.parse_args()
+
+    catalog = trim(json.loads(read_source(args.source)))
+    data = json.dumps(catalog, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    packed = gzip.compress(data.encode("utf-8"), compresslevel=9, mtime=0)
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUT_DIR / "catalog.json.gz").write_bytes(packed)
+    taken_at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    models = sum(len(p["models"]) for p in catalog.values())
+    (OUT_DIR / "catalog.txt").write_text(
+        f"source={args.source}\ntaken_at={taken_at}\nproviders={len(catalog)}\nmodels={models}\n"
+    )
+    print(
+        f"{len(catalog)} providers, {models} models: "
+        f"{len(data)} bytes of JSON, {len(packed)} gzipped"
+    )
+
+
+if __name__ == "__main__":
+    main()
