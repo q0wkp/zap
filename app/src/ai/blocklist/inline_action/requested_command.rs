@@ -25,6 +25,9 @@ use warpui::{
 };
 
 use crate::ai::agent::{AIAgentActionResult, AIAgentActionType};
+use crate::ai::agent_providers::active_ai::ui_language_name;
+use crate::ai::agent_providers::explain_command::{self, CommandExplanation, CommandRisk};
+use warpui::r#async::SpawnedFutureHandle;
 use warpui::{EntityId, EventContext};
 
 use crate::ai::agent::RequestCommandOutputResult;
@@ -65,8 +68,8 @@ use crate::terminal::TerminalModel;
 use crate::util::bindings::keybinding_name_to_keystroke;
 use crate::view_components::action_button::{ButtonSize, KeystrokeSource, NakedTheme};
 use crate::view_components::compactible_action_button::{
-    CompactibleActionButton, RenderCompactibleActionButton, LARGE_SIZE_SWITCH_THRESHOLD,
-    MEDIUM_SIZE_SWITCH_THRESHOLD, SMALL_SIZE_SWITCH_THRESHOLD,
+    CompactibleActionButton, RenderCompactibleActionButton, MEDIUM_SIZE_SWITCH_THRESHOLD,
+    SMALL_SIZE_SWITCH_THRESHOLD, XLARGE_SIZE_SWITCH_THRESHOLD,
 };
 use crate::view_components::compactible_split_action_button::CompactibleSplitActionButton;
 use crate::{
@@ -203,6 +206,7 @@ pub enum RequestedCommandViewAction {
     AcceptAndAutoExecute,
     ToggleAcceptMenu,
     Reject,
+    Explain,
     OpenEditMode,
     CloseEditMode,
     FocusEditor,
@@ -210,6 +214,36 @@ pub enum RequestedCommandViewAction {
     OpenActiveAgentProfileEditor,
     SelectText,
     CopyOnSelect(String),
+}
+
+/// The state of Explain for a requested command. Each state but `None` remembers the command
+/// text it is about, so that it is not shown once the command is edited.
+enum ExplanationState {
+    None,
+    Loading {
+        command: String,
+        model: String,
+    },
+    Ready {
+        command: String,
+        model: String,
+        explanation: CommandExplanation,
+    },
+    Failed {
+        command: String,
+        error: String,
+    },
+}
+
+impl ExplanationState {
+    fn command(&self) -> Option<&str> {
+        match self {
+            ExplanationState::None => None,
+            ExplanationState::Loading { command, .. }
+            | ExplanationState::Ready { command, .. }
+            | ExplanationState::Failed { command, .. } => Some(command),
+        }
+    }
 }
 
 pub struct RequestedCommandView {
@@ -223,6 +257,10 @@ pub struct RequestedCommandView {
     cancel_button: CompactibleActionButton,
     edit_button: CompactibleActionButton,
     minimize_button: CompactibleActionButton,
+    explain_button: CompactibleActionButton,
+    /// What Explain found out about the command, shown while the user decides on it.
+    explanation: ExplanationState,
+    explanation_request: Option<SpawnedFutureHandle>,
 
     // Split accept button and menu state
     accept_and_autoexecute_split_button: CompactibleSplitActionButton,
@@ -306,6 +344,16 @@ impl RequestedCommandView {
             ButtonSize::InlineActionHeader,
             RequestedCommandViewAction::OpenEditMode,
             Icon::Pencil,
+            Arc::new(NakedTheme),
+            ctx,
+        );
+
+        let explain_button = CompactibleActionButton::new(
+            crate::t!("ai-requested-command-explain"),
+            None,
+            ButtonSize::InlineActionHeader,
+            RequestedCommandViewAction::Explain,
+            Icon::Info,
             Arc::new(NakedTheme),
             ctx,
         );
@@ -467,6 +515,9 @@ impl RequestedCommandView {
             cancel_button,
             edit_button,
             minimize_button,
+            explain_button,
+            explanation: ExplanationState::None,
+            explanation_request: None,
             accept_and_autoexecute_split_button,
             is_accept_split_button_menu_open: false,
             accept_split_button_menu: accept_menu,
@@ -853,6 +904,176 @@ impl RequestedCommandView {
         &self.command_text
     }
 
+    /// The command as the user sees it now, including edits not committed yet.
+    fn current_command_text(&self, app: &AppContext) -> String {
+        match &self.editor {
+            Some(editor) => editor.as_ref(app).text(app).into_string(),
+            None => self.command_text.clone(),
+        }
+    }
+
+    /// Asks a model to explain the command. The answer is shown on the card and never reaches
+    /// the conversation.
+    fn explain(&mut self, ctx: &mut ViewContext<Self>) {
+        self.commit_editor_contents(ctx);
+        let command = self.command_text.clone();
+        if command.trim().is_empty() {
+            return;
+        }
+        if matches!(&self.explanation, ExplanationState::Loading { command: asked, .. } if *asked == command)
+        {
+            return;
+        }
+        if let Some(request) = self.explanation_request.take() {
+            request.abort();
+        }
+
+        let app: &AppContext = ctx;
+        let Some(cfg) = explain_command::resolve_model(app, self.block_model.base_model(app))
+        else {
+            self.explanation = ExplanationState::Failed {
+                command,
+                error: crate::t!("ai-command-explanation-no-model"),
+            };
+            ctx.notify();
+            return;
+        };
+        let language = ui_language_name(app);
+        let model = cfg.model_id.clone();
+        self.explanation = ExplanationState::Loading {
+            command: command.clone(),
+            model: model.clone(),
+        };
+        let request = explain_command::explain(cfg, command.clone(), language);
+        self.explanation_request = Some(ctx.spawn(request, move |me, result, ctx| {
+            me.explanation_request = None;
+            me.explanation = match result {
+                Ok(explanation) => ExplanationState::Ready {
+                    command,
+                    model,
+                    explanation,
+                },
+                Err(error) => ExplanationState::Failed {
+                    command,
+                    error: format!("{error:#}"),
+                },
+            };
+            ctx.notify();
+        }));
+        ctx.notify();
+    }
+
+    /// Drops the explanation once the user has decided on the command.
+    fn discard_explanation(&mut self) {
+        if let Some(request) = self.explanation_request.take() {
+            request.abort();
+        }
+        self.explanation = ExplanationState::None;
+    }
+
+    fn render_explanation(&self, app: &AppContext) -> Option<Box<dyn Element>> {
+        let explained_command = self.explanation.command()?;
+        if self.is_editing || explained_command != self.current_command_text(app) {
+            return None;
+        }
+        let appearance = Appearance::as_ref(app);
+        let theme = appearance.theme();
+        let font_family = appearance.ui_font_family();
+        let font_size = appearance.ui_font_size();
+        let main_text_color = blended_colors::text_main(theme, theme.background());
+        let sub_text_color = theme.sub_text_color(theme.background()).into_solid();
+
+        let mut column = Flex::column().with_cross_axis_alignment(CrossAxisAlignment::Stretch);
+        match &self.explanation {
+            ExplanationState::None => return None,
+            ExplanationState::Loading { model, .. } => {
+                column.add_child(
+                    Text::new(
+                        crate::t!("ai-command-explanation-loading", model = model.as_str()),
+                        font_family,
+                        font_size,
+                    )
+                    .with_color(sub_text_color)
+                    .finish(),
+                );
+            }
+            ExplanationState::Failed { error, .. } => {
+                column.add_child(
+                    Text::new(
+                        crate::t!("ai-command-explanation-failed", error = error.as_str()),
+                        font_family,
+                        font_size,
+                    )
+                    .with_color(theme.ui_error_color())
+                    .finish(),
+                );
+            }
+            ExplanationState::Ready {
+                model, explanation, ..
+            } => {
+                if let Some(risk) = explanation.risk {
+                    let (label, color) = match risk {
+                        CommandRisk::Low => (
+                            crate::t!("ai-command-explanation-risk-low"),
+                            theme.ansi_fg_green(),
+                        ),
+                        CommandRisk::Medium => (
+                            crate::t!("ai-command-explanation-risk-medium"),
+                            theme.ansi_fg_yellow(),
+                        ),
+                        CommandRisk::High => (
+                            crate::t!("ai-command-explanation-risk-high"),
+                            theme.ansi_fg_red(),
+                        ),
+                    };
+                    let risk_line = match &explanation.risk_reason {
+                        Some(reason) => format!("{label}: {reason}"),
+                        None => label,
+                    };
+                    column.add_child(
+                        Container::new(
+                            Text::new(risk_line, font_family, font_size)
+                                .with_color(color)
+                                .finish(),
+                        )
+                        .with_margin_bottom(6.)
+                        .finish(),
+                    );
+                }
+                if !explanation.details.is_empty() {
+                    column.add_child(
+                        Text::new(explanation.details.clone(), font_family, font_size)
+                            .with_color(main_text_color)
+                            .finish(),
+                    );
+                }
+                column.add_child(
+                    Container::new(
+                        Text::new(
+                            crate::t!("ai-command-explanation-footer", model = model.as_str()),
+                            font_family,
+                            font_size - 1.,
+                        )
+                        .with_color(sub_text_color)
+                        .finish(),
+                    )
+                    .with_margin_top(6.)
+                    .finish(),
+                );
+            }
+        }
+
+        Some(
+            Container::new(column.finish())
+                .with_horizontal_padding(INLINE_ACTION_HORIZONTAL_PADDING)
+                .with_vertical_padding(REQUESTED_COMMAND_BODY_VERTICAL_PADDING)
+                .with_background_color(theme.background().into_solid())
+                .with_border(Border::top(1.).with_border_fill(theme.surface_2()))
+                .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(8.)))
+                .finish(),
+        )
+    }
+
     pub fn copied_from_citation(&self) -> Option<&AIAgentCitation> {
         self.copied_from_citation.as_ref()
     }
@@ -1207,10 +1428,11 @@ impl RequestedCommandView {
                         RequestedActionViewType::Command => {
                             let action_buttons: Vec<Rc<dyn RenderCompactibleActionButton>> = vec![
                                 Rc::new(self.cancel_button.clone()),
+                                Rc::new(self.explain_button.clone()),
                                 Rc::new(self.edit_button.clone()),
                                 Rc::new(self.accept_and_autoexecute_split_button.clone()),
                             ];
-                            (action_buttons, LARGE_SIZE_SWITCH_THRESHOLD)
+                            (action_buttons, XLARGE_SIZE_SWITCH_THRESHOLD)
                         }
                         RequestedActionViewType::McpTool => {
                             let action_buttons: Vec<Rc<dyn RenderCompactibleActionButton>> = vec![
@@ -1407,6 +1629,12 @@ impl View for RequestedCommandView {
             .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
             .with_child(Clipped::new(header_element).finish());
 
+        let explanation = action_status
+            .as_ref()
+            .is_some_and(|status| status.is_blocked())
+            .then(|| self.render_explanation(app))
+            .flatten();
+
         if let (true, Some(editor)) = (should_render_editor, &self.editor) {
             content.add_child(
                 ConstrainedBox::new(
@@ -1417,12 +1645,20 @@ impl View for RequestedCommandView {
                             REQUESTED_COMMAND_BODY_VERTICAL_PADDING - SCROLLBAR_WIDTH.as_f32() - 2.,
                         )
                         .with_background_color(theme.background().into_solid())
-                        .with_corner_radius(CornerRadius::with_bottom(Radius::Pixels(8.)))
+                        .with_corner_radius(if explanation.is_some() {
+                            CornerRadius::default()
+                        } else {
+                            CornerRadius::with_bottom(Radius::Pixels(8.))
+                        })
                         .finish(),
                 )
                 .with_max_height(MAX_EDITOR_HEIGHT)
                 .finish(),
             );
+        }
+
+        if let Some(explanation) = explanation {
+            content.add_child(explanation);
         }
 
         if should_render_mcp_content {
@@ -1592,17 +1828,23 @@ impl TypedActionView for RequestedCommandView {
         match action {
             RequestedCommandViewAction::Accept => {
                 self.commit_editor_contents(ctx);
+                self.discard_explanation();
                 ctx.emit(RequestedCommandViewEvent::Accepted);
             }
             RequestedCommandViewAction::AcceptAndAutoExecute => {
                 self.commit_editor_contents(ctx);
+                self.discard_explanation();
                 ctx.emit(RequestedCommandViewEvent::Accepted);
                 ctx.emit(RequestedCommandViewEvent::EnableAutoexecuteMode);
             }
             RequestedCommandViewAction::ToggleAcceptMenu => {
                 self.toggle_accept_split_button_menu(ctx)
             }
-            RequestedCommandViewAction::Reject => ctx.emit(RequestedCommandViewEvent::Rejected),
+            RequestedCommandViewAction::Reject => {
+                self.discard_explanation();
+                ctx.emit(RequestedCommandViewEvent::Rejected)
+            }
+            RequestedCommandViewAction::Explain => self.explain(ctx),
             RequestedCommandViewAction::OpenEditMode => self.open_edit_mode(ctx),
             RequestedCommandViewAction::CloseEditMode => self.close_edit_mode(ctx),
             RequestedCommandViewAction::FocusEditor => {
