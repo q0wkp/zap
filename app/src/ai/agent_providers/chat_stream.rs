@@ -1168,6 +1168,22 @@ fn accepted_history_repair_log_message(
     )
 }
 
+/// Builds the request that goes out to the provider: `build_chat_request`, with every detected
+/// secret masked when secret redaction is on. Everything that reads the request afterwards (the
+/// diagnostic logs and the provider) sees only the redacted one.
+fn build_outbound_chat_request(
+    params: &RequestParams,
+    force_echo_reasoning: bool,
+    api_type: AgentProviderApiType,
+    attachment_caps: attachment_caps::AttachmentCaps,
+) -> Result<ChatRequest, ConvertToAPITypeError> {
+    let mut chat_req = build_chat_request(params, force_echo_reasoning, api_type, attachment_caps)?;
+    if params.should_redact_secrets {
+        super::secret_redaction::redact_chat_request(&mut chat_req);
+    }
+    Ok(chat_req)
+}
+
 /// 把 RequestParams 翻译为 genai `ChatRequest`(含 system + messages + tools)。
 ///
 /// `force_echo_reasoning`:由 `super::reasoning::model_requires_reasoning_echo`
@@ -3298,6 +3314,8 @@ pub struct TitleGenInput {
     pub model_id: String,
     pub api_type: AgentProviderApiType,
     pub reasoning_effort: crate::settings::ReasoningEffortSetting,
+    /// Whether secret redaction is on for the request the title is generated from.
+    pub redact_secrets: bool,
 }
 
 pub struct ByopOutputInput {
@@ -3360,7 +3378,7 @@ pub async fn generate_byop_output(
         } else {
             api_type
         };
-    let chat_req = build_chat_request(
+    let chat_req = build_outbound_chat_request(
         &params,
         force_echo_reasoning,
         shaping_api_type,
@@ -3386,6 +3404,7 @@ pub async fn generate_byop_output(
     let client = build_client(api_type, &base_url, api_key);
     let request_id = Uuid::new_v4().to_string();
     let mcp_context = params.mcp_context.clone();
+    let redact_secrets = params.should_redact_secrets;
     let tool_names_for_extract = available_tool_names(&params);
 
     // ⚠️ BYOP 持久化关键:warp 自家路径下,以下 ClientAction 都是 server 端 emit
@@ -4361,7 +4380,8 @@ pub async fn generate_byop_output(
                 loading_msg.id = web_msg_id.clone();
                 yield Ok(make_add_messages_event(&current_task_id, vec![loading_msg]));
 
-                let result_json = dispatch_byop_web_tool(&call.fn_name, &args_str).await;
+                let result_json =
+                    dispatch_byop_web_tool(&call.fn_name, &args_str, redact_secrets).await;
 
                 let mut done_msg = if is_search {
                     make_web_search_status_from_result(
@@ -4547,6 +4567,7 @@ pub(crate) async fn generate_title_via_byop(
         model_id: tg.model_id.clone(),
         api_type: tg.api_type,
         reasoning_effort: tg.reasoning_effort,
+        redact_secrets: tg.redact_secrets,
     };
     let system = include_str!("prompts/tasks/title_system.md");
     let user_prompt = format!(
@@ -4768,7 +4789,10 @@ fn make_append_event(task_id: &str, message_id: &str, kind: AppendKind) -> api::
 /// 不通过 protobuf executor —— 直接在本地用 reqwest 跑 HTTP,把结构化结果
 /// 序列化成 JSON Value 给上游 LLM。错误也序列化成 `{status:"error", ...}`,
 /// 让模型看到标准 tool_result。
-async fn dispatch_byop_web_tool(tool_name: &str, args_str: &str) -> Value {
+///
+/// With `redact_secrets`, detected secrets are masked in the search query before it is sent to
+/// the search service. A fetched URL is left as it is: masking it would only break the fetch.
+async fn dispatch_byop_web_tool(tool_name: &str, args_str: &str, redact_secrets: bool) -> Value {
     use tools::web_runtime;
     // 为 webfetch 构建带 SSRF 防护的 client：自定义重定向策略会校验每一跳目标。
     let client = match web_runtime::build_ssrf_safe_client() {
@@ -4795,7 +4819,10 @@ async fn dispatch_byop_web_tool(tool_name: &str, args_str: &str) -> Value {
     } else {
         // websearch
         match serde_json::from_str::<web_runtime::SearchToolArgs>(args_str) {
-            Ok(args) => {
+            Ok(mut args) => {
+                if redact_secrets {
+                    crate::ai::agent::redaction::redact_secrets(&mut args.query);
+                }
                 let api_key = std::env::var("EXA_API_KEY").ok();
                 match web_runtime::run_websearch(&client, args, api_key.as_deref(), None).await {
                     Ok(out) => web_runtime::search_output_to_json(&out),
@@ -7778,5 +7805,89 @@ mod issue_94_task_linearization_tests {
             "request_id 不同的两轮 user 消息都要保留"
         );
         assert_eq!(message_ids(&out), vec!["m1", "m2", "m3"]);
+    }
+}
+
+/// With secret redaction on, the agent request goes out with no detected secret in it, wherever
+/// in the conversation the secret is; with it off, the request is sent as built.
+#[cfg(test)]
+mod outbound_secret_redaction_tests {
+    use super::*;
+    use crate::ai::agent_providers::secret_redaction::tests::{SecretPattern, SECRET};
+    use crate::test_util::ai_agent_tasks::create_api_task;
+    use serial_test::serial;
+
+    /// The secret in the user rules (system prompt), an earlier user query and answer, the
+    /// current query and its selected-text context.
+    fn params_with_secret_everywhere(input: AIAgentInput) -> RequestParams {
+        let history = vec![
+            make_user_query_message("task-1", "req-0", format!("earlier I pasted {SECRET}"), &[]),
+            make_agent_output_message("task-1", "req-0", format!("noted {SECRET}")),
+        ];
+        let mut params =
+            RequestParams::new_for_test(vec![input], vec![create_api_task("task-1", history)]);
+        params.user_rules = vec![(None, format!("the deploy key is {SECRET}"))];
+        params
+    }
+
+    fn user_query() -> AIAgentInput {
+        AIAgentInput::UserQuery {
+            query: format!("now use {SECRET}"),
+            context: Arc::from([AIAgentContext::SelectedText(format!("selected {SECRET}"))]),
+            static_query_type: None,
+            referenced_attachments: HashMap::new(),
+            user_query_mode: UserQueryMode::default(),
+            running_command: None,
+            intended_agent: None,
+        }
+    }
+
+    fn outbound_wire(params: &RequestParams, api_type: AgentProviderApiType) -> String {
+        let req = build_outbound_chat_request(
+            params,
+            false,
+            api_type,
+            attachment_caps::AttachmentCaps::default(),
+        )
+        .expect("request builds");
+        serde_json::to_string(&req).expect("request serializes")
+    }
+
+    #[test]
+    #[serial]
+    fn a_user_query_request_carries_no_secret_when_redaction_is_on() {
+        let _pattern = SecretPattern::set();
+        let mut params = params_with_secret_everywhere(user_query());
+        for api_type in [
+            AgentProviderApiType::OpenAi,
+            AgentProviderApiType::Anthropic,
+        ] {
+            params.should_redact_secrets = false;
+            let unredacted = outbound_wire(&params, api_type);
+            assert!(
+                unredacted.matches(SECRET).count() >= 5,
+                "the fixture puts the secret in five places: {unredacted}"
+            );
+
+            params.should_redact_secrets = true;
+            let redacted = outbound_wire(&params, api_type);
+            assert!(!redacted.contains(SECRET), "a secret is sent: {redacted}");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn a_summarization_request_carries_no_secret_when_redaction_is_on() {
+        let _pattern = SecretPattern::set();
+        let mut params = params_with_secret_everywhere(AIAgentInput::SummarizeConversation {
+            prompt: Some(format!("keep {SECRET} in the summary")),
+            overflow: false,
+        });
+        let unredacted = outbound_wire(&params, AgentProviderApiType::OpenAi);
+        assert!(unredacted.contains(SECRET), "{unredacted}");
+
+        params.should_redact_secrets = true;
+        let redacted = outbound_wire(&params, AgentProviderApiType::OpenAi);
+        assert!(!redacted.contains(SECRET), "a secret is sent: {redacted}");
     }
 }
