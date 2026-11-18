@@ -182,6 +182,10 @@ fn pending_title_generation_from_byop(
             api_type: title_gen.api_type,
             reasoning_effort: title_gen.reasoning_effort,
             redact_secrets: params.should_redact_secrets,
+            system_prompt: params
+                .prompt_overrides
+                .get(crate::ai::execution_profiles::prompt_overrides::PromptSlot::Title)
+                .clone(),
         },
         user_query,
         task_id: byop.root_task_id.clone(),

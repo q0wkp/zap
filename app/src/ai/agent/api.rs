@@ -28,6 +28,7 @@ use crate::{
 use super::{AIAgentInput, MCPContext, MCPServer, RequestMetadata, RunningCommand, Suggestions};
 use crate::ai::blocklist::{BlocklistAIPermissions, RequestInput};
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
+use crate::ai::execution_profiles::prompt_overrides::PromptOverrides;
 use crate::ai::facts::{AIFact, AIFactObjectModel};
 use crate::ai::mcp::templatable_manager::TemplatableMCPServerInfo;
 use crate::ai::mcp::TemplatableMCPServerManager;
@@ -96,6 +97,9 @@ pub struct RequestParams {
     /// 仅在 `is_memory_enabled` 为 true 且未被 trash 时收集;为了 prompt cache
     /// 稳定性,按 `(name, content)` 字典序排序。
     pub user_rules: Vec<(Option<String>, String)>,
+    /// Zap BYOP: the active profile's prompt choices, read once in `new()` so that the
+    /// system prompt and the title prompt of this request follow the same profile.
+    pub prompt_overrides: PromptOverrides,
     pub warp_drive_context_enabled: bool,
     pub context_window_limit: Option<u32>,
     pub mcp_context: Option<MCPContext>,
@@ -212,6 +216,7 @@ impl RequestParams {
             computer_use_model: LLMId::from("byop:test"),
             is_memory_enabled: false,
             user_rules: Vec::new(),
+            prompt_overrides: PromptOverrides::default(),
             warp_drive_context_enabled: false,
             context_window_limit: None,
             mcp_context: None,
@@ -396,6 +401,11 @@ impl RequestParams {
                         .map(|v| v.clamp(cw.min, cw.max))
                 })
         };
+        let prompt_overrides = AIExecutionProfilesModel::as_ref(app)
+            .active_profile(terminal_view_id, app)
+            .data()
+            .prompt_overrides
+            .clone();
 
         Self {
             input: request_input.all_inputs().cloned().collect(),
@@ -413,6 +423,7 @@ impl RequestParams {
             computer_use_model: request_input.computer_use_model_id.clone(),
             is_memory_enabled,
             user_rules,
+            prompt_overrides,
             warp_drive_context_enabled,
             mcp_context,
             planning_enabled: true,

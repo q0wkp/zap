@@ -37,7 +37,6 @@ use super::generate_ai_input_suggestions::{
 
 use crate::ai::agent::api::collect_user_rules;
 use crate::ai::agent_providers::active_ai::next_command as byop_next_command;
-use crate::ai::agent_providers::oneshot::OneshotConfig;
 use crate::cloud_object::model::persistence::ObjectStoreModel;
 
 cfg_if::cfg_if! {
@@ -56,7 +55,7 @@ const MAX_NUM_SIMILAR_HISTORY_CONTEXT: usize = 25;
 /// `byop_cfg` 必须由调用方在 spawn 前从 `&AppContext` 解出(运行时不再可用)。
 /// `byop_cfg = None` ⇒ 静默 no-op,返回 Ok 空响应(避免 401 报错噪声)。
 async fn byop_generate_input_suggestions(
-    byop_cfg: Option<OneshotConfig>,
+    byop_cfg: Option<byop_next_command::Resolved>,
     request: &GenerateAIInputSuggestionsRequest,
     user_rules: Vec<(Option<String>, String)>,
 ) -> Result<GenerateAIInputSuggestionsResponseV2, AIApiError> {

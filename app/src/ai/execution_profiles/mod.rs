@@ -22,12 +22,14 @@ use warp_core::features::FeatureFlag;
 use warpui::{AppContext, SingletonEntity};
 
 use super::llms::{LLMContextWindow, LLMId, LLMPreferences};
+use prompt_overrides::PromptOverrides;
 
 pub const PROFILE_NAME_MAX_LENGTH: usize = 50;
 
 pub mod editor;
 pub mod model_menu_items;
 pub mod profiles;
+pub mod prompt_overrides;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActionPermission {
@@ -214,6 +216,10 @@ pub struct AIExecutionProfile {
 
     /// Whether the agent may use web search when helpful for completing tasks
     pub web_search_enabled: bool,
+
+    /// Where each prompt sent to a BYOP model comes from; every slot on Auto by default.
+    #[serde(skip_serializing_if = "PromptOverrides::is_empty")]
+    pub prompt_overrides: PromptOverrides,
 }
 
 impl Default for AIExecutionProfile {
@@ -243,6 +249,7 @@ impl Default for AIExecutionProfile {
             context_window_limit: None,
             autosync_plans_to_warp_drive: false,
             web_search_enabled: true,
+            prompt_overrides: PromptOverrides::default(),
         }
     }
 }
@@ -298,6 +305,7 @@ impl AIExecutionProfile {
             context_window_limit: None,
             autosync_plans_to_warp_drive: false,
             web_search_enabled: true,
+            prompt_overrides: PromptOverrides::default(),
         }
     }
 
@@ -356,6 +364,7 @@ impl AIExecutionProfile {
             context_window_limit: None,
             autosync_plans_to_warp_drive: FeatureFlag::SyncAmbientPlans.is_enabled(),
             web_search_enabled: true,
+            prompt_overrides: PromptOverrides::default(),
         }
     }
 }

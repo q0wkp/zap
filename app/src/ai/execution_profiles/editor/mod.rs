@@ -1,5 +1,10 @@
+use crate::ai::agent_providers::custom_prompts;
+use crate::ai::agent_providers::prompt_renderer::BUILTIN_SYSTEM_TEMPLATES;
 use crate::ai::blocklist::BlocklistAIPermissions;
 use crate::ai::execution_profiles::model_menu_items::available_model_menu_items;
+use crate::ai::execution_profiles::prompt_overrides::{
+    menu_choices, PromptChoice, PromptOverrides, PromptSlot,
+};
 use crate::ai::execution_profiles::{
     profiles::{AIExecutionProfilesModel, AIExecutionProfilesModelEvent, ClientProfileId},
     AIExecutionProfile, ActionPermission, WriteToPtyPermission,
@@ -12,8 +17,9 @@ use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::settings::{AISettings, AgentModeCommandExecutionPredicate};
 use crate::ui_components::icons::Icon;
 use crate::view_components::{
-    action_button::{ActionButton, DangerSecondaryTheme},
-    Dropdown, DropdownItem, FilterableDropdown, SubmittableTextInput, SubmittableTextInputEvent,
+    action_button::{ActionButton, ButtonSize, DangerSecondaryTheme, SecondaryTheme},
+    Dropdown, DropdownItem, FilterableDropdown, FilterableDropdownEvent, SubmittableTextInput,
+    SubmittableTextInputEvent,
 };
 use crate::workspaces::user_workspaces::UserWorkspacesEvent;
 use crate::TemplatableMCPServerManager;
@@ -154,6 +160,11 @@ pub enum ExecutionProfileEditorViewAction {
     SetWebSearchEnabled {
         enabled: bool,
     },
+    SetPromptChoice {
+        slot: PromptSlot,
+        choice: PromptChoice,
+    },
+    OpenCustomPromptsDir,
 }
 
 pub struct ExecutionProfileEditorView {
@@ -169,6 +180,11 @@ pub struct ExecutionProfileEditorView {
     active_ai_model_dropdown: ViewHandle<FilterableDropdown<ExecutionProfileEditorViewAction>>,
     next_command_model_dropdown: ViewHandle<FilterableDropdown<ExecutionProfileEditorViewAction>>,
     computer_use_model_dropdown: ViewHandle<FilterableDropdown<ExecutionProfileEditorViewAction>>,
+    prompt_dropdowns: Vec<(
+        PromptSlot,
+        ViewHandle<FilterableDropdown<ExecutionProfileEditorViewAction>>,
+    )>,
+    open_custom_prompts_button: ViewHandle<ActionButton>,
     apply_code_diffs_dropdown: ViewHandle<Dropdown<ExecutionProfileEditorViewAction>>,
     read_files_dropdown: ViewHandle<Dropdown<ExecutionProfileEditorViewAction>>,
     execute_commands_dropdown: ViewHandle<Dropdown<ExecutionProfileEditorViewAction>>,
@@ -455,6 +471,28 @@ impl ExecutionProfileEditorView {
             dropdown.set_menu_width(MODEL_MENU_WIDTH, ctx);
             dropdown
         });
+        let prompt_dropdowns = PromptSlot::ALL
+            .iter()
+            .map(|slot| {
+                let dropdown = ctx.add_typed_action_view(|ctx| {
+                    let mut dropdown = FilterableDropdown::new(ctx);
+                    dropdown.set_menu_width(MODEL_MENU_WIDTH, ctx);
+                    dropdown
+                });
+                (*slot, dropdown)
+            })
+            .collect_vec();
+        let open_custom_prompts_button = ctx.add_typed_action_view(|_| {
+            ActionButton::new(
+                crate::t!("settings-exec-profile-editor-open-prompts-folder"),
+                SecondaryTheme,
+            )
+            .with_icon(Icon::Folder)
+            .with_size(ButtonSize::Small)
+            .on_click(|ctx| {
+                ctx.dispatch_typed_action(ExecutionProfileEditorViewAction::OpenCustomPromptsDir);
+            })
+        });
         let command_allowlist_editor = ctx.add_typed_action_view(|ctx| {
             let mut input =
                 SubmittableTextInput::new(ctx).validate_on_edit(|s| Regex::new(s).is_ok());
@@ -540,6 +578,8 @@ impl ExecutionProfileEditorView {
             active_ai_model_dropdown,
             next_command_model_dropdown,
             computer_use_model_dropdown,
+            prompt_dropdowns,
+            open_custom_prompts_button,
             apply_code_diffs_dropdown,
             read_files_dropdown,
             execute_commands_dropdown,
@@ -569,6 +609,26 @@ impl ExecutionProfileEditorView {
                 view.save_profile_name_if_valid(ctx);
             }
         });
+
+        // Scan the custom prompts directory again whenever a prompt menu opens, so files added
+        // while the editor is open can be picked.
+        for (slot, dropdown) in &view.prompt_dropdowns {
+            let slot = *slot;
+            ctx.subscribe_to_view(dropdown, move |view, dropdown, event, ctx| {
+                if let FilterableDropdownEvent::ToggleExpanded = event {
+                    let overrides = BlocklistAIPermissions::as_ref(ctx)
+                        .permissions_profile_for_id(ctx, view.profile_id)
+                        .prompt_overrides;
+                    Self::refresh_prompt_dropdown(
+                        slot,
+                        &dropdown,
+                        &overrides,
+                        &list_custom_prompts(),
+                        ctx,
+                    );
+                }
+            });
+        }
 
         ctx.subscribe_to_view(&view.command_allowlist_editor, |view, _, event, ctx| {
             if let SubmittableTextInputEvent::Submit(s) = event {
@@ -986,7 +1046,54 @@ impl ExecutionProfileEditorView {
             ctx,
         );
 
+        let custom_prompts = list_custom_prompts();
+        for (slot, dropdown) in &self.prompt_dropdowns {
+            Self::refresh_prompt_dropdown(
+                *slot,
+                dropdown,
+                &current_permissions.prompt_overrides,
+                &custom_prompts,
+                ctx,
+            );
+        }
+
         Self::update_profile_name_editor(&self.profile_name_editor, &current_permissions, ctx);
+    }
+
+    fn refresh_prompt_dropdown(
+        slot: PromptSlot,
+        menu: &ViewHandle<FilterableDropdown<ExecutionProfileEditorViewAction>>,
+        overrides: &PromptOverrides,
+        custom_prompts: &[String],
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let current = overrides.get(slot).clone();
+        let items = menu_choices(slot, BUILTIN_SYSTEM_TEMPLATES, custom_prompts, &current)
+            .into_iter()
+            .map(|choice| {
+                DropdownItem::new(
+                    prompt_choice_label(slot, &choice, custom_prompts),
+                    ExecutionProfileEditorViewAction::SetPromptChoice { slot, choice },
+                )
+            })
+            .collect();
+        menu.update(ctx, |dropdown, ctx| {
+            if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
+                dropdown.set_enabled(ctx);
+            } else {
+                dropdown.set_disabled(ctx);
+            }
+            dropdown.set_items(items, ctx);
+            dropdown.set_selected_by_action(
+                ExecutionProfileEditorViewAction::SetPromptChoice {
+                    slot,
+                    choice: current,
+                },
+                ctx,
+            );
+            ctx.notify();
+        });
+        ctx.notify();
     }
 
     fn refresh_execution_profile_dropdown_menu(
@@ -1316,6 +1423,57 @@ impl ExecutionProfileEditorView {
     }
 }
 
+fn list_custom_prompts() -> Vec<String> {
+    custom_prompts::custom_prompts_dir()
+        .map(|dir| custom_prompts::list(&dir))
+        .unwrap_or_default()
+}
+
+/// The menu label of `choice` in the prompt menu of `slot`. A choice that is no longer
+/// available (a deleted file, a built-in this version doesn't have) is labeled as such.
+fn prompt_choice_label(
+    slot: PromptSlot,
+    choice: &PromptChoice,
+    custom_prompts: &[String],
+) -> String {
+    match choice {
+        PromptChoice::Auto => {
+            if slot.has_builtin_alternatives() {
+                crate::t!("settings-exec-profile-editor-prompt-auto-by-model")
+            } else {
+                crate::t!("settings-exec-profile-editor-prompt-builtin")
+            }
+        }
+        PromptChoice::Builtin(name) => {
+            if slot.has_builtin_alternatives() && BUILTIN_SYSTEM_TEMPLATES.contains(&name.as_str())
+            {
+                crate::t!(
+                    "settings-exec-profile-editor-prompt-builtin-named",
+                    name = name.clone()
+                )
+            } else {
+                crate::t!(
+                    "settings-exec-profile-editor-prompt-unavailable",
+                    name = name.clone()
+                )
+            }
+        }
+        PromptChoice::Custom(path) => {
+            if custom_prompts.contains(path) {
+                crate::t!(
+                    "settings-exec-profile-editor-prompt-custom",
+                    path = path.clone()
+                )
+            } else {
+                crate::t!(
+                    "settings-exec-profile-editor-prompt-unavailable",
+                    name = path.clone()
+                )
+            }
+        }
+    }
+}
+
 mod ui_helpers;
 
 impl View for ExecutionProfileEditorView {
@@ -1337,6 +1495,7 @@ impl View for ExecutionProfileEditorView {
                 profile_data.is_default_profile,
             ))
             .with_child(render_models_section(appearance, self))
+            .with_child(render_prompts_section(appearance, self))
             .with_child(render_permissions_section(
                 appearance,
                 self,
@@ -1535,6 +1694,22 @@ impl TypedActionView for ExecutionProfileEditorView {
                     profiles_model.set_web_search_enabled(self.profile_id, *enabled, ctx);
                 });
                 ctx.notify();
+            }
+            ExecutionProfileEditorViewAction::SetPromptChoice { slot, choice } => {
+                AIExecutionProfilesModel::handle(ctx).update(ctx, |profiles_model, ctx| {
+                    profiles_model.set_prompt_choice(self.profile_id, *slot, choice.clone(), ctx);
+                });
+                ctx.notify();
+            }
+            ExecutionProfileEditorViewAction::OpenCustomPromptsDir => {
+                let Some(dir) = custom_prompts::custom_prompts_dir() else {
+                    log::warn!("[prompt overrides] no home directory for custom prompts");
+                    return;
+                };
+                match std::fs::create_dir_all(&dir) {
+                    Ok(()) => ctx.open_file_path(&dir),
+                    Err(e) => log::warn!("[prompt overrides] can't create {}: {e}", dir.display()),
+                }
             }
         }
     }

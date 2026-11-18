@@ -1,3 +1,5 @@
+use crate::ai::agent_providers::custom_prompts;
+use crate::ai::execution_profiles::prompt_overrides::PromptSlot;
 use crate::ai::execution_profiles::{AIExecutionProfile, ActionPermission};
 use crate::editor::EditorView;
 use crate::settings::AISettings;
@@ -276,6 +278,74 @@ pub fn render_models_section(
             &cu_label,
             &cu_desc,
             &view.computer_use_model_dropdown,
+        ));
+    }
+
+    Container::new(column.finish())
+        .with_margin_bottom(12.)
+        .finish()
+}
+
+fn prompt_slot_label(slot: PromptSlot) -> (String, String) {
+    match slot {
+        PromptSlot::Agent => (
+            crate::t!("settings-exec-profile-editor-prompt-agent"),
+            crate::t!("settings-exec-profile-editor-prompt-agent-desc"),
+        ),
+        PromptSlot::Title => (
+            crate::t!("settings-exec-profile-editor-prompt-title"),
+            crate::t!("settings-exec-profile-editor-prompt-title-desc"),
+        ),
+        PromptSlot::PromptSuggestions => (
+            crate::t!("settings-exec-profile-editor-prompt-suggestions"),
+            crate::t!("settings-exec-profile-editor-prompt-suggestions-desc"),
+        ),
+        PromptSlot::InputCompletion => (
+            crate::t!("settings-exec-profile-editor-prompt-input-completion"),
+            crate::t!("settings-exec-profile-editor-prompt-input-completion-desc"),
+        ),
+        PromptSlot::RelevantFiles => (
+            crate::t!("settings-exec-profile-editor-prompt-relevant-files"),
+            crate::t!("settings-exec-profile-editor-prompt-relevant-files-desc"),
+        ),
+        PromptSlot::WorkflowMetadata => (
+            crate::t!("settings-exec-profile-editor-prompt-workflow-metadata"),
+            crate::t!("settings-exec-profile-editor-prompt-workflow-metadata-desc"),
+        ),
+        PromptSlot::NextCommand => (
+            crate::t!("settings-exec-profile-editor-prompt-next-command"),
+            crate::t!("settings-exec-profile-editor-prompt-next-command-desc"),
+        ),
+    }
+}
+
+pub fn render_prompts_section(
+    appearance: &Appearance,
+    view: &ExecutionProfileEditorView,
+) -> Box<dyn Element> {
+    let section_label = crate::t!("settings-exec-profile-editor-section-prompts");
+    let dir = custom_prompts::custom_prompts_dir()
+        .map(|dir| warp_core::paths::home_relative_path(&dir))
+        .unwrap_or_default();
+    let description = crate::t!("settings-exec-profile-editor-prompts-desc", dir = dir);
+
+    let mut column = Flex::column()
+        .with_child(render_separator(appearance))
+        .with_child(render_section_label(&section_label, appearance))
+        .with_child(render_info_section(&description, None, appearance))
+        .with_child(
+            Container::new(
+                Flex::row()
+                    .with_child(ChildView::new(&view.open_custom_prompts_button).finish())
+                    .finish(),
+            )
+            .with_margin_bottom(16.)
+            .finish(),
+        );
+    for (slot, dropdown) in &view.prompt_dropdowns {
+        let (label, desc) = prompt_slot_label(*slot);
+        column.add_child(render_filterable_dropdown_row(
+            appearance, &label, &desc, dropdown,
         ));
     }
 
