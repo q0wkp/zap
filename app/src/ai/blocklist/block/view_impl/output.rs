@@ -826,6 +826,32 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                 );
                             }
                         }
+                        AIAgentOutputMessageType::InvalidToolCall { tool_name, detail } => {
+                            let mut text = match tool_name {
+                                Some(tool) => {
+                                    crate::t!(
+                                        "ai-tool-call-invalid-arguments",
+                                        tool = tool.as_str()
+                                    )
+                                }
+                                None => crate::t!("ai-tool-call-invalid-arguments-unknown-tool"),
+                            };
+                            if let Some(detail) = detail {
+                                text.push('\n');
+                                text.push_str(detail);
+                            }
+                            let formatted_text = render_requested_action_body_text(
+                                text.into(),
+                                appearance.ui_font_family(),
+                                app,
+                            );
+                            let renderable_action =
+                                RenderableAction::new_with_formatted_text(formatted_text, app)
+                                    .with_icon(
+                                        inline_action_icons::red_x_icon(appearance).finish(),
+                                    );
+                            output_items.add_child(renderable_action.render(app).finish());
+                        }
                         AIAgentOutputMessageType::DebugOutput { text } => {
                             if ChannelState::enable_debug_features() {
                                 if let Some(element) = render_collapsible_debug_output(

@@ -492,6 +492,25 @@ impl ConvertAPIMessageToClientOutputMessage for api::Message {
                         .with_citations(citations),
                 ))
             }
+            // A tool call's result is attached to the action that requested it. Zap BYOP: a call
+            // whose arguments could not be parsed has no action and only a marker for a result,
+            // so it is shown on its own, as a failed call.
+            api::message::Message::ToolCallResult(api::message::ToolCallResult {
+                result: None,
+                ..
+            }) => match crate::ai::agent_providers::tools::parse_invalid_tool_call(
+                &self.server_message_data,
+            ) {
+                Some(invalid) => Ok(MaybeAIAgentOutputMessage::Message(
+                    AIAgentOutputMessage::invalid_tool_call(
+                        MessageId::new(self.id),
+                        invalid.tool_name,
+                        invalid.detail,
+                    )
+                    .with_citations(citations),
+                )),
+                None => Ok(MaybeAIAgentOutputMessage::NoClientRepresentation),
+            },
             // These messages don't indicate an error but they don't translate to a client-side output message.
             api::message::Message::UserQuery(_)
             | api::message::Message::SystemQuery(_)

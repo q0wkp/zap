@@ -205,3 +205,40 @@ pub fn action_result_to_msg_result(
     };
     Some(msg_side)
 }
+
+/// A tool call the model made whose arguments could not be parsed, so it was never run.
+///
+/// `chat_stream` answers such a call with a result that carries no `tool_call_result::Result`,
+/// only an `invalid_arguments` JSON payload in the message's `server_message_data`, and asks the
+/// model to retry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidToolCall {
+    /// The function name the model called, when the payload names it.
+    pub tool_name: Option<String>,
+    /// Why the arguments were rejected, when the payload says.
+    pub detail: Option<String>,
+}
+
+/// Recognizes the `invalid_arguments` payload of a tool call result's `server_message_data`.
+pub fn parse_invalid_tool_call(server_message_data: &str) -> Option<InvalidToolCall> {
+    let payload: Value = serde_json::from_str(server_message_data).ok()?;
+    if payload.get("error").and_then(Value::as_str) != Some("invalid_arguments") {
+        return None;
+    }
+    let non_empty_string = |key: &str| {
+        payload
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    };
+    Some(InvalidToolCall {
+        tool_name: non_empty_string("tool"),
+        detail: non_empty_string("detail"),
+    })
+}
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;
