@@ -56,6 +56,7 @@ use crate::ai::predict::prompt_suggestions::{
     is_accept_prompt_suggestion_bound_to_ctrl_enter,
 };
 use crate::search::slash_command_menu::static_commands::commands;
+use crate::ssh_manager::connection::SshManagerConnection;
 use crate::ssh_manager::onekey::{load_saved_ssh_credentials, OneKeyCredentialKind};
 use crate::ssh_manager::password_prompt::bytes_look_like_password_prompt;
 use crate::terminal::input::inline_menu::InlineMenuPositioner;
@@ -520,8 +521,8 @@ use super::ssh::install_tmux::{
 use super::ssh::root_access::RootAccess;
 use super::ssh::ssh_detection::evaluate_warpify_ssh_host;
 use super::ssh::util::{
-    convert_script_to_one_line, parse_interactive_ssh_command, InteractiveSshCommand,
-    SshWarpifyCommand,
+    convert_script_to_one_line, parse_interactive_ssh_command, replayable_ssh_command,
+    InteractiveSshCommand, SshWarpifyCommand,
 };
 use super::ssh::warpify::{
     begin_warpify_ssh_session_command, warpify_ssh_session_command, SshWarpifyBlock,
@@ -2293,6 +2294,31 @@ struct OneKeyPromptCandidate {
     kind: OneKeyCredentialKind,
 }
 
+/// How a pane split from a terminal in an SSH session opens on the same host; see
+/// [`TerminalView::ssh_session_for_split`].
+#[derive(Clone, Debug)]
+pub struct SshSessionForSplit {
+    connection: SshConnectionForSplit,
+    /// The directory to change to once the new SSH session has bootstrapped.
+    directory: Option<RemoteDirectory>,
+}
+
+#[derive(Clone, Debug)]
+enum SshConnectionForSplit {
+    /// Run this `ssh` command line in the new pane's local shell.
+    Command(String),
+    /// Connect through the SSH manager, with the server's saved credentials.
+    SshManager(SshManagerConnection),
+}
+
+/// A working directory on a remote host.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RemoteDirectory {
+    /// `user@hostname` of the session the path was read from.
+    host: String,
+    path: String,
+}
+
 pub struct TerminalView {
     pub model: Arc<FairMutex<TerminalModel>>,
     view_handle: WeakViewHandle<Self>,
@@ -2414,6 +2440,11 @@ pub struct TerminalView {
     /// SSH 管理器创建的 tab 会先启动本地 shell，再执行 ssh 并等待远端 shell
     /// bootstrap；默认 Agent 模式必须延后到远端会话可用后再进入。
     enter_agent_view_after_ssh_bootstrap: bool,
+    /// Set in a pane split from an SSH session: the directory to change to once this pane's own
+    /// SSH session has bootstrapped.
+    directory_after_ssh_bootstrap: Option<RemoteDirectory>,
+    /// The connection the SSH manager made in this terminal, if it made one.
+    ssh_manager_connection: Option<SshManagerConnection>,
     slow_bootstrap_banner: ViewHandle<Banner<TerminalAction>>,
     is_slow_bootstrap_banner_open: bool,
 
@@ -3942,6 +3973,8 @@ impl TerminalView {
             awaiting_pending_command_completion: false,
             enter_agent_view_after_pending_commands: false,
             enter_agent_view_after_ssh_bootstrap: false,
+            directory_after_ssh_bootstrap: None,
+            ssh_manager_connection: None,
             slow_bootstrap_banner,
             is_slow_bootstrap_banner_open: false,
             incompatible_configuration_banner,
@@ -10126,6 +10159,9 @@ impl TerminalView {
                 // finishes (e.g. tab config setup commands like `git worktree add`).
                 if self.awaiting_pending_command_completion {
                     self.awaiting_pending_command_completion = false;
+                    // An `ssh` run for a split pane that ended without bootstrapping a remote
+                    // session leaves nothing to change directory in.
+                    self.directory_after_ssh_bootstrap = None;
                     ctx.emit(Event::PendingCommandCompleted);
 
                     // If agent view entry was deferred until setup commands
@@ -11578,6 +11614,10 @@ impl TerminalView {
         self.any_session_contains_restored_remote_blocks = self.contains_restored_remote_blocks();
         self.any_session_contains_remote_blocks |= self.active_block_is_considered_remote(ctx);
         self.update_focused_terminal_info(ctx);
+
+        if is_ssh_session {
+            self.change_to_directory_after_ssh_bootstrap(session_id, ctx);
+        }
 
         if self.enter_agent_view_after_ssh_bootstrap && is_ssh_session {
             self.enter_agent_view_after_ssh_bootstrap = false;
@@ -13526,6 +13566,12 @@ impl TerminalView {
 
     pub fn set_enter_agent_view_after_ssh_bootstrap(&mut self) {
         self.enter_agent_view_after_ssh_bootstrap = true;
+    }
+
+    /// Records the connection the SSH manager made in this terminal, so that a pane split from
+    /// it connects the same way.
+    pub fn set_ssh_manager_connection(&mut self, connection: SshManagerConnection) {
+        self.ssh_manager_connection = Some(connection);
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -20875,6 +20921,80 @@ impl TerminalView {
 
     pub fn is_find_bar_focused(&self, ctx: &AppContext) -> bool {
         self.find_bar.as_ref(ctx).is_editor_focused(ctx)
+    }
+
+    /// How a pane split from this one opens on the same host, if the active session is in an SSH
+    /// session that a local shell started (see [`Sessions::local_ssh_command`]). When the SSH
+    /// manager typed that command, the new pane connects through the SSH manager as well, with
+    /// the server's saved credentials. Otherwise it is a plain `ssh` command the new pane runs
+    /// again (see [`replayable_ssh_command`]), so it reaches the host the same way with the same
+    /// options. Either way the new pane then changes to this pane's directory if it lands on the
+    /// same host as the same user.
+    pub fn ssh_session_for_split<C: ModelAsRef>(&self, ctx: &C) -> Option<SshSessionForSplit> {
+        let session_id = self.active_block_session_id()?;
+        let sessions = self.sessions.as_ref(ctx);
+        let command = sessions.local_ssh_command(session_id)?;
+        let connection = match &self.ssh_manager_connection {
+            Some(connection) if connection.command.trim() == command.trim() => {
+                SshConnectionForSplit::SshManager(connection.clone())
+            }
+            _ => SshConnectionForSplit::Command(replayable_ssh_command(&command)?.to_owned()),
+        };
+        let session = sessions.get(session_id)?;
+        let directory = self.pwd().map(|path| RemoteDirectory {
+            host: format!("{}@{}", session.user(), session.hostname()),
+            path,
+        });
+        Some(SshSessionForSplit {
+            connection,
+            directory,
+        })
+    }
+
+    /// Opens the SSH session of the pane this one was split from; see
+    /// [`Self::ssh_session_for_split`]. A connection the SSH manager has to make is returned
+    /// instead, for the caller to make with [`crate::ssh_manager::connection::connect_terminal`].
+    pub fn open_ssh_session_for_split(
+        &mut self,
+        ssh_session: SshSessionForSplit,
+        ctx: &mut ViewContext<Self>,
+    ) -> Option<SshManagerConnection> {
+        self.directory_after_ssh_bootstrap = ssh_session.directory;
+        match ssh_session.connection {
+            SshConnectionForSplit::Command(command) => {
+                self.execute_command_or_set_pending(&command, ctx);
+                None
+            }
+            SshConnectionForSplit::SshManager(connection) => Some(connection),
+        }
+    }
+
+    /// Changes to the directory a pane split from an SSH session waits for, once the pane's own
+    /// SSH session has bootstrapped: only on the host and as the user it belongs to, and only if
+    /// nothing has been typed into the input meanwhile.
+    fn change_to_directory_after_ssh_bootstrap(
+        &mut self,
+        session_id: SessionId,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let Some(directory) = self.directory_after_ssh_bootstrap.take() else {
+            return;
+        };
+        let Some(session) = self.sessions.as_ref(ctx).get(session_id) else {
+            return;
+        };
+        if format!("{}@{}", session.user(), session.hostname()) != directory.host {
+            return;
+        }
+        let input = self.input.as_ref(ctx);
+        if !input.buffer_text(ctx).is_empty() || input.has_pending_command() {
+            return;
+        }
+        let command = format!(
+            "cd {}",
+            session.shell_family().shell_escape(&directory.path)
+        );
+        self.execute_command_or_set_pending(&command, ctx);
     }
 
     pub fn pwd(&self) -> Option<String> {

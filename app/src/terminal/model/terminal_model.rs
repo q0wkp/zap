@@ -2920,7 +2920,14 @@ impl ansi::Handler for TerminalModel {
             let shell_type = ShellType::from_name(&data.shell)
                 .unwrap_or_else(|| panic!("invalid shell name: {}", data.shell));
 
-            let pending_session_info = SessionInfo::create_pending(
+            // Like a subshell's, the command that started an SSH wrapper session is the one in
+            // the active block, which is still the spawning session's block.
+            let ssh_wrapper_command = self
+                .pending_legacy_ssh_session
+                .is_some()
+                .then(|| self.block_list().active_block().command_to_string());
+
+            let mut pending_session_info = SessionInfo::create_pending(
                 shell_type,
                 data,
                 subshell_info,
@@ -2932,6 +2939,7 @@ impl ansi::Handler for TerminalModel {
                 ),
                 self.block_list().active_block().session_id(),
             );
+            pending_session_info.ssh_wrapper_command = ssh_wrapper_command;
             self.pending_session_info = Some(pending_session_info.clone());
 
             if self.block_list().is_bootstrapped() {

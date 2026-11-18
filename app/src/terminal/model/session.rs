@@ -464,6 +464,23 @@ impl Sessions {
         }
     }
 
+    /// The command line a local session ran to start the SSH session that `session_id` is, or
+    /// runs inside of as a subshell (e.g. after `sudo -s`). `None` when there is no such SSH
+    /// session or when it was started from another remote host (a nested `ssh`, which no
+    /// command in a local shell reaches).
+    pub fn local_ssh_command(&self, session_id: SessionId) -> Option<String> {
+        let mut session = self.get(session_id)?;
+        loop {
+            let spawning_session = self.get(session.info.spawning_session_id?)?;
+            if let Some(command) = session.ssh_command() {
+                return spawning_session.is_local().then(|| command.to_owned());
+            }
+            // Only a subshell runs on its spawning session's host.
+            session.subshell_info().as_ref()?;
+            session = spawning_session;
+        }
+    }
+
     /// Registers a session in the map for the purpose of testing.
     ///
     /// Prefer using [`Self::initialize_bootstrapped_session`] to properly register
@@ -562,6 +579,10 @@ pub struct SessionInfo {
     pub tmux_control_mode: bool,
     /// If this is a subshell or remote session, e.g. ssh, store the parent session ID here.
     pub spawning_session_id: Option<SessionId>,
+    /// For a session started by the SSH wrapper, the `ssh` command line that was run in the
+    /// spawning session. (A remote session warpified as a subshell keeps its command in
+    /// `subshell_info` instead.)
+    pub ssh_wrapper_command: Option<String>,
 }
 
 impl SessionInfo {
@@ -629,6 +650,7 @@ impl SessionInfo {
             host_info: Default::default(),
             tmux_control_mode: false,
             spawning_session_id,
+            ssh_wrapper_command: None,
         }
     }
 
@@ -763,6 +785,7 @@ impl SessionInfo {
             },
             tmux_control_mode,
             spawning_session_id: self.spawning_session_id,
+            ssh_wrapper_command: self.ssh_wrapper_command,
         }
     }
 
@@ -976,6 +999,18 @@ impl Session {
 
     pub fn subshell_info(&self) -> &Option<SubshellInitializationInfo> {
         &self.info.subshell_info
+    }
+
+    /// The command line that started this session as an SSH session from its spawning
+    /// session, if it is one.
+    fn ssh_command(&self) -> Option<&str> {
+        match &self.info.subshell_info {
+            Some(subshell_info) => subshell_info
+                .ssh_connection_info
+                .is_some()
+                .then_some(subshell_info.spawning_command.as_str()),
+            None => self.info.ssh_wrapper_command.as_deref(),
+        }
     }
 
     /// Replaces the command executor for this session. Used after a remote
@@ -1367,6 +1402,7 @@ pub mod testing {
                 host_info: Default::default(),
                 tmux_control_mode: false,
                 spawning_session_id: None,
+                ssh_wrapper_command: None,
             }
         }
 

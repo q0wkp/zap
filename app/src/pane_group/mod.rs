@@ -30,7 +30,7 @@ use crate::pane_group::pane::get_started_pane::GetStartedPane;
 use crate::pane_group::pane::welcome_pane::WelcomePane;
 use crate::pane_group::pane::ActionOrigin;
 use crate::quit_warning::UnsavedStateSummary;
-use crate::settings::{AISettings, DefaultSessionMode, PaneSettings};
+use crate::settings::{AISettings, DefaultSessionMode, PaneSettings, SshSettings};
 use crate::settings_view::SettingsSection;
 use crate::terminal::available_shells::{AvailableShell, AvailableShells};
 #[cfg(not(target_family = "wasm"))]
@@ -3316,6 +3316,66 @@ impl PaneGroup {
         new_pane_id
     }
 
+    /// Splits a terminal pane off `base_pane_id` for a split the user asked for without picking a
+    /// shell. When `base_pane_id` is a terminal whose shell is in an SSH session started from a
+    /// local shell, the new pane opens on the same host (see
+    /// [`TerminalView::ssh_session_for_split`]) unless the user turned that off; otherwise this
+    /// is [`Self::insert_terminal_pane`].
+    fn split_terminal_pane(
+        &mut self,
+        direction: Direction,
+        base_pane_id: PaneId,
+        chosen_shell: Option<AvailableShell>,
+        ctx: &mut ViewContext<Self>,
+    ) -> TerminalPaneId {
+        let ssh_session = base_pane_id
+            .as_terminal_pane_id()
+            .filter(|_| *SshSettings::as_ref(ctx).split_pane_on_same_host.value())
+            .and_then(|terminal_pane_id| self.terminal_view_from_pane_id(terminal_pane_id, ctx))
+            .and_then(|view| view.as_ref(ctx).ssh_session_for_split(ctx));
+        let Some(ssh_session) = ssh_session else {
+            return self.insert_terminal_pane(direction, base_pane_id, chosen_shell, ctx);
+        };
+
+        // The new pane's local shell is only there to run `ssh`, so the default session mode
+        // isn't applied to it; as in a tab the SSH manager opens, agent view waits for the
+        // remote shell instead.
+        let new_pane_id = self.add_session_with_default_session_mode_behavior(
+            direction,
+            Some(base_pane_id),
+            base_pane_id.as_terminal_pane_id(),
+            chosen_shell,
+            None, /* conversation_restoration */
+            DefaultSessionModeBehavior::Ignore,
+            ctx,
+        );
+        if let Some(view) = self.terminal_view_from_pane_id(new_pane_id, ctx) {
+            let ai_settings = AISettings::as_ref(ctx);
+            let enter_agent_view = ai_settings.default_session_mode(ctx)
+                == DefaultSessionMode::Agent
+                && ai_settings.default_cli_agent(ctx).is_none();
+            let ssh_manager_connection = view.update(ctx, |view, ctx| {
+                if enter_agent_view {
+                    view.set_enter_agent_view_after_ssh_bootstrap();
+                }
+                view.open_ssh_session_for_split(ssh_session, ctx)
+            });
+            // The server's startup command isn't run again: the new pane opens a shell next to
+            // the one split from, in its directory.
+            if let Some(connection) = ssh_manager_connection {
+                crate::ssh_manager::connection::connect_terminal(
+                    &view,
+                    connection.node_id,
+                    connection.server,
+                    false, /* run_startup_command */
+                    ctx,
+                );
+            }
+        }
+        ctx.emit(Event::AppStateChanged);
+        new_pane_id
+    }
+
     /// Used when splitting panes.
     fn insert_terminal_pane(
         &mut self,
@@ -4095,14 +4155,26 @@ impl PaneGroup {
             // pane like a notebook. Once it's possible to open the same notebook more than once,
             // we may revisit this so that splitting from a terminal pane starts a new session, but
             // splitting from a notebook pane reopens the notebook side-by-side.
+            PaneEvent::SplitLeft(None) => {
+                self.split_terminal_pane(Direction::Left, pane_id, None, ctx);
+            }
             PaneEvent::SplitLeft(chosen_shell) => {
                 self.insert_terminal_pane(Direction::Left, pane_id, chosen_shell.clone(), ctx);
+            }
+            PaneEvent::SplitRight(None) => {
+                self.split_terminal_pane(Direction::Right, pane_id, None, ctx);
             }
             PaneEvent::SplitRight(chosen_shell) => {
                 self.insert_terminal_pane(Direction::Right, pane_id, chosen_shell.clone(), ctx);
             }
+            PaneEvent::SplitUp(None) => {
+                self.split_terminal_pane(Direction::Up, pane_id, None, ctx);
+            }
             PaneEvent::SplitUp(chosen_shell) => {
                 self.insert_terminal_pane(Direction::Up, pane_id, chosen_shell.clone(), ctx);
+            }
+            PaneEvent::SplitDown(None) => {
+                self.split_terminal_pane(Direction::Down, pane_id, None, ctx);
             }
             PaneEvent::SplitDown(chosen_shell) => {
                 self.insert_terminal_pane(Direction::Down, pane_id, chosen_shell.clone(), ctx);
@@ -6058,7 +6130,7 @@ impl TypedActionView for PaneGroup {
                         None
                     }
                 };
-                self.add_terminal_pane(*direction, chosen_shell, ctx);
+                self.split_terminal_pane(*direction, self.focused_pane_id(ctx), chosen_shell, ctx);
             }
             Remove(view_id) => self.close_pane_with_confirmation(*view_id, ctx),
             RemoveActive => self.close_active_pane_with_confirmation(ctx),
