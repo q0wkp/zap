@@ -23,6 +23,7 @@ use warpui::{AppContext, EntityId, SingletonEntity as _};
 use super::chat_stream;
 use crate::ai::llms::LLMPreferences;
 use crate::settings::{AgentProviderApiType, ReasoningEffortSetting};
+use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 
 /// BYOP one-shot 请求所需的 provider/model 信息。
 #[derive(Debug, Clone)]
@@ -32,6 +33,9 @@ pub struct OneshotConfig {
     pub model_id: String,
     pub api_type: AgentProviderApiType,
     pub reasoning_effort: ReasoningEffortSetting,
+    /// Whether secret redaction is on: detected secrets are masked in the system prompt and the
+    /// user content before the request is sent.
+    pub redact_secrets: bool,
 }
 
 /// One-shot 调用的可选参数。
@@ -57,7 +61,7 @@ fn truncate_chars(s: &str, max: usize) -> String {
     s.chars().take(max).collect()
 }
 
-fn build_oneshot_request(
+pub(super) fn build_oneshot_request(
     cfg: &OneshotConfig,
     system: &str,
     user: &str,
@@ -83,8 +87,11 @@ fn build_oneshot_request(
     let max_chars = opts.max_chars.unwrap_or(DEFAULT_MAX_CHARS);
     let user_truncated = truncate_chars(user, max_chars);
 
-    let chat_req = ChatRequest::from_messages(vec![ChatMessage::user(user_truncated)])
+    let mut chat_req = ChatRequest::from_messages(vec![ChatMessage::user(user_truncated)])
         .with_system(system.to_owned());
+    if cfg.redact_secrets {
+        super::secret_redaction::redact_chat_request(&mut chat_req);
+    }
 
     (chat_req, chat_opts)
 }
@@ -174,6 +181,7 @@ pub fn resolve_active_ai_oneshot(
         model_id,
         api_type: provider.api_type,
         reasoning_effort,
+        redact_secrets: get_secret_obfuscation_mode(app).should_redact_secret(),
     })
 }
 
@@ -197,5 +205,6 @@ pub fn resolve_next_command_oneshot(
         model_id,
         api_type: provider.api_type,
         reasoning_effort,
+        redact_secrets: get_secret_obfuscation_mode(app).should_redact_secret(),
     })
 }
