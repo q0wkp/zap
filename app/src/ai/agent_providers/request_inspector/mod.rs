@@ -43,6 +43,8 @@ pub enum CallKind {
     WorkflowMetadata,
     /// Suggesting the next command.
     NextCommand,
+    /// Explaining a command the agent asks to run.
+    ExplainCommand,
     /// A one-shot call whose caller did not say what it is for.
     #[default]
     Other,
@@ -82,6 +84,7 @@ impl CallKind {
             | CallKind::RelevantFiles
             | CallKind::WorkflowMetadata
             | CallKind::NextCommand
+            | CallKind::ExplainCommand
             | CallKind::Other => CallGroup::ActiveAi,
         }
     }
@@ -95,6 +98,7 @@ impl CallKind {
             CallKind::RelevantFiles => crate::t!("byop-inspector-kind-relevant-files"),
             CallKind::WorkflowMetadata => crate::t!("byop-inspector-kind-workflow-metadata"),
             CallKind::NextCommand => crate::t!("byop-inspector-kind-next-command"),
+            CallKind::ExplainCommand => crate::t!("byop-inspector-kind-explain-command"),
             CallKind::Other => crate::t!("byop-inspector-kind-other"),
         }
     }

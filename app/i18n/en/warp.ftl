@@ -3796,6 +3796,7 @@ byop-inspector-kind-input-prediction = Input prediction
 byop-inspector-kind-relevant-files = Relevant files
 byop-inspector-kind-workflow-metadata = Workflow metadata
 byop-inspector-kind-next-command = Next command
+byop-inspector-kind-explain-command = Explain command
 byop-inspector-kind-other = One-shot call
 byop-inspector-binary-elided = base64 data elided, length
 byop-inspector-status-in-progress = in progress

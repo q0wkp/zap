@@ -3707,6 +3707,7 @@ byop-inspector-kind-input-prediction = 输入预测
 byop-inspector-kind-relevant-files = 相关文件
 byop-inspector-kind-workflow-metadata = 工作流元数据
 byop-inspector-kind-next-command = 下一条命令
+byop-inspector-kind-explain-command = 解释命令
 byop-inspector-kind-other = 单次调用
 byop-inspector-binary-elided = 已省略 base64 数据,长度
 byop-inspector-status-in-progress = 进行中

@@ -3627,6 +3627,7 @@ byop-inspector-kind-input-prediction = 入力予測
 byop-inspector-kind-relevant-files = 関連ファイル
 byop-inspector-kind-workflow-metadata = ワークフローのメタデータ
 byop-inspector-kind-next-command = 次のコマンド
+byop-inspector-kind-explain-command = コマンドの説明
 byop-inspector-kind-other = 単発の呼び出し
 byop-inspector-binary-elided = base64 データを省略、長さ
 byop-inspector-status-in-progress = 進行中

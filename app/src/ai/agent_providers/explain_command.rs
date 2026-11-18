@@ -10,7 +10,9 @@ use warpui::{AppContext, SingletonEntity as _};
 use super::oneshot::{
     byop_oneshot_completion, resolve_active_ai_oneshot, OneshotConfig, OneshotOptions,
 };
+use super::request_inspector::CallKind;
 use crate::ai::llms::{LLMId, LLMPreferences};
+use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 
 /// The most characters of a command that are sent to the model.
 const MAX_COMMAND_CHARS: usize = 12_000;
@@ -50,6 +52,7 @@ pub fn resolve_model(app: &AppContext, exchange_model: Option<&LLMId>) -> Option
         model_id,
         api_type: provider.api_type,
         reasoning_effort,
+        redact_secrets: get_secret_obfuscation_mode(app).should_redact_secret(),
     })
 }
 
@@ -66,6 +69,7 @@ pub async fn explain(
         // Leave room for the text around the command, so that only the command is cut.
         max_chars: Some(user.chars().count()),
         temperature: Some(0.2),
+        kind: CallKind::ExplainCommand,
         ..Default::default()
     };
     let reply = byop_oneshot_completion(&cfg, &system, &user, &opts).await?;
