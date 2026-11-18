@@ -1,6 +1,10 @@
 //! Connecting a terminal to a server saved in the SSH manager: typing its `ssh` command line
-//! into the terminal's local shell, and answering the password prompts that follow with the
-//! credentials saved in the keychain.
+//! into the terminal's local shell, and answering the password and passphrase prompts that
+//! follow with the credentials saved in the keychain, through ssh's askpass (see
+//! [`warp_ssh_manager::askpass`]).
+
+use std::collections::HashMap;
+use std::ffi::OsString;
 
 use warp_ssh_manager::{
     KeychainSecretStore, SecretKind, SshRepository, SshSecretStore, SshServerInfo,
@@ -9,6 +13,25 @@ use warpui::{SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::settings::{AISettings, DefaultSessionMode};
 use crate::terminal::TerminalView;
+
+/// The secret channel of a connection the SSH manager is about to make, which its terminal's
+/// shell must have been started with the environment of.
+#[cfg(unix)]
+pub type ConnectionAskpass = warp_ssh_manager::askpass::AskpassChannel;
+#[cfg(not(unix))]
+pub enum ConnectionAskpass {}
+
+/// Prepares the askpass channel for a connection, before its terminal is created, and returns the
+/// environment that terminal's shell must start with. Without it (`None` and no variables) ssh
+/// asks for the password on the terminal.
+pub fn prepare_askpass() -> (Option<ConnectionAskpass>, HashMap<OsString, OsString>) {
+    #[cfg(unix)]
+    match warp_ssh_manager::askpass::AskpassChannel::prepare() {
+        Ok((channel, env)) => return (Some(channel), env.into_iter().collect()),
+        Err(e) => log::warn!("ssh askpass unavailable, ssh will ask on the terminal: {e}"),
+    }
+    (None, HashMap::new())
+}
 
 /// A connection the SSH manager made in a terminal.
 #[derive(Clone, Debug)]
@@ -21,13 +44,15 @@ pub struct SshManagerConnection {
 }
 
 /// Connects `terminal_view`, a terminal whose local shell is starting, to `server`: queues its
-/// `ssh` command line, and starts the injectors that type the saved password, passphrase and
-/// root password at their prompts. The injectors are owned by `ctx`'s view. The server's startup
-/// command (and its zmx session) runs once the remote shell is ready if `run_startup_command`.
+/// `ssh` command line, hands the saved password or passphrase to `askpass` (whose environment the
+/// terminal's shell was started with), and starts the injector that offers the root password at
+/// `su`. The injector is owned by `ctx`'s view. The server's startup command (and its zmx
+/// session) runs once the remote shell is ready if `run_startup_command`.
 pub fn connect_terminal<O: View>(
     terminal_view: &ViewHandle<TerminalView>,
     node_id: String,
     server: SshServerInfo,
+    askpass: Option<ConnectionAskpass>,
     run_startup_command: bool,
     ctx: &mut ViewContext<O>,
 ) {
@@ -46,7 +71,7 @@ pub fn connect_terminal<O: View>(
         }) {
             Ok(resolved) => resolved,
             Err(e) => {
-                log::warn!("ssh auth resolution failed (will continue without injection): {e}");
+                log::warn!("ssh auth resolution failed (ssh will ask on the terminal): {e}");
                 let fallback_kind = match server.auth_type {
                     warp_ssh_manager::AuthType::Password => SecretKind::Password,
                     warp_ssh_manager::AuthType::Key => SecretKind::Passphrase,
@@ -79,23 +104,15 @@ pub fn connect_terminal<O: View>(
     }
 
     // 1. 同步读 keychain(主线程 OK)。OneKey server 会使用共享凭据 id。
-    let secret = match KeychainSecretStore.get(&secret_lookup_id, secret_kind) {
-        Ok(opt) => opt.unwrap_or_else(|| zeroize::Zeroizing::new(String::new())),
-        Err(e) => {
-            log::warn!("ssh keychain read failed (will continue without injection): {e}");
-            zeroize::Zeroizing::new(String::new())
+    // 2. 交给 askpass:ssh 自己要密码 / passphrase 时由 askpass 助手取,不再看终端输出。
+    match (askpass, KeychainSecretStore.get(&secret_lookup_id, secret_kind)) {
+        #[cfg(unix)]
+        (Some(askpass), Ok(Some(secret))) if !secret.is_empty() => {
+            askpass.serve(secret, warp_ssh_manager::askpass::SERVE_TIMEOUT);
         }
-    };
-
-    // 2. 注入器 spawn 必须在 execute_command 之前启动 — 否则 password prompt
-    //    在 spawn 之前已经飞过 broadcast,injector 拿不到。
-    let pty_reads_rx = terminal_view.read(ctx, |v, c| v.inactive_pty_reads_rx(c));
-    crate::ssh_manager::secret_injector::spawn_password_injector(
-        pty_reads_rx,
-        terminal_view.downgrade(),
-        secret,
-        ctx,
-    );
+        (_, Err(e)) => log::warn!("ssh keychain read failed (ssh will ask on the terminal): {e}"),
+        _ => {}
+    }
 
     // 启动命令注入器 — 等待 shell ready 后自动执行 startup_command
     if let Some(startup_cmd) =

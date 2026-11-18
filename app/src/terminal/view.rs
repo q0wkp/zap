@@ -2303,6 +2303,13 @@ pub struct SshSessionForSplit {
     directory: Option<RemoteDirectory>,
 }
 
+impl SshSessionForSplit {
+    /// Whether the new pane connects through the SSH manager, with the server's saved credentials.
+    pub fn is_ssh_manager(&self) -> bool {
+        matches!(self.connection, SshConnectionForSplit::SshManager(_))
+    }
+}
+
 #[derive(Clone, Debug)]
 enum SshConnectionForSplit {
     /// Run this `ssh` command line in the new pane's local shell.
@@ -2371,7 +2378,7 @@ pub struct TerminalView {
     onekey_search_editor: ViewHandle<EditorView>,
     /// 当前 OneKey 搜索框中的查询字符串,影响菜单 items 列表的过滤与排序。
     onekey_query: String,
-    /// `secret_injector` 起飞后到完成/超时之间为 true。OneKey listener 看到
+    /// su 密码注入器等待 / 注入期间为 true。OneKey listener 看到
     /// true 直接跳过,避免与自动注入同时弹菜单。
     ssh_secret_auto_injection_in_flight: bool,
     /// 检测到 su root 密码提示时暂存 root 密码,等待用户确认后注入。
@@ -7413,7 +7420,7 @@ impl TerminalView {
     }
 
     /// 暴露 PTY 输出广播接收端,给非录制订阅者用(目前是 SSH manager 的
-    /// SecretInjector,见 `app/src/ssh_manager/secret_injector.rs`)。返回
+    /// startup command 和 su 密码注入器)。返回
     /// `None` 表示当前会话不是 local TTY(wasm / 远端会话)。
     pub fn inactive_pty_reads_rx(
         &self,
@@ -15883,17 +15890,7 @@ impl TerminalView {
         self.close_context_menu(ctx, true);
     }
 
-    pub(crate) fn note_ssh_secret_auto_injected(&mut self, ctx: &mut ViewContext<Self>) {
-        self.onekey_last_prompt_at = Some(Instant::now());
-        if matches!(
-            self.context_menu_state.map(|state| state.menu_type),
-            Some(ContextMenuType::OneKeyPrompt)
-        ) {
-            self.close_context_menu(ctx, true);
-        }
-    }
-
-    /// 仅由 `secret_injector` 在起飞/结束时调用。详见字段文档。
+    /// 仅由 `su_password_injector` 在起飞/结束时调用。详见字段文档。
     pub(crate) fn set_ssh_secret_auto_injection_in_flight(&mut self, in_flight: bool) {
         self.ssh_secret_auto_injection_in_flight = in_flight;
     }

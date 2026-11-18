@@ -15218,6 +15218,7 @@ dependencies = [
  "dirs 6.0.0",
  "instant",
  "keyring",
+ "libc",
  "libsqlite3-sys",
  "log",
  "persistence",
