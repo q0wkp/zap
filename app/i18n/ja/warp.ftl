@@ -226,6 +226,14 @@ ai-block-remove-queued-prompt = キュー中のプロンプトを削除
 ai-block-send-now = 今すぐ送信
 ai-block-check-now =  · 今すぐ確認
 ai-block-check-now-tooltip = タイマーをスキップしてエージェントに今このコマンドを確認させる。
+ai-block-compaction-summary-compacting = 会話を圧縮しています…
+ai-block-compaction-summary-compacted = 会話を圧縮しました
+ai-block-compaction-summary-compacted-auto = 会話を自動的に圧縮しました
+ai-block-compaction-summary-stopped = 会話の圧縮が中断されました
+ai-block-show-full-output = { $lines ->
+    [0] 出力をすべて表示
+   *[other] 出力をすべて表示（残り { $lines } 行）
+}
 ai-block-resume-conversation = 会話を再開
 ai-block-continue-conversation = 会話を続ける
 ai-block-fork-conversation = 会話をフォーク
@@ -2467,6 +2475,10 @@ rewind-dialog-body = 巻き戻してもよろしいですか? コードと会話
 rewind-dialog-info = 巻き戻しは手動またはシェルコマンドで編集されたファイルには影響しません。
 rewind-dialog-cancel = キャンセル
 rewind-dialog-confirm = 巻き戻し
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = { $count } 行を個別のコマンドとして実行しますか?
+multiline-command-dialog-body = このシェルはブラケットペーストを使用していないため、各行を個別のコマンドとして順番に実行します。
+multiline-command-dialog-run = 実行
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)

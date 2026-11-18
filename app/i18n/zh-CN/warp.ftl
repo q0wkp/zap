@@ -268,6 +268,14 @@ ai-block-remove-queued-prompt = 移除排队提示
 ai-block-send-now = 立即发送
 ai-block-check-now =  · 立即检查
 ai-block-check-now-tooltip = 让智能体现在检查此命令，跳过计时器。
+ai-block-compaction-summary-compacting = 正在压缩对话…
+ai-block-compaction-summary-compacted = 对话已压缩
+ai-block-compaction-summary-compacted-auto = 对话已自动压缩
+ai-block-compaction-summary-stopped = 对话压缩已中止
+ai-block-show-full-output = { $lines ->
+    [0] 显示完整输出
+   *[other] 显示完整输出（还有 { $lines } 行）
+}
 ai-block-resume-conversation = 继续对话
 ai-block-continue-conversation = 继续对话
 ai-block-fork-conversation = Fork 对话
@@ -2488,6 +2496,10 @@ rewind-dialog-body = 确定要倒回吗？这会将你的代码和对话恢复�
 rewind-dialog-info = 倒回不会影响手动编辑或通过 shell 命令编辑的文件。
 rewind-dialog-cancel = 取消
 rewind-dialog-confirm = 倒回
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = 将 { $count } 行作为单独的命令运行？
+multiline-command-dialog-body = 此 shell 未使用括号粘贴模式（bracketed paste），因此会把每一行当作单独的命令依次运行。
+multiline-command-dialog-run = 运行
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # 搜索面板（app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs）

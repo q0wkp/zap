@@ -1426,6 +1426,13 @@ fn should_show_completions_in_ai_input(buffer_text: &str) -> bool {
     }
 }
 
+/// Whether `command` has more lines than `threshold`, the number of lines a command may have
+/// before running it in a shell without bracketed paste needs confirmation. A `threshold` of 0
+/// turns the confirmation off.
+fn exceeds_multiline_command_threshold(command: &str, threshold: usize) -> bool {
+    threshold > 0 && command.lines().count() > threshold
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DenyExecutionReason {
     /// Can't execute command because shell bootstrapping is still underway; shell isn't ready to
@@ -11905,54 +11912,12 @@ impl Input {
             }
 
             let command = self.get_command(ctx);
-            if !self.try_execute_command(&command, ctx) {
+            if self.maybe_confirm_multiline_command(&command, ctx) {
                 return;
             }
-
-            if FeatureFlag::AgentMode.is_enabled()
-                && AISettings::as_ref(ctx).is_ai_autodetection_enabled(ctx)
-            {
-                self.ai_input_model.update(ctx, |input, ctx| {
-                    input.abort_in_progress_detection();
-
-                    // The default input state after executing a shell command is Shell mode with
-                    // autodetection enabled.
-                    input.set_input_config_for_classic_mode(
-                        InputConfig {
-                            input_type: InputType::Shell,
-                            is_locked: true,
-                        }
-                        .unlocked_if_autodetection_enabled(false, ctx),
-                        ctx,
-                    );
-                });
+            if !self.execute_submitted_command(&command, ctx) {
+                return;
             }
-
-            // Cancel actively streaming conversations if we're able to run the command.
-            // This is possible in persistent input mode.
-            self.ai_controller.update(ctx, |controller, ctx| {
-                let active_conversation_id = BlocklistAIHistoryModel::as_ref(ctx)
-                    .active_conversation(self.terminal_view_id)
-                    .filter(|conversation| conversation.status().is_in_progress())
-                    .map(|conversation| conversation.id());
-                if let Some(active_conversation_id) = active_conversation_id {
-                    controller.cancel_conversation_progress(
-                        active_conversation_id,
-                        CancellationReason::UserCommandExecuted,
-                        ctx,
-                    );
-                }
-            });
-
-            self.ai_input_model.update(ctx, |model, ctx| {
-                model.handle_input_buffer_submitted(ctx);
-            });
-
-            if SyncedInputState::as_ref(ctx).is_syncing_any_inputs(ctx.window_id()) {
-                ctx.emit(Event::SyncInput(SyncInputType::RanCommand));
-            }
-
-            self.model.lock().set_is_input_dirty(false);
         }
 
         AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
@@ -11960,6 +11925,98 @@ impl Input {
             ai_settings.mark_quota_banner_as_dismissed(ctx);
             ctx.notify();
         });
+    }
+
+    /// Runs `command`, submitted from the input buffer, as a shell command, and resets the input
+    /// for the next one. Returns `false` if the command could not be run.
+    fn execute_submitted_command(&mut self, command: &str, ctx: &mut ViewContext<Self>) -> bool {
+        if !self.try_execute_command(command, ctx) {
+            return false;
+        }
+
+        if FeatureFlag::AgentMode.is_enabled()
+            && AISettings::as_ref(ctx).is_ai_autodetection_enabled(ctx)
+        {
+            self.ai_input_model.update(ctx, |input, ctx| {
+                input.abort_in_progress_detection();
+
+                // The default input state after executing a shell command is Shell mode with
+                // autodetection enabled.
+                input.set_input_config_for_classic_mode(
+                    InputConfig {
+                        input_type: InputType::Shell,
+                        is_locked: true,
+                    }
+                    .unlocked_if_autodetection_enabled(false, ctx),
+                    ctx,
+                );
+            });
+        }
+
+        // Cancel actively streaming conversations if we're able to run the command.
+        // This is possible in persistent input mode.
+        self.ai_controller.update(ctx, |controller, ctx| {
+            let active_conversation_id = BlocklistAIHistoryModel::as_ref(ctx)
+                .active_conversation(self.terminal_view_id)
+                .filter(|conversation| conversation.status().is_in_progress())
+                .map(|conversation| conversation.id());
+            if let Some(active_conversation_id) = active_conversation_id {
+                controller.cancel_conversation_progress(
+                    active_conversation_id,
+                    CancellationReason::UserCommandExecuted,
+                    ctx,
+                );
+            }
+        });
+
+        self.ai_input_model.update(ctx, |model, ctx| {
+            model.handle_input_buffer_submitted(ctx);
+        });
+
+        if SyncedInputState::as_ref(ctx).is_syncing_any_inputs(ctx.window_id()) {
+            ctx.emit(Event::SyncInput(SyncInputType::RanCommand));
+        }
+
+        self.model.lock().set_is_input_dirty(false);
+        true
+    }
+
+    /// If `command` is long and the shell would run each of its lines as a separate command (it
+    /// isn't using bracketed paste), asks the user to confirm it first and returns `true`. The
+    /// buffer stays as it is until the user answers.
+    fn maybe_confirm_multiline_command(&self, command: &str, ctx: &mut ViewContext<Self>) -> bool {
+        let threshold = *InputSettings::as_ref(ctx).multiline_command_confirmation_threshold;
+        if !exceeds_multiline_command_threshold(command, threshold)
+            || self.can_execute_command(ctx).is_no()
+        {
+            return false;
+        }
+        let shell_uses_bracketed_paste = self
+            .model
+            .lock()
+            .block_list()
+            .active_block()
+            .needs_bracketed_paste();
+        if shell_uses_bracketed_paste {
+            return false;
+        }
+        ctx.dispatch_typed_action(&WorkspaceAction::ShowMultilineCommandConfirmationDialog {
+            terminal_view_id: self.terminal_view_id,
+            line_count: command.lines().count(),
+        });
+        true
+    }
+
+    /// Runs the buffer the user confirmed in the multi-line command dialog.
+    pub(crate) fn run_confirmed_multiline_command(&mut self, ctx: &mut ViewContext<Self>) {
+        let command = self.get_command(ctx);
+        if self.execute_submitted_command(&command, ctx) {
+            // As after a command run with Enter, don't show the quota banner any more.
+            AISettings::handle(ctx).update(ctx, |ai_settings, ctx| {
+                ai_settings.mark_quota_banner_as_dismissed(ctx);
+                ctx.notify();
+            });
+        }
     }
 
     fn input_cmd_enter(&mut self, ctx: &mut ViewContext<Self>) {

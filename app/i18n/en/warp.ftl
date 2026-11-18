@@ -273,6 +273,14 @@ ai-block-remove-queued-prompt = Remove queued prompt
 ai-block-send-now = Send now
 ai-block-check-now =  · Check now
 ai-block-check-now-tooltip = Ask the agent to check this command now, skipping its timer.
+ai-block-compaction-summary-compacting = Compacting conversation…
+ai-block-compaction-summary-compacted = Conversation compacted
+ai-block-compaction-summary-compacted-auto = Conversation compacted automatically
+ai-block-compaction-summary-stopped = Conversation compaction stopped
+ai-block-show-full-output = { $lines ->
+    [0] Show full output
+   *[other] Show full output ({ $lines } more lines)
+}
 ai-block-resume-conversation = Resume conversation
 ai-block-continue-conversation = Continue conversation
 ai-block-fork-conversation = Fork conversation
@@ -2562,6 +2570,10 @@ rewind-dialog-body = Are you sure you want to rewind? This will restore your cod
 rewind-dialog-info = Rewinding does not affect files edited manually or via shell commands.
 rewind-dialog-cancel = Cancel
 rewind-dialog-confirm = Rewind
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = Run { $count } lines as separate commands?
+multiline-command-dialog-body = This shell isn't using bracketed paste, so it will run each line as its own command, one after another.
+multiline-command-dialog-run = Run
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)

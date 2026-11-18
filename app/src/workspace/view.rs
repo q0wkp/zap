@@ -388,6 +388,10 @@ use super::delete_conversation_confirmation_dialog::{
     DeleteConversationConfirmationDialog, DeleteConversationConfirmationEvent,
     DeleteConversationDialogSource,
 };
+use super::multiline_command_confirmation_dialog::{
+    MultilineCommandConfirmationDialog, MultilineCommandConfirmationEvent,
+    MultilineCommandConfirmationSource,
+};
 use super::native_modal::{NativeModal, NativeModalEvent};
 use super::one_time_modal_model::OneTimeModalEvent;
 use super::rewind_confirmation_dialog::{
@@ -922,6 +926,7 @@ pub struct Workspace {
     close_session_confirmation_dialog: ViewHandle<CloseSessionConfirmationDialog>,
     rewind_confirmation_dialog: ViewHandle<RewindConfirmationDialog>,
     delete_conversation_confirmation_dialog: ViewHandle<DeleteConversationConfirmationDialog>,
+    multiline_command_confirmation_dialog: ViewHandle<MultilineCommandConfirmationDialog>,
     resource_center_view: ViewHandle<ResourceCenterView>,
     command_search_view: ViewHandle<CommandSearchView>,
     autoupdate_unable_to_update_banner_dismissed: bool,
@@ -1658,6 +1663,21 @@ impl Workspace {
         );
 
         delete_conversation_confirmation_dialog
+    }
+
+    fn build_multiline_command_confirmation_dialog(
+        ctx: &mut ViewContext<Self>,
+    ) -> ViewHandle<MultilineCommandConfirmationDialog> {
+        let multiline_command_confirmation_dialog =
+            ctx.add_typed_action_view(MultilineCommandConfirmationDialog::new);
+        ctx.subscribe_to_view(
+            &multiline_command_confirmation_dialog,
+            move |me, _, event, ctx| {
+                me.handle_multiline_command_confirmation_dialog_event(event, ctx);
+            },
+        );
+
+        multiline_command_confirmation_dialog
     }
 
     fn build_native_modal_view(ctx: &mut ViewContext<Self>) -> ViewHandle<NativeModal> {
@@ -2548,6 +2568,8 @@ impl Workspace {
         let rewind_confirmation_dialog = Self::build_rewind_confirmation_dialog(ctx);
         let delete_conversation_confirmation_dialog =
             Self::build_delete_conversation_confirmation_dialog(ctx);
+        let multiline_command_confirmation_dialog =
+            Self::build_multiline_command_confirmation_dialog(ctx);
         let command_search_view = ctx.add_typed_action_view(CommandSearchView::new);
         ctx.subscribe_to_view(&command_search_view, |me, _, event, ctx| {
             me.handle_command_search_event(event, ctx);
@@ -2907,6 +2929,7 @@ impl Workspace {
             close_session_confirmation_dialog,
             rewind_confirmation_dialog,
             delete_conversation_confirmation_dialog,
+            multiline_command_confirmation_dialog,
             resource_center_view,
             command_search_view,
             autoupdate_unable_to_update_banner_dismissed: false,
@@ -9402,6 +9425,44 @@ impl Workspace {
         }
     }
 
+    fn handle_multiline_command_confirmation_dialog_event(
+        &mut self,
+        event: &MultilineCommandConfirmationEvent,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        self.current_workspace_state
+            .is_multiline_command_confirmation_dialog_open = false;
+        let (terminal_view_id, run) = match event {
+            MultilineCommandConfirmationEvent::Confirm { terminal_view_id } => {
+                (Some(*terminal_view_id), true)
+            }
+            MultilineCommandConfirmationEvent::Cancel { terminal_view_id } => {
+                (Some(*terminal_view_id), false)
+            }
+            MultilineCommandConfirmationEvent::Dismiss => (None, false),
+        };
+        let input = terminal_view_id.and_then(|terminal_view_id| {
+            ctx.views_of_type::<TerminalView>(ctx.window_id())
+                .and_then(|terminal_views| {
+                    terminal_views.into_iter().find(|terminal_view| {
+                        terminal_view.as_ref(ctx).view_id() == terminal_view_id
+                    })
+                })
+                .map(|terminal_view| terminal_view.as_ref(ctx).input().clone())
+        });
+        self.focus_active_tab(ctx);
+        if let Some(input) = input {
+            input.update(ctx, |input, ctx| {
+                if run {
+                    input.run_confirmed_multiline_command(ctx);
+                } else {
+                    input.focus_input_box(ctx);
+                }
+            });
+        }
+        ctx.notify();
+    }
+
     pub fn handle_network_status_event(
         &mut self,
         _handle: ModelHandle<NetworkStatus>,
@@ -14678,6 +14739,11 @@ impl Workspace {
                 .is_rewind_confirmation_dialog_open
             {
                 ctx.focus(&self.rewind_confirmation_dialog);
+            } else if self
+                .current_workspace_state
+                .is_multiline_command_confirmation_dialog_open
+            {
+                ctx.focus(&self.multiline_command_confirmation_dialog);
             } else if self.current_workspace_state.is_native_quit_modal_open {
                 ctx.focus(&self.native_modal);
             } else {
@@ -14811,6 +14877,21 @@ impl Workspace {
         self.current_workspace_state
             .is_rewind_confirmation_dialog_open = true;
         ctx.focus(&self.rewind_confirmation_dialog);
+        ctx.notify();
+    }
+
+    pub fn show_multiline_command_confirmation_dialog(
+        &mut self,
+        source: MultilineCommandConfirmationSource,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        self.multiline_command_confirmation_dialog
+            .update(ctx, |view, _| {
+                view.set_source(source);
+            });
+        self.current_workspace_state
+            .is_multiline_command_confirmation_dialog_open = true;
+        ctx.focus(&self.multiline_command_confirmation_dialog);
         ctx.notify();
     }
 
@@ -20449,6 +20530,18 @@ impl TypedActionView for Workspace {
                     ctx,
                 );
             }
+            ShowMultilineCommandConfirmationDialog {
+                terminal_view_id,
+                line_count,
+            } => {
+                self.show_multiline_command_confirmation_dialog(
+                    MultilineCommandConfirmationSource {
+                        terminal_view_id: *terminal_view_id,
+                        line_count: *line_count,
+                    },
+                    ctx,
+                );
+            }
             ExecuteRewindAIConversation {
                 ai_block_view_id,
                 exchange_id,
@@ -21555,6 +21648,21 @@ impl View for Workspace {
         {
             stack.add_positioned_overlay_child(
                 ChildView::new(&self.delete_conversation_confirmation_dialog).finish(),
+                OffsetPositioning::offset_from_parent(
+                    Vector2F::zero(),
+                    ParentOffsetBounds::WindowByPosition,
+                    ParentAnchor::Center,
+                    ChildAnchor::Center,
+                ),
+            );
+        }
+
+        if self
+            .current_workspace_state
+            .is_multiline_command_confirmation_dialog_open
+        {
+            stack.add_positioned_overlay_child(
+                ChildView::new(&self.multiline_command_confirmation_dialog).finish(),
                 OffsetPositioning::offset_from_parent(
                     Vector2F::zero(),
                     ParentOffsetBounds::WindowByPosition,

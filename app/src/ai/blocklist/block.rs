@@ -347,6 +347,10 @@ pub(super) struct AIBlockStateHandles {
     /// reset every frame if we built the handle inline.
     image_section_tooltip_handles: Vec<MouseStateHandle>,
 
+    /// Whether the user asked to see the whole answer, past the length that is rendered at first.
+    show_full_output: bool,
+    show_full_output_button: MouseStateHandle,
+
     /// Only applies to text selections made at the `AIBlock` level. Child views of the `AIBlock`
     /// are responsible for managing their own text selection states.
     selection_handle: SelectionHandle,
@@ -1865,8 +1869,26 @@ impl AIBlock {
                 .or_default();
         }
 
+        let is_streaming = self.model.status(ctx).is_streaming();
+
         // Register element state for reasoning messages and track summarization timing.
         for message in &output.messages {
+            // A BYOP compaction summary shows as a marker that starts collapsed.
+            if matches!(&message.message, AIAgentOutputMessageType::Text(_))
+                && self
+                    .model
+                    .compaction_summary_marker(&message.id, is_streaming, ctx)
+                    .is_some()
+            {
+                self.collapsible_block_states
+                    .entry(message.id.clone())
+                    .or_insert_with(|| CollapsibleElementState {
+                        expansion_state: CollapsibleExpansionState::Collapsed,
+                        ..Default::default()
+                    })
+                    .sync_finished_state(!is_streaming);
+            }
+
             if let AIAgentOutputMessageType::Reasoning {
                 finished_duration, ..
             } = &message.message
@@ -5228,6 +5250,9 @@ pub enum AIBlockAction {
 
     CopyAIBlockCodeSnippet(String),
 
+    /// Show the whole answer, past the length that is rendered at first.
+    ShowFullOutput,
+
     /// Continue the conversation using this response
     ContinueConversation,
 
@@ -5430,6 +5455,10 @@ impl TypedActionView for AIBlock {
             }
             AIBlockAction::CopyOnSelect(selection) => {
                 self.maybe_copy_on_select(selection.clone(), ctx);
+            }
+            AIBlockAction::ShowFullOutput => {
+                self.state_handles.show_full_output = true;
+                ctx.notify();
             }
             AIBlockAction::CopyAIBlockCodeSnippet(text) => {
                 ctx.clipboard()

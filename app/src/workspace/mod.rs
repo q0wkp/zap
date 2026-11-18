@@ -12,6 +12,7 @@ pub mod header_toolbar_item;
 pub mod hoa_onboarding;
 mod home;
 mod lightbox_view;
+pub mod multiline_command_confirmation_dialog;
 mod native_modal;
 mod one_time_modal_model;
 mod registry;
@@ -110,6 +111,7 @@ pub fn init(app: &mut AppContext) {
     lightbox_view::init(app);
     rewind_confirmation_dialog::init(app);
     delete_conversation_confirmation_dialog::init(app);
+    multiline_command_confirmation_dialog::init(app);
     crate::tab_configs::remove_confirmation_dialog::init(app);
     hoa_onboarding::init(app);
     tab_configs::session_config_modal::init(app);

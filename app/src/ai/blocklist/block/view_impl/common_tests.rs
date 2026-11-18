@@ -10,11 +10,11 @@ use warpui::App;
 use super::{blocklist_image_asset_source, ResolvedBlocklistImageSources};
 use super::{
     collect_visual_markdown_lightbox_collection, compute_visual_section_width,
-    display_query_without_context_references, inline_image_source_label,
+    display_query_without_context_references, find_output_cut, inline_image_source_label,
     is_supported_blocklist_image_source, lightbox_trigger_for_section, query_context_references,
     query_prefix_highlight_len, render_scrollable_collapsible_content,
     should_render_query_and_header, text_sections_with_indices, CollapsibleElementState,
-    CollapsibleExpansionState, QueryContextReference, VisualMarkdownLightboxCollection,
+    CollapsibleExpansionState, OutputCut, QueryContextReference, VisualMarkdownLightboxCollection,
 };
 use crate::{
     ai::agent::{
@@ -145,6 +145,100 @@ fn display_query_without_context_references_removes_chip_text() {
             &references,
         ),
         "/agent compare with now"
+    );
+}
+
+/// A text section of `lines` lines, "line 0" to "line {lines - 1}".
+fn plain_text_section(lines: usize) -> AIAgentTextSection {
+    AIAgentTextSection::PlainText {
+        text: (0..lines)
+            .map(|line| format!("line {line}"))
+            .join("\n")
+            .into(),
+    }
+}
+
+fn code_section(code: &str) -> AIAgentTextSection {
+    AIAgentTextSection::Code {
+        code: code.to_string(),
+        language: None,
+        source: None,
+    }
+}
+
+#[test]
+fn find_output_cut_is_none_when_the_output_fits() {
+    let sections = vec![
+        plain_text_section(3),
+        code_section("a\nb"),
+        plain_text_section(2),
+    ];
+    assert_eq!(find_output_cut(&sections, 7, 1024), None);
+}
+
+#[test]
+fn find_output_cut_cuts_text_between_lines() {
+    let sections = vec![
+        plain_text_section(3),
+        plain_text_section(5),
+        plain_text_section(4),
+    ];
+    assert_eq!(
+        find_output_cut(&sections, 6, 1024),
+        Some(OutputCut {
+            section_offset: 1,
+            kept_lines: 3,
+            hidden_lines: 2 + 4,
+        })
+    );
+}
+
+#[test]
+fn find_output_cut_hides_the_sections_after_the_limit() {
+    let sections = vec![
+        plain_text_section(3),
+        code_section("a\nb"),
+        plain_text_section(2),
+    ];
+    assert_eq!(
+        find_output_cut(&sections, 3, 1024),
+        Some(OutputCut {
+            section_offset: 1,
+            kept_lines: 0,
+            hidden_lines: 2 + 2,
+        })
+    );
+}
+
+#[test]
+fn find_output_cut_shows_a_code_section_whole() {
+    let code = (0..10).map(|line| line.to_string()).join("\n");
+    let sections = vec![
+        plain_text_section(1),
+        code_section(&code),
+        plain_text_section(2),
+    ];
+    assert_eq!(
+        find_output_cut(&sections, 3, 1024),
+        Some(OutputCut {
+            section_offset: 2,
+            kept_lines: 0,
+            hidden_lines: 2,
+        })
+    );
+}
+
+#[test]
+fn find_output_cut_limits_bytes() {
+    // Each line, "line N" and its line break, counts for 7 bytes.
+    let sections = vec![plain_text_section(10)];
+    assert_eq!(
+        find_output_cut(&sections, 100, 14),
+        Some(OutputCut {
+            section_offset: 0,
+            kept_lines: 2,
+            hidden_lines: 8,
+        })
     );
 }
 

@@ -271,6 +271,14 @@ ai-block-remove-queued-prompt = Удалить промпт из очереди
 ai-block-send-now = Отправить сейчас
 ai-block-check-now =  · Проверить сейчас
 ai-block-check-now-tooltip = Попросить агента проверить эту команду сейчас, минуя таймер.
+ai-block-compaction-summary-compacting = Сжатие разговора…
+ai-block-compaction-summary-compacted = Разговор сжат
+ai-block-compaction-summary-compacted-auto = Разговор сжат автоматически
+ai-block-compaction-summary-stopped = Сжатие разговора прервано
+ai-block-show-full-output = { $lines ->
+    [0] Показать весь вывод
+   *[other] Показать весь вывод (ещё строк: { $lines })
+}
 ai-block-resume-conversation = Возобновить диалог
 ai-block-continue-conversation = Продолжить диалог
 ai-block-fork-conversation = Ответвить диалог
@@ -2548,6 +2556,10 @@ rewind-dialog-body = Вы уверены, что хотите выполнить
 rewind-dialog-info = Откат не затрагивает файлы, измененные вручную или через команды shell.
 rewind-dialog-cancel = Отмена
 rewind-dialog-confirm = Откатить
+# Multi-line command confirmation dialog (app/src/workspace/multiline_command_confirmation_dialog.rs)
+multiline-command-dialog-title = Выполнить { $count } строк как отдельные команды?
+multiline-command-dialog-body = Эта оболочка не использует bracketed paste, поэтому выполнит каждую строку как отдельную команду, одну за другой.
+multiline-command-dialog-run = Выполнить
 
 # --- ANCHOR-SUB-SEARCH-PALETTES ---
 # Search palettes (app/src/search/command_palette/view.rs, app/src/search/welcome_palette/view.rs)

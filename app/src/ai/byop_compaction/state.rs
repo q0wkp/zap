@@ -132,6 +132,21 @@ impl CompactionState {
         &self.completed
     }
 
+    /// How the compaction whose summary is the assistant message `msg_id` was triggered, if
+    /// that message is the summary of a completed compaction.
+    pub fn summary_trigger(&self, msg_id: &str) -> Option<CompactionTrigger> {
+        self.completed
+            .iter()
+            .find(|c| c.assistant_msg_id == msg_id)
+            .map(|c| {
+                if c.auto {
+                    CompactionTrigger::Auto
+                } else {
+                    CompactionTrigger::Manual
+                }
+            })
+    }
+
     /// 所有应在拼请求时跳过的 message id(对齐 opencode `hidden`):
     /// 已完成压缩的每个区间的 head_message_ids + user_msg_id + assistant_msg_id。
     ///
@@ -225,6 +240,18 @@ mod state_tests {
         }"#;
         let c: CompletedCompaction = serde_json::from_str(json).unwrap();
         assert!(c.head_message_ids.is_empty());
+    }
+
+    #[test]
+    fn summary_trigger_finds_the_summary_message() {
+        let mut s = CompactionState::default();
+        s.push_completed(cc("u1", "a1", false));
+        s.push_completed(cc("u2", "a2", true));
+        assert_eq!(s.summary_trigger("a1"), Some(CompactionTrigger::Manual));
+        assert_eq!(s.summary_trigger("a2"), Some(CompactionTrigger::Auto));
+        // The trigger message and unrelated messages are not summaries.
+        assert_eq!(s.summary_trigger("u1"), None);
+        assert_eq!(s.summary_trigger("other"), None);
     }
 
     #[test]

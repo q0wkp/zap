@@ -110,7 +110,7 @@ use warp_core::channel::ChannelState;
 use super::common::{
     format_elapsed_seconds, render_debug_footer, render_failed_output, render_informational_footer,
     render_output_status_text, render_scrollable_collapsible_content, render_text_sections,
-    DebugFooterProps, FailedOutputProps, FindContext, TextSectionsProps,
+    DebugFooterProps, FailedOutputProps, FindContext, OutputLengthCap, TextSectionsProps,
     STATUS_FOOTER_VERTICAL_PADDING, STATUS_ICON_SIZE_DELTA,
 };
 use super::imported_comments::render_imported_comments;
@@ -276,6 +276,10 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                     AIBlockAction::CopyAIBlockCodeSnippet(snippet)
                 }
 
+                fn show_full_output_action() -> AIBlockAction {
+                    AIBlockAction::ShowFullOutput
+                }
+
                 for output_message in output.messages.iter() {
                     match &output_message.message {
                         // Skip rendering text and reasoning sections if this is a passive conversation.
@@ -288,6 +292,29 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                         AIAgentOutputMessageType::Text(AIAgentText { sections })
                             if !are_all_text_sections_empty(sections) =>
                         {
+                            // A BYOP compaction summary is not the agent's answer: show it as a
+                            // collapsed marker that expands to the summary.
+                            if let Some(marker) = props.model.compaction_summary_marker(
+                                &output_message.id,
+                                status.is_streaming(),
+                                app,
+                            ) {
+                                if let Some(element) = render_collapsible_block(
+                                    output_message,
+                                    marker.header_text(),
+                                    sections,
+                                    true,
+                                    props,
+                                    &mut has_rendered_first_text_section,
+                                    &mut text_section_index,
+                                    &mut code_section_index,
+                                    app,
+                                ) {
+                                    output_items.add_child(element);
+                                    continue;
+                                }
+                            }
+
                             let theme = appearance.theme();
                             let text_color = blended_colors::text_main(theme, theme.surface_1());
 
@@ -332,6 +359,14 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                                     resolved_blocklist_image_sources: Some(
                                         props.resolved_blocklist_image_sources,
                                     ),
+                                    length_cap: Some(OutputLengthCap {
+                                        show_full_output: props.state_handles.show_full_output,
+                                        show_full_output_action_factory: &show_full_output_action,
+                                        button_mouse_state: props
+                                            .state_handles
+                                            .show_full_output_button
+                                            .clone(),
+                                    }),
                                 },
                                 app,
                             );
@@ -2992,6 +3027,7 @@ fn render_collapsible_text_block_section(
             resolved_code_block_paths: Some(props.resolved_code_block_paths),
             #[cfg(feature = "local_fs")]
             resolved_blocklist_image_sources: Some(props.resolved_blocklist_image_sources),
+            length_cap: None,
         },
         app,
     );
