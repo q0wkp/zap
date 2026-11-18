@@ -45,7 +45,8 @@ use crate::settings::{
     AliasExpansionEnabled, AliasExpansionSettings, AppEditorSettings, AtContextMenuInTerminalMode,
     AutocompleteSymbols, AutosuggestionKeybindingHint, CodeSettings, CommandCorrections,
     CompletionsOpenWhileTyping, CopyOnSelect, CtrlTabBehavior, DefaultSessionMode,
-    EnableSshAutoDiscovery, EnableSlashCommandsInTerminal, EnableSshWrapper,
+    DefaultSshKeepalive, EnableSshAutoDiscovery, EnableSlashCommandsInTerminal, EnableSshWrapper,
+    SplitPaneOnSameSshHost,
     ErrorUnderliningEnabled, ExtraMetaKeys,
     GPUSettings, GlobalHotkeyMode, InputSettings, InputSettingsChangedEvent,
     LinuxSelectionClipboard, MiddleClickPasteEnabled, MouseScrollMultiplier, PreferLowPowerGPU,
@@ -395,6 +396,24 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     ));
 
     toggle_binding_pairs.push(ToggleSettingActionPair::new(
+        &crate::t!("toggle-suffix-ssh-keepalive"),
+        builder(SettingsAction::FeaturesPageToggle(
+            FeaturesPageAction::ToggleSshDefaultKeepalive,
+        )),
+        context,
+        flags::SSH_DEFAULT_KEEPALIVE_CONTEXT_FLAG,
+    ));
+
+    toggle_binding_pairs.push(ToggleSettingActionPair::new(
+        &crate::t!("toggle-suffix-split-pane-on-same-ssh-host"),
+        builder(SettingsAction::FeaturesPageToggle(
+            FeaturesPageAction::ToggleSplitPaneOnSameSshHost,
+        )),
+        context,
+        flags::SPLIT_PANE_ON_SAME_SSH_HOST_CONTEXT_FLAG,
+    ));
+
+    toggle_binding_pairs.push(ToggleSettingActionPair::new(
         &crate::t!("toggle-suffix-link-tooltip"),
         builder(SettingsAction::FeaturesPageToggle(
             FeaturesPageAction::ToggleLinkTooltip,
@@ -658,6 +677,8 @@ pub enum FeaturesPageAction {
     #[deprecated]
     ToggleSshWrapper,
     ToggleSshAutoDiscovery,
+    ToggleSshDefaultKeepalive,
+    ToggleSplitPaneOnSameSshHost,
     ToggleSnackbar,
     ToggleLinkTooltip,
     ToggleCompletionsOpenWhileTyping,
@@ -855,6 +876,14 @@ impl FeaturesPageAction {
             Self::ToggleSshAutoDiscovery => TelemetryEvent::FeaturesPageAction {
                 action: "ToggleSshAutoDiscovery".to_string(),
                 value: to_string(*ssh_settings.enable_ssh_auto_discovery.value()),
+            },
+            Self::ToggleSshDefaultKeepalive => TelemetryEvent::FeaturesPageAction {
+                action: "ToggleSshDefaultKeepalive".to_string(),
+                value: to_string(*ssh_settings.default_keepalive.value()),
+            },
+            Self::ToggleSplitPaneOnSameSshHost => TelemetryEvent::FeaturesPageAction {
+                action: "ToggleSplitPaneOnSameSshHost".to_string(),
+                value: to_string(*ssh_settings.split_pane_on_same_host.value()),
             },
             Self::SetGlobalHotkeyMode(mode) => TelemetryEvent::FeaturesPageAction {
                 action: "SetGlobalHotkeyMode".to_string(),
@@ -1425,6 +1454,18 @@ impl TypedActionView for FeaturesPageView {
                 SshSettings::handle(ctx).update(ctx, |ssh_settings, ctx| {
                     report_if_error!(ssh_settings
                         .enable_ssh_auto_discovery
+                        .toggle_and_save_value(ctx));
+                });
+            }
+            ToggleSshDefaultKeepalive => {
+                SshSettings::handle(ctx).update(ctx, |ssh_settings, ctx| {
+                    report_if_error!(ssh_settings.default_keepalive.toggle_and_save_value(ctx));
+                });
+            }
+            ToggleSplitPaneOnSameSshHost => {
+                SshSettings::handle(ctx).update(ctx, |ssh_settings, ctx| {
+                    report_if_error!(ssh_settings
+                        .split_pane_on_same_host
                         .toggle_and_save_value(ctx));
                 });
             }
@@ -2610,6 +2651,20 @@ impl FeaturesPageView {
             .is_supported_on_current_platform()
         {
             session_widgets.push(Box::new(SSHAutoDiscoveryWidget::default()));
+        }
+
+        if SshSettings::as_ref(ctx)
+            .default_keepalive
+            .is_supported_on_current_platform()
+        {
+            session_widgets.push(Box::new(SshKeepaliveWidget::default()));
+        }
+
+        if SshSettings::as_ref(ctx)
+            .split_pane_on_same_host
+            .is_supported_on_current_platform()
+        {
+            session_widgets.push(Box::new(SplitPaneOnSameSshHostWidget::default()));
         }
 
         let session_settings = SessionSettings::as_ref(ctx);
@@ -5050,6 +5105,100 @@ impl SettingsWidget for SSHAutoDiscoveryWidget {
                 })
                 .finish(),
             None,
+        )
+    }
+}
+
+#[derive(Default)]
+struct SshKeepaliveWidget {
+    switch_state: SwitchStateHandle,
+}
+
+impl SettingsWidget for SshKeepaliveWidget {
+    type View = FeaturesPageView;
+
+    fn search_terms(&self) -> &str {
+        "ssh keepalive idle connection timeout"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let ui_builder = appearance.ui_builder();
+        render_body_item::<FeaturesPageAction>(
+            crate::t!("settings-features-ssh-keepalive"),
+            None,
+            LocalOnlyIconState::for_setting(
+                DefaultSshKeepalive::storage_key(),
+                DefaultSshKeepalive::sync_to_cloud(),
+                &mut view
+                    .button_mouse_states
+                    .local_only_icon_tooltip_states
+                    .borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            ui_builder
+                .switch(self.switch_state.clone())
+                .check(*SshSettings::as_ref(app).default_keepalive.value())
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(FeaturesPageAction::ToggleSshDefaultKeepalive);
+                })
+                .finish(),
+            Some(crate::t!("settings-features-ssh-keepalive-description")),
+        )
+    }
+}
+
+#[derive(Default)]
+struct SplitPaneOnSameSshHostWidget {
+    switch_state: SwitchStateHandle,
+}
+
+impl SettingsWidget for SplitPaneOnSameSshHostWidget {
+    type View = FeaturesPageView;
+
+    fn search_terms(&self) -> &str {
+        "ssh split pane same host"
+    }
+
+    fn render(
+        &self,
+        view: &Self::View,
+        appearance: &Appearance,
+        app: &AppContext,
+    ) -> Box<dyn Element> {
+        let ui_builder = appearance.ui_builder();
+        render_body_item::<FeaturesPageAction>(
+            crate::t!("settings-features-split-pane-on-same-ssh-host"),
+            None,
+            LocalOnlyIconState::for_setting(
+                SplitPaneOnSameSshHost::storage_key(),
+                SplitPaneOnSameSshHost::sync_to_cloud(),
+                &mut view
+                    .button_mouse_states
+                    .local_only_icon_tooltip_states
+                    .borrow_mut(),
+                app,
+            ),
+            ToggleState::Enabled,
+            appearance,
+            ui_builder
+                .switch(self.switch_state.clone())
+                .check(*SshSettings::as_ref(app).split_pane_on_same_host.value())
+                .build()
+                .on_click(move |ctx, _, _| {
+                    ctx.dispatch_typed_action(FeaturesPageAction::ToggleSplitPaneOnSameSshHost);
+                })
+                .finish(),
+            Some(crate::t!(
+                "settings-features-split-pane-on-same-ssh-host-description"
+            )),
         )
     }
 }

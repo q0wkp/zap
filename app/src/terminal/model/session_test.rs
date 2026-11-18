@@ -5,7 +5,9 @@ use warpui::{
     TypedActionView, View, ViewContext,
 };
 
-use super::{SessionId, Sessions, SessionsEvent};
+use super::{BootstrapSessionType, SessionId, SessionInfo, Sessions, SessionsEvent};
+use crate::terminal::model::terminal_model::SubshellInitializationInfo;
+use crate::terminal::ssh::util::parse_interactive_ssh_command;
 
 struct TestView {
     events: Vec<SessionsEvent>,
@@ -99,4 +101,57 @@ fn test_set_env_var_emits_no_event_when_no_change() {
             assert_eq!(view.events.len(), 1);
         });
     });
+}
+
+#[test]
+fn local_ssh_command_follows_the_session_tree() {
+    let subshell_info = |command: &str| SubshellInitializationInfo {
+        spawning_command: command.to_owned(),
+        was_triggered_by_rc_file_snippet: false,
+        env_var_collection_name: None,
+        ssh_connection_info: parse_interactive_ssh_command(command),
+    };
+    let remote = |id: u64, spawning_session_id: u64| SessionInfo {
+        session_type: BootstrapSessionType::WarpifiedRemote,
+        spawning_session_id: Some(SessionId::from(spawning_session_id)),
+        ..SessionInfo::new_for_test().with_id(id)
+    };
+
+    let mut sessions = Sessions::new_for_test();
+    sessions.register_session_for_test(SessionInfo::new_for_test().with_id(1));
+    // `ssh` run through the SSH wrapper in the local session.
+    sessions.register_session_for_test(SessionInfo {
+        ssh_wrapper_command: Some("ssh -p 2222 me@a".to_owned()),
+        ..remote(2, 1)
+    });
+    // A subshell inside it, e.g. `sudo -s`.
+    sessions.register_session_for_test(SessionInfo {
+        subshell_info: Some(subshell_info("sudo -s")),
+        ..remote(3, 2)
+    });
+    // A nested `ssh` from the remote host.
+    sessions.register_session_for_test(SessionInfo {
+        subshell_info: Some(subshell_info("ssh b")),
+        ..remote(4, 3)
+    });
+    // `ssh` warpified as a subshell from the local session.
+    sessions.register_session_for_test(SessionInfo {
+        subshell_info: Some(subshell_info("ssh c")),
+        ..remote(5, 1)
+    });
+    // A local subshell.
+    sessions.register_session_for_test(SessionInfo {
+        subshell_info: Some(subshell_info("bash")),
+        spawning_session_id: Some(SessionId::from(1)),
+        ..SessionInfo::new_for_test().with_id(6)
+    });
+
+    let command = |id: u64| sessions.local_ssh_command(SessionId::from(id));
+    assert_eq!(command(1), None);
+    assert_eq!(command(2).as_deref(), Some("ssh -p 2222 me@a"));
+    assert_eq!(command(3).as_deref(), Some("ssh -p 2222 me@a"));
+    assert_eq!(command(4), None);
+    assert_eq!(command(5).as_deref(), Some("ssh c"));
+    assert_eq!(command(6), None);
+    assert_eq!(command(7), None);
 }

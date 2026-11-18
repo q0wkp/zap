@@ -217,6 +217,30 @@ pub fn parse_interactive_ssh_command(command: &str) -> Option<InteractiveSshComm
     }
 }
 
+/// Returns `command`, trimmed, if running it again verbatim in another local shell opens a new
+/// interactive session to the same destination: a literal `ssh` (or `command ssh`) with a
+/// destination and no remote command. The command line is kept as it was typed, so every option
+/// means what it meant the first time. Anything a shell would expand or that would run more than
+/// `ssh` (separators, pipes, redirections, substitutions, variables, globs, history expansion,
+/// control characters) makes it `None`, since it could mean something else the second time.
+pub fn replayable_ssh_command(command: &str) -> Option<&str> {
+    const SHELL_SYNTAX: &[char] = &[
+        ';', '&', '|', '<', '>', '(', ')', '{', '}', '$', '`', '!', '*', '?', '[', ']',
+    ];
+    let command = command.trim();
+    if command.contains(SHELL_SYNTAX) || command.contains(char::is_control) {
+        return None;
+    }
+    if !matches!(
+        SshWarpifyCommand::matches(command),
+        Some(SshWarpifyCommand::Ssh)
+    ) {
+        return None;
+    }
+    InteractiveSshCommand::parse_ssh_command(command)?.host?;
+    Some(command)
+}
+
 fn parse_ssh_command_tokens(command: &str) -> Option<Vec<String>> {
     let Ok(tokens) = shell_words::split(command) else {
         return None;
@@ -412,5 +436,56 @@ mod tests {
                 .host
                 == Some("localhost".to_string())
         );
+    }
+
+    #[test]
+    fn replayable_ssh_command_keeps_plain_ssh_verbatim() {
+        assert_eq!(replayable_ssh_command("ssh host"), Some("ssh host"));
+        assert_eq!(
+            replayable_ssh_command("  ssh -p 2222 -i ~/.ssh/id_work user@host  "),
+            Some("ssh -p 2222 -i ~/.ssh/id_work user@host")
+        );
+        assert_eq!(
+            replayable_ssh_command("ssh -J bastion -o 'ProxyCommand=nc %h %p' host"),
+            Some("ssh -J bastion -o 'ProxyCommand=nc %h %p' host")
+        );
+        assert_eq!(
+            replayable_ssh_command("command ssh host"),
+            Some("command ssh host")
+        );
+    }
+
+    #[test]
+    fn replayable_ssh_command_rejects_other_commands() {
+        // Not a literal ssh.
+        assert!(replayable_ssh_command("gcloud compute ssh --zone us-west1-a vm").is_none());
+        assert!(replayable_ssh_command("sshpass -p secret ssh host").is_none());
+        assert!(replayable_ssh_command("FOO=1 ssh host").is_none());
+        assert!(replayable_ssh_command("s host").is_none());
+        // Not an interactive session with a destination.
+        assert!(replayable_ssh_command("ssh").is_none());
+        assert!(replayable_ssh_command("ssh -v").is_none());
+        assert!(replayable_ssh_command("ssh host uptime").is_none());
+        assert!(replayable_ssh_command("ssh -T host").is_none());
+    }
+
+    #[test]
+    fn replayable_ssh_command_rejects_shell_syntax() {
+        for command in [
+            "ssh host; rm -rf ~",
+            "ssh host && echo done",
+            "ssh host | tee log",
+            "ssh host > log",
+            "ssh $HOST",
+            "ssh `pick-host`",
+            "ssh $(pick-host)",
+            "ssh host{1,2}",
+            "ssh web*",
+            "ssh !!",
+            "ssh host\nrm -rf ~",
+            "ssh host\u{7}",
+        ] {
+            assert!(replayable_ssh_command(command).is_none(), "{command:?}");
+        }
     }
 }

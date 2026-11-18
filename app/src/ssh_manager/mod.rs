@@ -4,6 +4,7 @@
 //! 数据层在独立 crate `warp_ssh_manager`(`crates/warp_ssh_manager/`)。
 
 pub mod candidates;
+pub mod connection;
 pub mod notifier;
 pub mod onekey;
 pub mod panel;
