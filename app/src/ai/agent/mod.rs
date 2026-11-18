@@ -577,6 +577,13 @@ impl AIAgentOutput {
                     result.push(format!("Received {} agent events", event_ids.len()));
                     last_was_action = false;
                 }
+                AIAgentOutputMessageType::InvalidToolCall { tool_name, detail } => {
+                    result.push(invalid_tool_call_summary(
+                        tool_name.as_deref(),
+                        detail.as_deref(),
+                    ));
+                    last_was_action = false;
+                }
             }
         }
 
@@ -1573,6 +1580,29 @@ pub enum AIAgentOutputMessageType {
     EventsFromAgents {
         event_ids: Vec<String>,
     },
+    /// A tool call whose arguments could not be parsed, so it was never run and the model was
+    /// asked to retry. It has no action: none could be built from the arguments.
+    InvalidToolCall {
+        /// The tool the model called, if known.
+        tool_name: Option<String>,
+        /// Why the arguments were rejected, if known.
+        detail: Option<String>,
+    },
+}
+
+/// A one-line description of an [`AIAgentOutputMessageType::InvalidToolCall`] for plain-text
+/// output (copying a conversation, logs, the SDK).
+pub fn invalid_tool_call_summary(tool_name: Option<&str>, detail: Option<&str>) -> String {
+    let mut summary = match tool_name {
+        Some(tool_name) => format!("Tool call {tool_name} rejected: invalid arguments"),
+        None => "Tool call rejected: invalid arguments".to_owned(),
+    };
+    if let Some(detail) = detail {
+        summary.push_str(" (");
+        summary.push_str(detail);
+        summary.push(')');
+    }
+    summary
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -1768,6 +1798,11 @@ impl Display for AIAgentOutputMessage {
             AIAgentOutputMessageType::EventsFromAgents { event_ids } => {
                 write!(f, "Received {} agent events", event_ids.len())?
             }
+            AIAgentOutputMessageType::InvalidToolCall { tool_name, detail } => write!(
+                f,
+                "{}",
+                invalid_tool_call_summary(tool_name.as_deref(), detail.as_deref())
+            )?,
         }
 
         if !self.citations.is_empty() {
@@ -1911,6 +1946,18 @@ impl AIAgentOutputMessage {
         Self {
             id,
             message: AIAgentOutputMessageType::EventsFromAgents { event_ids },
+            citations: vec![],
+        }
+    }
+
+    pub fn invalid_tool_call(
+        id: MessageId,
+        tool_name: Option<String>,
+        detail: Option<String>,
+    ) -> Self {
+        Self {
+            id,
+            message: AIAgentOutputMessageType::InvalidToolCall { tool_name, detail },
             citations: vec![],
         }
     }

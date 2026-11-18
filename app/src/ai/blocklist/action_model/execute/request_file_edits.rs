@@ -16,8 +16,8 @@ use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _, 
 
 use apply_diff_model::ApplyDiffModel;
 pub(crate) use diff_application::apply_edits;
-use diff_application::DiffApplicationError;
 pub(crate) use diff_application::FileReadResult;
+use diff_application::{match_notes, DiffApplicationError};
 pub(crate) use telemetry::MalformedFinalLineProxyEvent;
 #[allow(unused_imports)]
 pub use telemetry::{EditAcceptAndContinueClickedEvent, EditAcceptClickedEvent};
@@ -54,6 +54,9 @@ pub struct RequestFileEditsExecutor {
     diff_views: HashMap<AIAgentActionId, ViewHandle<CodeDiffView>>,
     /// Set of action IDs where diff application failed.
     diff_application_failures: HashMap<AIAgentActionId, Vec1<DiffApplicationError>>,
+    /// Remarks for the model on how the edits of an action were matched, reported with its
+    /// result.
+    diff_application_notes: HashMap<AIAgentActionId, Vec<String>>,
     terminal_view_id: EntityId,
 }
 
@@ -69,6 +72,7 @@ impl RequestFileEditsExecutor {
             apply_diff_model,
             diff_views: HashMap::new(),
             diff_application_failures: HashMap::new(),
+            diff_application_notes: HashMap::new(),
             terminal_view_id,
         }
     }
@@ -173,6 +177,7 @@ impl RequestFileEditsExecutor {
                 ..Default::default()
             });
 
+        let notes = self.diff_application_notes.remove(id).unwrap_or_default();
         let (result_tx, result_rx) = oneshot::channel();
         let mut result_tx = Some(result_tx);
 
@@ -263,6 +268,7 @@ impl RequestFileEditsExecutor {
                     deleted_files: deleted_files.clone(),
                     lines_added: diff.lines_added,
                     lines_removed: diff.lines_removed,
+                    notes: notes.clone(),
                 });
             }
             _ => (),
@@ -354,7 +360,13 @@ impl RequestFileEditsExecutor {
         };
 
         let applied_diffs = match applied_diffs {
-            Ok(diffs) if !diffs.is_empty() => diffs,
+            Ok(diffs) if !diffs.is_empty() => {
+                let notes = match_notes(&diffs);
+                if !notes.is_empty() {
+                    self.diff_application_notes.insert(id, notes);
+                }
+                diffs
+            }
             Ok(_) => {
                 // We didn't generate any diffs--consider this a failure.
                 log::warn!("No diffs generated");

@@ -44,6 +44,10 @@ pub struct ExpandedConfig {
     /// Mouse state handle for expansion toggle
     pub toggle_mouse_state: MouseStateHandle,
     pub expands_upwards: bool,
+    /// Buttons rendered before the expansion chevron, such as Stop on a running command.
+    pub action_buttons: Vec<Rc<dyn RenderCompactibleActionButton>>,
+    /// The header width below which `action_buttons` render in their compact form.
+    pub action_buttons_size_switch_threshold: f32,
 }
 
 impl ExpandedConfig {
@@ -54,7 +58,19 @@ impl ExpandedConfig {
             on_right_click: None,
             toggle_mouse_state,
             expands_upwards: false,
+            action_buttons: Vec::new(),
+            action_buttons_size_switch_threshold: 0.,
         }
+    }
+
+    pub fn with_action_buttons(
+        mut self,
+        action_buttons: Vec<Rc<dyn RenderCompactibleActionButton>>,
+        size_switch_threshold: f32,
+    ) -> Self {
+        self.action_buttons = action_buttons;
+        self.action_buttons_size_switch_threshold = size_switch_threshold;
+        self
     }
 
     pub fn with_expands_upwards(mut self) -> Self {
@@ -386,17 +402,59 @@ impl HeaderConfig {
                     .finish()
                 }
                 InteractionMode::ManuallyExpandable(expansion_config) => {
-                    let expanded_icon = ConstrainedBox::new(render_expansion_icon(
-                        expansion_config.is_expanded,
-                        expansion_config.expands_upwards,
-                        appearance,
-                        app,
-                    ))
-                    .with_height(icon_size(app))
-                    .with_width(icon_size(app))
-                    .finish();
+                    let expanded_icon = || {
+                        ConstrainedBox::new(render_expansion_icon(
+                            expansion_config.is_expanded,
+                            expansion_config.expands_upwards,
+                            appearance,
+                            app,
+                        ))
+                        .with_height(icon_size(app))
+                        .with_width(icon_size(app))
+                        .finish()
+                    };
 
-                    self.render_header(app, Some(expanded_icon))
+                    if expansion_config.action_buttons.is_empty() {
+                        return self.render_header(app, Some(expanded_icon()));
+                    }
+
+                    let button_refs: Vec<&dyn RenderCompactibleActionButton> = expansion_config
+                        .action_buttons
+                        .iter()
+                        .map(|b| b.as_ref())
+                        .collect();
+                    let (regular_row, compact_row) =
+                        render_compact_and_regular_button_rows(button_refs, None, appearance, app);
+                    let with_expanded_icon = |buttons: Box<dyn Element>| {
+                        Flex::row()
+                            .with_main_axis_size(MainAxisSize::Min)
+                            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+                            .with_child(buttons)
+                            .with_child(
+                                Container::new(expanded_icon())
+                                    .with_margin_left(ICON_MARGIN)
+                                    .finish(),
+                            )
+                            .finish()
+                    };
+
+                    let regular_header = self
+                        .clone()
+                        .render_header(app, Some(with_expanded_icon(regular_row)));
+                    let compact_header =
+                        self.render_header(app, Some(with_expanded_icon(compact_row)));
+
+                    let size_switch_threshold = expansion_config
+                        .action_buttons_size_switch_threshold
+                        * appearance.monospace_ui_scalar();
+                    SizeConstraintSwitch::new(
+                        regular_header,
+                        vec![(
+                            SizeConstraintCondition::WidthLessThan(size_switch_threshold),
+                            compact_header,
+                        )],
+                    )
+                    .finish()
                 }
                 InteractionMode::RightClickable(_) => self.render_header(app, None),
             }

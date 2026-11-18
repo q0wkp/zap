@@ -27,6 +27,7 @@ use super::prompt_renderer;
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::prompt_overrides::{PromptChoice, PromptSlot};
 use crate::ai::predict::generate_am_query_suggestions::GenerateAMQuerySuggestionsResponse;
+use crate::settings::language::{Language, LanguageSettings};
 
 pub mod parsing;
 
@@ -90,6 +91,34 @@ pub struct LastBlockSnippet {
     pub pwd: String,
 }
 
+/// The English name of the language Zap's UI is shown in, for asking a model to reply in it.
+pub(crate) fn ui_language_name(app: &AppContext) -> &'static str {
+    match *LanguageSettings::as_ref(app).language {
+        Language::English => "English",
+        Language::SimplifiedChinese => "Simplified Chinese",
+        Language::Japanese => "Japanese",
+        Language::Russian => "Russian",
+        // Language::System follows the OS locale; resolve via the active i18n loader
+        // so Chinese/Japanese/Russian system-locale users still get localized suggestions.
+        Language::System => {
+            let locale = crate::i18n::current_languages()
+                .into_iter()
+                .next()
+                .map(|l| l.to_string())
+                .unwrap_or_default();
+            if locale.starts_with("zh") {
+                "Simplified Chinese"
+            } else if locale.starts_with("ja") {
+                "Japanese"
+            } else if locale.starts_with("ru") {
+                "Russian"
+            } else {
+                "English"
+            }
+        }
+    }
+}
+
 /// 已渲染好 prompt + 解析好 OneshotConfig 的请求 — 跨 spawn 边界传递。
 pub struct RenderedRequest {
     pub cfg: OneshotConfig,
@@ -104,7 +133,6 @@ pub struct RenderedRequest {
 
 pub mod prompt_suggestions {
     use super::*;
-    use crate::settings::language::{Language, LanguageSettings};
 
     pub struct Input {
         pub recent_blocks: Vec<BlockSnippet>,
@@ -119,30 +147,7 @@ pub mod prompt_suggestions {
         input: Input,
     ) -> Option<RenderedRequest> {
         let cfg = resolve_active_ai_oneshot(app, terminal_view_id)?;
-        let language = match *LanguageSettings::as_ref(app).language {
-            Language::English => "English",
-            Language::SimplifiedChinese => "Simplified Chinese",
-            Language::Japanese => "Japanese",
-            Language::Russian => "Russian",
-            // Language::System follows the OS locale; resolve via the active i18n loader
-            // so Chinese/Japanese/Russian system-locale users still get localized suggestions.
-            Language::System => {
-                let locale = crate::i18n::current_languages()
-                    .into_iter()
-                    .next()
-                    .map(|l| l.to_string())
-                    .unwrap_or_default();
-                if locale.starts_with("zh") {
-                    "Simplified Chinese"
-                } else if locale.starts_with("ja") {
-                    "Japanese"
-                } else if locale.starts_with("ru") {
-                    "Russian"
-                } else {
-                    "English"
-                }
-            }
-        };
+        let language = ui_language_name(app);
         let system = render_system(
             PromptSlot::PromptSuggestions,
             &prompt_choice(app, terminal_view_id, PromptSlot::PromptSuggestions),

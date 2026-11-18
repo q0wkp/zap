@@ -189,6 +189,105 @@ fn test_totally_unrelated_search() {
     assert!(diff.failures.is_some());
 }
 
+/// A search without line numbers that occurs in several places is not applied to any of them,
+/// since nothing says which one was meant.
+#[test]
+fn test_search_matching_several_places_is_ambiguous() {
+    let file_content = "fn a() {\n    x();\n}\n\nfn b() {\n    x();\n}\n";
+    let input_diffs = vec![
+        SearchAndReplace {
+            search: "fn b() {".to_string(),
+            replace: "fn c() {".to_string(),
+        },
+        SearchAndReplace {
+            search: "    x();".to_string(),
+            replace: "    y();".to_string(),
+        },
+    ];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, file_content);
+    // The unique block is matched; the ambiguous one is not.
+    assert_eq!(
+        deltas(&diff),
+        &[DiffDelta {
+            replacement_line_range: 5..6,
+            insertion: "fn c() {".to_string(),
+        }]
+    );
+    assert!(diff.warrants_failure());
+    let failures = diff.failures.expect("Expected failures to be tracked");
+    assert_eq!(failures.fuzzy_match_failures, 0);
+    assert_eq!(failures.ambiguous_matches, 1);
+    assert_eq!(
+        failures.ambiguous_match_details,
+        vec![AmbiguousMatch {
+            block_number: 2,
+            start_lines: vec![2, 6],
+        }]
+    );
+}
+
+/// The same holds when the places only match once indentation is ignored.
+#[test]
+fn test_search_matching_several_places_ignoring_indentation_is_ambiguous() {
+    let file_content = "fn a() {\n    x();\n}\n\nfn b() {\n        x();\n}\n";
+    let input_diffs = vec![SearchAndReplace {
+        search: "x();".to_string(),
+        replace: "y();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, file_content);
+    assert!(deltas(&diff).is_empty());
+    let failures = diff.failures.expect("Expected failures to be tracked");
+    assert_eq!(
+        failures.ambiguous_match_details,
+        vec![AmbiguousMatch {
+            block_number: 1,
+            start_lines: vec![2, 6],
+        }]
+    );
+}
+
+/// An exact match in one place wins over places that only match once indentation is ignored.
+#[test]
+fn test_single_exact_match_is_not_ambiguous() {
+    let file_content = "fn a() {\n    x();\n}\n\nfn b() {\n        x();\n}\n";
+    let input_diffs = vec![SearchAndReplace {
+        search: "    x();".to_string(),
+        replace: "    y();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, file_content);
+    assert_eq!(
+        deltas(&diff),
+        &[DiffDelta {
+            replacement_line_range: 2..3,
+            insertion: "    y();".to_string(),
+        }]
+    );
+    assert!(!diff.warrants_failure());
+}
+
+/// Line numbers say which of the places is meant, so the block is applied there.
+#[test]
+fn test_line_numbers_resolve_a_search_matching_several_places() {
+    let file_content = "fn a() {\n    x();\n}\n\nfn b() {\n    x();\n}\n";
+    let input_diffs = vec![SearchAndReplace {
+        search: "6|    x();".to_string(),
+        replace: "    y();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, file_content);
+    assert_eq!(
+        deltas(&diff),
+        &[DiffDelta {
+            replacement_line_range: 6..7,
+            insertion: "    y();".to_string(),
+        }]
+    );
+    assert!(!diff.warrants_failure());
+}
+
 /// The agent sometimes emits a search whose final line is a prefix of the actual file line.
 /// Before `PrefixTailMatch`, the Jaro-Winkler scorer landed just under the 0.9 threshold for
 /// long lines and the diff failed with `Could not apply all diffs to <file>`.  With
@@ -669,7 +768,7 @@ fn test_search_range_greater_than_file_length() {
         MakeExactMatch,
     );
 
-    assert_eq!(r, Some(1..3));
+    assert_eq!(r, BlockMatch::Found(1..3));
 }
 
 #[test]
@@ -763,4 +862,70 @@ impl ActionButtonTheme for DefaultWeightAgentInputButtonTheme {\n\
         deltas[0].insertion.is_empty(),
         "The surviving delta should be the deletion"
     );
+}
+
+/// A block applied where the file matches it only once indentation is ignored is reported.
+#[test]
+fn test_match_ignoring_indentation_is_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "only_here();".to_string(),
+        replace: "there();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, "fn a() {\n    only_here();\n}\n");
+    assert_eq!(deltas(&diff).len(), 1);
+    assert!(!diff.warrants_failure());
+    let failures = diff
+        .failures
+        .expect("Expected the loose match to be tracked");
+    assert_eq!(
+        failures.loose_matches,
+        vec![LooseMatch {
+            block_number: 1,
+            lines: 2..3,
+            kind: LooseMatchKind::IgnoringIndentation,
+        }]
+    );
+}
+
+/// A block applied to lines that are only similar to it is reported as approximate.
+#[test]
+fn test_approximate_match_is_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "let total = compute_totl(items);".to_string(),
+        replace: "let total = sum(items);".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs(
+        "test.rs",
+        &input_diffs,
+        "fn a() {\nlet total = compute_total(items);\n}\n",
+    );
+    assert_eq!(deltas(&diff).len(), 1);
+    let failures = diff
+        .failures
+        .expect("Expected the loose match to be tracked");
+    assert_eq!(
+        failures.loose_matches,
+        vec![LooseMatch {
+            block_number: 1,
+            lines: 2..3,
+            kind: LooseMatchKind::Approximate,
+        }]
+    );
+}
+
+/// An exact match is not reported.
+#[test]
+fn test_exact_match_is_not_reported() {
+    let input_diffs = vec![SearchAndReplace {
+        search: "    only_here();".to_string(),
+        replace: "    there();".to_string(),
+    }];
+
+    let diff = fuzzy_match_diffs("test.rs", &input_diffs, "fn a() {\n    only_here();\n}\n");
+    assert_eq!(deltas(&diff).len(), 1);
+    assert!(diff
+        .failures
+        .is_none_or(|failures| failures.loose_matches.is_empty()));
 }

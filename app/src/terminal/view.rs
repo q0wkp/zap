@@ -18314,6 +18314,26 @@ impl TerminalView {
                 self.focus_ai_block_if_self_focused(&block, ctx);
                 self.maybe_send_agent_mode_desktop_notification(&conversation_id, ctx);
             }
+            AIBlockEvent::StopRequestedCommand { action_id } => {
+                if is_restored {
+                    return;
+                }
+                // Stop does what Ctrl-C (or the status bar's Stop) does, but only while the
+                // command is still the one running.
+                let is_active_command = {
+                    let model = self.model.lock();
+                    let block_list = model.block_list();
+                    block_list
+                        .block_for_ai_action_id(action_id)
+                        .is_some_and(|command_block| {
+                            command_block.id() == block_list.active_block().id()
+                                && !command_block.finished()
+                        })
+                };
+                if is_active_command {
+                    self.ctrl_c(ctx);
+                }
+            }
             AIBlockEvent::PassiveCodeDiffLoaded => {
                 if is_restored {
                     return;

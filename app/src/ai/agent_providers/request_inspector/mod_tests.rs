@@ -149,6 +149,7 @@ fn every_kind_belongs_to_a_group() {
         CallKind::RelevantFiles,
         CallKind::WorkflowMetadata,
         CallKind::NextCommand,
+        CallKind::ExplainCommand,
         CallKind::Other,
     ] {
         assert!(CallGroup::ALL.contains(&kind.group()));

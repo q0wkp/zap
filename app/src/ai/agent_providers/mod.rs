@@ -14,6 +14,7 @@ pub mod attachment_caps;
 pub mod chat_stream;
 pub mod content_tool_calls;
 pub mod custom_prompts;
+pub mod explain_command;
 pub mod llm_id;
 pub mod models_dev;
 pub mod ollama;

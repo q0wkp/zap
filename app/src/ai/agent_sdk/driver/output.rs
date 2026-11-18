@@ -10,6 +10,7 @@ pub mod text {
     use ai::agent::action_result::ReadSkillResult;
     use itertools::Itertools;
 
+    use crate::ai::agent::invalid_tool_call_summary;
     use crate::{
         ai::agent::{
             AIAgentActionType, AIAgentInput, AIAgentOutput, AIAgentOutputMessageType, AIAgentTodo,
@@ -414,6 +415,13 @@ pub mod text {
                 AIAgentOutputMessageType::EventsFromAgents { event_ids } => {
                     writeln!(w, "Received {} agent events", event_ids.len())?;
                 }
+                AIAgentOutputMessageType::InvalidToolCall { tool_name, detail } => {
+                    writeln!(
+                        w,
+                        "{}",
+                        invalid_tool_call_summary(tool_name.as_deref(), detail.as_deref())
+                    )?;
+                }
             }
         }
 
@@ -472,6 +480,7 @@ pub mod text {
 }
 
 pub mod json {
+    use crate::ai::agent::invalid_tool_call_summary;
     use crate::{
         ai::agent::{
             AIAgentActionType, AIAgentInput, AIAgentOutput, AIAgentOutputMessage,
@@ -978,6 +987,14 @@ pub mod json {
                 }
                 AIAgentOutputMessageType::MessagesReceivedFromAgents { .. }
                 | AIAgentOutputMessageType::EventsFromAgents { .. } => None,
+                AIAgentOutputMessageType::InvalidToolCall { tool_name, detail } => {
+                    Some(JsonMessage::ToolError {
+                        error: Cow::Owned(invalid_tool_call_summary(
+                            tool_name.as_deref(),
+                            detail.as_deref(),
+                        )),
+                    })
+                }
             }
         }
     }

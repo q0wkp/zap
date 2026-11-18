@@ -522,6 +522,10 @@ pub enum RequestFileEditsResult {
         deleted_files: Vec<String>,
         lines_added: usize,
         lines_removed: usize,
+        /// Remarks for the model on how the edits were matched against the files, such as a
+        /// search that matched only once indentation was ignored. Only BYOP models get them:
+        /// Warp's protocol has no field for them, so they are not stored with the conversation.
+        notes: Vec<String>,
     },
     Cancelled,
     /// Diff application failed.
