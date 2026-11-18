@@ -16,6 +16,7 @@ pub mod content_tool_calls;
 pub mod custom_prompts;
 pub mod llm_id;
 pub mod models_dev;
+pub mod ollama;
 pub mod oneshot;
 pub mod openai_compatible;
 pub mod prompt_renderer;

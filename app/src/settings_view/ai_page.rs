@@ -3347,12 +3347,30 @@ impl TypedActionView for AISettingsPageView {
                 let provider_id_for_handler = provider_id.clone();
                 ctx.spawn(
                     async move {
-                        crate::ai::agent_providers::fetch_openai_compatible_models(
-                            client,
-                            &provider.base_url,
-                            api_key.as_deref(),
-                        )
-                        .await
+                        // Each fetched model comes with its context window when the server
+                        // reports one, which only Ollama's native API does.
+                        if provider.api_type == crate::settings::AgentProviderApiType::Ollama {
+                            crate::ai::agent_providers::ollama::fetch_ollama_models(
+                                client,
+                                &provider.base_url,
+                                api_key.as_deref(),
+                            )
+                            .await
+                            .map(|models| {
+                                models
+                                    .into_iter()
+                                    .map(|m| (m.id, m.context_window))
+                                    .collect::<Vec<_>>()
+                            })
+                        } else {
+                            crate::ai::agent_providers::fetch_openai_compatible_models(
+                                client,
+                                &provider.base_url,
+                                api_key.as_deref(),
+                            )
+                            .await
+                            .map(|models| models.into_iter().map(|m| (m.id, None)).collect())
+                        }
                     },
                     move |view, result, ctx| match result {
                         Ok(fetched) => {
@@ -3363,14 +3381,24 @@ impl TypedActionView for AISettingsPageView {
                                     .find(|p| p.id == provider_id_for_handler)
                                 {
                                     // 合并保留: 已存在的 id 保留用户改过的 name,新 id 追加,
-                                    // 本地多余的 id 不删(用户手动 ×)。
-                                    let existing: std::collections::HashSet<String> =
-                                        p.models.iter().map(|m| m.id.clone()).collect();
-                                    for m in fetched {
-                                        if !existing.contains(&m.id) {
-                                            p.models.push(
-                                                crate::settings::AgentProviderModel::from_id(m.id),
-                                            );
+                                    // 本地多余的 id 不删(用户手动 ×)。A reported context
+                                    // window fills in only where none is set.
+                                    for (id, context_window) in fetched {
+                                        match p.models.iter_mut().find(|m| m.id == id) {
+                                            Some(existing) => {
+                                                if existing.context_window == 0 {
+                                                    existing.context_window =
+                                                        context_window.unwrap_or(0);
+                                                }
+                                            }
+                                            None => {
+                                                let mut model =
+                                                    crate::settings::AgentProviderModel::from_id(
+                                                        id,
+                                                    );
+                                                model.context_window = context_window.unwrap_or(0);
+                                                p.models.push(model);
+                                            }
                                         }
                                     }
                                 }
