@@ -16,7 +16,13 @@
 //! ## 模板加载
 //!
 //! 全部模板 `include_str!` 编进二进制(零运行时 IO),改模板需重编。
+//!
+//! A profile can override each prompt (see `execution_profiles::prompt_overrides`) with
+//! another built-in system template or a file from the custom prompts directory, which is read
+//! at render time (see [`super::custom_prompts`]). Overrides that can't be used are logged and
+//! fall back to the built-in prompt; with nothing overridden, rendering is exactly as above.
 
+use std::path::Path;
 use std::sync::OnceLock;
 
 use ai::LLMId;
@@ -24,7 +30,9 @@ use chrono::Local;
 use minijinja::{Environment, Value};
 use serde::Serialize;
 
+use super::custom_prompts;
 use crate::ai::agent::AIAgentContext;
+use crate::ai::execution_profiles::prompt_overrides::{PromptChoice, PromptSlot};
 use crate::settings::AgentProviderApiType;
 // ---------------------------------------------------------------------------
 
@@ -105,11 +113,135 @@ fn build_env() -> Environment<'static> {
             .unwrap_or_else(|e| panic!("template {name} parses: {e}"));
     }
 
+    // The auxiliary prompts of `active_ai`, kept in the same environment so that a custom
+    // template can include them.
+    for (name, src) in [
+        (
+            "active_ai/prompt_suggestions_system.j2",
+            include_str!("prompts/active_ai/prompt_suggestions_system.j2") as &str,
+        ),
+        (
+            "active_ai/prompt_suggestions_user.j2",
+            include_str!("prompts/active_ai/prompt_suggestions_user.j2"),
+        ),
+        (
+            "active_ai/nld_predict_system.j2",
+            include_str!("prompts/active_ai/nld_predict_system.j2"),
+        ),
+        (
+            "active_ai/nld_predict_user.j2",
+            include_str!("prompts/active_ai/nld_predict_user.j2"),
+        ),
+        (
+            "active_ai/relevant_files_system.j2",
+            include_str!("prompts/active_ai/relevant_files_system.j2"),
+        ),
+        (
+            "active_ai/relevant_files_user.j2",
+            include_str!("prompts/active_ai/relevant_files_user.j2"),
+        ),
+        (
+            "active_ai/next_command_system.j2",
+            include_str!("prompts/active_ai/next_command_system.j2"),
+        ),
+        (
+            "active_ai/next_command_user.j2",
+            include_str!("prompts/active_ai/next_command_user.j2"),
+        ),
+        (
+            "active_ai/workflow_metadata_system.j2",
+            include_str!("prompts/active_ai/workflow_metadata_system.j2"),
+        ),
+        (
+            "active_ai/workflow_metadata_user.j2",
+            include_str!("prompts/active_ai/workflow_metadata_user.j2"),
+        ),
+    ] {
+        env.add_template(name, src)
+            .unwrap_or_else(|e| panic!("template {name} parses: {e}"));
+    }
+
     env
 }
 
-fn env() -> &'static Environment<'static> {
+pub(super) fn env() -> &'static Environment<'static> {
     ENV.get_or_init(build_env)
+}
+
+/// The built-in agent system templates a profile can pick by name: `anthropic` is
+/// `system/anthropic.j2`. Every name is registered in [`build_env`].
+pub const BUILTIN_SYSTEM_TEMPLATES: &[&str] = &[
+    "default",
+    "anthropic",
+    "gpt",
+    "beast",
+    "codex",
+    "gemini",
+    "kimi",
+    "trinity",
+    "local",
+];
+
+// ---------------------------------------------------------------------------
+// Prompt overrides
+// ---------------------------------------------------------------------------
+
+/// Renders the prompt `choice` selects for `slot` in place of the built-in one.
+///
+/// `None` means "use the built-in prompt": the choice is Auto, or it can't be used (a built-in
+/// name that doesn't exist, a missing file, a path outside the custom prompts directory, a
+/// template error), in which case the reason is logged.
+pub(super) fn render_override(
+    slot: PromptSlot,
+    choice: &PromptChoice,
+    ctx: &Value,
+) -> Option<String> {
+    if choice.is_auto() {
+        return None;
+    }
+    render_override_in(
+        custom_prompts::custom_prompts_dir().as_deref(),
+        slot,
+        choice,
+        ctx,
+    )
+}
+
+fn render_override_in(
+    custom_dir: Option<&Path>,
+    slot: PromptSlot,
+    choice: &PromptChoice,
+    ctx: &Value,
+) -> Option<String> {
+    let rendered = match choice {
+        PromptChoice::Auto => return None,
+        PromptChoice::Builtin(name) => {
+            let known = slot.has_builtin_alternatives()
+                && BUILTIN_SYSTEM_TEMPLATES.contains(&name.as_str());
+            if !known {
+                log::warn!(
+                    "[byop prompt] {slot:?}: no built-in prompt named {name:?}; using the default"
+                );
+                return None;
+            }
+            let template_name = format!("system/{name}.j2");
+            env()
+                .get_template(&template_name)
+                .and_then(|template| template.render(ctx))
+                .map_err(anyhow::Error::from)
+        }
+        PromptChoice::Custom(relative) => match custom_dir {
+            Some(dir) => custom_prompts::render(env(), dir, relative, ctx.clone()),
+            None => Err(anyhow::anyhow!("no custom prompts directory")),
+        },
+    };
+    match rendered {
+        Ok(prompt) => Some(prompt),
+        Err(e) => {
+            log::warn!("[byop prompt] {slot:?}: {choice:?} not used, using the default: {e:#}");
+            None
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -393,6 +525,9 @@ pub fn render_init_project_command(arguments: Option<&str>) -> String {
 /// 上游 LLM 的工具名列表(内置 + MCP,已应用 gating)。模板按此动态渲染白名单,
 /// 不要再硬编码"unavailable tools"黑名单 —— 模型看不到的工具自然不会调,
 /// 反过来用文本黑名单会让模型连真实可用的工具也不敢调。
+///
+/// `prompt` is the profile's choice for the agent prompt: a usable override replaces the
+/// template picked by model, see [`render_override`].
 pub fn render_system(
     api_type: AgentProviderApiType,
     model: &LLMId,
@@ -400,6 +535,7 @@ pub fn render_system(
     available_tools: &[String],
     plan_mode: bool,
     user_rules: &[(Option<String>, String)],
+    prompt: &PromptChoice,
 ) -> String {
     let model_id = model_id_from_llm_id(model);
     let template_name = pick_template(&model_id, api_type);
@@ -413,6 +549,11 @@ pub fn render_system(
             content: content.clone(),
         })
         .collect();
+    let prompt_ctx = Value::from_serialize(&prompt_ctx);
+
+    if let Some(rendered) = render_override(PromptSlot::Agent, prompt, &prompt_ctx) {
+        return rendered;
+    }
 
     let env = env();
     let tmpl = match env.get_template(template_name) {
@@ -422,7 +563,7 @@ pub fn render_system(
             return fallback_system(&model_id);
         }
     };
-    match tmpl.render(Value::from_serialize(&prompt_ctx)) {
+    match tmpl.render(prompt_ctx) {
         Ok(s) => s,
         Err(e) => {
             log::error!("[byop prompt] render {template_name} failed: {e}");
@@ -567,6 +708,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(
             out.contains("Working directory: /home/user/project"),
@@ -598,6 +740,7 @@ mod tests {
                 &[],
                 false,
                 &[],
+                &PromptChoice::Auto,
             );
             assert!(
                 out.contains("Zap"),
@@ -615,6 +758,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         // 没 skills 时 skills 区块不应出现
         assert!(
@@ -649,6 +793,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(
             out.contains(skill_path),
@@ -683,6 +828,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(
             out.contains("find-skills"),
@@ -708,6 +854,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(!out.is_empty());
     }
@@ -728,6 +875,7 @@ mod tests {
             &tools,
             false,
             &[],
+            &PromptChoice::Auto,
         );
         for name in &tools {
             assert!(
@@ -752,6 +900,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(!out.contains("Available Tools"), "{out}");
     }
@@ -765,6 +914,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(
             !out.contains("Plan Mode (Read-Only)"),
@@ -791,6 +941,7 @@ mod tests {
                 &[],
                 true,
                 &[],
+                &PromptChoice::Auto,
             );
             assert!(
                 out.contains("Plan Mode (Read-Only)"),
@@ -815,6 +966,7 @@ mod tests {
             &[],
             false,
             &[],
+            &PromptChoice::Auto,
         );
         assert!(
             !out.contains("# User rules"),
@@ -835,6 +987,7 @@ mod tests {
             &[],
             false,
             &rules,
+            &PromptChoice::Auto,
         );
         assert!(
             out.contains("# User rules"),
@@ -870,6 +1023,7 @@ mod tests {
                 &[],
                 false,
                 &rules,
+                &PromptChoice::Auto,
             );
             assert!(
                 out.contains("snake_case only."),
@@ -893,6 +1047,7 @@ mod tests {
             &[],
             false,
             &rules,
+            &PromptChoice::Auto,
         );
 
         // 两条规则之间应至少包含一个 "blank line"(两个相邻换行)。
@@ -925,6 +1080,7 @@ mod tests {
             &[],
             false,
             &rules,
+            &PromptChoice::Auto,
         );
         assert!(out.contains("# User rules"), "{out}");
         assert!(out.contains("Be terse."), "{out}");
@@ -958,6 +1114,7 @@ mod tests {
                 &[],
                 false,
                 &[],
+                &PromptChoice::Auto,
             );
             assert!(
                 out.contains("# Thinking language"),
@@ -982,6 +1139,7 @@ mod tests {
             &tools,
             false,
             &[],
+            &PromptChoice::Auto,
         );
         let pos_thinking = out
             .find("# Thinking language")
@@ -991,5 +1149,185 @@ mod tests {
             pos_thinking < pos_tools,
             "thinking_language 应在 tool_aliases 之前: thinking={pos_thinking}, tools={pos_tools}\n{out}"
         );
+    }
+
+    // -- Prompt overrides ----------------------------------------------------
+
+    fn render_agent(model: &str, prompt: &PromptChoice) -> String {
+        render_system(
+            AgentProviderApiType::OpenAi,
+            &LLMId::from(format!("byop:p:{model}").as_str()),
+            &[],
+            &["read_files".to_string()],
+            false,
+            &[],
+            prompt,
+        )
+    }
+
+    fn write_prompt(dir: &Path, relative: &str, content: &str) {
+        let path = dir.join(relative);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+
+    #[test]
+    fn every_builtin_system_template_is_registered() {
+        for name in BUILTIN_SYSTEM_TEMPLATES {
+            assert!(
+                env().get_template(&format!("system/{name}.j2")).is_ok(),
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn auto_renders_the_template_picked_by_model() {
+        // Auto must stay byte-identical to rendering the auto-picked template directly.
+        for model in ["claude-sonnet-4-5", "gpt-4o", "deepseek-chat"] {
+            let expected = env()
+                .get_template(pick_template(model, AgentProviderApiType::OpenAi))
+                .unwrap()
+                .render(Value::from_serialize(&PromptContext {
+                    available_tools: vec!["read_files".to_string()],
+                    ..collect_prompt_context(model, &[])
+                }))
+                .unwrap();
+            assert_eq!(
+                render_agent(model, &PromptChoice::Auto),
+                expected,
+                "{model}"
+            );
+        }
+    }
+
+    #[test]
+    fn builtin_choice_replaces_the_model_pick() {
+        let local = render_agent("claude-sonnet-4-5", &PromptChoice::Builtin("local".into()));
+        let ollama = render_system(
+            AgentProviderApiType::Ollama,
+            &LLMId::from("byop:p:claude-sonnet-4-5"),
+            &[],
+            &["read_files".to_string()],
+            false,
+            &[],
+            &PromptChoice::Auto,
+        );
+        assert_eq!(local, ollama);
+        assert_ne!(
+            local,
+            render_agent("claude-sonnet-4-5", &PromptChoice::Auto)
+        );
+    }
+
+    #[test]
+    fn unusable_choices_fall_back_to_auto() {
+        let auto = render_agent("gpt-4o", &PromptChoice::Auto);
+        for choice in [
+            PromptChoice::Builtin("no-such-family".into()),
+            PromptChoice::Builtin("../partials/env".into()),
+            PromptChoice::Custom("../../etc/passwd".into()),
+        ] {
+            assert_eq!(render_agent("gpt-4o", &choice), auto, "{choice:?}");
+        }
+    }
+
+    #[test]
+    fn override_renders_custom_file_with_agent_context() {
+        let dir = tempfile::tempdir().unwrap();
+        write_prompt(
+            dir.path(),
+            "agent.j2",
+            "Custom for {{ model_id }}\n{% include \"partials/tool_aliases.j2\" %}",
+        );
+        let ctx = Value::from_serialize(&PromptContext {
+            model_id: "m1".into(),
+            available_tools: vec!["grep".into()],
+            ..Default::default()
+        });
+
+        let out = render_override_in(
+            Some(dir.path()),
+            PromptSlot::Agent,
+            &PromptChoice::Custom("agent.j2".into()),
+            &ctx,
+        )
+        .unwrap();
+        assert!(out.starts_with("Custom for m1"), "{out}");
+        assert!(out.contains("grep"), "{out}");
+    }
+
+    #[test]
+    fn override_custom_file_can_extend_an_auxiliary_builtin() {
+        let dir = tempfile::tempdir().unwrap();
+        write_prompt(
+            dir.path(),
+            "next.j2",
+            "{% include \"active_ai/next_command_system.j2\" %}\nEXTRA",
+        );
+        let ctx = minijinja::context! { user_rules => Vec::<String>::new() };
+
+        let out = render_override_in(
+            Some(dir.path()),
+            PromptSlot::NextCommand,
+            &PromptChoice::Custom("next.j2".into()),
+            &ctx,
+        )
+        .unwrap();
+        let builtin = env()
+            .get_template("active_ai/next_command_system.j2")
+            .unwrap()
+            .render(&ctx)
+            .unwrap();
+        assert_eq!(out, format!("{builtin}\nEXTRA"));
+    }
+
+    #[test]
+    fn override_falls_back_when_it_cannot_be_used() {
+        let dir = tempfile::tempdir().unwrap();
+        write_prompt(dir.path(), "broken.j2", "{% if unclosed %}");
+        write_prompt(dir.path(), "undefined.j2", "{{ missing.field }}");
+        let ctx = minijinja::context! {};
+
+        for (custom_dir, slot, choice) in [
+            (Some(dir.path()), PromptSlot::Agent, PromptChoice::Auto),
+            (
+                Some(dir.path()),
+                PromptSlot::Agent,
+                PromptChoice::Custom("missing.j2".into()),
+            ),
+            (
+                Some(dir.path()),
+                PromptSlot::Agent,
+                PromptChoice::Custom("broken.j2".into()),
+            ),
+            (
+                Some(dir.path()),
+                PromptSlot::Agent,
+                PromptChoice::Custom("undefined.j2".into()),
+            ),
+            (
+                Some(dir.path()),
+                PromptSlot::Agent,
+                PromptChoice::Custom("/etc/hostname".into()),
+            ),
+            (
+                None,
+                PromptSlot::Agent,
+                PromptChoice::Custom("broken.j2".into()),
+            ),
+            // Only the agent slot has built-in alternatives.
+            (
+                Some(dir.path()),
+                PromptSlot::Title,
+                PromptChoice::Builtin("default".into()),
+            ),
+        ] {
+            assert_eq!(
+                render_override_in(custom_dir, slot, &choice, &ctx),
+                None,
+                "{slot:?} {choice:?}"
+            );
+        }
     }
 }

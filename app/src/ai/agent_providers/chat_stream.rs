@@ -69,6 +69,7 @@ use crate::ai::byop_readiness::{
     RedactedToolKind, RepairSource, RepairStateStatus, TerminalResultKind, ToolCallKey,
     ToolCallRef, ToolResultSource,
 };
+use crate::ai::execution_profiles::prompt_overrides::{PromptChoice, PromptSlot};
 use crate::settings::AgentProviderApiType;
 use ai::agent::convert::ConvertToAPITypeError;
 
@@ -1206,6 +1207,7 @@ fn build_chat_request(
         &tool_names,
         plan_mode,
         &params.user_rules,
+        params.prompt_overrides.get(PromptSlot::Agent),
     );
     // Zap:legacy SSH 会话画像补丁。`render_system` 走 AIAgentContext,
     // 拿到的 OS/shell 是本地客户端;legacy SSH 下 PTY 实际在远端,
@@ -3317,6 +3319,8 @@ pub struct TitleGenInput {
     pub reasoning_effort: crate::settings::ReasoningEffortSetting,
     /// Whether secret redaction is on for the request the title is generated from.
     pub redact_secrets: bool,
+    /// The profile's choice for the title system prompt.
+    pub system_prompt: PromptChoice,
 }
 
 pub struct ByopOutputInput {
@@ -4605,7 +4609,15 @@ pub(crate) async fn generate_title_via_byop(
         reasoning_effort: tg.reasoning_effort,
         redact_secrets: tg.redact_secrets,
     };
-    let system = include_str!("prompts/tasks/title_system.md");
+    // The built-in prompt is plain text, sent as is; only a custom one is a template.
+    let system = prompt_renderer::render_override(
+        PromptSlot::Title,
+        &tg.system_prompt,
+        &minijinja::context! {},
+    );
+    let system = system
+        .as_deref()
+        .unwrap_or(include_str!("prompts/tasks/title_system.md"));
     let user_prompt = format!(
         "Generate a title for this conversation:\n<user>{}</user>",
         user_query

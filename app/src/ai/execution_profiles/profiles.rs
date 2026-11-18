@@ -26,6 +26,7 @@ use crate::{
     cloud_object::model::generic_string_model::GenericStringObjectId, server::ids::ClientId,
 };
 
+use super::prompt_overrides::{PromptChoice, PromptSlot};
 use super::{
     AIExecutionProfile, AIExecutionProfileObjectModel, ActionPermission, WriteToPtyPermission,
 };
@@ -953,6 +954,20 @@ impl AIExecutionProfilesModel {
                 setting_value: format!("{enabled}"),
             },
             ctx
+        );
+    }
+
+    pub fn set_prompt_choice(
+        &mut self,
+        profile_id: ClientProfileId,
+        slot: PromptSlot,
+        choice: PromptChoice,
+        ctx: &mut ModelContext<Self>,
+    ) {
+        self.edit_profile_internal(
+            profile_id,
+            |profile| profile.prompt_overrides.set(slot, choice),
+            ctx,
         );
     }
 
