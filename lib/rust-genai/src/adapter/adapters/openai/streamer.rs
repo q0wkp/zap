@@ -73,9 +73,16 @@ impl OpenAIStreamer {
 
 	/// Captures a single tool call into `captured_data.tool_calls`, merging with existing if needed.
 	/// Returns the (possibly merged) tool call for use in events.
+	///
+	/// `call_id` and `fn_name` are empty when the fragment does not carry them.
 	fn capture_tool_call(&mut self, index: usize, call_id: String, fn_name: String, arguments: String) -> ToolCall {
 		let tool_call = ToolCall {
-			call_id: call_id.clone(),
+			// A call whose first fragment has no id is identified by its index.
+			call_id: if call_id.is_empty() {
+				format!("call_{index}")
+			} else {
+				call_id
+			},
 			fn_name: fn_name.clone(),
 			fn_arguments: Value::String(arguments.clone()),
 			thought_signatures: None,
@@ -93,9 +100,10 @@ impl OpenAIStreamer {
 				let accumulated = format!("{existing_args}{arguments}");
 				existing_call.fn_arguments = Value::String(accumulated);
 			}
-			// Update call_id and fn_name on first chunk that has them
+			// The call keeps the id it was first emitted with: consumers key the
+			// chunks of a call by it. A provider may repeat the name on every chunk
+			// and send the id only once.
 			if !fn_name.is_empty() {
-				existing_call.call_id = call_id;
 				existing_call.fn_name = fn_name;
 			}
 			existing_call.clone()
@@ -119,9 +127,7 @@ impl OpenAIStreamer {
 				tool_call_obj.x_take::<u32>("index"),
 				tool_call_obj.x_take::<Value>("function"),
 			) {
-				let call_id = tool_call_obj
-					.x_take::<String>("id")
-					.unwrap_or_else(|_| format!("call_{index}"));
+				let call_id = tool_call_obj.x_take::<String>("id").unwrap_or_default();
 				let fn_name = function.x_take::<String>("name").unwrap_or_default();
 				let arguments = function.x_take::<String>("arguments").unwrap_or_default();
 

@@ -70,3 +70,60 @@ fn fragments_of_two_tool_calls_in_one_message_reach_both_calls() {
 	assert_eq!(captured[0].fn_arguments, Value::String("{\"path\":\"a.rs\"}".to_string()));
 	assert_eq!(captured[1].fn_arguments, Value::String("{\"query\":\"main\"}".to_string()));
 }
+
+#[test]
+fn tool_call_keeps_its_id_when_later_fragments_repeat_only_the_name() {
+	let options = ChatOptions::default().with_capture_tool_calls(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 0, "id": "call_abc", "function": {"name": "read_files", "arguments": "{\"path\":"}}
+	]));
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 0, "function": {"name": "read_files", "arguments": "\"a.rs\"}"}}
+	]));
+
+	let emitted = queued_tool_calls(&mut streamer);
+	assert_eq!(emitted.len(), 2);
+	assert_eq!(emitted[0].call_id, "call_abc");
+	assert_eq!(emitted[1].call_id, "call_abc");
+	assert_eq!(emitted[1].fn_arguments, Value::String("{\"path\":\"a.rs\"}".to_string()));
+
+	let captured = streamer.captured_data.tool_calls.expect("captured tool calls");
+	assert_eq!(captured.len(), 1);
+	assert_eq!(captured[0].call_id, "call_abc");
+}
+
+#[test]
+fn tool_call_keeps_the_id_it_was_first_emitted_with() {
+	let options = ChatOptions::default().with_capture_tool_calls(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 0, "function": {"name": "read_files", "arguments": ""}}
+	]));
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 0, "id": "call_abc", "function": {"arguments": "{}"}}
+	]));
+
+	let emitted = queued_tool_calls(&mut streamer);
+	assert_eq!(emitted[0].call_id, "call_0");
+	assert_eq!(emitted[1].call_id, "call_0");
+	assert_eq!(emitted[1].fn_name, "read_files");
+	assert_eq!(emitted[1].fn_arguments, Value::String("{}".to_string()));
+}
+
+#[test]
+fn tool_call_without_any_id_is_identified_by_its_index() {
+	let options = ChatOptions::default().with_capture_tool_calls(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 0, "function": {"name": "read_files", "arguments": "{}"}},
+		{"index": 1, "id": "", "function": {"name": "grep", "arguments": "{}"}}
+	]));
+
+	let emitted = queued_tool_calls(&mut streamer);
+	assert_eq!(emitted[0].call_id, "call_0");
+	assert_eq!(emitted[1].call_id, "call_1");
+}
