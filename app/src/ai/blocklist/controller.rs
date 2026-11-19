@@ -3501,27 +3501,8 @@ impl BlocklistAIController {
                             .join(", "),
                         conversation_id,
                     );
-                    // Zap:LRC tag-in 首轮自动授权 agent 工具执行。
-                    //
-                    // 触发条件:发起本轮请求时 active_block 处于
-                    // InteractionMode::User { did_user_tag_in_agent: true }。不能用当前
-                    // active_block 的 monitored metadata 兜底,否则同一 CLI subagent 会话里的
-                    // 后续普通请求也会被自动确认,导致确认 UI 不显示。
-                    let auto_accept_for_lrc_tag_in =
-                        response_stream.as_ref(ctx).is_lrc_tag_in_request();
-                    if auto_accept_for_lrc_tag_in {
-                        log::info!(
-                            "[byop] LRC tag-in: queue with auto-accept ({} action(s))",
-                            actions_to_queue.len()
-                        );
-                    }
                     self.action_model.update(ctx, |action_model, ctx| {
-                        action_model.queue_actions_with_options(
-                            actions_to_queue,
-                            conversation_id,
-                            auto_accept_for_lrc_tag_in,
-                            ctx,
-                        );
+                        action_model.queue_actions(actions_to_queue, conversation_id, ctx);
                     });
                 } else {
                     // Zap BYOP:from_args 解析失败时,chat_stream 走 fallback emit

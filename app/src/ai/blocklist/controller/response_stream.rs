@@ -333,10 +333,6 @@ impl ResponseStream {
         &self.id
     }
 
-    pub fn is_lrc_tag_in_request(&self) -> bool {
-        self.params.lrc_should_spawn_subagent
-    }
-
     /// Zap BYOP 本地会话压缩:返回本流是否在跑 SummarizeConversation,
     /// 以及 overflow 标记。controller 在 handle_response_stream_finished 的
     /// Done 分支据此调 commit_summarization 把摘要落到 conversation.compaction_state。
