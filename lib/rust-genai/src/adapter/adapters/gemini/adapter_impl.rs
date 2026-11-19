@@ -301,7 +301,6 @@ impl GeminiAdapter {
 			}
 		};
 
-		let mut tool_call_counter: usize = 0;
 		for mut part in parts {
 			// Each Gemini response part may contain one or more of:
 			// thoughtSignature, thought+text (reasoning), functionCall, text.
@@ -320,10 +319,15 @@ impl GeminiAdapter {
 			// -- Function call
 			if let Ok(fc) = part.x_take::<Value>("functionCall") {
 				let fn_name: String = fc.x_get("name").unwrap_or_default();
-				// Gemini omits call_id; synthesize a unique one to avoid
-				// collisions when the same tool is called multiple times.
-				let call_id = format!("call#{}#{}", fn_name, tool_call_counter);
-				tool_call_counter += 1;
+				// Use the id Gemini gives the call (Gemini 3+). Older models omit it, so
+				// synthesize one. A stream delivers its calls over several chunks, each
+				// parsed here on its own, and a conversation keeps the calls of every
+				// turn: the id has to be unique beyond this one body, not only within it.
+				let call_id = fc
+					.x_get::<String>("id")
+					.ok()
+					.filter(|id| !id.is_empty())
+					.unwrap_or_else(|| synthesize_call_id(&fn_name));
 				content.push(GeminiChatContent::ToolCall(ToolCall {
 					call_id,
 					fn_name,
@@ -889,6 +893,9 @@ pub(in crate::adapter) struct GeminiChatRequestParts {
 
 // region:    --- Helpers
 
+/// Start of the ids given to the tool calls that Gemini returned without one.
+const SYNTHETIC_CALL_ID_PREFIX: &str = "call#";
+
 /// Extract and remove a string field from a JSON Value.
 fn take_string(v: &mut Value, key: &str) -> Option<String> {
 	v.as_object_mut()
@@ -902,6 +909,11 @@ fn take_bool(v: &mut Value, key: &str) -> bool {
 		.and_then(|m| m.remove(key))
 		.and_then(|v| v.as_bool())
 		.unwrap_or(false)
+}
+
+/// Builds the id of a tool call that Gemini returned without one: `call#<fn_name>#<unique>`.
+fn synthesize_call_id(fn_name: &str) -> String {
+	format!("{SYNTHETIC_CALL_ID_PREFIX}{fn_name}#{}", uuid::Uuid::new_v4().simple())
 }
 
 // endregion: --- Helpers
@@ -947,7 +959,7 @@ mod tests {
 	}
 
 	#[test]
-	fn tool_call_id_uses_counter() {
+	fn tool_call_ids_differ_within_one_body() {
 		// Simulate Gemini response with two functionCalls for the same tool
 		let body = json!({
 			"candidates": [{
@@ -978,6 +990,63 @@ mod tests {
 		assert_ne!(tool_calls[0].call_id, tool_calls[1].call_id);
 		assert!(tool_calls[0].call_id.contains("read_file"));
 		assert!(tool_calls[1].call_id.contains("read_file"));
+	}
+
+	fn tool_call_ids_of_body(body: Value) -> Vec<String> {
+		let model_iden = ModelIden::new(AdapterKind::Gemini, "gemini-test");
+		let response = GeminiAdapter::body_to_gemini_chat_response(&model_iden, body).unwrap();
+		response
+			.content
+			.into_iter()
+			.filter_map(|c| {
+				if let GeminiChatContent::ToolCall(tc) = c {
+					Some(tc.call_id)
+				} else {
+					None
+				}
+			})
+			.collect()
+	}
+
+	#[test]
+	fn tool_call_ids_differ_between_stream_chunks() {
+		// A stream delivers each functionCall in a chunk of its own, parsed separately.
+		let chunk = || {
+			json!({
+				"candidates": [{
+					"content": {
+						"role": "model",
+						"parts": [{"functionCall": {"name": "read_file", "args": {"path": "a.rs"}}}]
+					}
+				}],
+				"usageMetadata": {"totalTokenCount": 100}
+			})
+		};
+		let first = tool_call_ids_of_body(chunk());
+		let second = tool_call_ids_of_body(chunk());
+		assert_eq!(first.len(), 1);
+		assert_eq!(second.len(), 1);
+		assert_ne!(first[0], second[0]);
+		assert!(first[0].starts_with("call#read_file#"));
+	}
+
+	#[test]
+	fn tool_call_id_from_gemini_is_kept() {
+		let ids = tool_call_ids_of_body(json!({
+			"candidates": [{
+				"content": {
+					"role": "model",
+					"parts": [
+						{"functionCall": {"id": "fc_123", "name": "read_file", "args": {}}},
+						{"functionCall": {"id": "", "name": "read_file", "args": {}}}
+					]
+				}
+			}],
+			"usageMetadata": {"totalTokenCount": 100}
+		}));
+		assert_eq!(ids.len(), 2);
+		assert_eq!(ids[0], "fc_123");
+		assert!(ids[1].starts_with("call#read_file#"));
 	}
 
 	#[test]
