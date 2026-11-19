@@ -1,5 +1,10 @@
 //! Storage for user preferences.
 
+use std::fs::File;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 pub mod file_backed;
 pub mod in_memory;
 #[cfg(target_family = "wasm")]
@@ -11,6 +16,82 @@ pub mod user_defaults;
 
 /// A type alias for a boxed user preferences backend.
 pub type Model = Box<dyn UserPreferences>;
+
+/// Replaces the contents of the preferences file at `file_path` with `data`, creating the file
+/// and its parent directory if they don't exist.
+///
+/// The data is written to a temporary file next to the target, which is then renamed over it.
+/// Writing the file in place truncates it first, so a crash, a kill or a full disk in the middle
+/// of the write would leave a truncated file behind and lose every preference in it; with the
+/// rename, the file holds either the previous contents or the new ones. The data is not synced
+/// to disk, so this does not cover a power loss: preferences are written often, and a sync on
+/// every write would be too slow.
+///
+/// A symbolic link at `file_path` stays in place and the file it points to is replaced, and an
+/// existing file keeps its permissions. A read-only file is not replaced. Where the temporary
+/// file can't be created or renamed (a directory that isn't writable, a file that is itself a
+/// mount point), the file is written in place as a fallback.
+fn write_file_atomically(file_path: &Path, data: &[u8]) -> std::io::Result<()> {
+    let target = std::fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
+    let parent_dir = target
+        .parent()
+        .expect("absolute path to file should have parent");
+    std::fs::create_dir_all(parent_dir)?;
+
+    let existing_permissions = std::fs::metadata(&target)
+        .ok()
+        .map(|metadata| metadata.permissions());
+    if existing_permissions
+        .as_ref()
+        .is_some_and(|permissions| permissions.readonly())
+    {
+        // A rename would replace a file that was made read-only to keep it from being written.
+        // Write in place, which fails as it should.
+        return std::fs::write(&target, data);
+    }
+
+    let temporary_path = temporary_sibling_path(&target);
+    let Ok(mut temporary_file) = File::create(&temporary_path) else {
+        return std::fs::write(&target, data);
+    };
+
+    let written = temporary_file
+        .write_all(data)
+        .and_then(|()| match existing_permissions {
+            Some(permissions) => temporary_file.set_permissions(permissions),
+            None => Ok(()),
+        });
+    drop(temporary_file);
+    if let Err(error) = written {
+        // The previous contents are still in place, so report the failure instead of risking
+        // them with a write in place.
+        let _ = std::fs::remove_file(&temporary_path);
+        return Err(error);
+    }
+
+    if std::fs::rename(&temporary_path, &target).is_err() {
+        let _ = std::fs::remove_file(&temporary_path);
+        return std::fs::write(&target, data);
+    }
+    Ok(())
+}
+
+/// Returns a path in the directory of `target` that no other write uses, in this process or in
+/// another one writing the same file.
+fn temporary_sibling_path(target: &Path) -> PathBuf {
+    static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+
+    let mut file_name = target
+        .file_name()
+        .expect("path to file should have a file name")
+        .to_owned();
+    file_name.push(format!(
+        ".{}.{}.tmp",
+        std::process::id(),
+        NEXT_ID.fetch_add(1, Ordering::Relaxed)
+    ));
+    target.with_file_name(file_name)
+}
 
 /// A trait representing storage for user preferences.
 pub trait UserPreferences {
@@ -128,3 +209,7 @@ pub enum Error {
     #[error("unknown error")]
     Unknown(#[from] anyhow::Error),
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;
