@@ -176,6 +176,8 @@ pub struct SshManagerPanel {
     add_folder_btn: MouseStateHandle,
     add_server_btn: MouseStateHandle,
     toggle_all_btn: MouseStateHandle,
+    /// Mouse state of the tree's background, which opens the context menu on a right click.
+    tree_background_state: MouseStateHandle,
     row_states: HashMap<String, MouseStateHandle>,
     /// 每行的 DraggableState — 跨渲染保持拖拽进度,所以必须 cache 在 view state。
     row_drag_states: HashMap<String, DraggableState>,
@@ -211,6 +213,7 @@ impl SshManagerPanel {
             add_folder_btn: MouseStateHandle::default(),
             add_server_btn: MouseStateHandle::default(),
             toggle_all_btn: MouseStateHandle::default(),
+            tree_background_state: MouseStateHandle::default(),
             row_states: HashMap::new(),
             row_drag_states: HashMap::new(),
             context_menu_position: None,
@@ -1412,7 +1415,9 @@ impl SshManagerPanel {
             .with_main_axis_size(MainAxisSize::Min)
             .finish();
         // 空白处右键 = 节点 None 的 OpenContextMenu。
-        let hoverable = Hoverable::new(MouseStateHandle::default(), move |_| inner)
+        // The mouse state lives in the view: a fresh one on every render reports a hover change
+        // each frame while the pointer is over the tree, which re-renders without end.
+        let hoverable = Hoverable::new(self.tree_background_state.clone(), move |_| inner)
             .on_right_click(|ctx, _, position| {
                 let offset = match ctx.element_position_by_id(SSH_PANEL_POSITION_ID) {
                     Some(bounds) => position - bounds.origin(),

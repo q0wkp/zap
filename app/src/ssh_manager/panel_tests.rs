@@ -65,6 +65,7 @@ fn panel_with_nodes(
         add_folder_btn: MouseStateHandle::default(),
         add_server_btn: MouseStateHandle::default(),
         toggle_all_btn: MouseStateHandle::default(),
+        tree_background_state: MouseStateHandle::default(),
         row_states,
         row_drag_states,
         context_menu_position: None,

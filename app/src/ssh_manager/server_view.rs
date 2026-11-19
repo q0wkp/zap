@@ -139,6 +139,8 @@ pub struct SshServerView {
     auth_onekey_btn_state: MouseStateHandle,
     key_path_picker_btn_state: MouseStateHandle,
     onekey_manager_btn_state: MouseStateHandle,
+    /// Mouse state of the OneKey manager's panel, which swallows clicks on its background.
+    onekey_manager_panel_state: MouseStateHandle,
     onekey_manager_close_btn_state: MouseStateHandle,
     onekey_manager_new_btn_state: MouseStateHandle,
     onekey_manager_save_btn_state: MouseStateHandle,
@@ -250,6 +252,7 @@ impl SshServerView {
             auth_onekey_btn_state: MouseStateHandle::default(),
             key_path_picker_btn_state: MouseStateHandle::default(),
             onekey_manager_btn_state: MouseStateHandle::default(),
+            onekey_manager_panel_state: MouseStateHandle::default(),
             onekey_manager_close_btn_state: MouseStateHandle::default(),
             onekey_manager_new_btn_state: MouseStateHandle::default(),
             onekey_manager_save_btn_state: MouseStateHandle::default(),
@@ -2178,7 +2181,9 @@ impl SshServerView {
         .with_height(ONEKEY_MANAGER_HEIGHT)
         .finish();
 
-        let panel = Hoverable::new(MouseStateHandle::default(), move |_| panel)
+        // The mouse state lives in the view: a fresh one on every render reports a hover change
+        // each frame while the pointer is over the panel, which re-renders without end.
+        let panel = Hoverable::new(self.onekey_manager_panel_state.clone(), move |_| panel)
             .on_mouse_down(|_, _, _| {})
             .finish();
 
