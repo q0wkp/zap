@@ -41,6 +41,7 @@ use anyhow::Result;
 use serde_json::Value;
 use warp_multi_agent_api as api;
 
+use super::chat_stream::TRUNCATED_OUTPUT_ERROR;
 use crate::ai::agent::AIAgentActionResult;
 
 /// 一条 tool 的双向适配描述。
@@ -211,7 +212,8 @@ pub fn action_result_to_msg_result(
 ///
 /// `chat_stream` answers such a call with a result that carries no `tool_call_result::Result`,
 /// only an `invalid_arguments` JSON payload in the message's `server_message_data`, and asks the
-/// model to retry.
+/// model to retry. A call whose arguments were cut off with the generation gets a
+/// `truncated_output` payload of the same shape.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InvalidToolCall {
     /// The function name the model called, when the payload names it.
@@ -220,10 +222,14 @@ pub struct InvalidToolCall {
     pub detail: Option<String>,
 }
 
-/// Recognizes the `invalid_arguments` payload of a tool call result's `server_message_data`.
+/// Recognizes the `invalid_arguments` or `truncated_output` payload of a tool call result's
+/// `server_message_data`.
 pub fn parse_invalid_tool_call(server_message_data: &str) -> Option<InvalidToolCall> {
     let payload: Value = serde_json::from_str(server_message_data).ok()?;
-    if payload.get("error").and_then(Value::as_str) != Some("invalid_arguments") {
+    if !matches!(
+        payload.get("error").and_then(Value::as_str),
+        Some("invalid_arguments" | TRUNCATED_OUTPUT_ERROR)
+    ) {
         return None;
     }
     let non_empty_string = |key: &str| {

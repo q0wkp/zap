@@ -52,7 +52,8 @@ use warp_multi_agent_api as api;
 use genai::adapter::AdapterKind;
 use genai::chat::{
     Binary, BinarySource, CacheControl, ChatMessage, ChatOptions, ChatRequest, ChatRole,
-    ChatStreamEvent, ContentPart, MessageContent, Tool as GenaiTool, ToolCall, ToolResponse,
+    ChatStreamEvent, ContentPart, MessageContent, StopReason, Tool as GenaiTool, ToolCall,
+    ToolResponse,
 };
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget, WebConfig};
@@ -712,14 +713,19 @@ fn persisted_tool_result_kind(
                 .unwrap_or(false)
             {
                 TerminalResultKind::LocalInterception
-            } else if value.get("error").and_then(Value::as_str) == Some("invalid_arguments") {
+            } else if matches!(
+                value.get("error").and_then(Value::as_str),
+                Some("invalid_arguments" | TRUNCATED_OUTPUT_ERROR)
+            ) {
                 TerminalResultKind::StructuredError
             } else {
                 TerminalResultKind::Real
             }
         }
         Err(_)
-            if content.contains("_byop_intercepted") || content.contains("invalid_arguments") =>
+            if content.contains("_byop_intercepted")
+                || content.contains("invalid_arguments")
+                || content.contains(TRUNCATED_OUTPUT_ERROR) =>
         {
             TerminalResultKind::UnreadableLocalInterception
         }
@@ -3376,6 +3382,81 @@ fn byop_api_error(stage: &str, err: OpenAiCompatibleError) -> AIApiError {
     }
 }
 
+/// The `error` of the result that answers a tool call whose arguments were cut off. The
+/// controller's auto-resume check looks for it in the result's `server_message_data`.
+pub(crate) const TRUNCATED_OUTPUT_ERROR: &str = "truncated_output";
+
+/// Why a generation ended before the model had finished it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GenerationCutOff {
+    /// The provider stopped the generation at the output token limit.
+    TokenLimit,
+    /// The stream closed without its closing event, as when a relay drops the connection.
+    StreamDropped,
+}
+
+/// Tells whether the generation was cut off, from the stop reason the provider reported and the
+/// number of closing events the stream delivered.
+fn generation_cut_off(
+    stop_reason: Option<&StopReason>,
+    end_events: u32,
+) -> Option<GenerationCutOff> {
+    if stop_reason.is_some_and(StopReason::is_max_tokens) {
+        Some(GenerationCutOff::TokenLimit)
+    } else if end_events == 0 {
+        Some(GenerationCutOff::StreamDropped)
+    } else {
+        None
+    }
+}
+
+/// Whether a tool call's arguments are still the raw text the model streamed, and that text is
+/// not a complete JSON document. In a generation that was cut off these are arguments the model
+/// never got to finish, not arguments it got wrong.
+fn tool_call_arguments_are_incomplete(call: &ToolCall) -> bool {
+    match &call.fn_arguments {
+        Value::String(raw) => serde_json::from_str::<Value>(raw).is_err(),
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Array(_) | Value::Object(_) => {
+            false
+        }
+    }
+}
+
+/// The result that answers a tool call whose arguments were cut off. An `invalid_arguments`
+/// result would send the model looking for a schema mistake it did not make; this one says the
+/// output was cut short and that the call has to be made again, smaller.
+fn truncated_output_result(
+    cut_off: GenerationCutOff,
+    tool_name: &str,
+    received_args: &str,
+) -> Value {
+    let (reason, detail, hint) = match cut_off {
+        GenerationCutOff::TokenLimit => (
+            "token_limit",
+            "The response reached the output token limit before the arguments of this tool call \
+             were complete, so the call was not run.",
+            "The arguments were cut off, not wrong: do not change their schema. Make the call \
+             again with a smaller payload, for example by splitting the work into several \
+             smaller calls (write a large file in parts, change fewer places at a time).",
+        ),
+        GenerationCutOff::StreamDropped => (
+            "stream_interrupted",
+            "The connection to the provider closed before the arguments of this tool call were \
+             complete, so the call was not run. No token limit was reported.",
+            "The arguments were cut off, not wrong: do not change their schema. Make the same \
+             call again; if it is cut off once more, use a smaller payload.",
+        ),
+    };
+    json!({
+        "error": TRUNCATED_OUTPUT_ERROR,
+        "reason": reason,
+        "detail": detail,
+        "tool": tool_name,
+        "received_args_bytes": received_args.len(),
+        "hint": hint,
+    })
+}
+
 // ---------------------------------------------------------------------------
 // 主流程
 // ---------------------------------------------------------------------------
@@ -3863,6 +3944,9 @@ pub async fn generate_byop_output(
         // 依然保持 0。
         let mut captured_cache_read_tokens: i32 = 0;
         let mut captured_cache_create_tokens: i32 = 0;
+        // The stop reason of the closing event, to tell a generation that was cut off at the
+        // token limit from one the model finished.
+        let mut captured_stop_reason: Option<StopReason> = None;
 
         while let Some(item) = sdk_stream.next().await {
             let event = match item {
@@ -4108,6 +4192,9 @@ pub async fn generate_byop_output(
                 }
                 ChatStreamEvent::End(end) => {
                     end_count += 1;
+                    if let Some(reason) = end.captured_stop_reason.as_ref() {
+                        captured_stop_reason = Some(reason.clone());
+                    }
                     if let (Some(call), Some(usage)) =
                         (&inspector_call, end.captured_usage.as_ref())
                     {
@@ -4278,6 +4365,18 @@ pub async fn generate_byop_output(
             );
         }
 
+        let cut_off = generation_cut_off(captured_stop_reason.as_ref(), end_count);
+        if let Some(cut_off) = cut_off {
+            log::warn!(
+                "[byop] generation cut off: {cut_off:?} stop_reason={} ends={end_count} \
+                 captured_tools={total_tools}",
+                captured_stop_reason
+                    .as_ref()
+                    .map(StopReason::raw)
+                    .unwrap_or("(none)"),
+            );
+        }
+
         // 流结束:把累积的 tool_calls 一次性发出。
         let mut final_messages: Vec<api::Message> = Vec::new();
         let mut ordered_tool_calls: Vec<ToolCall> = Vec::with_capacity(tool_bufs.len());
@@ -4337,6 +4436,35 @@ pub async fn generate_byop_output(
                     call.call_id,
                     args_repr,
                 );
+            }
+
+            // A call left unfinished by a generation that was cut off is answered as such, before
+            // any tool looks at its arguments: they are incomplete, not invalid.
+            if let Some(cut_off) = cut_off.filter(|_| tool_call_arguments_are_incomplete(&call)) {
+                let args_str = call.fn_arguments.as_str().unwrap_or("");
+                log::warn!(
+                    "[byop] tool_call cut off ({cut_off:?}) → emit truncated_output tool_result: \
+                     tool={} call_id={} args_bytes={}",
+                    call.fn_name,
+                    call.call_id,
+                    args_str.len(),
+                );
+                let error_content =
+                    truncated_output_result(cut_off, &call.fn_name, args_str).to_string();
+                final_messages.push(make_tool_call_carrier_message(
+                    &current_task_id,
+                    &request_id,
+                    &call.call_id,
+                    &call.fn_name,
+                    args_str,
+                ));
+                final_messages.push(make_tool_call_result_message(
+                    &current_task_id,
+                    &request_id,
+                    call.call_id.clone(),
+                    error_content,
+                ));
+                continue;
             }
 
             // Zap BYOP todowrite 拦截:不映射到 protobuf executor,合成
@@ -5440,6 +5568,108 @@ fn make_finished_done(
                 request_cost: None,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod truncated_output_tests {
+    use super::*;
+
+    fn call(fn_arguments: Value) -> ToolCall {
+        ToolCall {
+            call_id: "call-1".to_owned(),
+            fn_name: "create_file".to_owned(),
+            fn_arguments,
+            thought_signatures: None,
+        }
+    }
+
+    #[test]
+    fn token_limit_and_dropped_stream_are_cut_offs() {
+        let max_tokens = StopReason::from("length".to_owned());
+        let anthropic_max_tokens = StopReason::from("max_tokens".to_owned());
+        let completed = StopReason::from("stop".to_owned());
+        let tool_use = StopReason::from("tool_calls".to_owned());
+
+        assert_eq!(
+            generation_cut_off(Some(&max_tokens), 1),
+            Some(GenerationCutOff::TokenLimit)
+        );
+        assert_eq!(
+            generation_cut_off(Some(&anthropic_max_tokens), 1),
+            Some(GenerationCutOff::TokenLimit)
+        );
+        assert_eq!(generation_cut_off(Some(&completed), 1), None);
+        assert_eq!(generation_cut_off(Some(&tool_use), 1), None);
+        // A provider that reports no stop reason but closes its stream properly.
+        assert_eq!(generation_cut_off(None, 1), None);
+        // No closing event at all: the connection was dropped.
+        assert_eq!(
+            generation_cut_off(None, 0),
+            Some(GenerationCutOff::StreamDropped)
+        );
+    }
+
+    #[test]
+    fn only_unfinished_raw_arguments_are_incomplete() {
+        assert!(tool_call_arguments_are_incomplete(&call(json!(
+            "{\"path\":\"a.rs\",\"content\":\"fn main() {"
+        ))));
+        assert!(tool_call_arguments_are_incomplete(&call(json!(""))));
+        // Complete arguments, parsed or still a string, are left to the tool to judge.
+        assert!(!tool_call_arguments_are_incomplete(&call(json!({"path": "a.rs"}))));
+        assert!(!tool_call_arguments_are_incomplete(&call(json!(
+            "{\"path\":\"a.rs\"}"
+        ))));
+        assert!(!tool_call_arguments_are_incomplete(&call(json!({}))));
+    }
+
+    #[test]
+    fn result_tells_a_token_limit_from_a_dropped_stream() {
+        let token_limit =
+            truncated_output_result(GenerationCutOff::TokenLimit, "create_file", "{\"path\":");
+        let dropped =
+            truncated_output_result(GenerationCutOff::StreamDropped, "create_file", "{\"path\":");
+
+        for result in [&token_limit, &dropped] {
+            assert_eq!(result["error"], "truncated_output");
+            assert_eq!(result["tool"], "create_file");
+            assert_eq!(result["received_args_bytes"], 8);
+            assert!(result["hint"].as_str().unwrap().contains("smaller payload"));
+            // The controller's auto-resume check looks for this exact text.
+            assert!(result
+                .to_string()
+                .contains(r#""error":"truncated_output""#));
+        }
+        assert_eq!(token_limit["reason"], "token_limit");
+        assert!(token_limit["detail"].as_str().unwrap().contains("token limit"));
+        assert_eq!(dropped["reason"], "stream_interrupted");
+        assert!(dropped["detail"]
+            .as_str()
+            .unwrap()
+            .contains("connection to the provider closed"));
+    }
+
+    #[test]
+    fn result_is_classified_like_an_invalid_arguments_result() {
+        let content =
+            truncated_output_result(GenerationCutOff::TokenLimit, "create_file", "{").to_string();
+        let result = make_tool_call_result_message("task-1", "req-1", "call-1".to_owned(), content);
+        assert!(matches!(
+            persisted_tool_result_kind(&result, None),
+            TerminalResultKind::StructuredError
+        ));
+
+        let unreadable = make_tool_call_result_message(
+            "task-1",
+            "req-1",
+            "call-1".to_owned(),
+            r#"{"error":"truncated_output","tool":"create_file""#.to_owned(),
+        );
+        assert!(matches!(
+            persisted_tool_result_kind(&unreadable, None),
+            TerminalResultKind::UnreadableLocalInterception
+        ));
     }
 }
 

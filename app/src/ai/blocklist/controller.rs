@@ -3537,7 +3537,8 @@ impl BlocklistAIController {
                     // 同标记反复命中导致死循环。
                     // Zap BYOP:没有进入 AIAgentAction 队列的 synthetic
                     // ToolCallResult 需要 auto-resume,否则 exchange 静默结束,模型卡死等结果。
-                    // 1. invalid_arguments — from_args 解析失败兜底(原始)。
+                    // 1. invalid_arguments — from_args 解析失败兜底(原始);truncated_output —
+                    //    生成被截断导致参数不完整,同样要让模型重发。
                     // 2. _byop_intercepted — todowrite / webfetch / websearch 等本地拦截
                     //    工具结果。这类工具不走 protobuf executor,直接合成 result,
                     //    没有 AIAgentAction 入队。
@@ -3555,13 +3556,16 @@ impl BlocklistAIController {
                                     .contains(r#""error":"invalid_arguments""#)
                                     || msg
                                         .server_message_data
+                                        .contains(r#""error":"truncated_output""#)
+                                    || msg
+                                        .server_message_data
                                         .contains(r#""_byop_intercepted":true"#))
                         })
                     });
                     if needs_byop_local_resume {
                         log::info!(
-                            "[byop] detected synthetic local tool_result (invalid_arguments \
-                             or _byop_intercepted) without queued action → schedule auto-resume. \
+                            "[byop] detected synthetic local tool_result (invalid_arguments, \
+                             truncated_output or _byop_intercepted) without queued action → schedule auto-resume. \
                              conversation_id={conversation_id:?}"
                         );
                         let network_status = NetworkStatus::handle(ctx);
