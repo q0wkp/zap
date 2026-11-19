@@ -6,6 +6,7 @@ use crate::chat::{ChatOptionsSet, StopReason, ToolCall};
 use crate::webc::{Event, EventSourceStream};
 use crate::{Error, ModelIden, Result};
 use serde_json::Value;
+use std::collections::VecDeque;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use value_ext::JsonValueExt;
@@ -55,6 +56,8 @@ pub struct OpenAIStreamer {
 	/// Flag to prevent polling the EventSource after a MessageStop event
 	done: bool,
 	captured_data: StreamerCapturedData,
+	/// Events still to emit from a message that produced more than one.
+	pending_events: VecDeque<InterStreamEvent>,
 }
 
 impl OpenAIStreamer {
@@ -64,6 +67,7 @@ impl OpenAIStreamer {
 			done: false,
 			options: StreamerOptions::new(model_iden, options_set),
 			captured_data: Default::default(),
+			pending_events: VecDeque::new(),
 		}
 	}
 
@@ -101,12 +105,42 @@ impl OpenAIStreamer {
 			tool_call
 		}
 	}
+
+	/// Captures every tool call of a `delta.tool_calls` array and queues a ToolCallChunk for each.
+	/// A provider may send several calls in one message, complete (e.g., Ollama) or as fragments.
+	fn queue_delta_tool_calls(&mut self, delta_tool_calls: &Value) {
+		let Some(delta_tool_calls) = delta_tool_calls.as_array() else {
+			return;
+		};
+
+		for tool_call_obj_val in delta_tool_calls {
+			let mut tool_call_obj = tool_call_obj_val.clone();
+			if let (Ok(index), Ok(mut function)) = (
+				tool_call_obj.x_take::<u32>("index"),
+				tool_call_obj.x_take::<Value>("function"),
+			) {
+				let call_id = tool_call_obj
+					.x_take::<String>("id")
+					.unwrap_or_else(|_| format!("call_{index}"));
+				let fn_name = function.x_take::<String>("name").unwrap_or_default();
+				let arguments = function.x_take::<String>("arguments").unwrap_or_default();
+
+				let tool_call = self.capture_tool_call(index as usize, call_id, fn_name, arguments);
+				self.pending_events.push_back(InterStreamEvent::ToolCallChunk(tool_call));
+			}
+		}
+	}
 }
 
 impl futures::Stream for OpenAIStreamer {
 	type Item = Result<InterStreamEvent>;
 
 	fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+		// Emit what an earlier message left to emit before reading the next one
+		if let Some(event) = self.pending_events.pop_front() {
+			return Poll::Ready(Some(Ok(event)));
+		}
+
 		if self.done {
 			// The last poll was definitely the end, so end the stream.
 			// This will prevent triggering a stream ended error
@@ -209,31 +243,12 @@ impl futures::Stream for OpenAIStreamer {
 							// NOTE: Some providers (e.g., Ollama) send tool_calls AND finish_reason in the same message.
 							// We need to capture tool_calls here before continuing to the next message.
 							// Capture tool_calls that arrive in the same chunk as finish_reason.
-							// After capturing, emit the first ToolCallChunk so downstream
-							// consumers (e.g. agent loops) see the tool call event.
-							let mut first_tool_call_event: Option<ToolCall> = None;
+							// Each one is queued as a ToolCallChunk so downstream
+							// consumers (e.g. agent loops) see the tool call events.
 							if let Ok(delta_tool_calls) = first_choice.x_take::<Value>("/delta/tool_calls")
 								&& delta_tool_calls != Value::Null
-								&& let Some(delta_tool_calls) = delta_tool_calls.as_array()
 							{
-								for tool_call_obj_val in delta_tool_calls {
-									let mut tool_call_obj = tool_call_obj_val.clone();
-									if let (Ok(index), Ok(mut function)) = (
-										tool_call_obj.x_take::<u32>("index"),
-										tool_call_obj.x_take::<Value>("function"),
-									) {
-										let call_id = tool_call_obj
-											.x_take::<String>("id")
-											.unwrap_or_else(|_| format!("call_{index}"));
-										let fn_name = function.x_take::<String>("name").unwrap_or_default();
-										let arguments = function.x_take::<String>("arguments").unwrap_or_default();
-
-										let tc = self.capture_tool_call(index as usize, call_id, fn_name, arguments);
-										if first_tool_call_event.is_none() {
-											first_tool_call_event = Some(tc);
-										}
-									}
-								}
+								self.queue_delta_tool_calls(&delta_tool_calls);
 							}
 
 							if let Some(usage) =
@@ -274,10 +289,10 @@ impl futures::Stream for OpenAIStreamer {
 								return Poll::Ready(Some(Ok(InterStreamEvent::ReasoningChunk(reasoning_content))));
 							}
 
-							// If we captured a tool call in the finish_reason chunk,
-							// emit it as a ToolCallChunk so the agent loop sees it.
-							if let Some(tc) = first_tool_call_event {
-								return Poll::Ready(Some(Ok(InterStreamEvent::ToolCallChunk(tc))));
+							// If we captured tool calls in the finish_reason chunk,
+							// emit the first one now; the next polls emit the others.
+							if let Some(event) = self.pending_events.pop_front() {
+								return Poll::Ready(Some(Ok(event)));
 							}
 
 							continue;
@@ -286,29 +301,9 @@ impl futures::Stream for OpenAIStreamer {
 						else if let Ok(delta_tool_calls) = first_choice.x_take::<Value>("/delta/tool_calls")
 							&& delta_tool_calls != Value::Null
 						{
-							// Check if there's a tool call in the delta
-							if let Some(delta_tool_calls) = delta_tool_calls.as_array()
-								&& let Some(tool_call_obj_val) = delta_tool_calls.first()
-							{
-								// Extract the first tool call object as a mutable value
-								let mut tool_call_obj = tool_call_obj_val.clone();
-
-								// Extract tool call data
-								if let (Ok(index), Ok(mut function)) = (
-									tool_call_obj.x_take::<u32>("index"),
-									tool_call_obj.x_take::<Value>("function"),
-								) {
-									let call_id = tool_call_obj
-										.x_take::<String>("id")
-										.unwrap_or_else(|_| format!("call_{index}"));
-									let fn_name = function.x_take::<String>("name").unwrap_or_default();
-									let arguments = function.x_take::<String>("arguments").unwrap_or_default();
-
-									let tool_call = self.capture_tool_call(index as usize, call_id, fn_name, arguments);
-
-									// Return the ToolCallChunk event
-									return Poll::Ready(Some(Ok(InterStreamEvent::ToolCallChunk(tool_call))));
-								}
+							self.queue_delta_tool_calls(&delta_tool_calls);
+							if let Some(event) = self.pending_events.pop_front() {
+								return Poll::Ready(Some(Ok(event)));
 							}
 							// No valid tool call found, continue to next message
 							continue;
@@ -389,6 +384,10 @@ impl futures::Stream for OpenAIStreamer {
 		Poll::Pending
 	}
 }
+
+#[cfg(test)]
+#[path = "streamer_tests.rs"]
+mod streamer_tests;
 
 #[cfg(test)]
 mod tests {
