@@ -153,6 +153,44 @@ fn render_lrc_request_context(params: &RequestParams) -> Option<String> {
         })
 }
 
+/// File tools that a remote session serves through the SSH extension (the remote server). A
+/// remote session without a connected extension has no way to run them, so they are withheld
+/// there rather than offered to fail, as Warp's `get_supported_tools` does.
+const REMOTE_SERVER_FILE_TOOLS: &[&str] = &["read_files", "apply_file_diffs"];
+
+/// Whether this turn's session is remote with no connected SSH extension.
+fn remote_file_tools_unavailable(params: &RequestParams) -> bool {
+    params.session_context.is_remote() && params.session_context.host_id().is_none()
+}
+
+/// Tells the model, in a remote session without the SSH extension, that the file tools are
+/// withheld and how to work with files instead: the system templates otherwise tell it to prefer
+/// them over shell commands, which would leave it no sanctioned way to read or edit files.
+fn render_remote_file_tools_unavailable_block(params: &RequestParams) -> Option<String> {
+    if !remote_file_tools_unavailable(params) {
+        return None;
+    }
+    // `run_shell_command` is itself withheld in plan mode and while a long-running command is
+    // attached; pointing the model at it there would only produce refused calls.
+    let rules = if available_tool_names(params)
+        .iter()
+        .any(|name| name == "run_shell_command")
+    {
+        "    - Read files with shell commands through `run_shell_command` (for example `cat` or `sed -n '1,200p' <file>`).\n    \
+         - Create or edit files with shell commands through `run_shell_command` (for example a quoted heredoc or `patch`), then re-read the file to confirm the change.\n    \
+         - These rules override any other instruction to prefer `read_files` or `apply_file_diffs`.\n"
+    } else {
+        "    - Inspect files with `grep` and `file_glob`.\n"
+    };
+    Some(format!(
+        "\n\n<remote_session_without_ssh_extension>\n  \
+         <fact>The active terminal is an SSH session on a remote host without the SSH extension connected, \
+         so the `read_files` and `apply_file_diffs` tools are unavailable in this session.</fact>\n  \
+         <rules>\n{rules}  </rules>\n\
+         </remote_session_without_ssh_extension>"
+    ))
+}
+
 /// Zap:渲染 SSH 会话状态块,append 到 system prompt 末尾。
 ///
 /// 触发条件:`SessionContext.is_legacy_ssh()` 为 true(用户在本地 PTY 手敲
@@ -1268,6 +1306,9 @@ fn build_chat_request(
     // 追加一段 SSH 状态块矫正 LLM 推断。
     if let Some(ssh_block) = render_ssh_session_block(&params.session_context) {
         system_text.push_str(&ssh_block);
+    }
+    if let Some(block) = render_remote_file_tools_unavailable_block(params) {
+        system_text.push_str(&block);
     }
     // 注:LRC / 长命令的工具用法引导(write_to_long_running_shell_command + command_id +
     // 各种 mode 与 raw 字节序列)已经在 `prompts/system/default.j2:69-79` 完整覆盖。
@@ -2803,10 +2844,14 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
     let cli_subagent = is_cli_subagent_turn(params);
+    let remote_files_withheld = remote_file_tools_unavailable(params);
     let mut names: Vec<String> = tools::REGISTRY
         .iter()
         .filter(|t| {
             if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
+            if remote_files_withheld && REMOTE_SERVER_FILE_TOOLS.contains(&t.name) {
                 return false;
             }
             if is_lrc && t.name == "run_shell_command" {
@@ -2855,6 +2900,7 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
     let cli_subagent = is_cli_subagent_turn(params);
+    let remote_files_withheld = remote_file_tools_unavailable(params);
     // Zap BYOP:`suggest_prompt` chip UI 已通过 view 层订阅
     // PromptSuggestionExecutorEvent 恢复(见 `terminal/view.rs::
     // handle_suggest_prompt_executor_event`),可以暴露给模型。
@@ -2870,6 +2916,9 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
         .filter(|t| {
             // A CLI subagent is offered only what its popover can ask the user to confirm.
             if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
+            if remote_files_withheld && REMOTE_SERVER_FILE_TOOLS.contains(&t.name) {
                 return false;
             }
             if is_lrc && t.name == "run_shell_command" {
@@ -5913,6 +5962,44 @@ mod cli_subagent_tools_tests {
     fn every_cli_agent_tool_is_a_registered_tool() {
         for name in CLI_SUBAGENT_TOOLS {
             assert!(tools::lookup(name).is_some(), "{name} is not in the registry");
+        }
+    }
+
+    /// A remote session without the SSH extension has no way to run the file tools, so they are
+    /// withheld and the model is told how to work with files instead.
+    #[test]
+    fn remote_session_without_extension_withholds_file_tools() {
+        use crate::ai::blocklist::SessionContext;
+        use crate::terminal::model::session::SessionType;
+
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.session_context = SessionContext::new_for_test_with_session_type(
+            SessionType::WarpifiedRemote { host_id: None },
+        );
+        let offered = available_tool_names(&params);
+        for name in REMOTE_SERVER_FILE_TOOLS {
+            assert!(!offered.iter().any(|offered| offered == name), "{name} offered");
+        }
+        let block = render_remote_file_tools_unavailable_block(&params).unwrap();
+        assert!(block.contains("run_shell_command"), "{block}");
+
+        params.lrc_command_id = Some("block-1".to_owned());
+        let block = render_remote_file_tools_unavailable_block(&params).unwrap();
+        assert!(!block.contains("run_shell_command"), "{block}");
+
+        for session_type in [
+            SessionType::WarpifiedRemote {
+                host_id: Some(warp_core::HostId::new("host-1".to_owned())),
+            },
+            SessionType::Local,
+        ] {
+            let mut params = RequestParams::new_for_test(vec![], vec![]);
+            params.session_context = SessionContext::new_for_test_with_session_type(session_type);
+            let offered = available_tool_names(&params);
+            for name in REMOTE_SERVER_FILE_TOOLS {
+                assert!(offered.iter().any(|offered| offered == name), "{name} withheld");
+            }
+            assert!(render_remote_file_tools_unavailable_block(&params).is_none());
         }
     }
 
