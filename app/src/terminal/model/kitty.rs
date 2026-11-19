@@ -4,6 +4,7 @@ use flate2::read::ZlibDecoder;
 use pathfinder_geometry::vector::Vector2F;
 use rand::Rng;
 use std::cmp::min;
+use std::collections::BTreeMap;
 use std::io::Read;
 #[cfg(feature = "local_fs")]
 use std::{env, fs, str};
@@ -193,7 +194,6 @@ impl From<InvalidKittyAction> for KittyError {
 #[derive(Debug, Clone)]
 pub enum InvalidControlData {
     IdMissing,
-    UnicodePlaceholderUnsupported,
     UnknownDeleteSpecifier,
     IdAndNumberGiven,
 }
@@ -341,10 +341,6 @@ impl TryFrom<KittyMessage> for KittyAction {
                 Ok(KittyAction::StoreOnly(action))
             }
             KittyPlacementAction::StoreAndDisplay => {
-                if message.control_data.unicode_placeholder {
-                    return Err(InvalidControlData::UnicodePlaceholderUnsupported.into());
-                }
-
                 let mut action = StoreAndDisplay {
                     image_id: message
                         .control_data
@@ -359,6 +355,7 @@ impl TryFrom<KittyMessage> for KittyAction {
                         cols: message.control_data.cols,
                         rows: message.control_data.rows,
                         cursor_movement_policy: message.control_data.cursor_movement_policy,
+                        unicode_placeholder: message.control_data.unicode_placeholder,
                     },
                     image: KittyImage::try_from(message)?,
                 };
@@ -372,10 +369,6 @@ impl TryFrom<KittyMessage> for KittyAction {
                 Ok(KittyAction::StoreAndDisplay(action))
             }
             KittyPlacementAction::DisplayStoredImage => {
-                if message.control_data.unicode_placeholder {
-                    return Err(InvalidControlData::UnicodePlaceholderUnsupported.into());
-                }
-
                 let id = match message.control_data.image_id {
                     Some(id) => id,
                     None => return Err(InvalidControlData::IdMissing.into()),
@@ -392,6 +385,7 @@ impl TryFrom<KittyMessage> for KittyAction {
                         cols: message.control_data.cols,
                         rows: message.control_data.rows,
                         cursor_movement_policy: message.control_data.cursor_movement_policy,
+                        unicode_placeholder: message.control_data.unicode_placeholder,
                     },
                 }))
             }
@@ -469,6 +463,17 @@ pub struct KittyImageMetadata {
     pub pixel_data_format: KittyPixelDataFormat,
     pub transmission_medium: KittyTransmissionMedium,
     pub image_size: Vector2F,
+    /// The image's virtual placements (`U=1`), by placement id, with 0 for a placement that has
+    /// none. They are not placed in a grid: the image is drawn where placeholder cells are.
+    pub virtual_placements: BTreeMap<u32, VirtualPlacement>,
+}
+
+/// A virtual placement: the number of columns and rows of placeholder cells an image is spread
+/// over, where the client gave them.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct VirtualPlacement {
+    pub cols: Option<u32>,
+    pub rows: Option<u32>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -477,6 +482,8 @@ pub struct KittyPlacementData {
     pub cols: Option<u32>,
     pub rows: Option<u32>,
     pub cursor_movement_policy: CursorMovementPolicy,
+    /// Whether this is a virtual placement (`U=1`), shown through placeholder cells.
+    pub unicode_placeholder: bool,
 }
 
 impl KittyPlacementData {
@@ -524,6 +531,7 @@ impl From<KittyControlData> for KittyImageMetadata {
             pixel_data_format: control_data.pixel_data_format,
             image_size: Vector2F::new(control_data.width as f32, control_data.height as f32),
             transmission_medium: control_data.transmission_medium,
+            virtual_placements: BTreeMap::new(),
         }
     }
 }

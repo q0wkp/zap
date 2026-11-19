@@ -41,7 +41,7 @@ use super::index::Point;
 use super::kitty::{
     create_kitty_error_reply, create_kitty_ok_reply, DeletionType, InvalidControlData, KittyAction,
     KittyChunk, KittyMessage, KittyPlacementAction, KittyReplyIds, KittyResponse,
-    PendingKittyMessage,
+    PendingKittyMessage, VirtualPlacement,
 };
 use super::secrets::{RespectObfuscatedSecrets, SecretAndHandle};
 use super::selection::ScrollDelta;
@@ -2377,6 +2377,8 @@ impl TerminalModel {
             | DeletionType::DeleteById(_)
             | DeletionType::WithZIndex(_)
             | DeletionType::InIdRange { .. } => {
+                self.delete_kitty_virtual_placements(deletion_type);
+
                 if self.alt_screen_active {
                     image_ids.extend(
                         self.alt_screen
@@ -2428,11 +2430,54 @@ impl TerminalModel {
         }
     }
 
-    /// Whether any grid still shows the image with the given id.
+    /// Removes the virtual placements a Kitty delete command selects. They have no cell or
+    /// z-index of their own, so only the commands that name images reach them.
+    fn delete_kitty_virtual_placements(&mut self, deletion_type: &DeletionType) {
+        for (image_id, metadata) in &mut self.image_id_to_metadata {
+            let StoredImageMetadata::Kitty(metadata) = metadata else {
+                continue;
+            };
+
+            match deletion_type {
+                DeletionType::DeleteAll => metadata.virtual_placements.clear(),
+                DeletionType::DeleteById(delete_by_id) => {
+                    if delete_by_id.image_id != *image_id {
+                        continue;
+                    }
+                    match delete_by_id.placement_id {
+                        Some(placement_id) => {
+                            metadata.virtual_placements.remove(&placement_id);
+                        }
+                        None => metadata.virtual_placements.clear(),
+                    }
+                }
+                DeletionType::InIdRange { first, last } => {
+                    if (*first..=*last).contains(image_id) {
+                        metadata.virtual_placements.clear();
+                    }
+                }
+                DeletionType::AtCursor
+                | DeletionType::AtCell { .. }
+                | DeletionType::InColumn(_)
+                | DeletionType::InRow(_)
+                | DeletionType::WithZIndex(_) => {}
+            }
+        }
+    }
+
+    /// Whether the image with the given id is still shown: in a grid, or through placeholder
+    /// cells.
     fn is_image_placed(&self, image_id: u32) -> bool {
-        self.alt_screen
-            .grid_handler()
-            .has_placement_of_image(image_id)
+        let has_virtual_placement = matches!(
+            self.image_id_to_metadata.get(&image_id),
+            Some(StoredImageMetadata::Kitty(metadata)) if !metadata.virtual_placements.is_empty()
+        );
+
+        has_virtual_placement
+            || self
+                .alt_screen
+                .grid_handler()
+                .has_placement_of_image(image_id)
             || self
                 .block_list
                 .blocks()
@@ -3586,16 +3631,38 @@ impl ansi::Handler for TerminalModel {
                         }
                     }
                     KittyAction::StoreAndDisplay(action) => {
-                        self.image_id_to_metadata.insert(
-                            action.image_id,
-                            StoredImageMetadata::Kitty(action.image.metadata.clone()),
-                        );
+                        let mut metadata = action.image.metadata.clone();
+                        if action.placement_data.unicode_placeholder {
+                            metadata.virtual_placements.insert(
+                                placement_id.unwrap_or(0),
+                                VirtualPlacement {
+                                    cols: action.placement_data.cols,
+                                    rows: action.placement_data.rows,
+                                },
+                            );
+                        }
+                        self.image_id_to_metadata
+                            .insert(action.image_id, StoredImageMetadata::Kitty(metadata));
                         if let Some(image_number) = image_number {
                             self.kitty_image_ids_by_number
                                 .insert(image_number, action.image_id);
                         }
                     }
-                    KittyAction::DisplayStoredImage(_) => {}
+                    KittyAction::DisplayStoredImage(action) => {
+                        if action.placement_data.unicode_placeholder {
+                            if let Some(StoredImageMetadata::Kitty(metadata)) =
+                                self.image_id_to_metadata.get_mut(&action.image_id)
+                            {
+                                metadata.virtual_placements.insert(
+                                    placement_id.unwrap_or(0),
+                                    VirtualPlacement {
+                                        cols: action.placement_data.cols,
+                                        rows: action.placement_data.rows,
+                                    },
+                                );
+                            }
+                        }
+                    }
                     KittyAction::QuerySupport(_) => {}
                     KittyAction::Delete {
                         delete_placements_only,

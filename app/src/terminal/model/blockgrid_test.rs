@@ -273,6 +273,42 @@ pub fn test_kitty_display_of_stored_image_without_pixels_is_ignored() {
         .is_none());
 }
 
+/// A virtual placement is shown through placeholder cells, so it takes no room in the grid.
+#[test]
+pub fn test_kitty_virtual_placement_is_not_placed_in_the_grid() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut block_grid = kitty_test_blockgrid();
+    let mut metadata = kitty_metadata_with_size(1, 10.0, 10.0);
+    let action = KittyAction::StoreAndDisplay(StoreAndDisplay {
+        image: KittyImage {
+            metadata: KittyImageMetadata {
+                image_size: Vector2F::new(10.0, 10.0),
+                ..Default::default()
+            },
+            data: vec![0],
+        },
+        placement_data: KittyPlacementData {
+            cols: Some(1),
+            rows: Some(1),
+            unicode_placeholder: true,
+            ..Default::default()
+        },
+        image_id: 1,
+        placement_id: 1,
+    });
+
+    block_grid
+        .handle_completed_kitty_action(action, &mut metadata)
+        .expect("kitty action should be handled")
+        .expect("kitty image should be stored");
+
+    assert_eq!(block_grid.grid_handler().cursor_point(), Point::new(0, 0));
+    assert!(block_grid
+        .grid_handler()
+        .get_image_placement_data(1, 1)
+        .is_none());
+}
+
 /// Places a 2x2-cell Kitty image at the cursor, leaving the cursor where it is.
 fn place_kitty_image(
     block_grid: &mut BlockGrid,
@@ -287,6 +323,7 @@ fn place_kitty_image(
             cols: Some(2),
             rows: Some(2),
             cursor_movement_policy: CursorMovementPolicy::DoNotMoveCursor,
+            unicode_placeholder: false,
         },
         image_id,
         placement_id: 1,

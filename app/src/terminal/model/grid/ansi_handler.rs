@@ -1782,6 +1782,21 @@ impl GridHandler {
                     }
                 };
 
+                // A virtual placement takes no room in the grid: the image is stored, and drawn
+                // where the client prints placeholder cells.
+                if action.placement_data.unicode_placeholder {
+                    if metadata.image_size.x() != 0.0 && metadata.image_size.y() != 0.0 {
+                        self.ansi_handler_state.event_proxy.send_terminal_event(
+                            Event::ImageReceived {
+                                image_id: action.image_id,
+                                image_data: action.image.data,
+                                image_protocol: ImageProtocol::Kitty,
+                            },
+                        );
+                    }
+                    return Ok(());
+                }
+
                 let Some(placement) =
                     self.kitty_placement_size(&action.placement_data, metadata.image_size)
                 else {
@@ -1813,6 +1828,10 @@ impl GridHandler {
                         .into())
                     }
                 };
+
+                if action.placement_data.unicode_placeholder {
+                    return Ok(());
+                }
 
                 let Some(placement) =
                     self.kitty_placement_size(&action.placement_data, metadata.image_size)

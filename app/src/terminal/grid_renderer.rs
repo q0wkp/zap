@@ -1,5 +1,6 @@
 mod cell_glyph_cache;
 mod cell_type;
+mod kitty_placeholder;
 
 use crate::appearance::Appearance;
 use crate::terminal::grid_size_util::calculate_grid_baseline_position;
@@ -9,6 +10,7 @@ use crate::terminal::{color, SizeInfo};
 
 use crate::terminal::model::grid::Dimensions;
 use crate::terminal::model::index::Point;
+use crate::terminal::model::kitty_placeholder::PLACEHOLDER as KITTY_PLACEHOLDER;
 use crate::terminal::model::selection::SelectionPoint;
 use crate::terminal::model::{ObfuscateSecrets, SecretHandle};
 
@@ -38,6 +40,7 @@ use warpui::{AppContext, Element, EntityId, PaintContext, Scene, SingletonEntity
 
 pub use self::cell_glyph_cache::CellGlyphCache;
 use self::cell_type::{CellType, IsFocused, Secret};
+use self::kitty_placeholder::PlaceholderRuns;
 
 use super::block_filter::{BLOCK_FILTER_DOTTED_LINE_DASH, BLOCK_FILTER_DOTTED_LINE_WIDTH};
 use super::blockgrid_renderer::GridRenderParams;
@@ -632,6 +635,8 @@ fn render_grid_without_ligatures<'a>(
         }
     }
 
+    let mut kitty_placeholder_runs = PlaceholderRuns::default();
+
     for (offset, row_idx) in visible_rows.enumerate() {
         let offset_row = start_row + offset;
 
@@ -771,6 +776,10 @@ fn render_grid_without_ligatures<'a>(
                 continue;
             }
 
+            if cell.c == KITTY_PLACEHOLDER {
+                kitty_placeholder_runs.push(cell, offset_row, col);
+            }
+
             // Cell is empty, we should flush the background if there's any and continue
             if cell.is_empty() {
                 if let Some(sampler) = bg_color_sampler.as_deref_mut() {
@@ -900,6 +909,8 @@ fn render_grid_without_ligatures<'a>(
             .draw_rect_without_hit_recording(RectF::new(data.origin, data.size))
             .with_background(Fill::Solid(data.color));
     }
+
+    kitty_placeholder_runs.render(image_metadata, cell_size, grid_origin, ctx, app);
 }
 
 #[inline]
@@ -1148,6 +1159,8 @@ fn render_grid_with_ligatures<'a>(
         }
     }
 
+    let mut kitty_placeholder_runs = PlaceholderRuns::default();
+
     for (offset, row_idx) in visible_rows.enumerate() {
         let offset_row = start_row + offset;
         let mut string_builder = AttributedStringBuilder::new(
@@ -1328,6 +1341,10 @@ fn render_grid_with_ligatures<'a>(
                 continue;
             }
 
+            if cell.c == KITTY_PLACEHOLDER {
+                kitty_placeholder_runs.push(cell, offset_row, col);
+            }
+
             if cell.is_empty() {
                 if let Some(sampler) = bg_color_sampler.as_deref_mut() {
                     // If the cell is empty, that means the bg is is `NamedBackground.`
@@ -1474,6 +1491,9 @@ fn render_grid_with_ligatures<'a>(
                     // to properly align the contents. We don't want the text layout engine to
                     // attempt the same thing, so we replace it with a placeholder
                     string_builder.append_placeholder(col);
+                } else if cell.c == KITTY_PLACEHOLDER {
+                    // The cell shows a part of an image, which is drawn after the text.
+                    string_builder.append_placeholder(col);
                 } else {
                     string_builder.append_content(cell.content_for_display(), col);
                 }
@@ -1541,6 +1561,8 @@ fn render_grid_with_ligatures<'a>(
             .draw_rect_without_hit_recording(RectF::new(data.origin, data.size))
             .with_background(Fill::Solid(data.color));
     }
+
+    kitty_placeholder_runs.render(image_metadata, cell_size, grid_origin, ctx, app);
 }
 
 fn paint_line(
@@ -1748,6 +1770,11 @@ fn render_cell_glyph(
     } else {
         cell_size
     };
+
+    // A Kitty placeholder cell shows a part of an image, which is drawn after the text.
+    if cell.c == KITTY_PLACEHOLDER {
+        return;
+    }
 
     let mut cell_content = cell.content_for_display();
 

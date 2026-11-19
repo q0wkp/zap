@@ -4,6 +4,7 @@ use crate::terminal::model::block::BlockId;
 use crate::terminal::model::bootstrap::BootstrapStage;
 use crate::terminal::model::grid::Dimensions as _;
 use crate::terminal::model::index::Side;
+use crate::terminal::model::kitty::VirtualPlacement;
 use crate::terminal::model::selection::ExpandedSelectionRange;
 use chrono::{DateTime, Local};
 use vec1::vec1;
@@ -1125,5 +1126,64 @@ fn test_kitty_image_id_and_number_together_are_an_error() {
         reply.starts_with("\x1b_Gi=5,I=3;EINVAL:"),
         "unexpected reply: {reply:?}"
     );
+    assert!(!model.image_id_to_metadata.contains_key(&5));
+}
+
+fn kitty_virtual_placements(model: &TerminalModel, image_id: u32) -> Vec<(u32, VirtualPlacement)> {
+    match model.image_id_to_metadata.get(&image_id) {
+        Some(StoredImageMetadata::Kitty(metadata)) => metadata
+            .virtual_placements
+            .iter()
+            .map(|(placement_id, placement)| (*placement_id, *placement))
+            .collect(),
+        Some(StoredImageMetadata::ITerm(_)) | None => vec![],
+    }
+}
+
+#[test]
+fn test_kitty_virtual_placement_is_kept_with_the_image() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+
+    // Transmitted and placed in one command, without a placement id.
+    assert_eq!(
+        kitty_replies(
+            &mut model,
+            &format!("\x1b_Ga=T,U=1,i=5,c=4,r=2,{KITTY_PIXEL}\x1b\\")
+        ),
+        "\x1b_Gi=5;OK\x1b\\"
+    );
+    assert_eq!(
+        kitty_virtual_placements(&model, 5),
+        vec![(
+            0,
+            VirtualPlacement {
+                cols: Some(4),
+                rows: Some(2)
+            }
+        )]
+    );
+    // It is shown where placeholder cells are, not in a grid.
+    assert!(!model
+        .block_list()
+        .active_block()
+        .grid_handler()
+        .has_placement_of_image(5));
+    assert!(model.is_image_placed(5));
+
+    // A second one, for the image as it is stored.
+    assert_eq!(
+        kitty_replies(&mut model, "\x1b_Ga=p,U=1,i=5,p=3,c=8\x1b\\"),
+        "\x1b_Gi=5,p=3;OK\x1b\\"
+    );
+    assert_eq!(kitty_virtual_placements(&model, 5).len(), 2);
+
+    // Deleting one placement leaves the other, and the image.
+    kitty_replies(&mut model, "\x1b_Ga=d,d=I,i=5,p=3\x1b\\");
+    assert_eq!(kitty_virtual_placements(&model, 5).len(), 1);
+    assert!(model.image_id_to_metadata.contains_key(&5));
+
+    kitty_replies(&mut model, "\x1b_Ga=d,d=I,i=5\x1b\\");
     assert!(!model.image_id_to_metadata.contains_key(&5));
 }

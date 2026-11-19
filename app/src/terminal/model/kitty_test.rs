@@ -153,3 +153,18 @@ fn unknown_delete_specifier_is_an_error() {
     let err = delete_action("a=d,d=f,i=1").expect_err("frames can't be deleted");
     assert_eq!(err.code(), "ENOTSUPP");
 }
+
+#[test]
+fn unicode_placeholder_placement_is_accepted() {
+    let action = KittyAction::try_from(KittyMessage {
+        control_data: control_data("a=p,U=1,i=5,c=4,r=2"),
+        payload: vec![],
+    });
+
+    let Ok(KittyAction::DisplayStoredImage(action)) = action else {
+        panic!("expected a display action, got {action:?}");
+    };
+    assert!(action.placement_data.unicode_placeholder);
+    assert_eq!(action.placement_data.cols, Some(4));
+    assert_eq!(action.placement_data.rows, Some(2));
+}
