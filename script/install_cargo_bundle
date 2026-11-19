@@ -5,12 +5,28 @@
 
 # This script should be platform-agnostic (eg. no unix-only references like /dev/null).
 
+# SHA-256 of the cargo-bundle.zip downloaded below.
+CARGO_BUNDLE_ZIP_SHA256=6e14083d4b61dcd2f123c1518b51c2e4a0b345957ab2628012d4536fc84e51db
+
 cargo_location=$(dirname "$(which cargo)")
 if test -f "$cargo_location/cargo-bundle"; then
     echo "cargo-bundle already exists, not installing."
 else
     set -e
     curl https://storage.googleapis.com/cached_crates/cargo-bundle.zip --output cargo-bundle.zip
+    # The binary runs in the release job, next to the signing secrets: install it only when
+    # the archive is the one this digest was taken from. When the archive is replaced on
+    # purpose, download it, check it, and put the output of `sha256sum cargo-bundle.zip` here.
+    if [ -n "$(command -v sha256sum)" ]; then
+        actual_sha256=$(sha256sum cargo-bundle.zip | cut -d ' ' -f 1)
+    else
+        actual_sha256=$(shasum -a 256 cargo-bundle.zip | cut -d ' ' -f 1)
+    fi
+    if [ "$actual_sha256" != "$CARGO_BUNDLE_ZIP_SHA256" ]; then
+        echo "cargo-bundle.zip has SHA-256 $actual_sha256, expected $CARGO_BUNDLE_ZIP_SHA256; not installing." >&2
+        rm -f cargo-bundle.zip
+        exit 1
+    fi
     unzip -o cargo-bundle.zip
     chmod 755 cargo-bundle
     cp cargo-bundle "$cargo_location"
