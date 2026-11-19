@@ -1,6 +1,7 @@
 #[cfg(target_os = "macos")]
 use std::fs;
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use warp_core::features::FeatureFlag;
 
@@ -22,6 +23,7 @@ use crate::{
 
 use super::{
     decode_path, deduplicate_events, encode_path, read_sqlite_data, save_app_state, setup_database,
+    take_prewarm_result, PrewarmState,
 };
 
 #[test]
@@ -520,4 +522,44 @@ fn test_deserialize_corrupted_guests() {
             guests: vec![],
         })
     );
+}
+
+#[test]
+fn prewarm_result_survives_a_worker_that_finished_before_its_state_was_stored() {
+    let handle = std::thread::spawn(|| -> anyhow::Result<i32> { Ok(7) });
+    // The worker is done before anything it could look up exists.
+    while !handle.is_finished() {
+        std::thread::yield_now();
+    }
+    let state = Mutex::new(PrewarmState::Pending(handle));
+
+    assert_eq!(take_prewarm_result(&state).map(Result::ok), Some(Some(7)));
+}
+
+#[test]
+fn prewarm_result_is_taken_once() {
+    let handle = std::thread::spawn(|| -> anyhow::Result<i32> { Ok(7) });
+    let state = Mutex::new(PrewarmState::Pending(handle));
+
+    assert!(take_prewarm_result(&state).is_some());
+    assert!(take_prewarm_result(&state).is_none());
+}
+
+#[test]
+fn prewarm_error_is_handed_to_the_caller() {
+    let handle =
+        std::thread::spawn(|| -> anyhow::Result<i32> { Err(anyhow::anyhow!("no database")) });
+    let state = Mutex::new(PrewarmState::Pending(handle));
+
+    assert!(matches!(take_prewarm_result(&state), Some(Err(_))));
+}
+
+#[test]
+fn prewarm_falls_back_without_a_worker_result() {
+    let unavailable = Mutex::new(PrewarmState::<i32>::Unavailable);
+    assert!(take_prewarm_result(&unavailable).is_none());
+
+    let handle = std::thread::spawn(|| -> anyhow::Result<i32> { panic!("prewarm failed") });
+    let panicked = Mutex::new(PrewarmState::Pending(handle));
+    assert!(take_prewarm_result(&panicked).is_none());
 }
