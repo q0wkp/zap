@@ -4,13 +4,14 @@ use crate::adapter::{Adapter, AdapterKind, ServiceType, WebRequestData};
 use crate::chat::{
 	Binary, BinarySource, ChatOptionsSet, ChatRequest, ChatResponse, ChatResponseFormat, ChatRole, ChatStream,
 	ChatStreamResponse, CompletionTokensDetails, ContentPart, MessageContent, PromptTokensDetails, ReasoningEffort,
-	StopReason, Tool, ToolCall, ToolConfig, ToolName, Usage,
+	StopReason, Tool, ToolCall, ToolConfig, ToolName, ToolResponse, Usage,
 };
 use crate::resolver::{AuthData, Endpoint};
 use crate::webc::{WebResponse, WebStream};
 use crate::{Error, Headers, ModelIden, Result, ServiceTarget};
 use reqwest::RequestBuilder;
 use serde_json::{Value, json};
+use std::collections::HashMap;
 use value_ext::JsonValueExt;
 
 pub struct GeminiAdapter;
@@ -557,6 +558,8 @@ impl GeminiAdapter {
 	) -> Result<GeminiChatRequestParts> {
 		let mut contents: Vec<Value> = Vec::new();
 		let mut systems: Vec<String> = Vec::new();
+		// The function name of each tool call seen so far, for the responses that follow it.
+		let mut fn_names_by_call_id: HashMap<String, String> = HashMap::new();
 
 		if let Some(system) = chat_req.system {
 			systems.push(system);
@@ -596,23 +599,11 @@ impl GeminiAdapter {
 								}
 							}
 							ContentPart::ToolCall(tool_call) => {
-								parts_values.push(json!({
-									"functionCall": {
-										"name": tool_call.fn_name,
-										"args": tool_call.fn_arguments,
-									}
-								}));
+								fn_names_by_call_id.insert(tool_call.call_id.clone(), tool_call.fn_name.clone());
+								parts_values.push(json!({"functionCall": function_call_value(tool_call)}));
 							}
 							ContentPart::ToolResponse(tool_response) => {
-								parts_values.push(json!({
-									"functionResponse": {
-										"name": tool_response.call_id,
-										"response": {
-											"name": tool_response.call_id,
-											"content": tool_response.content,
-										}
-									}
-								}));
+								parts_values.push(function_response_part(tool_response, &fn_names_by_call_id));
 							}
 							ContentPart::ThoughtSignature(thought) => {
 								parts_values.push(json!({
@@ -642,14 +633,9 @@ impl GeminiAdapter {
 								parts_values.push(json!({"text": text}));
 							}
 							ContentPart::ToolCall(tool_call) => {
+								fn_names_by_call_id.insert(tool_call.call_id.clone(), tool_call.fn_name.clone());
 								let mut part_obj = serde_json::Map::new();
-								part_obj.insert(
-									"functionCall".to_string(),
-									json!({
-										"name": tool_call.fn_name,
-										"args": tool_call.fn_arguments,
-									}),
-								);
+								part_obj.insert("functionCall".to_string(), function_call_value(tool_call));
 
 								match pending_thought.take() {
 									Some(thought) => {
@@ -707,23 +693,11 @@ impl GeminiAdapter {
 					for part in msg.content {
 						match part {
 							ContentPart::ToolCall(tool_call) => {
-								parts_values.push(json!({
-									"functionCall": {
-										"name": tool_call.fn_name,
-										"args": tool_call.fn_arguments,
-									}
-								}));
+								fn_names_by_call_id.insert(tool_call.call_id.clone(), tool_call.fn_name.clone());
+								parts_values.push(json!({"functionCall": function_call_value(tool_call)}));
 							}
 							ContentPart::ToolResponse(tool_response) => {
-								parts_values.push(json!({
-									"functionResponse": {
-										"name": tool_response.call_id,
-										"response": {
-											"name": tool_response.call_id,
-											"content": tool_response.content,
-										}
-									}
-								}));
+								parts_values.push(function_response_part(tool_response, &fn_names_by_call_id));
 							}
 							ContentPart::ThoughtSignature(thought) => {
 								parts_values.push(json!({
@@ -916,11 +890,59 @@ fn synthesize_call_id(fn_name: &str) -> String {
 	format!("{SYNTHETIC_CALL_ID_PREFIX}{fn_name}#{}", uuid::Uuid::new_v4().simple())
 }
 
+/// The function name inside a synthesized call id, or None when the id is not one.
+fn fn_name_of_synthetic_call_id(call_id: &str) -> Option<&str> {
+	let (fn_name, _unique) = call_id.strip_prefix(SYNTHETIC_CALL_ID_PREFIX)?.rsplit_once('#')?;
+	(!fn_name.is_empty()).then_some(fn_name)
+}
+
+/// The id to send to Gemini for a tool call: the call's own id, unless it was synthesized
+/// here, which Gemini has never seen.
+fn call_id_for_gemini(call_id: &str) -> Option<&str> {
+	(!call_id.is_empty() && fn_name_of_synthetic_call_id(call_id).is_none()).then_some(call_id)
+}
+
+/// Builds the value of a `functionCall` part.
+fn function_call_value(tool_call: ToolCall) -> Value {
+	let mut function_call = json!({
+		"name": tool_call.fn_name,
+		"args": tool_call.fn_arguments,
+	});
+	if let Some(call_id) = call_id_for_gemini(&tool_call.call_id) {
+		function_call["id"] = json!(call_id);
+	}
+	function_call
+}
+
+/// Builds a `functionResponse` part. Gemini pairs it with its call by the function's name
+/// (and by the id, when the call has one), so the name is that of the call the response
+/// answers: looked up in `fn_names_by_call_id`, or read from a synthesized call id. Only a
+/// response whose call is unknown falls back to the call id.
+fn function_response_part(tool_response: ToolResponse, fn_names_by_call_id: &HashMap<String, String>) -> Value {
+	let fn_name = fn_names_by_call_id
+		.get(&tool_response.call_id)
+		.map(String::as_str)
+		.or_else(|| fn_name_of_synthetic_call_id(&tool_response.call_id))
+		.unwrap_or(&tool_response.call_id);
+	let mut function_response = json!({
+		"name": fn_name,
+		"response": {
+			"name": fn_name,
+			"content": tool_response.content,
+		}
+	});
+	if let Some(call_id) = call_id_for_gemini(&tool_response.call_id) {
+		function_response["id"] = json!(call_id);
+	}
+	json!({"functionResponse": function_response})
+}
+
 // endregion: --- Helpers
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::chat::ChatMessage;
 
 	#[test]
 	fn merge_consecutive_tool_responses() {
@@ -1047,6 +1069,66 @@ mod tests {
 		assert_eq!(ids.len(), 2);
 		assert_eq!(ids[0], "fc_123");
 		assert!(ids[1].starts_with("call#read_file#"));
+	}
+
+	/// The request contents for an assistant turn with `tool_calls`, followed by a response to each.
+	fn contents_of_tool_round(tool_calls: Vec<ToolCall>) -> Vec<Value> {
+		let responses: Vec<ChatMessage> = tool_calls
+			.iter()
+			.map(|tool_call| ChatMessage::from(ToolResponse::new(tool_call.call_id.clone(), "ok")))
+			.collect();
+		let chat_req = ChatRequest::from_messages(vec![ChatMessage::from(tool_calls)]).append_messages(responses);
+		let model_iden = ModelIden::new(AdapterKind::Gemini, "gemini-2.5-flash");
+		GeminiAdapter::into_gemini_request_parts(&model_iden, chat_req)
+			.unwrap()
+			.contents
+	}
+
+	fn tool_call(call_id: &str, fn_name: &str) -> ToolCall {
+		ToolCall {
+			call_id: call_id.to_string(),
+			fn_name: fn_name.to_string(),
+			fn_arguments: json!({}),
+			thought_signatures: None,
+		}
+	}
+
+	#[test]
+	fn function_response_is_named_after_its_function() {
+		let synthesized = synthesize_call_id("read_file");
+		let contents = contents_of_tool_round(vec![tool_call(&synthesized, "read_file"), tool_call("fc_123", "grep")]);
+
+		assert_eq!(contents.len(), 2);
+		let calls = contents[0]["parts"].as_array().unwrap();
+		assert_eq!(calls[0]["functionCall"]["name"], "read_file");
+		// An id synthesized here is not sent to Gemini; an id of its own is.
+		assert!(calls[0]["functionCall"].get("id").is_none());
+		assert_eq!(calls[1]["functionCall"]["id"], "fc_123");
+
+		let responses = contents[1]["parts"].as_array().unwrap();
+		assert_eq!(responses.len(), 2);
+		assert_eq!(responses[0]["functionResponse"]["name"], "read_file");
+		assert_eq!(responses[0]["functionResponse"]["response"]["name"], "read_file");
+		assert!(responses[0]["functionResponse"].get("id").is_none());
+		assert_eq!(responses[1]["functionResponse"]["name"], "grep");
+		assert_eq!(responses[1]["functionResponse"]["id"], "fc_123");
+		assert_eq!(responses[1]["functionResponse"]["response"]["content"], "ok");
+	}
+
+	#[test]
+	fn function_response_without_its_call_reads_the_name_from_a_synthesized_id() {
+		let fn_names = HashMap::new();
+
+		// The format of the ids synthesized before they ended in a random part.
+		let part = function_response_part(ToolResponse::new("call#read_file#0", "ok"), &fn_names);
+		assert_eq!(part["functionResponse"]["name"], "read_file");
+
+		let part = function_response_part(ToolResponse::new(synthesize_call_id("grep"), "ok"), &fn_names);
+		assert_eq!(part["functionResponse"]["name"], "grep");
+
+		// Nothing tells the function's name: the call id stands in for it, as before.
+		let part = function_response_part(ToolResponse::new("toolu_1", "ok"), &fn_names);
+		assert_eq!(part["functionResponse"]["name"], "toolu_1");
 	}
 
 	#[test]
