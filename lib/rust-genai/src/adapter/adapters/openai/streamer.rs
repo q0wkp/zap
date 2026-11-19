@@ -58,6 +58,8 @@ pub struct OpenAIStreamer {
 	captured_data: StreamerCapturedData,
 	/// Events still to emit from a message that produced more than one.
 	pending_events: VecDeque<InterStreamEvent>,
+	/// The provider's `index` of each call in `captured_data.tool_calls`, by position.
+	captured_tool_call_indexes: Vec<usize>,
 }
 
 impl OpenAIStreamer {
@@ -68,6 +70,7 @@ impl OpenAIStreamer {
 			options: StreamerOptions::new(model_iden, options_set),
 			captured_data: Default::default(),
 			pending_events: VecDeque::new(),
+			captured_tool_call_indexes: Vec::new(),
 		}
 	}
 
@@ -94,7 +97,11 @@ impl OpenAIStreamer {
 
 		let calls = self.captured_data.tool_calls.get_or_insert_with(Vec::new);
 
-		if let Some(existing_call) = calls.get_mut(index) {
+		// The provider's indexes are not trusted to be dense or to start at 0, so they are
+		// looked up instead of being used as positions.
+		let position = self.captured_tool_call_indexes.iter().position(|captured| *captured == index);
+
+		if let Some(existing_call) = position.and_then(|position| calls.get_mut(position)) {
 			// Merge with existing: accumulate arguments as strings
 			if let Some(existing_args) = existing_call.fn_arguments.as_str() {
 				let accumulated = format!("{existing_args}{arguments}");
@@ -108,8 +115,8 @@ impl OpenAIStreamer {
 			}
 			existing_call.clone()
 		} else {
-			// New tool call - resize to handle potential gaps (though unlikely in streaming)
-			calls.resize(index + 1, tool_call.clone());
+			calls.push(tool_call.clone());
+			self.captured_tool_call_indexes.push(index);
 			tool_call
 		}
 	}

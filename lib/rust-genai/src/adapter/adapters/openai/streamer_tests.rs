@@ -127,3 +127,39 @@ fn tool_call_without_any_id_is_identified_by_its_index() {
 	assert_eq!(emitted[0].call_id, "call_0");
 	assert_eq!(emitted[1].call_id, "call_1");
 }
+
+#[test]
+fn tool_call_indexes_that_skip_ahead_capture_no_filler_calls() {
+	let options = ChatOptions::default().with_capture_tool_calls(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 1, "id": "call_a", "function": {"name": "read_files", "arguments": "{\"path\":"}}
+	]));
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 3, "id": "call_b", "function": {"name": "grep", "arguments": "{}"}}
+	]));
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": 1, "function": {"arguments": "\"a.rs\"}"}}
+	]));
+
+	let captured = streamer.captured_data.tool_calls.take().expect("captured tool calls");
+	assert_eq!(captured.len(), 2);
+	assert_eq!(captured[0].call_id, "call_a");
+	assert_eq!(captured[0].fn_arguments, Value::String("{\"path\":\"a.rs\"}".to_string()));
+	assert_eq!(captured[1].call_id, "call_b");
+}
+
+#[test]
+fn huge_tool_call_index_does_not_size_the_captured_calls() {
+	let options = ChatOptions::default().with_capture_tool_calls(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer.queue_delta_tool_calls(&json!([
+		{"index": u32::MAX, "id": "call_a", "function": {"name": "read_files", "arguments": "{}"}}
+	]));
+
+	let captured = streamer.captured_data.tool_calls.take().expect("captured tool calls");
+	assert_eq!(captured.len(), 1);
+	assert_eq!(captured[0].call_id, "call_a");
+}
