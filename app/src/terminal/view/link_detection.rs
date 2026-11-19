@@ -408,9 +408,10 @@ impl super::TerminalView {
         match link {
             #[cfg(feature = "local_fs")]
             GridHighlightedLink::File(link) => {
+                let session_id = self.session_id_for_grid_link(link);
                 let link = link.get_inner();
                 if let Some(path) = link.absolute_path() {
-                    self.open_file_path(path.clone(), link.line_and_column_num, ctx);
+                    self.open_file_path(path.clone(), link.line_and_column_num, session_id, ctx);
                 }
             }
             GridHighlightedLink::Url(url) => {
@@ -436,15 +437,23 @@ impl super::TerminalView {
                 line_and_column_num,
                 target_override,
             } => {
+                // Rich content has no block of its own: its paths belong to the active session.
+                let session_id = self.active_block_session_id();
                 if let Some(target_override) = target_override {
                     self.open_file_path_with_target(
                         absolute_path.clone(),
                         target_override.clone(),
                         *line_and_column_num,
+                        session_id,
                         ctx,
                     );
                 } else {
-                    self.open_file_path(absolute_path.clone(), *line_and_column_num, ctx);
+                    self.open_file_path(
+                        absolute_path.clone(),
+                        *line_and_column_num,
+                        session_id,
+                        ctx,
+                    );
                 }
             }
             RichContentLink::Url(url) => {
