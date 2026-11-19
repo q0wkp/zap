@@ -1001,6 +1001,10 @@ struct SelectedFilePath {
 struct FilePathMouseStateHandles {
     open_file_handle: MouseStateHandle,
     open_in_warp_handle: MouseStateHandle,
+    /// Hover state of the tooltip as a whole. It has to outlive a render: with a new handle
+    /// on every render, each frame reports the pointer as newly entering the tooltip, which
+    /// re-renders the view again.
+    tooltip_handle: MouseStateHandle,
 }
 
 pub struct RichTextEditorView {
@@ -2456,9 +2460,12 @@ impl RichTextEditorView {
 
         let tooltip_content = render_tooltip(links, TooltipRedaction::NoRedaction, appearance, ctx);
 
-        let hoverable = Hoverable::new(Default::default(), move |_| tooltip_content)
-            .with_cursor(Cursor::PointingHand)
-            .finish();
+        let hoverable = Hoverable::new(
+            self.file_path_mouse_states.tooltip_handle.clone(),
+            move |_| tooltip_content,
+        )
+        .with_cursor(Cursor::PointingHand)
+        .finish();
 
         Dismiss::new(hoverable)
             .on_dismiss(|ctx, _app| {
