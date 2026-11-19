@@ -2,6 +2,8 @@
 //! 命令拼装。UI 与 PTY 注入逻辑放在 `app/src/ssh_manager/` 与 `secret_injector`
 //! 模块,这里保持纯 Rust、无 warpui 依赖、可单独 `cargo test` 跑。
 
+#[cfg(unix)]
+pub mod askpass;
 pub mod db;
 pub mod node_secrets;
 pub mod repository;

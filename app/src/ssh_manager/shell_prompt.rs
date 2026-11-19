@@ -1,5 +1,5 @@
-//! Shell prompt 检测。供 SSH 注入器(`secret_injector` / `startup_command_injector`
-//! / `su_password_injector`)在等待登录完成、shell 就绪后再触发动作。
+//! Shell prompt 检测。供 SSH 注入器(`startup_command_injector` /
+//! `su_password_injector`)在等待登录完成、shell 就绪后再触发动作。
 //!
 //! 仅看 buffer 尾部 256 字节,匹配若干常见 prompt 末尾:
 //! - ASCII: `$ ` / `# ` / `> `

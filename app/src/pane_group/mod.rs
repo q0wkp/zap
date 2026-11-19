@@ -3309,6 +3309,7 @@ impl PaneGroup {
             self.active_session_id(ctx),
             chosen_shell,
             None, /* conversation_restoration */
+            HashMap::new(), /* env_vars */
             DefaultSessionModeBehavior::Ignore,
             ctx,
         );
@@ -3336,6 +3337,13 @@ impl PaneGroup {
         let Some(ssh_session) = ssh_session else {
             return self.insert_terminal_pane(direction, base_pane_id, chosen_shell, ctx);
         };
+        // A connection the SSH manager made gets its saved password through ssh's askpass,
+        // whose environment the new pane's shell has to start with.
+        let (askpass, env_vars) = if ssh_session.is_ssh_manager() {
+            crate::ssh_manager::connection::prepare_askpass()
+        } else {
+            (None, HashMap::new())
+        };
 
         // The new pane's local shell is only there to run `ssh`, so the default session mode
         // isn't applied to it; as in a tab the SSH manager opens, agent view waits for the
@@ -3346,6 +3354,7 @@ impl PaneGroup {
             base_pane_id.as_terminal_pane_id(),
             chosen_shell,
             None, /* conversation_restoration */
+            env_vars,
             DefaultSessionModeBehavior::Ignore,
             ctx,
         );
@@ -3367,6 +3376,7 @@ impl PaneGroup {
                     &view,
                     connection.node_id,
                     connection.server,
+                    askpass,
                     false, /* run_startup_command */
                     ctx,
                 );
@@ -5161,6 +5171,7 @@ impl PaneGroup {
             base_pane_id_for_context,
             chosen_shell,
             conversation_restoration,
+            HashMap::new(), /* env_vars */
             DefaultSessionModeBehavior::Apply,
             ctx,
         )
@@ -5174,6 +5185,7 @@ impl PaneGroup {
         base_pane_id_for_context: Option<TerminalPaneId>,
         chosen_shell: Option<AvailableShell>,
         conversation_restoration: Option<ConversationRestorationInNewPaneType>,
+        env_vars: HashMap<OsString, OsString>,
         default_session_mode_behavior: DefaultSessionModeBehavior,
         ctx: &mut ViewContext<Self>,
     ) -> TerminalPaneId {
@@ -5203,6 +5215,7 @@ impl PaneGroup {
             chosen_shell,
             startup_directory,
             conversation_restoration,
+            env_vars,
             default_session_mode_behavior,
             ctx,
         )
@@ -5261,6 +5274,7 @@ impl PaneGroup {
         chosen_shell: Option<AvailableShell>,
         startup_directory: Option<PathBuf>,
         conversation_restoration: Option<ConversationRestorationInNewPaneType>,
+        env_vars: HashMap<OsString, OsString>,
         default_session_mode_behavior: DefaultSessionModeBehavior,
         ctx: &mut ViewContext<Self>,
     ) -> TerminalPaneId {
@@ -5273,7 +5287,7 @@ impl PaneGroup {
 
         let (pane_data, view) = self.create_terminal_pane_data(
             startup_directory,
-            HashMap::new(),
+            env_vars,
             chosen_shell,
             conversation_restoration,
             ctx,
@@ -6020,6 +6034,7 @@ impl PaneGroup {
             self.focused_pane_id(ctx).as_terminal_pane_id(),
             None, /* chosen_shell */
             None, /* conversation_restoration */
+            HashMap::new(), /* env_vars */
             DefaultSessionModeBehavior::Ignore,
             ctx,
         );

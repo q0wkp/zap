@@ -10,10 +10,17 @@ pub struct CustomSecretRegexUpdater;
 impl CustomSecretRegexUpdater {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
         let updater = CustomSecretRegexUpdater;
-        // Initialize with current custom regexes (will be empty until safe mode is enabled)
+        let privacy_settings = PrivacySettings::handle(ctx);
+        // Seed the recommended patterns on the first start. Nothing else does: the settings are
+        // no longer fetched from a server, which is where this used to happen. The persisted
+        // flag makes this a no-op from then on, so a list the user edited or emptied stays as
+        // it is.
+        privacy_settings.update(ctx, |settings, ctx| {
+            settings.initialize_default_regexes_once(ctx);
+        });
+        // Initialize with the current custom regexes.
         updater.update_custom_secret_regex_list(ctx);
 
-        let privacy_settings = PrivacySettings::handle(ctx);
         ctx.subscribe_to_model(&privacy_settings, |me, evt, ctx| {
             if let PrivacySettingsChangedEvent::CustomSecretRegexList { .. } = evt {
                 me.update_custom_secret_regex_list(ctx);
@@ -50,3 +57,7 @@ impl Entity for CustomSecretRegexUpdater {
 }
 
 impl SingletonEntity for CustomSecretRegexUpdater {}
+
+#[cfg(test)]
+#[path = "secret_regex_updater_tests.rs"]
+mod tests;

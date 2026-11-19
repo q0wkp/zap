@@ -27,6 +27,9 @@ uuid.workspace = true
 zap_sync = { path = "../zap_sync" }
 zeroize = "1.8"
 
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
 [dev-dependencies]
 diesel = { workspace = true, features = ["chrono", "sqlite", "returning_clauses_for_sqlite_3_35"] }
 diesel_migrations = "2.2.0"

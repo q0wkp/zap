@@ -5492,14 +5492,9 @@ impl Workspace {
         );
     }
 
-    /// 在当前 tab 开新 terminal pane,自动跑 `ssh ...` 命令,并 spawn 一个
-    /// SecretInjector 监听 PTY 输出,在出现 `password:` / `passphrase:` 提示时
-    /// 自动注入 keychain 里的 secret。
-    ///
-    /// **配公钥免登录的边界**:用户在 server 端配了 authorized_keys,客户端
-    /// 默认私钥握手成功 → 不会出现 prompt → injector 静默超时(15s)退出,
-    /// **不会乱注入到登录后的 shell**。这是 SecretInjector 的天然特性:行尾
-    /// 严格匹配 + 一次性触发 + deadline。
+    /// 开新 tab 自动跑 `ssh ...` 命令。新 tab 的 shell 带着 askpass 环境启动,
+    /// ssh 要密码 / passphrase 时由 askpass 助手从 keychain 取(见
+    /// `ssh_manager::connection::prepare_askpass`),不看终端输出。
     ///
     /// **shell bootstrap 时序**:`execute_command_or_set_pending` 把 ssh 命令
     /// 丢进 pending 队列,等 `BootstrapPrecmdDone` 事件再 flush —— 不会跟
@@ -5529,14 +5524,20 @@ impl Workspace {
         let window_id = ctx.window_id();
 
         // 开新 tab(不分屏 — 之前用 add_terminal_pane(Direction::Right) 会切左/右
-        // 分屏,用户反馈不喜欢)。新 tab 添加后会自动成为 active tab。
-        self.add_new_session_tab_internal_with_default_session_mode_behavior(
-            NewSessionSource::Tab,
-            Some(window_id),
-            None, /* chosen_shell */
-            None, /* conversation_restoration */
-            true, /* hide_homepage */
-            DefaultSessionModeBehavior::Ignore,
+        // 分屏,用户反馈不喜欢)。新 tab 添加后会自动成为 active tab。shell 要带着
+        // askpass 环境启动,所以这里直接建 tab,不走默认 session mode。
+        let (askpass, env_vars) = crate::ssh_manager::connection::prepare_askpass();
+        let startup_directory =
+            self.get_new_tab_startup_directory(NewSessionSource::Tab, Some(window_id), ctx);
+        self.add_tab_with_pane_layout(
+            PanesLayout::SingleTerminal(Box::new(NewTerminalOptions {
+                initial_directory: startup_directory,
+                env_vars,
+                hide_homepage: true,
+                ..Default::default()
+            })),
+            Arc::new(HashMap::new()),
+            None, /*custom_tab_title*/
             ctx,
         );
 
@@ -5555,6 +5556,7 @@ impl Workspace {
             &terminal_view,
             node_id,
             server,
+            askpass,
             true, /* run_startup_command */
             ctx,
         );

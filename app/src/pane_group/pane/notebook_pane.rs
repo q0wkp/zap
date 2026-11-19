@@ -195,6 +195,7 @@ pub(super) fn subscribe_to_link_model(
                 None, /* chosen_shell */
                 Some(path.clone()),
                 None,
+                Default::default(), /* env_vars */
                 DefaultSessionModeBehavior::Apply,
                 ctx,
             );

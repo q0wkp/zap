@@ -77,11 +77,28 @@ struct RuleAtPath {
     parent_path: PathBuf,
     warp_md: Option<ProjectRule>,
     agents_md: Option<ProjectRule>,
+    claude_md: Option<ProjectRule>,
 }
 
 impl RuleAtPath {
+    /// The rule that applies in this directory: the first one present, in the order of
+    /// `RULES_FILE_PATTERN`.
     fn respected_rule(&self) -> Option<&ProjectRule> {
-        self.warp_md.as_ref().or(self.agents_md.as_ref())
+        self.warp_md
+            .as_ref()
+            .or(self.agents_md.as_ref())
+            .or(self.claude_md.as_ref())
+    }
+
+    /// The slot a rule file of this name is kept in, matched without regard to case.
+    /// `None` when the name is not one of `RULES_FILE_PATTERN`.
+    fn slot_mut(&mut self, file_name: &str) -> Option<&mut Option<ProjectRule>> {
+        match file_name.to_lowercase().as_str() {
+            "warp.md" => Some(&mut self.warp_md),
+            "agents.md" => Some(&mut self.agents_md),
+            "claude.md" => Some(&mut self.claude_md),
+            _ => None,
+        }
     }
 }
 
@@ -156,13 +173,7 @@ impl ProjectRules {
             .iter_mut()
             .find(|rule| rule.parent_path == parent)?;
 
-        if file_name.to_lowercase() == "warp.md" {
-            rule.warp_md.take()
-        } else if file_name.to_lowercase() == "agents.md" {
-            rule.agents_md.take()
-        } else {
-            None
-        }
+        rule.slot_mut(file_name)?.take()
     }
 
     /// Upsert a rule to the set of project rules. This will create a new RuleAtPath entry if none exists and update the existing one
@@ -188,10 +199,8 @@ impl ProjectRules {
 
         match existing_rule {
             Some(rule) => {
-                if file_name.to_lowercase() == "warp.md" {
-                    rule.warp_md = rule_file;
-                } else if file_name.to_lowercase() == "agents.md" {
-                    rule.agents_md = rule_file;
+                if let Some(slot) = rule.slot_mut(file_name) {
+                    *slot = rule_file;
                 }
             }
             None => {
@@ -199,10 +208,8 @@ impl ProjectRules {
                     parent_path: parent.to_path_buf(),
                     ..Default::default()
                 };
-                if file_name.to_lowercase() == "warp.md" {
-                    rule.warp_md = rule_file;
-                } else if file_name.to_lowercase() == "agents.md" {
-                    rule.agents_md = rule_file;
+                if let Some(slot) = rule.slot_mut(file_name) {
+                    *slot = rule_file;
                 }
                 self.rules.push(rule);
             }
@@ -307,6 +314,12 @@ impl ProjectContextModel {
                                 })
                                 .chain(rule_files.rules.iter().filter_map(|rule| {
                                     rule.agents_md.as_ref().map(|rule| ProjectRulePath {
+                                        project_root: root_clone.clone(),
+                                        path: rule.path.clone(),
+                                    })
+                                }))
+                                .chain(rule_files.rules.iter().filter_map(|rule| {
+                                    rule.claude_md.as_ref().map(|rule| ProjectRulePath {
                                         project_root: root_clone.clone(),
                                         path: rule.path.clone(),
                                     })

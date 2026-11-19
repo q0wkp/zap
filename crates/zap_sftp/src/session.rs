@@ -5,12 +5,16 @@
 //! date: 2026-05-31
 
 use std::net::{TcpStream, ToSocketAddrs};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine as _;
+
 use crate::error::SftpError;
+use crate::known_hosts::{self, KnownHosts, Verdict};
 use crate::sftp::Sftp;
 
 /// 默认连接超时时间（10 秒）
@@ -79,6 +83,24 @@ impl SftpSession {
         // 设置 SSH 会话超时（毫秒），影响 handshake 和后续所有阻塞操作
         session.set_timeout(effective_timeout.as_millis() as u32);
 
+        // 和 ssh 的 StrictHostKeyChecking=accept-new 一样校验 host key:先读
+        // known_hosts,让服务器优先给出已记录类型的 key,握手后再比对。
+        let host_entry = known_hosts::host_entry_name(host, port);
+        let user_known_hosts = known_hosts::user_known_hosts_path();
+        let known_host_files: Vec<&Path> = user_known_hosts
+            .as_deref()
+            .into_iter()
+            .chain([Path::new(known_hosts::GLOBAL_KNOWN_HOSTS_PATH)])
+            .collect();
+        let known = KnownHosts::load(&known_host_files).map_err(|e| {
+            SftpError::HostKeyRejected(format!("Failed to read known_hosts: {e}"))
+        })?;
+        // 设置失败(libssh2 一个都不认)时保留默认顺序,不影响连接。
+        let _ = session.method_pref(
+            ssh2::MethodType::HostKey,
+            &known_hosts::host_key_method_prefs(&known.key_types_for(&host_entry)),
+        );
+
         session.handshake()
             .map_err(|e| {
                 if is_timeout_error(&e) {
@@ -87,6 +109,8 @@ impl SftpSession {
                     SftpError::ConnectionFailed(format!("SSH handshake failed: {e}"))
                 }
             })?;
+
+        verify_host_key(&session, &known, &host_entry, user_known_hosts.as_deref())?;
 
         match &auth {
             AuthMethod::Password { password } => {
@@ -152,6 +176,56 @@ impl Drop for SftpSession {
     fn drop(&mut self) {
         if !self.disconnected.swap(true, Ordering::SeqCst) {
             let _ = self.session.disconnect(None, "bye", None);
+        }
+    }
+}
+
+/// Checks the key the server presented against known_hosts before anything secret is sent: a
+/// changed or revoked key is refused, a host seen for the first time is recorded.
+fn verify_host_key(
+    session: &ssh2::Session,
+    known: &KnownHosts,
+    host_entry: &str,
+    user_known_hosts: Option<&Path>,
+) -> Result<(), SftpError> {
+    let (key, key_type) = session
+        .host_key()
+        .ok_or_else(|| SftpError::HostKeyRejected("The server sent no host key".into()))?;
+    let key_type = match key_type {
+        ssh2::HostKeyType::Rsa => "ssh-rsa",
+        ssh2::HostKeyType::Dss => "ssh-dss",
+        ssh2::HostKeyType::Ecdsa256 => "ecdsa-sha2-nistp256",
+        ssh2::HostKeyType::Ecdsa384 => "ecdsa-sha2-nistp384",
+        ssh2::HostKeyType::Ecdsa521 => "ecdsa-sha2-nistp521",
+        ssh2::HostKeyType::Ed25519 => "ssh-ed25519",
+        ssh2::HostKeyType::Unknown => {
+            return Err(SftpError::HostKeyRejected(format!(
+                "{host_entry} sent a host key of an unknown type"
+            )));
+        }
+    };
+    let key = STANDARD.encode(key);
+    match known.verify(host_entry, key_type, &key) {
+        Verdict::Known => Ok(()),
+        Verdict::Changed => Err(SftpError::HostKeyRejected(format!(
+            "the {key_type} host key of {host_entry} differs from the one in known_hosts; \
+             if the change is expected, remove the old entry (ssh-keygen -R '{host_entry}')"
+        ))),
+        Verdict::Revoked => Err(SftpError::HostKeyRejected(format!(
+            "the {key_type} host key of {host_entry} is marked @revoked in known_hosts"
+        ))),
+        Verdict::Unknown => {
+            let path = user_known_hosts.ok_or_else(|| {
+                SftpError::HostKeyRejected(format!(
+                    "{host_entry} is not in known_hosts, and there is no home directory to record it in"
+                ))
+            })?;
+            known_hosts::append_entry(path, host_entry, key_type, &key).map_err(|e| {
+                SftpError::HostKeyRejected(format!(
+                    "Failed to add {host_entry} to {}: {e}",
+                    path.display()
+                ))
+            })
         }
     }
 }

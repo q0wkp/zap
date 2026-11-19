@@ -22,6 +22,9 @@ pub enum SftpError {
     #[error("Authentication failed: {0}")]
     AuthFailed(String),
 
+    #[error("Host key verification failed: {0}")]
+    HostKeyRejected(String),
+
     #[error("Operation timed out")]
     Timeout,
 
