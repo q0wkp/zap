@@ -525,3 +525,46 @@ fn test_config_with_active_tab_being_filtered() {
     let template = LaunchConfig::from_snapshot("Test".into(), &state);
     assert_eq!(template.windows[0].active_tab_index, None)
 }
+
+#[test]
+fn test_branch_without_panes_is_rejected() {
+    let empty_branch = serde_yaml::from_str::<LaunchConfig>(
+        r#"
+name: Empty Branch
+windows:
+  - tabs:
+      - layout:
+          split_direction: horizontal
+          panes: []
+"#,
+    );
+    assert!(empty_branch.is_err());
+
+    let nested_empty_branch = serde_yaml::from_str::<LaunchConfig>(
+        r#"
+name: Nested Empty Branch
+windows:
+  - tabs:
+      - layout:
+          split_direction: horizontal
+          panes:
+            - cwd: /tmp/left
+            - split_direction: vertical
+              panes: []
+"#,
+    );
+    assert!(nested_empty_branch.is_err());
+
+    let single_pane_branch = serde_yaml::from_str::<LaunchConfig>(
+        r#"
+name: Single Pane Branch
+windows:
+  - tabs:
+      - layout:
+          split_direction: horizontal
+          panes:
+            - cwd: /tmp/only
+"#,
+    );
+    assert!(single_pane_branch.is_ok());
+}

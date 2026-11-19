@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 use line_ending::LineEnding;
 use markdown_parser::{
-    FormattedIndentTextInline, FormattedText, FormattedTextFragment, FormattedTextLine, parse_html,
-    parse_markdown,
+    FormattedIndentTextInline, FormattedText, FormattedTextFragment, FormattedTextHeader,
+    FormattedTextLine, parse_html, parse_markdown,
 };
 use pathfinder_color::ColorU;
 use rand::SeedableRng;
@@ -44,7 +44,9 @@ use warpui::text::point::Point;
 
 use crate::content::buffer::{Buffer, StyledBufferRun};
 
-use super::{BufferEvent, EditResult, ToBufferCharOffset};
+use super::{
+    BufferEvent, EditResult, ToBufferCharOffset, convert_text_with_style_to_formatted_text,
+};
 
 #[derive(Debug)]
 pub struct TestEmbeddedItem {
@@ -6806,6 +6808,97 @@ fn test_edit_in_header() {
                 buffer.content.debug(),
                 "<text>test<header1>li<text>morene\\nsecond"
             );
+        });
+    });
+}
+
+#[test]
+fn test_header_text_conversion_splits_lines() {
+    let header_style = BufferBlockStyle::Header {
+        header_size: BlockHeaderSize::Header1,
+    };
+    let convert = |text: &str| {
+        convert_text_with_style_to_formatted_text(text, TextStyles::default(), header_style.clone())
+            .lines
+            .into_iter()
+            .collect::<Vec<_>>()
+    };
+    let heading = |text: &str| {
+        FormattedTextLine::Heading(FormattedTextHeader {
+            heading_size: BlockHeaderSize::Header1.into(),
+            text: vec![FormattedTextFragment::plain_text(text)],
+        })
+    };
+    let line = |text: &str| FormattedTextLine::Line(vec![FormattedTextFragment::plain_text(text)]);
+
+    // Only the first line continues the heading; every later line is plain text holding
+    // that line alone.
+    assert_eq!(convert("a"), vec![heading("a")]);
+    assert_eq!(convert("a\nb"), vec![heading("a"), line("b")]);
+    assert_eq!(
+        convert("a\n\nb\nc"),
+        vec![
+            heading("a"),
+            FormattedTextLine::LineBreak,
+            line("b"),
+            line("c")
+        ]
+    );
+}
+
+#[test]
+fn test_multiline_edit_in_header_inserts_each_line_once() {
+    App::test((), |mut app| async move {
+        let buffer = app.add_model(|_| Buffer::new(Box::new(|_, _| IndentBehavior::Ignore)));
+        let selection = app.add_model(|_| BufferSelectionModel::new(buffer.clone()));
+
+        buffer.update(&mut app, |buffer, ctx| {
+            let _ = buffer.edit_internal_first_selection(
+                CharOffset::from(1)..CharOffset::from(1),
+                "test\nline\nsecond",
+                TextStyles::default(),
+                selection.clone(),
+                ctx,
+            );
+            let _ = buffer.block_style_range(
+                CharOffset::from(6)..CharOffset::from(10),
+                BufferBlockStyle::Header {
+                    header_size: BlockHeaderSize::Header1,
+                },
+                selection.clone(),
+                ctx,
+            );
+            assert_eq!(
+                buffer.content.debug(),
+                "<text>test<header1>line<text>second"
+            );
+
+            let _ = buffer.edit_internal_first_selection(
+                CharOffset::from(8)..CharOffset::from(8),
+                "xy\nzw",
+                TextStyles::default(),
+                selection.clone(),
+                ctx,
+            );
+
+            let text = buffer.text();
+            let text = text.as_str();
+            assert_eq!(text.matches("xy").count(), 1, "unexpected text: {text:?}");
+            assert_eq!(text.matches("zw").count(), 1, "unexpected text: {text:?}");
+            assert!(
+                buffer
+                    .content
+                    .debug()
+                    .starts_with("<text>test<header1>lixy<text>zw"),
+                "unexpected content: {}",
+                buffer.content.debug()
+            );
+        });
+
+        selection.read(&app, |selection, _| {
+            buffer.read(&app, |buffer, _| {
+                buffer.validate(&selection.anchors);
+            });
         });
     });
 }

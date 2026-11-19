@@ -5,6 +5,7 @@ use crate::app_state::{
     WindowSnapshot,
 };
 use crate::themes::theme::AnsiColorIdentifier;
+use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[cfg(test)]
@@ -108,6 +109,7 @@ pub enum PaneTemplateType {
     },
     PaneBranchTemplate {
         split_direction: SplitDirection,
+        #[serde(deserialize_with = "deserialize_branch_panes")]
         panes: Vec<PaneTemplateType>,
     },
 }
@@ -179,6 +181,20 @@ where
 {
     let raw_path = String::deserialize(deserializer)?;
     Ok(PathBuf::from(shellexpand::tilde(&raw_path).into_owned()))
+}
+
+/// Deserializes the panes of a branch, rejecting an empty list: a branch
+/// without panes can't be laid out, and a tab built from one would have no
+/// pane to show.
+fn deserialize_branch_panes<'de, D>(deserializer: D) -> Result<Vec<PaneTemplateType>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let panes = Vec::<PaneTemplateType>::deserialize(deserializer)?;
+    if panes.is_empty() {
+        return Err(D::Error::custom("a pane branch needs at least one pane"));
+    }
+    Ok(panes)
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
