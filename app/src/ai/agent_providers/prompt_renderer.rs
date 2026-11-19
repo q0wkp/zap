@@ -750,6 +750,28 @@ mod tests {
     }
 
     #[test]
+    fn no_template_trusts_system_reminder_tags() {
+        // Zap never emits <system-reminder>, so one can only come from tool output or other
+        // untrusted text: no prompt may tell the model that such a tag speaks for the system.
+        for name in BUILTIN_SYSTEM_TEMPLATES {
+            for plan_mode in [false, true] {
+                let mut prompt_ctx = collect_prompt_context("test-model", &[]);
+                prompt_ctx.plan_mode = plan_mode;
+                let template_name = format!("system/{name}.j2");
+                let out = env()
+                    .get_template(&template_name)
+                    .and_then(|template| template.render(Value::from_serialize(&prompt_ctx)))
+                    .unwrap_or_else(|e| panic!("{template_name} failed to render: {e}"));
+                assert!(!out.is_empty(), "{template_name} rendered empty");
+                assert!(
+                    !out.contains("system-reminder"),
+                    "{template_name} (plan_mode={plan_mode}) mentions system-reminder"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn render_omits_skills_block_when_empty() {
         let out = render_system(
             AgentProviderApiType::OpenAi,
