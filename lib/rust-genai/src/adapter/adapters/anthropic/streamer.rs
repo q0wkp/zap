@@ -5,6 +5,7 @@ use crate::chat::{CacheCreationDetails, ChatOptionsSet, PromptTokensDetails, Sto
 use crate::webc::{Event, EventSourceStream};
 use crate::{Error, ModelIden, Result};
 use serde_json::{Map, Value};
+use std::borrow::Cow;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use value_ext::JsonValueExt;
@@ -75,6 +76,21 @@ fn merge_count(count: &mut Option<i32>, usage_data: &Value, key: &str) {
 	}
 }
 
+/// The type of an SSE frame: its event name, or, when the frame has none (some proxies
+/// strip the `event:` lines and forward only `data:`), the `type` field of its JSON data,
+/// which always repeats the event name.
+fn frame_type<'a>(event: &'a str, data: &str) -> Cow<'a, str> {
+	// `message` is what the event source reports for a frame without an event name.
+	if event != "message" {
+		return Cow::Borrowed(event);
+	}
+
+	serde_json::from_str::<Value>(data)
+		.ok()
+		.and_then(|data| data.get("type").and_then(Value::as_str).map(str::to_owned))
+		.map_or(Cow::Borrowed(event), Cow::Owned)
+}
+
 enum InProgressBlock {
 	Text,
 	ToolUse { id: String, name: String, input: String },
@@ -110,7 +126,8 @@ impl futures::Stream for AnthropicStreamer {
 			match event {
 				Some(Ok(Event::Open)) => return Poll::Ready(Some(Ok(InterStreamEvent::Start))),
 				Some(Ok(Event::Message(message))) => {
-					let message_type = message.event.as_str();
+					let message_type = frame_type(&message.event, &message.data);
+					let message_type = message_type.as_ref();
 
 					match message_type {
 						"message_start" => {
@@ -140,35 +157,14 @@ impl futures::Stream for AnthropicStreamer {
 							continue;
 						}
 						"content_block_stop" => {
-							match std::mem::replace(&mut self.in_progress_block, InProgressBlock::Text) {
-								InProgressBlock::ToolUse { id, name, input } if self.options.capture_tool_calls => {
-									// ToolCallChunks were already emitted incrementally
-									// during content_block_start and content_block_delta.
-									// Here we only finalize capture with parsed arguments.
-									let fn_arguments = if input.is_empty() {
-										Value::Object(Map::new())
-									} else {
-										serde_json::from_str(&input)?
-									};
-
-									let tc = ToolCall {
-										call_id: id,
-										fn_name: name,
-										fn_arguments,
-										thought_signatures: None,
-									};
-
-									match self.captured_data.tool_calls {
-										Some(ref mut t) => t.push(tc),
-										None => self.captured_data.tool_calls = Some(vec![tc]),
-									}
-								}
-								_ => {
-									// no-op for remaining block types
-								}
-							}
-
+							self.on_content_block_stop();
 							continue;
+						}
+						// -- ERROR
+						"error" => {
+							// The server sends nothing after an error: do not poll it again.
+							self.done = true;
+							return Poll::Ready(Some(Err(self.stream_error(&message.data)?)));
 						}
 						// -- END MESSAGE
 						"message_stop" => {
@@ -329,6 +325,54 @@ impl AnthropicStreamer {
 			}
 			InProgressBlock::Ignored => Ok(None),
 		}
+	}
+
+	/// Handles a `content_block_stop` message: captures the finished tool call, if the block was one.
+	fn on_content_block_stop(&mut self) {
+		match std::mem::replace(&mut self.in_progress_block, InProgressBlock::Text) {
+			InProgressBlock::ToolUse { id, name, input } if self.options.capture_tool_calls => {
+				// ToolCallChunks were already emitted incrementally
+				// during content_block_start and content_block_delta.
+				// Here we only finalize capture with parsed arguments.
+				let fn_arguments = if input.is_empty() {
+					Value::Object(Map::new())
+				} else {
+					// Arguments that do not parse (cut off, or malformed by the model) are
+					// kept as the raw string, as the OpenAI streamer does, so the caller can
+					// answer the model about that one call instead of losing the whole turn.
+					serde_json::from_str(&input).unwrap_or(Value::String(input))
+				};
+
+				let tc = ToolCall {
+					call_id: id,
+					fn_name: name,
+					fn_arguments,
+					thought_signatures: None,
+				};
+
+				match self.captured_data.tool_calls {
+					Some(ref mut t) => t.push(tc),
+					None => self.captured_data.tool_calls = Some(vec![tc]),
+				}
+			}
+			InProgressBlock::ToolUse { .. }
+			| InProgressBlock::Text
+			| InProgressBlock::Thinking
+			| InProgressBlock::Ignored => {
+				// no-op for remaining block types
+			}
+		}
+	}
+
+	/// Builds the error of an `error` message (`overloaded_error`, `api_error`, ...), whose
+	/// body is the message's `error` object, as the OpenAI streamer reports inline errors.
+	fn stream_error(&self, message_data: &str) -> Result<Error> {
+		let mut data = self.parse_message_data(message_data)?;
+		let body = data.x_take::<Value>("error").unwrap_or(data);
+		Ok(Error::ChatResponse {
+			model_iden: self.options.model_iden.clone(),
+			body,
+		})
 	}
 
 	fn capture_usage(&mut self, message_type: &str, message_data: &str) -> Result<()> {
