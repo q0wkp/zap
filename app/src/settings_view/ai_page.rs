@@ -138,6 +138,7 @@ use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -2129,8 +2130,8 @@ impl AISettingsPageView {
         provider_id: &str,
         name: &str,
         base_url: &str,
-        api_key: &str,
-        headers: &[(String, String)],
+        api_key: &RedactedString,
+        headers: &[(String, RedactedString)],
         models: &[(usize, String, String, u32, u32)],
         ctx: &mut ViewContext<Self>,
     ) {
@@ -2139,7 +2140,10 @@ impl AISettingsPageView {
             if let Some(p) = providers.iter_mut().find(|p| p.id == provider_id) {
                 p.name = name.to_owned();
                 p.base_url = base_url.to_owned();
-                p.extra_headers = headers.to_vec();
+                p.extra_headers = headers
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.expose().to_owned()))
+                    .collect();
                 // 按 model_index 更新，跳过越界索引（rebuild 中间表单与 settings 可能短暂不一致）。
                 for (idx, m_name, m_id, ctx_window, max_out) in models {
                     if let Some(m) = p.models.get_mut(*idx) {
@@ -2155,7 +2159,7 @@ impl AISettingsPageView {
         crate::ai::agent_providers::AgentProviderSecrets::handle(ctx).update(
             ctx,
             |secrets, ctx| {
-                secrets.set(provider_id, api_key.to_owned(), ctx);
+                secrets.set(provider_id, api_key.expose().to_owned(), ctx);
             },
         );
     }
@@ -2188,6 +2192,31 @@ pub enum PerAgentDimension {
     Toolbar,
     TabMenu,
     Titlebar,
+}
+
+/// A secret an action carries, such as an API key or the value of a request header.
+///
+/// Every dispatched typed action is logged with its `Debug` output, so a secret held as a
+/// plain `String` would be written to the log file each time the action is dispatched. This
+/// prints `[REDACTED]` instead; the value itself is unchanged and read with [`Self::expose`].
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct RedactedString(String);
+
+impl RedactedString {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// The secret itself. Never pass it to a log or a format string.
+    pub fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for RedactedString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("[REDACTED]")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2289,7 +2318,7 @@ pub enum AISettingsPageAction {
     },
     UpdateAgentProviderApiKey {
         provider_id: String,
-        api_key: String,
+        api_key: RedactedString,
     },
     /// 一次性保存某个 provider 卡片上的全部可编辑字段(name / base_url / api_key /
     /// extra_headers / models)。取代原来"失焦/Enter 逐字段推入"的 UX —— 用户在
@@ -2298,8 +2327,9 @@ pub enum AISettingsPageAction {
         provider_id: String,
         name: String,
         base_url: String,
-        api_key: String,
-        headers: Vec<(String, String)>,
+        api_key: RedactedString,
+        /// `(name, value)`: the value is often a credential.
+        headers: Vec<(String, RedactedString)>,
         /// 只携带可编辑部分:`(model_index, name, id, context_window, max_output_tokens)`。
         /// reasoning / tool_call / image / pdf / audio 由独立的 chip 动作维护,不走这里。
         models: Vec<(usize, String, String, u32, u32)>,
@@ -2308,8 +2338,9 @@ pub enum AISettingsPageAction {
         provider_id: String,
         name: String,
         base_url: String,
-        api_key: String,
-        headers: Vec<(String, String)>,
+        api_key: RedactedString,
+        /// `(name, value)`: the value is often a credential.
+        headers: Vec<(String, RedactedString)>,
         /// 只携带可编辑部分:`(model_index, name, id, context_window, max_output_tokens)`。
         models: Vec<(usize, String, String, u32, u32)>,
         action: Box<AISettingsPageAction>,
@@ -2358,7 +2389,7 @@ pub enum AISettingsPageAction {
         provider_id: String,
         header_index: usize,
         key: String,
-        value: String,
+        value: RedactedString,
     },
     FetchAgentProviderModels {
         provider_id: String,
@@ -3184,7 +3215,7 @@ impl TypedActionView for AISettingsPageView {
                 crate::ai::agent_providers::AgentProviderSecrets::handle(ctx).update(
                     ctx,
                     |secrets, ctx| {
-                        secrets.set(provider_id, api_key.clone(), ctx);
+                        secrets.set(provider_id, api_key.expose().to_owned(), ctx);
                     },
                 );
                 ctx.notify();
@@ -3453,7 +3484,7 @@ impl TypedActionView for AISettingsPageView {
                     let mut providers = settings.agent_providers.value().clone();
                     if let Some(p) = providers.iter_mut().find(|p| p.id == *provider_id) {
                         if let Some(h) = p.extra_headers.get_mut(*header_index) {
-                            *h = (key.clone(), value.clone());
+                            *h = (key.clone(), value.expose().to_owned());
                         }
                     }
                     let _ = settings.agent_providers.set_value(providers, ctx);
@@ -7178,3 +7209,7 @@ mod styles {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "ai_page_tests.rs"]
+mod tests;

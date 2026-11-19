@@ -44,7 +44,9 @@ use crate::editor::{
 use crate::settings::{AISettings, AgentProvider, AgentProviderApiType, AgentProviderModel};
 use strum::IntoEnumIterator;
 
-use super::ai_page::{AISettingsPageAction, AISettingsPageView, ModelCapabilityKind};
+use super::ai_page::{
+    AISettingsPageAction, AISettingsPageView, ModelCapabilityKind, RedactedString,
+};
 use super::settings_page::{build_sub_header, SettingsWidget, HEADER_PADDING};
 
 const CARD_BUTTON_PADDING: f32 = 6.0;
@@ -271,21 +273,23 @@ impl ProviderDraftEditors {
             String,
             String,
             String,
-            String,
-            Vec<(String, String)>,
+            RedactedString,
+            Vec<(String, RedactedString)>,
             Vec<(usize, String, String, u32, u32)>,
         ) -> AISettingsPageAction,
     ) -> AISettingsPageAction {
         let name = self.name_editor.as_ref(app).buffer_text(app);
         let base_url = self.base_url_editor.as_ref(app).buffer_text(app);
-        let api_key = self.api_key_editor.as_ref(app).buffer_text(app);
-        let headers: Vec<(String, String)> = self
+        // The key and the header values go into an action, and actions are logged when
+        // dispatched: wrap them so that they are not.
+        let api_key = RedactedString::new(self.api_key_editor.as_ref(app).buffer_text(app));
+        let headers: Vec<(String, RedactedString)> = self
             .header_editors
             .iter()
             .map(|(k, v)| {
                 (
                     k.as_ref(app).buffer_text(app),
-                    v.as_ref(app).buffer_text(app),
+                    RedactedString::new(v.as_ref(app).buffer_text(app)),
                 )
             })
             .collect();
