@@ -11,6 +11,7 @@ use crate::terminal::model::session::command_executor::shell_escape_single_quote
 use crate::terminal::shell::ShellType;
 use crate::ASSETS;
 use warp_core::features::FeatureFlag;
+use warp_core::safe_error;
 
 use crate::report_if_error;
 use itertools::Itertools;
@@ -33,13 +34,13 @@ use signal_hook_mio::v1_0::Signals;
 use command::blocking::Command;
 use std::{
     collections::HashMap,
-    ffi::{CStr, OsString},
+    ffi::OsString,
     fs::{DirBuilder, File},
     io,
     mem::MaybeUninit,
     os::unix::{
         fs::DirBuilderExt,
-        io::{AsRawFd, FromRawFd, RawFd},
+        io::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd},
     },
     path::{Path, PathBuf},
     ptr,
@@ -49,23 +50,31 @@ use warpui::{AppContext, SingletonEntity};
 
 const BASH_HISTORY_SIZE_SENTINEL: &str = "57265949261";
 
-/// Get raw fds for leader/follower ends of a new PTY.
-fn make_pty(size: winsize) -> Result<(RawFd, RawFd)> {
+/// Get the leader/follower ends of a new PTY.
+fn make_pty(size: winsize) -> Result<(OwnedFd, OwnedFd)> {
     let mut win_size = size;
     win_size.ws_xpixel = 0;
     win_size.ws_ypixel = 0;
 
     let ends = openpty(Some(&win_size), None).context("openpty failed")?;
+    // Take ownership of both ends right away, so that they are closed on
+    // every path that doesn't hand them on.
+    let (leader, follower) = unsafe {
+        (
+            OwnedFd::from_raw_fd(ends.master),
+            OwnedFd::from_raw_fd(ends.slave),
+        )
+    };
     // Configure the two new file descriptors to be closed on exec.  This keeps
     // us from leaking tty fds into spawned shells.  FD_CLOEXEC is _not_ shared
     // across duplicated fds, so when we call `libc::dup2()` below, those fds
     // will _not_ be closed when we exec the shell.
     unsafe {
-        libc::fcntl(ends.master, libc::F_SETFD, libc::FD_CLOEXEC);
-        libc::fcntl(ends.slave, libc::F_SETFD, libc::FD_CLOEXEC);
+        libc::fcntl(leader.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC);
+        libc::fcntl(follower.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC);
     }
 
-    Ok((ends.master, ends.slave))
+    Ok((leader, follower))
 }
 
 fn docker_sandbox_run_args(starter: &DockerSandboxShellStarter) -> Vec<std::ffi::OsString> {
@@ -104,60 +113,110 @@ fn docker_sandbox_run_args(starter: &DockerSandboxShellStarter) -> Vec<std::ffi:
     args
 }
 
-#[derive(Debug)]
-struct Passwd<'a> {
-    name: &'a str,
-    dir: &'a str,
-    shell: &'a str,
+/// The current user's password-database record, resolved for shell/session
+/// setup. Fields are owned so the record outlives any transient lookup buffer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct CurrentUser {
+    pub(super) name: String,
+    pub(super) dir: String,
+    pub(super) shell: String,
 }
 
-pub fn get_pw_shell() -> String {
-    let mut buf = [0; 1024];
-    let pw = get_pw_entry(&mut buf);
-    pw.shell.to_string()
+/// Resolves the current uid's passwd record for shell/session setup.
+///
+/// Resolution order, stopping at the first hit:
+/// 1. In-process passwd lookup (`getpwuid_r`, via nix) — fast, and correct
+///    wherever the process can resolve users itself (local `/etc/passwd`, or a
+///    glibc-dynamic build that can load NSS plugins).
+/// 2. `getent passwd <uid>` — delegates to the host's own NSS stack, so
+///    centrally-managed users (SSSD/LDAP/AD) still resolve even from a
+///    static/musl binary that can't `dlopen` glibc NSS plugins in-process.
+/// 3. `/etc/passwd` — last resort for minimal hosts that lack `getent`.
+///
+/// Returns `None` only if all three fail; callers then fall back to the ambient
+/// environment (`$HOME`/`$USER`) or built-in shell defaults.
+pub(super) fn resolve_current_user() -> Option<CurrentUser> {
+    let uid = nix::unistd::getuid();
+    current_user_via_getpwuid(uid)
+        .or_else(|| current_user_via_getent(uid.as_raw()))
+        .or_else(|| current_user_from_passwd_file(uid.as_raw()))
 }
 
-/// Return a Passwd struct with pointers into the provided buf.
-///
-/// # Unsafety
-///
-/// If `buf` is changed while `Passwd` is alive, bad things will almost certainly happen.
-fn get_pw_entry(buf: &mut [i8; 1024]) -> Passwd<'_> {
-    // Create zeroed passwd struct.
-    let mut entry: MaybeUninit<libc::passwd> = MaybeUninit::uninit();
+/// Resolve the current user with an in-process passwd lookup via nix's
+/// safe [`nix::unistd::User::from_uid`] wrapper (backed by `getpwuid_r`).
+fn current_user_via_getpwuid(uid: nix::unistd::Uid) -> Option<CurrentUser> {
+    match nix::unistd::User::from_uid(uid) {
+        Ok(Some(user)) => Some(CurrentUser {
+            name: user.name,
+            dir: user.dir.to_string_lossy().into_owned(),
+            shell: user.shell.to_string_lossy().into_owned(),
+        }),
+        // No passwd entry for this uid — e.g. a static/musl binary that can't
+        // resolve directory-service users in-process. Fall through to the
+        // host-delegated lookups.
+        Ok(None) => None,
+        Err(err) => {
+            safe_error!(
+                safe: ("passwd entry lookup failed for uid {uid}: {err}"),
+                full: ("passwd entry lookup failed")
+            );
+            None
+        }
+    }
+}
 
-    let mut res: *mut libc::passwd = ptr::null_mut();
+/// `getent` is the host's own (typically glibc-dynamic) binary, so it consults
+/// the host's full NSS configuration — including SSSD/LDAP/AD — which a
+/// static/musl Warp binary cannot do in-process.
+fn current_user_via_getent(uid: u32) -> Option<CurrentUser> {
+    let output = Command::new("getent")
+        .arg("passwd")
+        .arg(uid.to_string())
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8(output.stdout).ok()?;
+    stdout.lines().find_map(|line| parse_passwd_line(line, uid))
+}
 
-    // Try and read the pw file.
-    let uid = unsafe { libc::getuid() };
-    let status = unsafe {
-        libc::getpwuid_r(
-            uid,
-            entry.as_mut_ptr(),
-            buf.as_mut_ptr() as *mut _,
-            buf.len(),
-            &mut res,
-        )
-    };
-    let entry = unsafe { entry.assume_init() };
+fn current_user_from_passwd_file(uid: u32) -> Option<CurrentUser> {
+    let contents = std::fs::read_to_string("/etc/passwd").ok()?;
+    contents
+        .lines()
+        .find_map(|line| parse_passwd_line(line, uid))
+}
 
-    if status < 0 {
-        panic!("getpwuid_r failed");
+/// Parse a single `passwd(5)`-format line
+/// (`name:passwd:uid:gid:gecos:dir:shell`) and return it as a [`CurrentUser`]
+/// iff its uid field equals `uid`.
+fn parse_passwd_line(line: &str, uid: u32) -> Option<CurrentUser> {
+    // Strip leading blanks and ignore blank / comment lines, as glibc's passwd
+    // reader does before parsing fields.
+    let line = line.trim_start();
+    if line.is_empty() || line.starts_with('#') {
+        return None;
     }
 
-    if res.is_null() {
-        panic!("pw not found");
+    // `splitn(7, ':')` leaves the shell field (the 7th) as the rest of the
+    // line, including any embedded colons — matching glibc's `pw_shell = line`.
+    let mut fields = line.splitn(7, ':');
+    let name = fields.next()?;
+    let _passwd = fields.next()?;
+    let line_uid: u32 = fields.next()?.parse().ok()?;
+    let _gid = fields.next()?;
+    let _gecos = fields.next()?;
+    let dir = fields.next()?;
+    let shell = fields.next()?;
+    if line_uid != uid {
+        return None;
     }
-
-    // Sanity check.
-    assert_eq!(entry.pw_uid, uid);
-
-    // Build a borrowed Passwd struct.
-    Passwd {
-        name: unsafe { CStr::from_ptr(entry.pw_name).to_str().unwrap() },
-        dir: unsafe { CStr::from_ptr(entry.pw_dir).to_str().unwrap() },
-        shell: unsafe { CStr::from_ptr(entry.pw_shell).to_str().unwrap() },
-    }
+    Some(CurrentUser {
+        name: name.to_owned(),
+        dir: dir.to_owned(),
+        shell: shell.to_owned(),
+    })
 }
 
 pub struct Pty {
@@ -232,8 +291,7 @@ fn build_host_shell_command(
     shell_debug_mode: bool,
     honor_ps1: bool,
 ) -> Command {
-    let mut buf = [0; 1024];
-    let pw = get_pw_entry(&mut buf);
+    let pw = resolve_current_user();
 
     log::info!(
         "Starting shell {}",
@@ -248,7 +306,10 @@ fn build_host_shell_command(
     // Support an overridden home directory for integration tests, which
     // should execute in a more hermetic environment than one where the home
     // directory contains whatever happens to already exist there.
-    let home_dir = std::env::var("HOME").unwrap_or_else(|_| pw.dir.to_owned());
+    let home_dir = std::env::var("HOME")
+        .ok()
+        .or_else(|| pw.as_ref().map(|pw| pw.dir.to_owned()))
+        .unwrap_or_else(|| "/".to_owned());
 
     // Unfortunately process::Command has no facility for using the same fd for in/out/err.
     // The issue is that Stdio wants to close its fd. Previously we tried Stdio::from_raw_fd(follower)
@@ -258,8 +319,15 @@ fn build_host_shell_command(
     // in the tests. Therefore we do NOT set stdin, stdout, stderr here; instead we
     // do it in the pre_exec hook.
     // Setup shell environment.
-    builder.env("LOGNAME", pw.name);
-    builder.env("USER", pw.name);
+    if let Some(user_name) = pw
+        .as_ref()
+        .map(|pw| pw.name.to_owned())
+        .or_else(|| std::env::var("USER").ok())
+        .or_else(|| std::env::var("LOGNAME").ok())
+    {
+        builder.env("LOGNAME", &user_name);
+        builder.env("USER", &user_name);
+    }
     builder.env("HOME", &home_dir);
 
     // Specify terminal name and capabilities.
@@ -395,17 +463,17 @@ fn spawn_command_in_pty(
     size: &SizeInfo,
     close_fds: bool,
 ) -> Result<PtySpawnInfo> {
+    // Both ends are closed when this function returns, unless the leader is
+    // handed to the caller below.  The follower only needs to stay alive long
+    // enough for fork().
     let (leader, follower) = make_pty(size.to_winsize())?;
-
-    // Close the follower at the end of this function.
-    // We need to keep it alive long enough for fork().
-    let _file = unsafe { File::from_raw_fd(follower) };
+    let follower_fd = follower.as_raw_fd();
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
-    if let Ok(mut termios) = termios::tcgetattr(leader) {
+    if let Ok(mut termios) = termios::tcgetattr(leader.as_raw_fd()) {
         // Set character encoding to UTF-8.
         termios.input_flags.set(InputFlags::IUTF8, true);
-        let _ = termios::tcsetattr(leader, SetArg::TCSANOW, &termios);
+        let _ = termios::tcsetattr(leader.as_raw_fd(), SetArg::TCSANOW, &termios);
     }
 
     // Detect isolation platform outside pre_exec, since detect() is not async-signal-safe.
@@ -451,9 +519,9 @@ fn spawn_command_in_pty(
             libc::sigprocmask(libc::SIG_SETMASK, &signals, ptr::null_mut());
 
             // Set up stdin/stdout/stderr.
-            cvt(libc::dup2(follower, libc::STDIN_FILENO))?;
-            cvt(libc::dup2(follower, libc::STDOUT_FILENO))?;
-            cvt(libc::dup2(follower, libc::STDERR_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDIN_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDOUT_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDERR_FILENO))?;
 
             // Create a new process group.
             cvt(libc::setsid())?;
@@ -464,15 +532,18 @@ fn spawn_command_in_pty(
             // there are no issues. To allow such a generic cast the clippy warning
             // is disabled.
             #[allow(clippy::cast_lossless)]
-            cvt(libc::ioctl(follower, TIOCSCTTY as _, 0))?;
+            cvt(libc::ioctl(follower_fd, TIOCSCTTY as _, 0))?;
 
-            // Close all other FDs to avoid leaking any other non-pty FDs
-            // into the shell process.  Don't propagate up errors, as most
-            // of these won't be active file descriptors, and attempting to
-            // close() them produces EINVAL.
+            // Mark all other FDs close-on-exec to avoid leaking any other
+            // non-pty FDs into the shell process.  They must not be closed
+            // here: one of them is the pipe through which Command reports a
+            // failed exec to the parent process, and without it spawn()
+            // returns a child that has already exited.  Don't propagate up
+            // errors, as most of these won't be active file descriptors,
+            // and fcntl() on them produces EBADF.
             if close_fds {
                 for fd in 3..fdlimit {
-                    libc::close(fd);
+                    libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC);
                 }
             }
 
@@ -511,7 +582,7 @@ fn spawn_command_in_pty(
     Ok(PtySpawnInfo {
         result: PtySpawnResult {
             pid: spawned.id(),
-            leader_fd: leader,
+            leader_fd: leader.into_raw_fd(),
         },
         child: spawned,
     })
@@ -747,8 +818,7 @@ fn build_docker_sandbox_command(
     shell_debug_mode: bool,
     honor_ps1: bool,
 ) -> Command {
-    let mut buf = [0; 1024];
-    let pw = get_pw_entry(&mut buf);
+    let pw = resolve_current_user();
 
     log::info!(
         "Starting Docker sandbox via {}",
@@ -760,7 +830,10 @@ fn build_docker_sandbox_command(
         builder.arg(arg);
     }
 
-    let home_dir = std::env::var("HOME").unwrap_or_else(|_| pw.dir.to_owned());
+    let home_dir = std::env::var("HOME")
+        .ok()
+        .or_else(|| pw.as_ref().map(|pw| pw.dir.to_owned()))
+        .unwrap_or_else(|| "/".to_owned());
 
     // Environment variables set on the host-side `sbx` process.
     //
@@ -774,8 +847,15 @@ fn build_docker_sandbox_command(
     // Once we've validated what the container bootstrap actually needs,
     // we can trim this list down to the variables the in-container bash
     // session actually consumes.
-    builder.env("LOGNAME", pw.name);
-    builder.env("USER", pw.name);
+    if let Some(user_name) = pw
+        .as_ref()
+        .map(|pw| pw.name.to_owned())
+        .or_else(|| std::env::var("USER").ok())
+        .or_else(|| std::env::var("LOGNAME").ok())
+    {
+        builder.env("LOGNAME", &user_name);
+        builder.env("USER", &user_name);
+    }
     builder.env("HOME", &home_dir);
     builder.env("TERM", "xterm-256color");
     builder.env("TERM_PROGRAM", "WarpTerminal");
@@ -981,6 +1061,83 @@ mod tests {
             Some(Some(BASH_HISTORY_SIZE_SENTINEL.to_owned()))
         );
     }
+
+    #[test]
+    fn spawn_reports_missing_executable_when_closing_fds() {
+        let command = Command::new("/nonexistent/warp-test-shell");
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+
+        let err = match spawn_command_in_pty(command, &size, true) {
+            Ok(_) => panic!("spawning a missing executable should fail"),
+            Err(err) => err,
+        };
+
+        assert_eq!(
+            err.downcast_ref::<io::Error>().map(io::Error::kind),
+            Some(io::ErrorKind::NotFound)
+        );
+    }
+
+    #[test]
+    fn spawn_does_not_pass_other_fds_to_the_child_when_closing_fds() {
+        // A duplicated descriptor is inherited by child processes, since
+        // FD_CLOEXEC is not shared across duplicates.
+        let file = File::open("/dev/null").expect("open /dev/null");
+        let inherited = unsafe { File::from_raw_fd(libc::dup(file.as_raw_fd())) };
+
+        let mut command = Command::new("/bin/sh");
+        command.arg("-c").arg(format!(
+            "test ! -e /dev/fd/{inherited_fd}",
+            inherited_fd = inherited.as_raw_fd()
+        ));
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+
+        let mut spawned = match spawn_command_in_pty(command, &size, true) {
+            Ok(spawned) => spawned,
+            Err(err) => panic!("spawning /bin/sh should succeed: {err:#}"),
+        };
+        let _leader = unsafe { File::from_raw_fd(spawned.result.leader_fd) };
+
+        let status = spawned.child.wait().expect("wait for the child");
+        assert!(status.success());
+    }
+
+    /// The descriptors of this process that are PTY leaders.
+    #[cfg(target_os = "linux")]
+    fn open_pty_leader_fds() -> std::collections::HashSet<RawFd> {
+        std::fs::read_dir("/proc/self/fd")
+            .expect("read /proc/self/fd")
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let target = std::fs::read_link(entry.path()).ok()?;
+                if target != Path::new("/dev/ptmx") && target != Path::new("/dev/pts/ptmx") {
+                    return None;
+                }
+                entry.file_name().to_str()?.parse().ok()
+            })
+            .collect()
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn failed_spawn_closes_the_pty_leader() {
+        const ATTEMPTS: usize = 32;
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+        let before = open_pty_leader_fds();
+
+        for _ in 0..ATTEMPTS {
+            let command = Command::new("/nonexistent/warp-test-shell");
+            assert!(spawn_command_in_pty(command, &size, false).is_err());
+        }
+
+        // Other tests may hold PTYs of their own while this one runs, so only
+        // require that the failed spawns didn't each leave a leader behind.
+        let leaked = open_pty_leader_fds().difference(&before).count();
+        assert!(
+            leaked < ATTEMPTS,
+            "{leaked} PTY leaders left open after {ATTEMPTS} failed spawns"
+        );
+    }
 }
 
 /// A set of platform helper utilities copied directly from std::sys.
@@ -1014,7 +1171,82 @@ mod utils {
 }
 
 #[test]
-fn test_get_pw_entry() {
-    let mut buf: [i8; 1024] = [0; 1024];
-    let _pw = get_pw_entry(&mut buf);
+fn parse_passwd_line_extracts_matching_uid() {
+    let line = "alice:x:1000:1000:Alice:/home/alice:/bin/zsh";
+    assert_eq!(
+        parse_passwd_line(line, 1000),
+        Some(CurrentUser {
+            name: "alice".to_owned(),
+            dir: "/home/alice".to_owned(),
+            shell: "/bin/zsh".to_owned(),
+        })
+    );
+    // A non-matching uid or a malformed line yields None.
+    assert_eq!(parse_passwd_line(line, 1001), None);
+    assert_eq!(parse_passwd_line("not a passwd line", 1000), None);
+}
+
+#[test]
+fn parse_passwd_line_matches_glibc_edge_cases() {
+    // An empty shell field (trailing colon) is valid and yields an empty shell,
+    // just as glibc allows `pw_shell` to be empty.
+    assert_eq!(
+        parse_passwd_line("root:x:0:0:root:/root:", 0),
+        Some(CurrentUser {
+            name: "root".to_owned(),
+            dir: "/root".to_owned(),
+            shell: String::new(),
+        })
+    );
+
+    // Blank lines and `#` comment lines (even with leading blanks) are skipped.
+    assert_eq!(parse_passwd_line("", 0), None);
+    assert_eq!(parse_passwd_line("   ", 0), None);
+    assert_eq!(
+        parse_passwd_line("# alice:x:1000:1000:Alice:/home/alice:/bin/zsh", 1000),
+        None
+    );
+
+    // Leading blanks before a real entry are stripped, not treated as part of
+    // the name.
+    assert_eq!(
+        parse_passwd_line("  bob:x:1001:1001:Bob:/home/bob:/bin/bash", 1001),
+        Some(CurrentUser {
+            name: "bob".to_owned(),
+            dir: "/home/bob".to_owned(),
+            shell: "/bin/bash".to_owned(),
+        })
+    );
+
+    // The shell field keeps everything after the sixth colon, so a shell value
+    // containing a `:` is not truncated (matches glibc's `pw_shell = line`).
+    assert_eq!(
+        parse_passwd_line("carol:x:1002:1002:Carol:/home/carol:/weird/shell:arg", 1002),
+        Some(CurrentUser {
+            name: "carol".to_owned(),
+            dir: "/home/carol".to_owned(),
+            shell: "/weird/shell:arg".to_owned(),
+        })
+    );
+
+    // A line missing the shell field (only six fields) is malformed → skipped.
+    assert_eq!(
+        parse_passwd_line("dave:x:1003:1003:Dave:/home/dave", 1003),
+        None
+    );
+
+    // A non-numeric uid field is malformed → skipped.
+    assert_eq!(
+        parse_passwd_line("eve:x:notanumber:1004:Eve:/home/eve:/bin/sh", 1004),
+        None
+    );
+}
+
+#[test]
+fn resolve_current_user_returns_running_user() {
+    // On the test host the current uid resolves via getpwuid_r, so this should
+    // succeed and report a non-empty name.
+    if let Some(user) = resolve_current_user() {
+        assert!(!user.name.is_empty());
+    }
 }

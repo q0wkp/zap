@@ -95,6 +95,19 @@ const MAX_LINK_PATH_FRAGMENTS: usize = 32;
 /// Max number of characters to scan for a URL.
 const URL_SCAN_CHARACTER_MAX_COUNT: usize = 1000;
 
+/// Characters a row can end with only in the middle of a URL's query. See
+/// [`GridHandler::hard_break_continues_url`].
+const URL_QUERY_BREAK_CHARS: [char; 3] = ['&', '=', '%'];
+
+/// Characters that tell the rest of a URL from a word of its own at the start
+/// of a row. See [`GridHandler::hard_break_continues_url`].
+const URL_CONTINUATION_CHARS: [char; 5] = ['/', '?', '&', '=', '%'];
+
+/// Punctuation that ends a sentence or a clause, which is not taken as part
+/// of the text that continues a URL on the next row.
+const URL_CONTINUATION_TRAILING_PUNCTUATION: [char; 9] =
+    ['.', ',', ';', ':', '!', '?', ')', '\'', '"'];
+
 /// Max depth for the kitty keyboard mode stack.
 /// Per the kitty keyboard protocol, this should be
 /// bounded to prevent denial of service attacks.
@@ -698,7 +711,7 @@ impl GridHandler {
         }
 
         // Scan backward until fragment boundary.
-        let mut cursor = self.grapheme_cursor_from(original_point, grapheme_cursor::Wrap::Soft);
+        let mut cursor = self.grapheme_cursor_from(original_point, grapheme_cursor::Wrap::All);
         cursor.move_backward();
 
         let mut starting_point = original_point;
@@ -706,6 +719,14 @@ impl GridHandler {
 
         while let Some(item) = cursor.current_item() {
             let current_point = item.point();
+
+            // A URL doesn't reach back over the end of a line, unless the
+            // line was broken there to wrap it.
+            if current_point.row < starting_point.row
+                && !self.url_continues_after_row(current_point.row)
+            {
+                break;
+            }
 
             // If we've hit a URL boundary, great; we can continue with our logic
             // by detecting a URL from that point
@@ -724,7 +745,7 @@ impl GridHandler {
             cursor.move_backward();
         }
 
-        let mut cursor = self.grapheme_cursor_from(starting_point, grapheme_cursor::Wrap::Soft);
+        let mut cursor = self.grapheme_cursor_from(starting_point, grapheme_cursor::Wrap::All);
         let mut locator = UrlLocator::new();
         let mut state = UrlLocation::Reset;
         let mut scheme_buffer = Vec::new();
@@ -735,6 +756,8 @@ impl GridHandler {
 
         // Whether we have scanned past the hovered point.
         let mut passed_point = false;
+        // The row of the last character scanned.
+        let mut scanned_row = starting_point.row;
 
         total_characters_scanned = 0;
         while let Some(item) = cursor.current_item() {
@@ -753,6 +776,12 @@ impl GridHandler {
                 break;
             }
             let current_point = item.point();
+
+            // A URL ends with its line, unless the line was broken to wrap it.
+            if current_point.row > scanned_row && !self.url_continues_after_row(scanned_row) {
+                break;
+            }
+            scanned_row = current_point.row;
 
             if current_point >= original_point {
                 passed_point = true;
@@ -833,6 +862,65 @@ impl GridHandler {
             }
             Some(url)
         }
+    }
+
+    /// Returns whether a URL that reaches the last column of `row` may carry
+    /// on in the next row.
+    fn url_continues_after_row(&self, row: usize) -> bool {
+        self.row_wraps(row) || self.hard_break_continues_url(row)
+    }
+
+    /// Returns whether the hard line break at the end of `row` was put inside
+    /// a URL to wrap it at the width of the terminal.
+    ///
+    /// Programs that lay out their own output (full-screen programs, CLI
+    /// agents) often break a long URL at the last column with a newline of
+    /// their own, instead of leaving the wrapping to the terminal. The grid
+    /// can't tell such a break from the end of a line that happens to fill
+    /// its row, so the break only counts as a wrap when the text on its two
+    /// sides doesn't read as separate words:
+    ///
+    /// - the row is filled up to its last column,
+    /// - the text at the start of the next row doesn't hold a URL of its
+    ///   own, and
+    /// - the row ends inside a query (see [`URL_QUERY_BREAK_CHARS`]), or the
+    ///   text at the start of the next row has a character that a word
+    ///   doesn't have (see [`URL_CONTINUATION_CHARS`]) or a period inside it.
+    fn hard_break_continues_url(&self, row: usize) -> bool {
+        // Filtered output leaves out rows, so the two rows are not
+        // necessarily shown one after the other.
+        if self.has_displayed_output() || self.row_wraps(row) {
+            return false;
+        }
+
+        let is_url_end = |c: char| c == DEFAULT_CHAR || URL_SEPARATORS.contains(&c);
+
+        let Some(last_char) = self.columns().checked_sub(1).and_then(|last_column| {
+            let row = self.row(row)?;
+            row.get(last_column).map(|cell| cell.c)
+        }) else {
+            return false;
+        };
+        if is_url_end(last_char) {
+            return false;
+        }
+
+        let Some(next_row) = self.row(row + 1) else {
+            return false;
+        };
+        let continuation: String = (0..self.columns())
+            .map_while(|column| next_row.get(column).map(|cell| cell.c))
+            .take_while(|c| !is_url_end(*c))
+            .collect();
+        if continuation.is_empty() || continuation.contains("://") {
+            return false;
+        }
+
+        if URL_QUERY_BREAK_CHARS.contains(&last_char) {
+            return true;
+        }
+        let continuation = continuation.trim_end_matches(URL_CONTINUATION_TRAILING_PUNCTUATION);
+        continuation.contains(URL_CONTINUATION_CHARS) || continuation.contains('.')
     }
 
     /// Converts a cell to a string, with ansi escape sequences

@@ -1797,6 +1797,9 @@ impl TerminalModel {
     /// case a double-encode of the url when we attempt to open it (see CORE-1573).
     /// Here, we pull the text at the given range, and then trim whitespace
     /// (including zero-width spaces) from the end before returning the url.
+    ///
+    /// A link that a program wrapped itself spans line breaks (see
+    /// `GridHandler::url_at_point`), which are not part of the url either.
     pub fn link_at_range<T: RangeInModel>(
         &self,
         item: &WithinModel<T>,
@@ -1804,7 +1807,7 @@ impl TerminalModel {
     ) -> String {
         let text = self.string_at_range(item, respect_obfuscated_secrets);
         text.trim_matches(['\u{200B}', ' ', '\n', '\r', '\t'])
-            .to_owned()
+            .replace(['\n', '\r'], "")
     }
 
     /// Return all possible file paths containing the grid point ordered from longest to shortest.
