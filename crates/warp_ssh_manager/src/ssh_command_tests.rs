@@ -364,3 +364,78 @@ fn startup_command_line_quotes_the_session_name() {
         Some("zmx attach 'my session; rm -rf ~'")
     );
 }
+
+#[test]
+fn endpoint_accepts_host_names_and_addresses() {
+    for host in ["example.com", "10.0.0.1", "::1", "fe80::1%eth0", "my-alias"] {
+        assert_eq!(validate_ssh_endpoint(host, "alice", 22), Ok(()), "{host}");
+    }
+    assert_eq!(validate_ssh_endpoint("example.com", "", 65535), Ok(()));
+}
+
+#[test]
+fn endpoint_rejects_a_host_ssh_would_read_as_an_option() {
+    assert_eq!(
+        validate_ssh_endpoint("-oProxyCommand=touch /tmp/x", "", 22),
+        Err(SshEndpointError::InvalidHost)
+    );
+    assert_eq!(
+        validate_ssh_endpoint("-V", "alice", 22),
+        Err(SshEndpointError::InvalidHost)
+    );
+}
+
+#[test]
+fn endpoint_rejects_whitespace_and_control_characters() {
+    for host in [
+        "exam ple.com",
+        "example.com\n",
+        "example\t.com",
+        "a\u{0}b",
+        "a\u{7f}b",
+    ] {
+        assert_eq!(
+            validate_ssh_endpoint(host, "alice", 22),
+            Err(SshEndpointError::InvalidHost),
+            "{host:?}"
+        );
+    }
+    assert_eq!(
+        validate_ssh_endpoint("", "alice", 22),
+        Err(SshEndpointError::EmptyHost)
+    );
+}
+
+#[test]
+fn endpoint_rejects_a_user_ssh_would_read_as_an_option() {
+    // The destination is `user@host`, so the user name is what the argument starts with.
+    assert_eq!(
+        validate_ssh_endpoint("example.com", "-oProxyCommand=id", 22),
+        Err(SshEndpointError::InvalidUsername)
+    );
+    assert_eq!(
+        validate_ssh_endpoint("example.com", "al ice", 22),
+        Err(SshEndpointError::InvalidUsername)
+    );
+}
+
+#[test]
+fn endpoint_rejects_port_zero() {
+    assert_eq!(
+        validate_ssh_endpoint("example.com", "alice", 0),
+        Err(SshEndpointError::InvalidPort)
+    );
+}
+
+#[test]
+fn test_connection_refuses_an_option_like_host_without_running_ssh() {
+    let mut s = server();
+    s.host = "-oProxyCommand=id".into();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(test_connection(&s, Some(Zeroizing::new("pw".into()))));
+    assert_eq!(result.status, ConnectionStatus::Offline);
+    assert_eq!(
+        result.error_message.as_deref(),
+        Some("Host cannot start with '-' or contain spaces or control characters")
+    );
+}

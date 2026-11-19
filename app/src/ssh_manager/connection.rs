@@ -55,6 +55,17 @@ pub fn connect_terminal<O: View>(
                 (server.clone(), node_id.clone(), fallback_kind)
             }
         };
+    // The host and user name may come from another device through sync, so they are checked here
+    // too, where the command line is built: a value starting with `-` would be read by `ssh` as
+    // an option.
+    if let Err(e) = warp_ssh_manager::validate_ssh_endpoint(
+        &server_for_connection.host,
+        &server_for_connection.username,
+        server_for_connection.port,
+    ) {
+        log::warn!("ssh manager: not connecting to a server with an invalid endpoint: {e}");
+        return;
+    }
     let cmd = warp_ssh_manager::build_ssh_command_line(&server_for_connection);
 
     // A default CLI agent isn't launched on the remote host, nor replaced by agent view there.

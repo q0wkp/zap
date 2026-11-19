@@ -34,8 +34,8 @@ use warpui::{
 
 use warp_ssh_manager::{
     AuthType, ConnectionStatus, KeychainSecretStore, NodeKind, OneKeyCredentialKind, SecretKind,
-    SshNode, SshOneKeyCredential, SshRepository, SshSecretStore, SshSecretStoreError,
-    SshServerInfo, ZmxSession, ZmxSessionsError,
+    SshEndpointError, SshNode, SshOneKeyCredential, SshRepository, SshSecretStore,
+    SshSecretStoreError, SshServerInfo, ZmxSession, ZmxSessionsError,
 };
 use zeroize::Zeroizing;
 
@@ -693,6 +693,20 @@ impl SshServerView {
                 return;
             }
         };
+        // A server may be saved before its host is filled in, but never with a host, user or
+        // port that `ssh` would misread.
+        match validate_form_endpoint(host.trim(), user.trim(), self.auth_type, port) {
+            Ok(()) | Err(SshEndpointError::EmptyHost) => {}
+            Err(
+                e @ (SshEndpointError::InvalidHost
+                | SshEndpointError::InvalidUsername
+                | SshEndpointError::InvalidPort),
+            ) => {
+                self.status = Some(StatusBanner::Error(endpoint_error_message(e)));
+                ctx.notify();
+                return;
+            }
+        }
 
         let credential_id = if self.auth_type == AuthType::OneKey {
             if self.selected_onekey_credential_id.is_none() {
@@ -825,21 +839,22 @@ impl SshServerView {
         let zmx_session_text = self.current_text(&self.zmx_session_editor.clone(), ctx);
         let notes_text = self.current_text(&self.notes_editor.clone(), ctx);
 
-        let port: u16 = port_str.trim().parse().unwrap_or(22);
         let host = host.trim().to_string();
-        if host.is_empty() {
-            self.status = Some(StatusBanner::Error(crate::t!(
-                "workspace-left-panel-ssh-manager-error-host-required"
-            )));
-            ctx.notify();
-            return;
-        }
+        let username = user.trim().to_string();
+        let port = match checked_form_endpoint(&host, &username, self.auth_type, &port_str) {
+            Ok(port) => port,
+            Err(e) => {
+                self.status = Some(StatusBanner::Error(endpoint_error_message(e)));
+                ctx.notify();
+                return;
+            }
+        };
         let key_path = key_path_text.trim().to_string();
         let server = SshServerInfo {
             node_id: self.node_id.clone(),
             host,
             port,
-            username: user.trim().to_string(),
+            username,
             auth_type: self.auth_type,
             key_path: if key_path.is_empty() {
                 None
@@ -883,22 +898,23 @@ impl SshServerView {
         let key_path_text = self.current_text(&self.key_path_editor.clone(), ctx);
         let credential_id = self.selected_onekey_credential_id.clone();
 
-        let port: u16 = port_str.trim().parse().unwrap_or(22);
         let host = host.trim().to_string();
-        if host.is_empty() {
-            self.status = Some(StatusBanner::Error(crate::t!(
-                "workspace-left-panel-ssh-manager-error-host-required"
-            )));
-            ctx.notify();
-            return None;
-        }
+        let username = user.trim().to_string();
+        let port = match checked_form_endpoint(&host, &username, self.auth_type, &port_str) {
+            Ok(port) => port,
+            Err(e) => {
+                self.status = Some(StatusBanner::Error(endpoint_error_message(e)));
+                ctx.notify();
+                return None;
+            }
+        };
 
         let key_path = key_path_text.trim().to_string();
         let server = SshServerInfo {
             node_id: self.node_id.clone(),
             host,
             port,
-            username: user.trim().to_string(),
+            username,
             auth_type: self.auth_type,
             key_path: if key_path.is_empty() {
                 None
@@ -2225,6 +2241,58 @@ fn make_editor(
         editor.set_placeholder_text(&placeholder, ctx);
         editor
     })
+}
+
+/// Validates the endpoint typed into the form. A OneKey server takes its user name from the
+/// credential, so the form's hidden user field isn't checked.
+fn validate_form_endpoint(
+    host: &str,
+    username: &str,
+    auth_type: AuthType,
+    port: u16,
+) -> Result<(), SshEndpointError> {
+    let username = match auth_type {
+        AuthType::OneKey => "",
+        AuthType::Password | AuthType::Key => username,
+    };
+    warp_ssh_manager::validate_ssh_endpoint(host, username, port)
+}
+
+/// Parses the port field (empty means the default, 22) and validates the endpoint with it, for
+/// connecting to the server the form describes.
+fn checked_form_endpoint(
+    host: &str,
+    username: &str,
+    auth_type: AuthType,
+    port_text: &str,
+) -> Result<u16, SshEndpointError> {
+    let port_text = port_text.trim();
+    let port = if port_text.is_empty() {
+        22
+    } else {
+        port_text
+            .parse()
+            .map_err(|_| SshEndpointError::InvalidPort)?
+    };
+    validate_form_endpoint(host, username, auth_type, port)?;
+    Ok(port)
+}
+
+fn endpoint_error_message(error: SshEndpointError) -> String {
+    match error {
+        SshEndpointError::EmptyHost => {
+            crate::t!("workspace-left-panel-ssh-manager-error-host-required")
+        }
+        SshEndpointError::InvalidHost => {
+            crate::t!("workspace-left-panel-ssh-manager-error-host-invalid")
+        }
+        SshEndpointError::InvalidUsername => {
+            crate::t!("workspace-left-panel-ssh-manager-error-user-invalid")
+        }
+        SshEndpointError::InvalidPort => {
+            crate::t!("workspace-left-panel-ssh-manager-error-port-invalid")
+        }
+    }
 }
 
 fn password_lookup_for_server_form(server: &SshServerInfo) -> (Option<String>, SecretKind) {

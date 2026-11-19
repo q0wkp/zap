@@ -5510,6 +5510,22 @@ impl Workspace {
         server: warp_ssh_manager::SshServerInfo,
         ctx: &mut ViewContext<Self>,
     ) {
+        // Refuse a host or port `ssh` would misread before opening a tab for it. A OneKey
+        // server's user name comes from its credential and is checked once that is resolved.
+        let username = match server.auth_type {
+            warp_ssh_manager::AuthType::OneKey => "",
+            warp_ssh_manager::AuthType::Password | warp_ssh_manager::AuthType::Key => {
+                server.username.as_str()
+            }
+        };
+        if let Err(e) = warp_ssh_manager::validate_ssh_endpoint(&server.host, username, server.port)
+        {
+            self.toast_stack.update(ctx, |toast_stack, ctx| {
+                toast_stack.add_ephemeral_toast(DismissibleToast::error(e.to_string()), ctx);
+            });
+            return;
+        }
+
         let window_id = ctx.window_id();
 
         // 开新 tab(不分屏 — 之前用 add_terminal_pane(Direction::Right) 会切左/右

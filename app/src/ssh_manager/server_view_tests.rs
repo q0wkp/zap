@@ -454,3 +454,50 @@ fn zmx_session_subtitle_skips_what_the_session_does_not_have() {
     session.command = None;
     assert_eq!(zmx_session_subtitle(&session), "");
 }
+
+#[test]
+fn form_endpoint_defaults_an_empty_port_to_22() {
+    assert_eq!(
+        checked_form_endpoint("example.com", "root", AuthType::Password, "  "),
+        Ok(22)
+    );
+    assert_eq!(
+        checked_form_endpoint("example.com", "root", AuthType::Password, " 2222 "),
+        Ok(2222)
+    );
+}
+
+#[test]
+fn form_endpoint_rejects_ports_out_of_range() {
+    for port in ["0", "65536", "-1", "ssh"] {
+        assert_eq!(
+            checked_form_endpoint("example.com", "root", AuthType::Password, port),
+            Err(SshEndpointError::InvalidPort),
+            "{port}"
+        );
+    }
+}
+
+#[test]
+fn form_endpoint_rejects_a_host_or_user_that_reads_as_an_option() {
+    assert_eq!(
+        checked_form_endpoint("-oProxyCommand=id", "root", AuthType::Key, "22"),
+        Err(SshEndpointError::InvalidHost)
+    );
+    assert_eq!(
+        checked_form_endpoint("example.com", "-l root", AuthType::Key, "22"),
+        Err(SshEndpointError::InvalidUsername)
+    );
+    assert_eq!(
+        checked_form_endpoint("", "root", AuthType::Key, "22"),
+        Err(SshEndpointError::EmptyHost)
+    );
+}
+
+#[test]
+fn form_endpoint_ignores_the_hidden_user_field_of_a_onekey_server() {
+    assert_eq!(
+        checked_form_endpoint("example.com", "-stale", AuthType::OneKey, "22"),
+        Ok(22)
+    );
+}

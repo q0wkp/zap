@@ -15,7 +15,51 @@ use futures_lite::io::AsyncWriteExt as _;
 use std::borrow::Cow;
 use std::process::Stdio;
 use std::time::Duration;
+use thiserror::Error;
 use zeroize::Zeroizing;
+
+/// Why a server's host, user name or port can't be handed to `ssh`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Error)]
+pub enum SshEndpointError {
+    #[error("Host cannot be empty")]
+    EmptyHost,
+    #[error("Host cannot start with '-' or contain spaces or control characters")]
+    InvalidHost,
+    #[error("User cannot start with '-' or contain spaces or control characters")]
+    InvalidUsername,
+    #[error("Port must be a number between 1 and 65535")]
+    InvalidPort,
+}
+
+/// Checks that `ssh` will read the server's destination as a destination.
+///
+/// `build_ssh_args` passes `user@host` (or the bare host) as one argument, so a value that
+/// starts with `-` would be parsed as an option instead (`-oProxyCommand=...` runs a local
+/// command). Whitespace and control characters never belong in a host or user name either.
+/// The values may come from another device through sync or from `~/.ssh/config`, so they are
+/// checked again wherever a command is built from them, not only when the user types them.
+pub fn validate_ssh_endpoint(
+    host: &str,
+    username: &str,
+    port: u16,
+) -> Result<(), SshEndpointError> {
+    let is_unsafe = |value: &str| {
+        value.starts_with('-') || value.chars().any(|c| c.is_whitespace() || c.is_control())
+    };
+    if host.is_empty() {
+        return Err(SshEndpointError::EmptyHost);
+    }
+    if is_unsafe(host) {
+        return Err(SshEndpointError::InvalidHost);
+    }
+    if is_unsafe(username) {
+        return Err(SshEndpointError::InvalidUsername);
+    }
+    if port == 0 {
+        return Err(SshEndpointError::InvalidPort);
+    }
+    Ok(())
+}
 
 pub fn build_ssh_args(server: &SshServerInfo) -> Vec<String> {
     let mut args: Vec<String> = vec!["ssh".into()];
@@ -83,6 +127,14 @@ pub async fn test_connection(
     password: Option<Zeroizing<String>>,
 ) -> ConnectionTestResult {
     let start = instant::Instant::now();
+
+    if let Err(e) = validate_ssh_endpoint(&server.host, &server.username, server.port) {
+        return ConnectionTestResult {
+            status: ConnectionStatus::Offline,
+            latency_ms: None,
+            error_message: Some(e.to_string()),
+        };
+    }
 
     let result = match server.auth_type {
         AuthType::Key => test_key_auth(server).await,
@@ -296,6 +348,8 @@ pub(crate) async fn run_remote_command(
     remote_command: &str,
     timeout: Duration,
 ) -> Result<std::process::Output, String> {
+    validate_ssh_endpoint(&server.host, &server.username, server.port)
+        .map_err(|e| e.to_string())?;
     match server.auth_type {
         AuthType::Key => {
             let cmd_args = build_key_auth_cmd_args(server, remote_command);
