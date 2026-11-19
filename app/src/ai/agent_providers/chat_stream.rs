@@ -91,6 +91,7 @@ use super::attachment_caps;
 use super::prompt_renderer;
 use super::user_context;
 use crate::ai::agent::AIAgentContext;
+use crate::ai::skills::SkillDescriptor;
 
 /// 从 input 中抽出最近一条 `UserQuery.context`(等价 warp `convert_to.rs::convert_input` 取的那条)。
 fn latest_input_context(input: &[AIAgentInput]) -> &[AIAgentContext] {
@@ -150,6 +151,44 @@ fn render_lrc_request_context(params: &RequestParams) -> Option<String> {
                 .as_deref()
                 .map(render_running_command_id_context)
         })
+}
+
+/// File tools that a remote session serves through the SSH extension (the remote server). A
+/// remote session without a connected extension has no way to run them, so they are withheld
+/// there rather than offered to fail, as Warp's `get_supported_tools` does.
+const REMOTE_SERVER_FILE_TOOLS: &[&str] = &["read_files", "apply_file_diffs"];
+
+/// Whether this turn's session is remote with no connected SSH extension.
+fn remote_file_tools_unavailable(params: &RequestParams) -> bool {
+    params.session_context.is_remote() && params.session_context.host_id().is_none()
+}
+
+/// Tells the model, in a remote session without the SSH extension, that the file tools are
+/// withheld and how to work with files instead: the system templates otherwise tell it to prefer
+/// them over shell commands, which would leave it no sanctioned way to read or edit files.
+fn render_remote_file_tools_unavailable_block(params: &RequestParams) -> Option<String> {
+    if !remote_file_tools_unavailable(params) {
+        return None;
+    }
+    // `run_shell_command` is itself withheld in plan mode and while a long-running command is
+    // attached; pointing the model at it there would only produce refused calls.
+    let rules = if available_tool_names(params)
+        .iter()
+        .any(|name| name == "run_shell_command")
+    {
+        "    - Read files with shell commands through `run_shell_command` (for example `cat` or `sed -n '1,200p' <file>`).\n    \
+         - Create or edit files with shell commands through `run_shell_command` (for example a quoted heredoc or `patch`), then re-read the file to confirm the change.\n    \
+         - These rules override any other instruction to prefer `read_files` or `apply_file_diffs`.\n"
+    } else {
+        "    - Inspect files with `grep` and `file_glob`.\n"
+    };
+    Some(format!(
+        "\n\n<remote_session_without_ssh_extension>\n  \
+         <fact>The active terminal is an SSH session on a remote host without the SSH extension connected, \
+         so the `read_files` and `apply_file_diffs` tools are unavailable in this session.</fact>\n  \
+         <rules>\n{rules}  </rules>\n\
+         </remote_session_without_ssh_extension>"
+    ))
 }
 
 /// Zap:渲染 SSH 会话状态块,append 到 system prompt 末尾。
@@ -1267,6 +1306,9 @@ fn build_chat_request(
     // 追加一段 SSH 状态块矫正 LLM 推断。
     if let Some(ssh_block) = render_ssh_session_block(&params.session_context) {
         system_text.push_str(&ssh_block);
+    }
+    if let Some(block) = render_remote_file_tools_unavailable_block(params) {
+        system_text.push_str(&block);
     }
     // 注:LRC / 长命令的工具用法引导(write_to_long_running_shell_command + command_id +
     // 各种 mode 与 raw 字节序列)已经在 `prompts/system/default.j2:69-79` 完整覆盖。
@@ -2775,6 +2817,24 @@ fn is_cli_subagent_turn(params: &RequestParams) -> bool {
     params.lrc_should_spawn_subagent
 }
 
+/// Whether the model may call `fn_name` this turn. Warp's server only emits tools from the
+/// request's supported tool list, so BYOP likewise accepts only the tools it offered
+/// (`available_tool_names`): a model can still name a tool it saw earlier in the conversation, or
+/// one that is withheld this turn (webfetch with web access off, a write tool in plan mode).
+fn is_offered_tool(offered_tool_names: &[String], fn_name: &str) -> bool {
+    offered_tool_names.iter().any(|name| name == fn_name)
+}
+
+/// The synthetic tool result for a call to a tool that was not offered this turn.
+fn tool_not_available_error(fn_name: &str) -> String {
+    serde_json::json!({
+        "error": "tool_not_available",
+        "detail": "This tool is not available in this turn. Use only the tools listed for this turn.",
+        "tool": fn_name,
+    })
+    .to_string()
+}
+
 /// 列出本轮真正会喂给上游模型的 tool name(内置 REGISTRY + 当前 MCP 工具),
 /// 与 `build_tools_array` 共享同一套 gating(LRC / `web_search_enabled` /
 /// `suggest_new_conversation` / `plan_mode`)。供 `prompt_renderer` 注入到
@@ -2784,10 +2844,14 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
     let cli_subagent = is_cli_subagent_turn(params);
+    let remote_files_withheld = remote_file_tools_unavailable(params);
     let mut names: Vec<String> = tools::REGISTRY
         .iter()
         .filter(|t| {
             if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
+            if remote_files_withheld && REMOTE_SERVER_FILE_TOOLS.contains(&t.name) {
                 return false;
             }
             if is_lrc && t.name == "run_shell_command" {
@@ -2836,6 +2900,7 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
     let cli_subagent = is_cli_subagent_turn(params);
+    let remote_files_withheld = remote_file_tools_unavailable(params);
     // Zap BYOP:`suggest_prompt` chip UI 已通过 view 层订阅
     // PromptSuggestionExecutorEvent 恢复(见 `terminal/view.rs::
     // handle_suggest_prompt_executor_event`),可以暴露给模型。
@@ -2851,6 +2916,9 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
         .filter(|t| {
             // A CLI subagent is offered only what its popover can ask the user to confirm.
             if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
+            if remote_files_withheld && REMOTE_SERVER_FILE_TOOLS.contains(&t.name) {
                 return false;
             }
             if is_lrc && t.name == "run_shell_command" {
@@ -3667,6 +3735,7 @@ pub async fn generate_byop_output(
     let client = build_client(api_type, &base_url, api_key);
     let request_id = Uuid::new_v4().to_string();
     let mcp_context = params.mcp_context.clone();
+    let listed_skills = listed_skills(&params);
     let redact_secrets = params.should_redact_secrets;
     let tool_names_for_extract = available_tool_names(&params);
 
@@ -4254,9 +4323,11 @@ pub async fn generate_byop_output(
                     // 这里跳过避免双卡。
                     // todowrite 走 BYOP todo 拦截器,合成 Message::UpdateTodos 触发 chip,
                     // 这里也跳过占位避免出现一张无意义的"调用 todowrite"卡。
+                    // 本轮没提供的工具在流结束时被拒绝,也不发占位卡。
                     if call.fn_name != tools::webfetch::TOOL_NAME
                         && call.fn_name != tools::websearch::TOOL_NAME
                         && call.fn_name != tools::todowrite::TOOL_NAME
+                        && is_offered_tool(&tool_names_for_extract, &call.fn_name)
                     {
                         if let Some(msg_id) = tool_msg_ids.get(&call.call_id).cloned() {
                             // 已 emit 占位 → 节流增量刷新。
@@ -4267,7 +4338,7 @@ pub async fn generate_byop_output(
                                 .unwrap_or(true);
                             if elapsed_ok {
                                 if let Ok(parsed) =
-                                    parse_incoming_tool_call(&call, mcp_context.as_ref())
+                                    parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills)
                                 {
                                     let mut updated = make_tool_call_message(
                                         &current_task_id,
@@ -4286,7 +4357,7 @@ pub async fn generate_byop_output(
                                 // reparse 失败(intermediate 状态):静默,等下次 chunk。
                             }
                         } else if let Ok(parsed) =
-                            parse_incoming_tool_call(&call, mcp_context.as_ref())
+                            parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills)
                         {
                             // 首次 parse 成功 → 立即 emit 占位卡。
                             // 每个 chunk 在未 emit 占位前都会重 parse(即"retry on every
@@ -4568,6 +4639,38 @@ pub async fn generate_byop_output(
                 );
             }
 
+            // Only a tool offered on this turn may run (see `is_offered_tool`). Any other call is
+            // answered with an error result before an interceptor or an action sees it. The
+            // controller does not auto-resume on this result, so a model that keeps naming a
+            // withheld tool can't loop; it sees the error with the next request.
+            if !is_offered_tool(&tool_names_for_extract, &call.fn_name) {
+                let args_str = if call.fn_arguments.is_string() {
+                    call.fn_arguments.as_str().unwrap_or("").to_owned()
+                } else {
+                    call.fn_arguments.to_string()
+                };
+                log::warn!(
+                    "[byop] tool_call for a tool not offered this turn → emit synthetic error \
+                     tool_result: tool={} call_id={}",
+                    call.fn_name,
+                    call.call_id
+                );
+                final_messages.push(make_tool_call_carrier_message(
+                    &current_task_id,
+                    &request_id,
+                    &call.call_id,
+                    &call.fn_name,
+                    &args_str,
+                ));
+                final_messages.push(make_tool_call_result_message(
+                    &current_task_id,
+                    &request_id,
+                    call.call_id.clone(),
+                    tool_not_available_error(&call.fn_name),
+                ));
+                continue;
+            }
+
             // A call left unfinished by a generation that was cut off is answered as such, before
             // any tool looks at its arguments: they are incomplete, not invalid.
             if let Some(cut_off) = cut_off.filter(|_| tool_call_arguments_are_incomplete(&call)) {
@@ -4793,7 +4896,7 @@ pub async fn generate_byop_output(
                 continue;
             }
 
-            match parse_incoming_tool_call(&call, mcp_context.as_ref()) {
+            match parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills) {
                 Ok(warp_tool) => {
                     // 如果 ToolCallChunk 阶段已经 emit 过占位卡(同 call_id),
                     // 改用 update_message 原地刷新为最终 args(覆盖 chunk 中可能后到
@@ -5215,7 +5318,74 @@ async fn dispatch_byop_web_tool(tool_name: &str, args_str: &str, redact_secrets:
     }
 }
 
+/// The skills listed to the model this turn, in the system prompt's `<available_skills>`.
+fn listed_skills(params: &RequestParams) -> Vec<SkillDescriptor> {
+    latest_input_context(&params.input)
+        .iter()
+        .find_map(|context| match context {
+            AIAgentContext::Skills { skills } => Some(skills.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+/// Points a `read_skill` call, which names its skill, at the skill of that name listed to the
+/// model this turn. Any other name fails, and the model is told which skills it may read: it may
+/// read the skills it was offered, not any SKILL.md on this machine that happens to share a name.
+fn resolve_read_skill(
+    tool: api::message::tool_call::Tool,
+    listed_skills: &[SkillDescriptor],
+) -> anyhow::Result<api::message::tool_call::Tool> {
+    use api::message::tool_call::read_skill::SkillReference as ApiSkillReference;
+    let api::message::tool_call::Tool::ReadSkill(mut read_skill) = tool else {
+        return Ok(tool);
+    };
+    let Some(ApiSkillReference::SkillPath(requested)) = read_skill.skill_reference.as_ref() else {
+        return Ok(api::message::tool_call::Tool::ReadSkill(read_skill));
+    };
+    let reference_matches = |skill: &SkillDescriptor| match &skill.reference {
+        ai::skills::SkillReference::Path(path) => path.to_string_lossy() == requested.as_str(),
+        ai::skills::SkillReference::BundledSkillId(id) => id == requested,
+    };
+    let skill = listed_skills
+        .iter()
+        .find(|skill| skill.name == *requested || reference_matches(skill))
+        .or_else(|| {
+            listed_skills
+                .iter()
+                .find(|skill| skill.name.eq_ignore_ascii_case(requested))
+        });
+    let Some(skill) = skill else {
+        let names = listed_skills
+            .iter()
+            .map(|skill| skill.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        anyhow::bail!(
+            "no skill named {requested:?} is available in this turn; the available skills are: [{names}]"
+        );
+    };
+    read_skill.skill_reference = Some(match &skill.reference {
+        ai::skills::SkillReference::Path(path) => {
+            ApiSkillReference::SkillPath(path.to_string_lossy().into_owned())
+        }
+        ai::skills::SkillReference::BundledSkillId(id) => {
+            ApiSkillReference::BundledSkillId(id.clone())
+        }
+    });
+    Ok(api::message::tool_call::Tool::ReadSkill(read_skill))
+}
+
 fn parse_incoming_tool_call(
+    call: &ToolCall,
+    mcp_ctx: Option<&crate::ai::agent::MCPContext>,
+    listed_skills: &[SkillDescriptor],
+) -> anyhow::Result<api::message::tool_call::Tool> {
+    parse_incoming_tool_call_args(call, mcp_ctx)
+        .and_then(|tool| resolve_read_skill(tool, listed_skills))
+}
+
+fn parse_incoming_tool_call_args(
     call: &ToolCall,
     mcp_ctx: Option<&crate::ai::agent::MCPContext>,
 ) -> anyhow::Result<api::message::tool_call::Tool> {
@@ -5793,6 +5963,76 @@ mod cli_subagent_tools_tests {
         for name in CLI_SUBAGENT_TOOLS {
             assert!(tools::lookup(name).is_some(), "{name} is not in the registry");
         }
+    }
+
+    /// A remote session without the SSH extension has no way to run the file tools, so they are
+    /// withheld and the model is told how to work with files instead.
+    #[test]
+    fn remote_session_without_extension_withholds_file_tools() {
+        use crate::ai::blocklist::SessionContext;
+        use crate::terminal::model::session::SessionType;
+
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.session_context = SessionContext::new_for_test_with_session_type(
+            SessionType::WarpifiedRemote { host_id: None },
+        );
+        let offered = available_tool_names(&params);
+        for name in REMOTE_SERVER_FILE_TOOLS {
+            assert!(!offered.iter().any(|offered| offered == name), "{name} offered");
+        }
+        let block = render_remote_file_tools_unavailable_block(&params).unwrap();
+        assert!(block.contains("run_shell_command"), "{block}");
+
+        params.lrc_command_id = Some("block-1".to_owned());
+        let block = render_remote_file_tools_unavailable_block(&params).unwrap();
+        assert!(!block.contains("run_shell_command"), "{block}");
+
+        for session_type in [
+            SessionType::WarpifiedRemote {
+                host_id: Some(warp_core::HostId::new("host-1".to_owned())),
+            },
+            SessionType::Local,
+        ] {
+            let mut params = RequestParams::new_for_test(vec![], vec![]);
+            params.session_context = SessionContext::new_for_test_with_session_type(session_type);
+            let offered = available_tool_names(&params);
+            for name in REMOTE_SERVER_FILE_TOOLS {
+                assert!(offered.iter().any(|offered| offered == name), "{name} withheld");
+            }
+            assert!(render_remote_file_tools_unavailable_block(&params).is_none());
+        }
+    }
+
+    /// Only offered tools may run: webfetch is rejected while web access is off, and a tag-in
+    /// turn rejects the tools it did not offer.
+    #[test]
+    fn unoffered_tool_calls_are_rejected() {
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.web_search_enabled = false;
+        let offered = available_tool_names(&params);
+        assert!(!is_offered_tool(&offered, tools::webfetch::TOOL_NAME));
+        assert!(is_offered_tool(&offered, "apply_file_diffs"));
+
+        params.lrc_command_id = Some("block-1".to_owned());
+        params.lrc_should_spawn_subagent = true;
+        let offered = available_tool_names(&params);
+        for name in ["apply_file_diffs", "run_shell_command"] {
+            assert!(
+                !is_offered_tool(&offered, name),
+                "{name} accepted on a tag-in turn"
+            );
+        }
+        assert!(is_offered_tool(
+            &offered,
+            "write_to_long_running_shell_command"
+        ));
+
+        let error = tool_not_available_error("apply_file_diffs");
+        assert!(
+            error.contains(r#""error":"tool_not_available""#),
+            "{error}"
+        );
+        assert!(error.contains(r#""tool":"apply_file_diffs""#), "{error}");
     }
 
     #[test]
@@ -8676,5 +8916,83 @@ mod outbound_secret_redaction_tests {
         params.should_redact_secrets = true;
         let redacted = outbound_wire(&params, AgentProviderApiType::OpenAi);
         assert!(!redacted.contains(SECRET), "a secret is sent: {redacted}");
+    }
+}
+
+#[cfg(test)]
+mod read_skill_resolution_tests {
+    use std::path::PathBuf;
+
+    use ai::skills::{SkillProvider, SkillReference, SkillScope};
+    use api::message::tool_call::read_skill::SkillReference as ApiSkillReference;
+
+    use super::*;
+
+    fn listed(name: &str, reference: SkillReference) -> SkillDescriptor {
+        SkillDescriptor {
+            reference,
+            name: name.to_owned(),
+            description: String::new(),
+            scope: SkillScope::Project,
+            provider: SkillProvider::Agents,
+            icon_override: None,
+        }
+    }
+
+    fn read_skill(reference: &str) -> api::message::tool_call::Tool {
+        api::message::tool_call::Tool::ReadSkill(api::message::tool_call::ReadSkill {
+            skill_reference: Some(ApiSkillReference::SkillPath(reference.to_owned())),
+            name: String::new(),
+        })
+    }
+
+    fn resolved_reference(tool: api::message::tool_call::Tool) -> Option<ApiSkillReference> {
+        match tool {
+            api::message::tool_call::Tool::ReadSkill(read_skill) => read_skill.skill_reference,
+            other => panic!("not a read_skill call: {other:?}"),
+        }
+    }
+
+    /// A name resolves to the listed skill's own file, never to another SKILL.md of that name.
+    #[test]
+    fn a_listed_name_resolves_to_its_listed_path() {
+        let skills = vec![
+            listed("deploy", SkillReference::Path(PathBuf::from("/repo/.agents/skills/deploy/SKILL.md"))),
+            listed("bundled", SkillReference::BundledSkillId("zap-bundled".to_owned())),
+        ];
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("deploy"), &skills).unwrap()),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("Deploy"), &skills).unwrap()),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(
+                resolve_read_skill(read_skill("/repo/.agents/skills/deploy/SKILL.md"), &skills)
+                    .unwrap()
+            ),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("bundled"), &skills).unwrap()),
+            Some(ApiSkillReference::BundledSkillId("zap-bundled".to_owned()))
+        );
+    }
+
+    /// A name or a path that was not listed this turn is refused, and the error names the
+    /// skills that are available.
+    #[test]
+    fn an_unlisted_skill_is_refused() {
+        let skills = vec![listed(
+            "deploy",
+            SkillReference::Path(PathBuf::from("/repo/.agents/skills/deploy/SKILL.md")),
+        )];
+        for requested in ["other", "/elsewhere/.agents/skills/deploy/SKILL.md"] {
+            let error = resolve_read_skill(read_skill(requested), &skills).unwrap_err();
+            assert!(error.to_string().contains("[deploy]"), "{error}");
+        }
+        assert!(resolve_read_skill(read_skill("deploy"), &[]).is_err());
     }
 }
