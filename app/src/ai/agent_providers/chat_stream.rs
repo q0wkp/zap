@@ -91,6 +91,7 @@ use super::attachment_caps;
 use super::prompt_renderer;
 use super::user_context;
 use crate::ai::agent::AIAgentContext;
+use crate::ai::skills::SkillDescriptor;
 
 /// 从 input 中抽出最近一条 `UserQuery.context`(等价 warp `convert_to.rs::convert_input` 取的那条)。
 fn latest_input_context(input: &[AIAgentInput]) -> &[AIAgentContext] {
@@ -3685,6 +3686,7 @@ pub async fn generate_byop_output(
     let client = build_client(api_type, &base_url, api_key);
     let request_id = Uuid::new_v4().to_string();
     let mcp_context = params.mcp_context.clone();
+    let listed_skills = listed_skills(&params);
     let redact_secrets = params.should_redact_secrets;
     let tool_names_for_extract = available_tool_names(&params);
 
@@ -4287,7 +4289,7 @@ pub async fn generate_byop_output(
                                 .unwrap_or(true);
                             if elapsed_ok {
                                 if let Ok(parsed) =
-                                    parse_incoming_tool_call(&call, mcp_context.as_ref())
+                                    parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills)
                                 {
                                     let mut updated = make_tool_call_message(
                                         &current_task_id,
@@ -4306,7 +4308,7 @@ pub async fn generate_byop_output(
                                 // reparse 失败(intermediate 状态):静默,等下次 chunk。
                             }
                         } else if let Ok(parsed) =
-                            parse_incoming_tool_call(&call, mcp_context.as_ref())
+                            parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills)
                         {
                             // 首次 parse 成功 → 立即 emit 占位卡。
                             // 每个 chunk 在未 emit 占位前都会重 parse(即"retry on every
@@ -4845,7 +4847,7 @@ pub async fn generate_byop_output(
                 continue;
             }
 
-            match parse_incoming_tool_call(&call, mcp_context.as_ref()) {
+            match parse_incoming_tool_call(&call, mcp_context.as_ref(), &listed_skills) {
                 Ok(warp_tool) => {
                     // 如果 ToolCallChunk 阶段已经 emit 过占位卡(同 call_id),
                     // 改用 update_message 原地刷新为最终 args(覆盖 chunk 中可能后到
@@ -5267,7 +5269,74 @@ async fn dispatch_byop_web_tool(tool_name: &str, args_str: &str, redact_secrets:
     }
 }
 
+/// The skills listed to the model this turn, in the system prompt's `<available_skills>`.
+fn listed_skills(params: &RequestParams) -> Vec<SkillDescriptor> {
+    latest_input_context(&params.input)
+        .iter()
+        .find_map(|context| match context {
+            AIAgentContext::Skills { skills } => Some(skills.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+/// Points a `read_skill` call, which names its skill, at the skill of that name listed to the
+/// model this turn. Any other name fails, and the model is told which skills it may read: it may
+/// read the skills it was offered, not any SKILL.md on this machine that happens to share a name.
+fn resolve_read_skill(
+    tool: api::message::tool_call::Tool,
+    listed_skills: &[SkillDescriptor],
+) -> anyhow::Result<api::message::tool_call::Tool> {
+    use api::message::tool_call::read_skill::SkillReference as ApiSkillReference;
+    let api::message::tool_call::Tool::ReadSkill(mut read_skill) = tool else {
+        return Ok(tool);
+    };
+    let Some(ApiSkillReference::SkillPath(requested)) = read_skill.skill_reference.as_ref() else {
+        return Ok(api::message::tool_call::Tool::ReadSkill(read_skill));
+    };
+    let reference_matches = |skill: &SkillDescriptor| match &skill.reference {
+        ai::skills::SkillReference::Path(path) => path.to_string_lossy() == requested.as_str(),
+        ai::skills::SkillReference::BundledSkillId(id) => id == requested,
+    };
+    let skill = listed_skills
+        .iter()
+        .find(|skill| skill.name == *requested || reference_matches(skill))
+        .or_else(|| {
+            listed_skills
+                .iter()
+                .find(|skill| skill.name.eq_ignore_ascii_case(requested))
+        });
+    let Some(skill) = skill else {
+        let names = listed_skills
+            .iter()
+            .map(|skill| skill.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        anyhow::bail!(
+            "no skill named {requested:?} is available in this turn; the available skills are: [{names}]"
+        );
+    };
+    read_skill.skill_reference = Some(match &skill.reference {
+        ai::skills::SkillReference::Path(path) => {
+            ApiSkillReference::SkillPath(path.to_string_lossy().into_owned())
+        }
+        ai::skills::SkillReference::BundledSkillId(id) => {
+            ApiSkillReference::BundledSkillId(id.clone())
+        }
+    });
+    Ok(api::message::tool_call::Tool::ReadSkill(read_skill))
+}
+
 fn parse_incoming_tool_call(
+    call: &ToolCall,
+    mcp_ctx: Option<&crate::ai::agent::MCPContext>,
+    listed_skills: &[SkillDescriptor],
+) -> anyhow::Result<api::message::tool_call::Tool> {
+    parse_incoming_tool_call_args(call, mcp_ctx)
+        .and_then(|tool| resolve_read_skill(tool, listed_skills))
+}
+
+fn parse_incoming_tool_call_args(
     call: &ToolCall,
     mcp_ctx: Option<&crate::ai::agent::MCPContext>,
 ) -> anyhow::Result<api::message::tool_call::Tool> {
@@ -8760,5 +8829,83 @@ mod outbound_secret_redaction_tests {
         params.should_redact_secrets = true;
         let redacted = outbound_wire(&params, AgentProviderApiType::OpenAi);
         assert!(!redacted.contains(SECRET), "a secret is sent: {redacted}");
+    }
+}
+
+#[cfg(test)]
+mod read_skill_resolution_tests {
+    use std::path::PathBuf;
+
+    use ai::skills::{SkillProvider, SkillReference, SkillScope};
+    use api::message::tool_call::read_skill::SkillReference as ApiSkillReference;
+
+    use super::*;
+
+    fn listed(name: &str, reference: SkillReference) -> SkillDescriptor {
+        SkillDescriptor {
+            reference,
+            name: name.to_owned(),
+            description: String::new(),
+            scope: SkillScope::Project,
+            provider: SkillProvider::Agents,
+            icon_override: None,
+        }
+    }
+
+    fn read_skill(reference: &str) -> api::message::tool_call::Tool {
+        api::message::tool_call::Tool::ReadSkill(api::message::tool_call::ReadSkill {
+            skill_reference: Some(ApiSkillReference::SkillPath(reference.to_owned())),
+            name: String::new(),
+        })
+    }
+
+    fn resolved_reference(tool: api::message::tool_call::Tool) -> Option<ApiSkillReference> {
+        match tool {
+            api::message::tool_call::Tool::ReadSkill(read_skill) => read_skill.skill_reference,
+            other => panic!("not a read_skill call: {other:?}"),
+        }
+    }
+
+    /// A name resolves to the listed skill's own file, never to another SKILL.md of that name.
+    #[test]
+    fn a_listed_name_resolves_to_its_listed_path() {
+        let skills = vec![
+            listed("deploy", SkillReference::Path(PathBuf::from("/repo/.agents/skills/deploy/SKILL.md"))),
+            listed("bundled", SkillReference::BundledSkillId("zap-bundled".to_owned())),
+        ];
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("deploy"), &skills).unwrap()),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("Deploy"), &skills).unwrap()),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(
+                resolve_read_skill(read_skill("/repo/.agents/skills/deploy/SKILL.md"), &skills)
+                    .unwrap()
+            ),
+            Some(ApiSkillReference::SkillPath("/repo/.agents/skills/deploy/SKILL.md".to_owned()))
+        );
+        assert_eq!(
+            resolved_reference(resolve_read_skill(read_skill("bundled"), &skills).unwrap()),
+            Some(ApiSkillReference::BundledSkillId("zap-bundled".to_owned()))
+        );
+    }
+
+    /// A name or a path that was not listed this turn is refused, and the error names the
+    /// skills that are available.
+    #[test]
+    fn an_unlisted_skill_is_refused() {
+        let skills = vec![listed(
+            "deploy",
+            SkillReference::Path(PathBuf::from("/repo/.agents/skills/deploy/SKILL.md")),
+        )];
+        for requested in ["other", "/elsewhere/.agents/skills/deploy/SKILL.md"] {
+            let error = resolve_read_skill(read_skill(requested), &skills).unwrap_err();
+            assert!(error.to_string().contains("[deploy]"), "{error}");
+        }
+        assert!(resolve_read_skill(read_skill("deploy"), &[]).is_err());
     }
 }

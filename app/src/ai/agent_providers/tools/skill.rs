@@ -9,9 +9,8 @@
 //!
 //! BYOP 路径暴露 `name` 字段,值取自 system prompt `<available_skills><skill><name>`。
 //! `from_args` 把 name 装入 proto 的 `SkillReference::SkillPath` 槽位(不改 proto),
-//! 由 `read_skill` executor 在 cache miss 时先按 name 反查到真实 SKILL.md 绝对路径
-//! 再读盘。这条 fallback 也兼容模型万一直接传绝对路径或 bundled 形式
-//! `@warp-skill:<id>` 的旧写法。
+//! 再由 `chat_stream::resolve_read_skill` 换成本轮列给模型的那个 skill 的引用;
+//! 没列出的 name 或路径直接报错,不会读到别处同名的 SKILL.md。
 //!
 //! ## 使用建议(写到 description)
 //!
@@ -49,7 +48,7 @@ fn from_args(args: &str) -> Result<api::message::tool_call::Tool> {
     use api::message::tool_call::read_skill::SkillReference;
     let parsed: Args = serde_json::from_str(args)?;
     // 复用 proto 的 `SkillPath` 槽位携带 name(避免 proto schema 变更);
-    // executor 端在 cache miss 时按 name 反查真实 SKILL.md 路径。
+    // chat_stream 再按本轮列出的 skill 换成真实引用。
     Ok(api::message::tool_call::Tool::ReadSkill(
         api::message::tool_call::ReadSkill {
             skill_reference: Some(SkillReference::SkillPath(parsed.name)),
