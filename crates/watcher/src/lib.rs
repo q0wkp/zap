@@ -272,6 +272,37 @@ impl DebounceEventHandler for WatcherEventHandler {
     }
 }
 
+/// Records that `path` no longer exists.
+///
+/// If a path is created and then removed, it is dropped from the update. If a path is modified or moved
+/// and then removed, only the removal is kept, and for a moved path it is the source that is removed
+/// instead of the target name.
+fn record_removed_path(
+    update: &mut BulkFilesystemWatcherEvent,
+    created: &mut HashSet<PathBuf>,
+    modified: &mut HashSet<PathBuf>,
+    path: &Path,
+) {
+    if created.remove(path) {
+        return;
+    }
+
+    modified.remove(path);
+
+    update.deleted.insert(match update.moved.remove(path) {
+        Some(source) => source,
+        None => path.to_path_buf(),
+    });
+}
+
+/// Records a rename, squashing it with an earlier rename of the same path in this update.
+fn record_moved_path(update: &mut BulkFilesystemWatcherEvent, from: PathBuf, to: PathBuf) {
+    match update.moved.remove(&from) {
+        Some(source) => update.moved.insert(to, source),
+        None => update.moved.insert(to, from),
+    };
+}
+
 /// Dedupe and standardize the raw notifier events into a BulkFilesystemWatcherEvent.
 fn deduplicate_and_merge_raw_notifier_events(
     raw_fs_events: &[DebouncedEvent],
@@ -281,7 +312,8 @@ fn deduplicate_and_merge_raw_notifier_events(
     let mut created: HashSet<PathBuf> = HashSet::new();
     let mut modified: HashSet<PathBuf> = HashSet::new();
 
-    let mut rename_from = None;
+    // The source of a rename whose target has not been seen yet, with the tracker the platform gave it.
+    let mut rename_from: Option<(PathBuf, Option<usize>)> = None;
     for fs_event in raw_fs_events {
         match fs_event.event.kind {
             // Create and modify should always be preserved.
@@ -296,17 +328,7 @@ fn deduplicate_and_merge_raw_notifier_events(
             // If a path is modified / moved and then removed, we should only keep the remove event.
             EventKind::Remove(_) => {
                 for path in &fs_event.event.paths {
-                    if created.remove(path) {
-                        continue;
-                    }
-
-                    modified.remove(path);
-
-                    // If a path is modified, remove the source instead of the target name.
-                    update.deleted.insert(match update.moved.remove(path) {
-                        Some(source) => source,
-                        None => path.clone(),
-                    });
+                    record_removed_path(&mut update, &mut created, &mut modified, path);
                 }
             }
 
@@ -337,48 +359,69 @@ fn deduplicate_and_merge_raw_notifier_events(
                         continue;
                     }
 
-                    if created.remove(path) {
-                        continue;
-                    }
-
-                    modified.remove(path);
-
-                    // If a path is modified, remove the source instead of the target name.
-                    update.deleted.insert(match update.moved.remove(path) {
-                        Some(source) => source,
-                        None => path.clone(),
-                    });
+                    record_removed_path(&mut update, &mut created, &mut modified, path);
                 }
             }
 
-            // If a path is renamed, we should check if it has been renamed in this update before and squash
-            // any sequential renames.
-            EventKind::Modify(ModifyKind::Name(rename_mode)) => 'rename: {
+            // A rename the debouncer could correlate arrives as `Both`. Separate `From` and `To` events are
+            // only two halves of one rename when the platform reports no tracker for either (Windows) or the
+            // same tracker for both. Any other `From` is a path that left the watched tree, and any other `To`
+            // is a path that entered it.
+            EventKind::Modify(ModifyKind::Name(rename_mode)) => {
                 let paths = &fs_event.event.paths;
+                let tracker = fs_event.event.tracker();
 
-                let (from, to) = match rename_mode {
-                    RenameMode::From if !paths.is_empty() => {
-                        rename_from = Some(paths.first().expect("Checked above").clone());
-                        break 'rename;
+                match rename_mode {
+                    RenameMode::From => {
+                        if let Some((unmatched, _)) = rename_from.take() {
+                            record_removed_path(
+                                &mut update,
+                                &mut created,
+                                &mut modified,
+                                &unmatched,
+                            );
+                        }
+                        if let Some(from) = paths.first() {
+                            rename_from = Some((from.clone(), tracker));
+                        }
                     }
-                    RenameMode::To if !paths.is_empty() && rename_from.is_some() => (
-                        rename_from.take().expect("Checked above"),
-                        paths.first().expect("Checked above").clone(),
-                    ),
-                    RenameMode::Both if paths.len() > 1 => (
-                        paths.first().expect("Checked above").clone(),
-                        paths.get(1).expect("Checked above").clone(),
-                    ),
-                    _ => break 'rename,
-                };
-
-                match update.moved.remove(&from) {
-                    Some(source) => update.moved.insert(to, source),
-                    None => update.moved.insert(to, from),
-                };
+                    RenameMode::To => {
+                        let Some(to) = paths.first() else {
+                            continue;
+                        };
+                        match rename_from.take() {
+                            Some((from, from_tracker)) if from_tracker == tracker => {
+                                record_moved_path(&mut update, from, to.clone());
+                            }
+                            Some((unmatched, _)) => {
+                                record_removed_path(
+                                    &mut update,
+                                    &mut created,
+                                    &mut modified,
+                                    &unmatched,
+                                );
+                                created.insert(to.clone());
+                            }
+                            None => {
+                                created.insert(to.clone());
+                            }
+                        }
+                    }
+                    RenameMode::Both => {
+                        if let [from, to, ..] = paths.as_slice() {
+                            record_moved_path(&mut update, from.clone(), to.clone());
+                        }
+                    }
+                    RenameMode::Any | RenameMode::Other => {}
+                }
             }
             _ => (),
         }
+    }
+
+    // A rename source that never got its target was moved out of the watched tree.
+    if let Some((unmatched, _)) = rename_from {
+        record_removed_path(&mut update, &mut created, &mut modified, &unmatched);
     }
 
     // A path that is created and then modified within the debounce window should be considered "added".
