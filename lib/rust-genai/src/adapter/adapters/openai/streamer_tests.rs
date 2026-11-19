@@ -163,3 +163,22 @@ fn huge_tool_call_index_does_not_size_the_captured_calls() {
 	assert_eq!(captured.len(), 1);
 	assert_eq!(captured[0].call_id, "call_a");
 }
+
+#[test]
+fn captured_arguments_of_a_call_without_any_become_an_empty_object() {
+	assert_eq!(parse_captured_arguments(Value::String(String::new())), json!({}));
+	assert_eq!(parse_captured_arguments(Value::String(" \n".to_string())), json!({}));
+}
+
+#[test]
+fn captured_arguments_are_parsed_or_kept_as_the_raw_string() {
+	assert_eq!(
+		parse_captured_arguments(Value::String("{\"path\":\"a.rs\"}".to_string())),
+		json!({"path": "a.rs"})
+	);
+	assert_eq!(
+		parse_captured_arguments(Value::String("{\"path\":\"a.r".to_string())),
+		Value::String("{\"path\":\"a.r".to_string())
+	);
+	assert_eq!(parse_captured_arguments(json!({"path": "a.rs"})), json!({"path": "a.rs"}));
+}

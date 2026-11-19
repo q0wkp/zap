@@ -353,13 +353,23 @@ impl OpenAIAdapter {
 						match part {
 							ContentPart::Text(text) => texts.push(text),
 							ContentPart::ToolCall(tool_call) => {
-								//
+								// `arguments` is a string holding JSON. Arguments that are already
+								// a string (kept raw because they did not parse) are sent as they
+								// are: serializing them would encode them a second time.
+								let arguments = match tool_call.fn_arguments {
+									Value::String(arguments) => arguments,
+									arguments @ (Value::Null
+									| Value::Bool(_)
+									| Value::Number(_)
+									| Value::Array(_)
+									| Value::Object(_)) => arguments.to_string(),
+								};
 								tool_calls.push(json!({
 									"type": "function",
 									"id": tool_call.call_id,
 									"function": {
 										"name": tool_call.fn_name,
-										"arguments": tool_call.fn_arguments.to_string(),
+										"arguments": arguments,
 									}
 								}))
 							}
@@ -537,6 +547,43 @@ mod tests {
 		assert_eq!(
 			assistant_json["reasoning_content"], "I should look up the weather.",
 			"reasoning_content should be present in serialized assistant message"
+		);
+	}
+
+	fn assistant_tool_call_arguments(fn_arguments: Value) -> Value {
+		let tool_call = ToolCall {
+			call_id: "call_1".to_string(),
+			fn_name: "get_weather".to_string(),
+			fn_arguments,
+			thought_signatures: None,
+		};
+		let assistant_msg = ChatMessage::assistant(MessageContent::from_parts(vec![ContentPart::ToolCall(tool_call)]));
+		let chat_req = ChatRequest::new(vec![ChatMessage::user("What's the weather in Paris?"), assistant_msg]);
+
+		let parts = OpenAIAdapter::into_openai_request_parts(&test_model(), chat_req).expect("should serialize");
+
+		parts.messages[1]["tool_calls"][0]["function"]["arguments"].clone()
+	}
+
+	/// Arguments kept as a raw string must go back out as that string, not as a
+	/// JSON string literal wrapping it.
+	#[test]
+	fn test_string_tool_call_arguments_are_not_encoded_twice() {
+		let raw = r#"{"city":"Par"#;
+		assert_eq!(assistant_tool_call_arguments(Value::String(raw.to_string())), Value::String(raw.to_string()));
+
+		let complete = r#"{"city":"Paris"}"#;
+		assert_eq!(
+			assistant_tool_call_arguments(Value::String(complete.to_string())),
+			Value::String(complete.to_string())
+		);
+	}
+
+	#[test]
+	fn test_object_tool_call_arguments_are_serialized_once() {
+		assert_eq!(
+			assistant_tool_call_arguments(serde_json::json!({"city": "Paris"})),
+			Value::String(r#"{"city":"Paris"}"#.to_string())
 		);
 	}
 
