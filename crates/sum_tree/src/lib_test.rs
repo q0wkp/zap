@@ -398,6 +398,56 @@ fn test_cursor() {
     assert_eq!(cursor.item(), Some(&2));
 }
 
+#[test]
+fn test_seek_between_child_summaries_and_parent_summary() {
+    fn leaf(values: &[u8]) -> SumTree<u8> {
+        let items: ArrayVec<u8, { 2 * TREE_BASE }> = values.iter().copied().collect();
+        let item_summaries: ArrayVec<IntegersSummary, { 2 * TREE_BASE }> =
+            items.iter().map(Item::summary).collect();
+        SumTree(Arc::new(Node::Leaf {
+            summary: sum(item_summaries.iter()),
+            items,
+            item_summaries,
+        }))
+    }
+
+    // Summing floats in a different order can leave a parent's summary slightly larger than
+    // what its children add up to, so a target can fall between the two. Integer summaries
+    // never drift like that, so build the node by hand: the children add up to a sum of 6,
+    // while the parent claims 8.
+    let child_trees: ArrayVec<SumTree<u8>, { 2 * TREE_BASE }> =
+        [leaf(&[1, 2]), leaf(&[3])].into_iter().collect();
+    let child_summaries: ArrayVec<IntegersSummary, { 2 * TREE_BASE }> =
+        child_trees.iter().map(SumTree::summary).collect();
+    let mut summary: IntegersSummary = sum(child_summaries.iter());
+    summary.sum.0 += 2;
+    let tree = SumTree(Arc::new(Node::Internal {
+        height: 1,
+        summary,
+        child_summaries,
+        child_trees,
+    }));
+
+    // Sum(7) lies past the last item, which ends at Sum(6), but inside the parent's summary.
+    // The seek ends up after the last item, having moved past each of the three items once.
+    for bias in [SeekBias::Left, SeekBias::Right] {
+        let mut cursor = tree.cursor::<Sum, Count>();
+        assert!(!cursor.seek(&Sum(7), bias));
+        assert_eq!(cursor.item(), None);
+        assert_eq!(cursor.seek_position(), &Sum(6));
+        assert_eq!(cursor.start(), &Count(3));
+
+        let mut cursor = tree.cursor::<Sum, Count>();
+        assert_eq!(cursor.slice(&Sum(7), bias).items(), [1, 2, 3]);
+        assert_eq!(cursor.seek_position(), &Sum(6));
+        assert_eq!(cursor.start(), &Count(3));
+
+        let mut cursor = tree.cursor::<Sum, Count>();
+        assert_eq!(cursor.summary::<Count>(&Sum(7), bias), Count(3));
+        assert_eq!(cursor.start(), &Count(3));
+    }
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct IntegersSummary {
     count: Count,
