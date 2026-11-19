@@ -44,7 +44,7 @@
 //! The wildcard matching is optimized for file search use cases:
 //! - **Fast paths** for common patterns like `*.rs` and `src/*`
 //! - **Substring matching** for file paths (patterns match anywhere in the path)
-//! - **No regex compilation** - uses efficient recursive algorithms
+//! - **No regex compilation** - uses efficient backtracking algorithms
 //! - **Progressive typing** support for better user experience
 //!
 //! ## Wildcard Characters
@@ -205,7 +205,7 @@ pub fn contains_wildcards(query: &str) -> bool {
 /// This function is optimized for common file search patterns:
 /// - Simple suffix patterns like `*.rs` use O(1) string operations
 /// - Simple prefix patterns like `src/*` use O(1) string operations  
-/// - Complex patterns use efficient recursive matching without regex
+/// - Complex patterns use efficient backtracking without regex
 ///
 /// # Returns
 ///
@@ -348,7 +348,7 @@ fn find_partial_suffix_match(text: &str, partial_suffix: &str) -> Option<Vec<usi
 
 /// Fast glob pattern matching without regex.
 ///
-/// Implements a simple recursive algorithm for glob patterns that avoids
+/// Implements a simple backtracking algorithm for glob patterns that avoids
 /// the overhead of regex compilation and matching.
 ///
 /// # Arguments
@@ -365,7 +365,9 @@ fn find_partial_suffix_match(text: &str, partial_suffix: &str) -> Option<Vec<usi
 /// This function requires the pattern to match the entire text, unlike
 /// [`find_substring_glob_match`] which finds patterns anywhere in the text.
 fn is_glob_match(text: &str, pattern: &str) -> bool {
-    is_glob_match_recursive(text.as_bytes(), pattern.as_bytes(), 0, 0)
+    let text_chars: Vec<char> = text.chars().collect();
+    let pattern_chars: Vec<char> = pattern.chars().collect();
+    is_glob_match_chars(&text_chars, &pattern_chars)
 }
 
 /// Finds a glob pattern as a substring anywhere in the text.
@@ -484,8 +486,15 @@ fn find_substring_glob_match(text: &str, pattern: &str) -> Option<Vec<usize>> {
     let text_chars: Vec<char> = text.chars().collect();
     let pattern_chars: Vec<char> = pattern.chars().collect();
 
-    // Try matching the pattern starting at each position in the text
-    for start_idx in 0..text_chars.len() {
+    // Try matching the pattern starting at each position in the text. A leading `*` already
+    // stands for any text in front of the match, so such a pattern matches from the first
+    // position or from none.
+    let start_count = if pattern_chars.first() == Some(&'*') {
+        text_chars.len().min(1)
+    } else {
+        text_chars.len()
+    };
+    for start_idx in 0..start_count {
         if is_glob_match_at_position(&text_chars, &pattern_chars, start_idx) {
             // Found a match starting at start_idx
             // For simplicity, return indices from start_idx to end of match
@@ -525,100 +534,40 @@ fn find_glob_match_end(
 }
 
 /// Glob matching for character slices
+///
+/// Only the most recent `*` is ever reconsidered: once a later `*` has been reached, giving an
+/// earlier one more characters can't make the rest of the pattern match if the later one couldn't.
+/// The work is therefore bounded by `text.len() * pattern.len()`, however many `*` the pattern has.
 fn is_glob_match_chars(text: &[char], pattern: &[char]) -> bool {
-    is_glob_match_chars_recursive(text, pattern, 0, 0)
-}
+    let mut text_idx = 0;
+    let mut pattern_idx = 0;
+    // The position of the most recent `*` in the pattern, and the end of the text it is
+    // currently taken to match.
+    let mut last_star = None;
 
-fn is_glob_match_chars_recursive(
-    text: &[char],
-    pattern: &[char],
-    text_idx: usize,
-    pattern_idx: usize,
-) -> bool {
-    // If we've consumed the entire pattern
-    if pattern_idx >= pattern.len() {
-        return text_idx >= text.len();
-    }
-
-    // If we've consumed the entire text but pattern remains
-    if text_idx >= text.len() {
-        // Only match if the remaining pattern is all '*'
-        return pattern[pattern_idx..].iter().all(|&c| c == '*');
-    }
-
-    match pattern[pattern_idx] {
-        '*' => {
-            // Try matching zero characters (skip the *)
-            if is_glob_match_chars_recursive(text, pattern, text_idx, pattern_idx + 1) {
-                return true;
-            }
-            // Try matching one or more characters
-            for i in text_idx..text.len() {
-                if is_glob_match_chars_recursive(text, pattern, i + 1, pattern_idx + 1) {
-                    return true;
-                }
-            }
-            false
-        }
-        '?' => {
-            // ? matches exactly one character
-            is_glob_match_chars_recursive(text, pattern, text_idx + 1, pattern_idx + 1)
-        }
-        c => {
-            // Regular character - must match exactly (case insensitive)
-            if text[text_idx].eq_ignore_ascii_case(&c) {
-                is_glob_match_chars_recursive(text, pattern, text_idx + 1, pattern_idx + 1)
-            } else {
-                false
-            }
+    while text_idx < text.len() {
+        let pattern_char = pattern.get(pattern_idx).copied();
+        if pattern_char == Some('*') {
+            // Start with the `*` matching zero characters
+            last_star = Some((pattern_idx, text_idx));
+            pattern_idx += 1;
+        } else if pattern_char.is_some_and(|c| c == '?' || text[text_idx].eq_ignore_ascii_case(&c))
+        {
+            // ? matches exactly one character, a regular character itself (case insensitive)
+            text_idx += 1;
+            pattern_idx += 1;
+        } else if let Some((star_idx, star_end)) = last_star {
+            // Mismatch: let the most recent `*` match one more character and retry from there
+            last_star = Some((star_idx, star_end + 1));
+            pattern_idx = star_idx + 1;
+            text_idx = star_end + 1;
+        } else {
+            return false;
         }
     }
-}
 
-fn is_glob_match_recursive(
-    text: &[u8],
-    pattern: &[u8],
-    text_idx: usize,
-    pattern_idx: usize,
-) -> bool {
-    // If we've consumed the entire pattern
-    if pattern_idx >= pattern.len() {
-        return text_idx >= text.len();
-    }
-
-    // If we've consumed the entire text but pattern remains
-    if text_idx >= text.len() {
-        // Only match if the remaining pattern is all '*'
-        return pattern[pattern_idx..].iter().all(|&c| c == b'*');
-    }
-
-    match pattern[pattern_idx] {
-        b'*' => {
-            // Try matching zero characters (skip the *)
-            if is_glob_match_recursive(text, pattern, text_idx, pattern_idx + 1) {
-                return true;
-            }
-            // Try matching one or more characters
-            for i in text_idx..text.len() {
-                if is_glob_match_recursive(text, pattern, i + 1, pattern_idx + 1) {
-                    return true;
-                }
-            }
-            false
-        }
-        b'?' => {
-            // ? matches exactly one character
-            is_glob_match_recursive(text, pattern, text_idx + 1, pattern_idx + 1)
-        }
-        c => {
-            // Regular character - must match exactly (case insensitive)
-            if text[text_idx].eq_ignore_ascii_case(&c) {
-                is_glob_match_recursive(text, pattern, text_idx + 1, pattern_idx + 1)
-            } else {
-                false
-            }
-        }
-    }
+    // We've consumed the entire text: only match if the remaining pattern is all '*'
+    pattern[pattern_idx..].iter().all(|&c| c == '*')
 }
 
 /// Performs case insensitive pattern matching with wildcard support.

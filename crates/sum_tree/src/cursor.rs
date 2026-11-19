@@ -822,9 +822,9 @@ where
                             // Whether the target is beyond the current leaf node.
                             let target_beyond_node = comparison == Ordering::Greater
                                 || (comparison == Ordering::Equal && bias == SeekBias::Right);
-                            if (self.stack.is_empty() || !at_last_item) && target_beyond_node {
-                                self.seek_dimension.add_summary(item_summary);
-                                self.sum_dimension.add_summary(item_summary);
+                            // Every item the seek moves past belongs to the aggregate,
+                            // including the last item of the leaf.
+                            if target_beyond_node {
                                 match aggregate {
                                     SeekAggregate::None => {}
                                     SeekAggregate::Slice(_) => {
@@ -836,14 +836,17 @@ where
                                         summary.add_summary(item_summary);
                                     }
                                 }
+                            }
+                            if (self.stack.is_empty() || !at_last_item) && target_beyond_node {
+                                self.seek_dimension.add_summary(item_summary);
+                                self.sum_dimension.add_summary(item_summary);
                             } else {
                                 // If we are at the last item and the target is actually
-                                // beyond the current leaf, add the item_summary to seek
-                                // and sum dimension because the item is past the last leaf item.
-                                // Mark item_after_current_subtree to true.
+                                // beyond the current leaf, mark item_after_current_subtree
+                                // to true and leave the cursor on the item: the call to
+                                // `next` below moves past it, and is what adds its summary
+                                // to the seek and sum dimensions.
                                 if target_beyond_node {
-                                    self.seek_dimension.add_summary(item_summary);
-                                    self.sum_dimension.add_summary(item_summary);
                                     is_item_after_current_subtree = true;
                                 }
                                 self.stack.push(StackEntry {

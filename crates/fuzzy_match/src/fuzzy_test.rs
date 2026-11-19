@@ -156,6 +156,42 @@ fn test_ui_star_partial_patterns() {
     assert!(result3.is_some());
 }
 
+#[test]
+fn test_wildcard_pattern_many_stars() {
+    // Every `*` here can match in many ways and the pattern fails only at its very end. Trying
+    // all the combinations would take longer than anyone could wait for.
+    let text = "a".repeat(200);
+    let pattern = format!("{}b", "*a".repeat(30));
+    assert!(match_wildcard_pattern(&text, &pattern).is_none());
+    assert!(match_wildcard_pattern(&text, &pattern[1..]).is_none());
+    assert!(match_wildcard_pattern(&format!("{text}b"), &pattern).is_some());
+    assert!(match_wildcard_pattern(&format!("{text}b"), &pattern[1..]).is_some());
+}
+
+#[test]
+fn test_wildcard_pattern_multiple_stars() {
+    let path = "src/deep/module/file.ts";
+    assert!(match_wildcard_pattern(path, "**/*.ts").is_some());
+    assert!(match_wildcard_pattern(path, "src/*/module/*.ts").is_some());
+    assert!(match_wildcard_pattern(path, "*/deep/*/f?le.*").is_some());
+    assert!(match_wildcard_pattern(path, "deep/*/f*.t?").is_some());
+    // The `*` has to reach past the first `b` for the rest to match.
+    assert!(match_wildcard_pattern("abcabd", "a*b?").is_some());
+
+    assert!(match_wildcard_pattern("src/deep/module/file.txt", "**/*.ts").is_none());
+    assert!(match_wildcard_pattern(path, "src/*/other/*.ts").is_none());
+    assert!(match_wildcard_pattern(path, "*/deep/*/f?le").is_none());
+    assert!(match_wildcard_pattern("abcab", "a*b?").is_none());
+}
+
+#[test]
+fn test_wildcard_pattern_question_mark_multibyte() {
+    // `?` stands for one character, however many bytes it takes.
+    assert!(match_wildcard_pattern("a東b", "a*?b").is_some());
+    assert!(match_wildcard_pattern("a東", "a*??").is_none());
+    assert!(match_wildcard_pattern("a東京", "a*??").is_some());
+}
+
 use crate::{
     match_indices, match_indices_case_insensitive, match_indices_case_insensitive_ignore_spaces,
 };
