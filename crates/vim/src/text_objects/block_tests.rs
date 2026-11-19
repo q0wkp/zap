@@ -145,3 +145,42 @@ fn test_vim_inner_block() {
         );
     }
 }
+
+#[test]
+fn vim_inner_block_only_padding() {
+    // The only newline between the brackets is both the leading and the trailing padding. With
+    // `c` there is nothing left to change, so the range is empty, right after the opening
+    // bracket and whatever precedes the newline.
+    for (text, bracket_type, changed) in [
+        ("{\n}", BracketType::CurlyBrace, 1),
+        ("(\n)", BracketType::Parenthesis, 1),
+        ("[\n]", BracketType::SquareBracket, 1),
+        ("{ \n  }", BracketType::CurlyBrace, 2),
+        ("fn main() {\n}", BracketType::CurlyBrace, 11),
+    ] {
+        let block = vim_a_block(text, changed, bracket_type).unwrap();
+        for offset in block.start.as_usize()..block.end.as_usize() {
+            assert_eq!(
+                vim_inner_block(text, offset, bracket_type, true),
+                Some(changed.into()..changed.into()),
+                "c on {text:?} at {offset}"
+            );
+        }
+    }
+
+    // `d` removes the leading padding, up to the newline.
+    assert_eq!(
+        vim_inner_block("{\n}", 0, BracketType::CurlyBrace, false),
+        Some(1.into()..1.into())
+    );
+    assert_eq!(
+        vim_inner_block("{ \n  }", 0, BracketType::CurlyBrace, false),
+        Some(1.into()..2.into())
+    );
+
+    // Two newlines: one is leading padding and the other trailing, with nothing between them.
+    assert_eq!(
+        vim_inner_block("{\n\n}", 0, BracketType::CurlyBrace, true),
+        Some(2.into()..2.into())
+    );
+}

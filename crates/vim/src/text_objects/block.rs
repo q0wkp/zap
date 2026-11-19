@@ -55,7 +55,9 @@ where
     }
 
     // Finally, if we're doing a command that preserves leading padding, e.g. `c`, check if we need
-    // to remove that from the range.
+    // to remove that from the range. When the block holds nothing but padding with a single
+    // newline, e.g. `{\n}`, that newline was already removed as trailing padding, so the range
+    // stays empty instead of starting past its end.
     if preserve_leading_padding {
         if let Some((i, _)) = buffer
             .chars_at(block_start)
@@ -63,7 +65,7 @@ where
             .take_while(|c| c.is_whitespace())
             .find_position(|c| *c == '\n')
         {
-            block_start += i + 1;
+            block_start = (block_start + i + 1).min(block_end);
         }
     }
 
