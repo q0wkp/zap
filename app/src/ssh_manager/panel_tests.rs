@@ -73,6 +73,9 @@ fn panel_with_nodes(
         context_menu_item_states: (0..MAX_CONTEXT_MENU_ITEMS)
             .map(|_| MouseStateHandle::default())
             .collect(),
+        pending_delete: None,
+        delete_confirm_btn: MouseStateHandle::default(),
+        delete_cancel_btn: MouseStateHandle::default(),
         rename_state: None,
         candidates,
         candidate_row_states: HashMap::new(),
@@ -336,5 +339,72 @@ fn panel_content_can_scroll_when_ssh_list_is_taller_than_panel() {
         let scroll_start = scroll_state.scroll_start().as_f32();
         assert!(scroll_start > 0.0);
         assert!(scroll_start < 10_000.0);
+    });
+}
+
+// --- delete confirmation ---------------------------------------------------
+
+#[test]
+fn descendant_count_counts_every_level_below_the_folder() {
+    let nodes = vec![
+        folder("f1", None, "Folder", 0),
+        server("s1", Some("f1"), "one", 0),
+        folder("f2", Some("f1"), "Inner", 1),
+        server("s2", Some("f2"), "two", 0),
+        server("s3", None, "outside", 1),
+    ];
+    assert_eq!(descendant_count(&nodes, "f1"), 3);
+    assert_eq!(descendant_count(&nodes, "f2"), 1);
+    assert_eq!(descendant_count(&nodes, "s3"), 0);
+    assert_eq!(descendant_count(&nodes, "missing"), 0);
+}
+
+/// "Delete" in the context menu only asks: the node stays until the question is answered, and
+/// cancelling leaves everything as it was.
+#[test]
+fn delete_from_the_context_menu_asks_first() {
+    App::test((), |mut app| async move {
+        crate::i18n::init(Some("en"));
+        initialize_settings_for_tests(&mut app);
+        app.add_singleton_model(|_| Appearance::mock());
+        app.add_singleton_model(|_| SshTreeChangedNotifier::new());
+
+        let nodes = vec![
+            folder("f1", None, "Folder", 0),
+            server("s1", Some("f1"), "one", 0),
+        ];
+        let (window_id, panel) = app.add_window(WindowStyle::NotStealFocus, |ctx| {
+            panel_with_nodes(ctx, nodes)
+        });
+        let mut presenter = Presenter::new(window_id);
+
+        panel.update(&mut app, |panel, ctx| {
+            panel.handle_action(
+                &SshManagerPanelAction::OpenContextMenu {
+                    target: Some("f1".to_string()),
+                    position: vec2f(10., 20.),
+                },
+                ctx,
+            );
+            // What a click on the menu's "Delete" item dispatches.
+            panel.handle_action(&SshManagerPanelAction::DeleteSelected, ctx);
+            panel.handle_action(&SshManagerPanelAction::DismissContextMenu, ctx);
+
+            let pending = panel.pending_delete.as_ref().expect("a pending delete");
+            assert_eq!(pending.node_id, "f1");
+            assert_eq!(pending.position, vec2f(10., 20.));
+            assert_eq!(panel.nodes.len(), 2);
+            let message = panel.delete_confirmation_message("f1").unwrap();
+            assert!(message.contains("Folder"), "{message}");
+            assert!(message.contains('1'), "{message}");
+        });
+        render_panel_scene(&mut app, &mut presenter, window_id);
+
+        panel.update(&mut app, |panel, ctx| {
+            panel.handle_action(&SshManagerPanelAction::CancelDelete, ctx);
+            assert!(panel.pending_delete.is_none());
+            assert_eq!(panel.nodes.len(), 2);
+        });
+        render_panel_scene(&mut app, &mut presenter, window_id);
     });
 }

@@ -25,6 +25,7 @@ use warpui::elements::{
 };
 use warpui::elements::{ClippedScrollStateHandle, ClippedScrollable};
 use warpui::platform::Cursor;
+use warpui::ui_components::button::ButtonVariant;
 use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 use warpui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
@@ -59,6 +60,7 @@ const CONTEXT_MENU_WIDTH: f32 = 200.0;
 const CONTEXT_MENU_ITEM_PADDING_V: f32 = 7.0;
 const CONTEXT_MENU_ITEM_PADDING_H: f32 = 12.0;
 const MAX_CONTEXT_MENU_ITEMS: usize = 5;
+const DELETE_CONFIRMATION_WIDTH: f32 = 280.0;
 const SSH_PANEL_POSITION_ID: &str = "ssh_manager_panel_root";
 
 #[derive(Clone, Debug)]
@@ -68,7 +70,11 @@ pub enum SshManagerPanelAction {
     /// 右键菜单：根据上下文决定父级。
     AddFolder,
     AddServer,
+    /// Ask whether to delete the selected node; nothing is deleted until `ConfirmDelete`.
     DeleteSelected,
+    /// Delete the node the open confirmation asks about.
+    ConfirmDelete,
+    CancelDelete,
     Connect,
     Edit,
     CloneServer(String),
@@ -128,6 +134,13 @@ pub enum SshManagerPanelEvent {
     PersistenceError(String),
 }
 
+/// A node the user asked to delete, until they confirm or cancel.
+struct PendingDelete {
+    node_id: String,
+    /// Where the confirmation is shown: where the context menu was.
+    position: Vector2F,
+}
+
 struct RenameState {
     node_id: String,
     editor: ViewHandle<EditorView>,
@@ -185,6 +198,11 @@ pub struct SshManagerPanel {
     context_menu_target: Option<String>,
     context_menu_item_states: Vec<MouseStateHandle>,
 
+    /// The node whose deletion is waiting for confirmation.
+    pending_delete: Option<PendingDelete>,
+    delete_confirm_btn: MouseStateHandle,
+    delete_cancel_btn: MouseStateHandle,
+
     /// 当前正在重命名的节点(编辑器 + node_id)。
     rename_state: Option<RenameState>,
 
@@ -220,6 +238,9 @@ impl SshManagerPanel {
             context_menu_item_states: (0..MAX_CONTEXT_MENU_ITEMS)
                 .map(|_| MouseStateHandle::default())
                 .collect(),
+            pending_delete: None,
+            delete_confirm_btn: MouseStateHandle::default(),
+            delete_cancel_btn: MouseStateHandle::default(),
             rename_state: None,
             candidates,
             candidate_row_states: HashMap::new(),
@@ -257,6 +278,11 @@ impl SshManagerPanel {
                 if let Some(id) = self.selected_id.clone() {
                     if !self.nodes.iter().any(|n| n.id == id) {
                         self.selected_id = None;
+                    }
+                }
+                if let Some(pending) = self.pending_delete.as_ref() {
+                    if !self.nodes.iter().any(|n| n.id == pending.node_id) {
+                        self.pending_delete = None;
                     }
                 }
                 // 重命名中的节点若被外部删除,清掉 rename_state
@@ -494,10 +520,28 @@ impl SshManagerPanel {
         }
     }
 
+    /// Asks before deleting the selected node: a delete takes everything below a folder and the
+    /// passwords saved in the keychain with it, and can't be undone.
     fn on_delete_selected(&mut self, ctx: &mut ViewContext<Self>) {
-        let Some(id) = self.selected_id.clone() else {
+        let Some(node_id) = self.selected_id.clone() else {
             return;
         };
+        // The context menu this came from is dismissed right after; show the question there.
+        let position = self.context_menu_position.unwrap_or_default();
+        self.pending_delete = Some(PendingDelete { node_id, position });
+        ctx.notify();
+    }
+
+    fn on_cancel_delete(&mut self, ctx: &mut ViewContext<Self>) {
+        self.pending_delete = None;
+        ctx.notify();
+    }
+
+    fn on_confirm_delete(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(PendingDelete { node_id: id, .. }) = self.pending_delete.take() else {
+            return;
+        };
+        ctx.notify();
         // The node, everything below it and the keychain secrets of the servers among them go
         // together, or not at all.
         let result = warp_ssh_manager::with_conn(|c| {
@@ -513,7 +557,9 @@ impl SshManagerPanel {
             return;
         }
 
-        self.selected_id = None;
+        if self.selected_id.as_deref() == Some(id.as_str()) {
+            self.selected_id = None;
+        }
         self.refresh_tree(ctx);
         SshTreeChangedNotifier::handle(ctx).update(ctx, |_, ctx| {
             ctx.emit(SshTreeChangedEvent::TreeChanged);
@@ -1749,6 +1795,88 @@ impl SshManagerPanel {
     }
 }
 
+impl SshManagerPanel {
+    /// What the delete confirmation asks: which node goes, and for a folder how much with it.
+    fn delete_confirmation_message(&self, node_id: &str) -> Option<String> {
+        let node = self.nodes.iter().find(|n| n.id == node_id)?;
+        Some(match node.kind {
+            NodeKind::Server => crate::t!(
+                "workspace-left-panel-ssh-manager-delete-confirm-server",
+                name = node.name.clone()
+            ),
+            NodeKind::Folder => crate::t!(
+                "workspace-left-panel-ssh-manager-delete-confirm-folder",
+                name = node.name.clone(),
+                count = descendant_count(&self.nodes, node_id)
+            ),
+        })
+    }
+
+    fn render_delete_confirmation(
+        &self,
+        pending: &PendingDelete,
+        appearance: &warp_core::ui::appearance::Appearance,
+    ) -> Option<Box<dyn Element>> {
+        let theme = appearance.theme();
+        let message = Text::new(
+            self.delete_confirmation_message(&pending.node_id)?,
+            appearance.ui_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(theme.main_text_color(theme.background()).into())
+        .finish();
+
+        let delete_button = appearance
+            .ui_builder()
+            .button(ButtonVariant::Warn, self.delete_confirm_btn.clone())
+            .with_text_label(crate::t!("workspace-left-panel-ssh-manager-menu-delete"))
+            .build()
+            .on_click(|ctx, _, _| ctx.dispatch_typed_action(SshManagerPanelAction::ConfirmDelete))
+            .finish();
+        let cancel_button = appearance
+            .ui_builder()
+            .button(ButtonVariant::Secondary, self.delete_cancel_btn.clone())
+            .with_text_label(crate::t!("common-cancel"))
+            .build()
+            .on_click(|ctx, _, _| ctx.dispatch_typed_action(SshManagerPanelAction::CancelDelete))
+            .finish();
+        let buttons = Flex::row()
+            .with_main_axis_size(MainAxisSize::Min)
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_spacing(8.0)
+            .with_child(delete_button)
+            .with_child(cancel_button)
+            .finish();
+
+        let content = Flex::column()
+            .with_main_axis_size(MainAxisSize::Min)
+            .with_cross_axis_alignment(CrossAxisAlignment::Start)
+            .with_spacing(12.0)
+            .with_child(message)
+            .with_child(buttons)
+            .finish();
+        let confirmation = ConstrainedBox::new(
+            Container::new(content)
+                .with_background(theme.surface_2())
+                .with_border(Border::all(1.0).with_border_color(theme.surface_3().into()))
+                .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.0)))
+                .with_uniform_padding(12.0)
+                .finish(),
+        )
+        .with_width(DELETE_CONFIRMATION_WIDTH)
+        .finish();
+
+        // A click anywhere else is a "no".
+        Some(
+            Dismiss::new(confirmation)
+                .on_dismiss(|ctx, _| {
+                    ctx.dispatch_typed_action(SshManagerPanelAction::CancelDelete);
+                })
+                .finish(),
+        )
+    }
+}
+
 impl Entity for SshManagerPanel {
     type Event = SshManagerPanelEvent;
 }
@@ -1765,6 +1893,8 @@ impl TypedActionView for SshManagerPanel {
             }
             SshManagerPanelAction::AddServer => self.on_add_server(ctx),
             SshManagerPanelAction::DeleteSelected => self.on_delete_selected(ctx),
+            SshManagerPanelAction::ConfirmDelete => self.on_confirm_delete(ctx),
+            SshManagerPanelAction::CancelDelete => self.on_cancel_delete(ctx),
             SshManagerPanelAction::Connect => self.on_connect(ctx),
             SshManagerPanelAction::Edit => self.on_edit(ctx),
             SshManagerPanelAction::CloneServer(id) => self.on_clone_server(id, ctx),
@@ -1865,11 +1995,18 @@ impl View for SshManagerPanel {
 
         let positioned_panel = SavePosition::new(panel_content, SSH_PANEL_POSITION_ID).finish();
 
-        let Some(position) = self.context_menu_position else {
+        // The context menu, or the question its "Delete" item leads to, shown in its place.
+        let overlay = match (self.context_menu_position, self.pending_delete.as_ref()) {
+            (Some(position), _) => Some((self.render_context_menu(appearance), position)),
+            (None, Some(pending)) => self
+                .render_delete_confirmation(pending, appearance)
+                .map(|confirmation| (confirmation, pending.position)),
+            (None, None) => None,
+        };
+        let Some((overlay_el, position)) = overlay else {
             return positioned_panel;
         };
 
-        let menu_el = self.render_context_menu(appearance);
         let positioning = OffsetPositioning::offset_from_parent(
             position,
             ParentOffsetBounds::ParentByPosition,
@@ -1879,7 +2016,7 @@ impl View for SshManagerPanel {
 
         let mut stack = Stack::new();
         stack.add_child(positioned_panel);
-        stack.add_positioned_overlay_child(menu_el, positioning);
+        stack.add_positioned_overlay_child(overlay_el, positioning);
         stack.finish()
     }
 }
@@ -1945,6 +2082,21 @@ fn sort_for_display(nodes: Vec<SshNode>, depths: &HashMap<String, usize>) -> Vec
         }
     }
     out
+}
+
+/// The number of nodes below `root_id`, at any depth.
+fn descendant_count(nodes: &[SshNode], root_id: &str) -> usize {
+    let mut count = 0;
+    let mut pending = vec![root_id];
+    while let Some(id) = pending.pop() {
+        for node in nodes {
+            if node.parent_id.as_deref() == Some(id) {
+                count += 1;
+                pending.push(node.id.as_str());
+            }
+        }
+    }
+    count
 }
 
 fn compute_depths(nodes: &[SshNode]) -> HashMap<String, usize> {
