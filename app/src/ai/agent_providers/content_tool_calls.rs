@@ -1,259 +1,232 @@
-//! Fallback: parse tool-call-shaped JSON embedded in assistant `content` text.
+//! Fallback: read tool calls that a model wrote as text in its assistant `content`.
 //!
-//! Local models (Ollama native) often emit pseudo-tool JSON as prose instead of
-//! structured `message.tool_calls`. When the BYOP stream ends with `tool_bufs`
-//! empty, `chat_stream` calls [`extract_tool_calls_from_assistant_text`].
+//! Local models (Ollama native) sometimes write a tool call as text instead of
+//! emitting structured `message.tool_calls`. When the BYOP stream ends with
+//! `tool_bufs` empty, `chat_stream` calls [`extract_tool_calls_from_assistant_text`].
+//!
+//! What it returns gets executed, so the text is read as a call only when the
+//! whole response is one, never when a call merely appears in it:
+//!
+//! - The response, after any leading `<think>…</think>` blocks, must consist of
+//!   calls and nothing else, in one of these forms:
+//!   - one or more JSON values separated by whitespace;
+//!   - the same inside a single code fence, with no language or `json`;
+//!   - one or more `<tool_call>…</tool_call>` blocks, each holding such values.
+//! - Each JSON value is a call object, an array of call objects, or
+//!   `{"tool_calls": [...]}` with no other key.
+//! - A call object is `{"name", "arguments"}` (the arguments may also be under
+//!   `parameters` or `input`) or `{"function": {"name", "arguments"}}` (or
+//!   `parameters`), optionally with `id`, `index` and a `type` of `function` or
+//!   `tool_use`. Any other key rejects it.
+//! - The name must be exactly that of a tool offered in this request, and the
+//!   arguments a JSON object, or a string holding one.
+//!
+//! If any part of the response fails this, no call is returned at all.
 
 use std::collections::HashSet;
 
 use genai::chat::ToolCall;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use uuid::Uuid;
 
+const THINK_OPEN: &str = "<think>";
+const THINK_CLOSE: &str = "</think>";
+const TOOL_CALL_OPEN: &str = "<tool_call>";
+const TOOL_CALL_CLOSE: &str = "</tool_call>";
+const CODE_FENCE: &str = "```";
+
+/// The keys a call object may have beside its name and arguments.
+const WRAPPED_CALL_KEYS: &[&str] = &["id", "index", "type", "function"];
+const FUNCTION_KEYS: &[&str] = &["name", "arguments", "parameters"];
+const FUNCTION_ARGUMENT_KEYS: &[&str] = &["arguments", "parameters"];
+const FLAT_CALL_KEYS: &[&str] = &[
+    "id",
+    "index",
+    "type",
+    "name",
+    "arguments",
+    "parameters",
+    "input",
+];
+const FLAT_CALL_ARGUMENT_KEYS: &[&str] = &["arguments", "parameters", "input"];
+
 /// Extract executable tool calls from assistant text when the provider did not
-/// emit native `tool_calls` stream events.
+/// emit native `tool_calls` stream events. The module documentation defines
+/// which texts are read as calls; any other text yields none.
 pub fn extract_tool_calls_from_assistant_text(
     text: &str,
     available_tool_names: &[String],
 ) -> Vec<ToolCall> {
-    let allowed: HashSet<&str> = available_tool_names.iter().map(String::as_str).collect();
-    let mut candidates = Vec::new();
-    for candidate in collect_json_candidates(text) {
-        for expanded in expand_tool_call_values(&candidate) {
-            if let Some(call) = parse_tool_call_value(&expanded, &allowed) {
-                candidates.push(call);
-            }
-        }
-    }
-    pick_best_tool_call(candidates)
-}
-
-fn expand_tool_call_values(value: &Value) -> Vec<Value> {
-    if let Some(items) = value.get("tool_calls").and_then(Value::as_array) {
-        return items.to_vec();
-    }
-    vec![value.clone()]
-}
-
-/// Prefer `run_shell_command` when the model emits multiple pseudo-tools in one
-/// response (common: wrong `webfetch` first, then correct shell JSON).
-fn pick_best_tool_call(candidates: Vec<ToolCall>) -> Vec<ToolCall> {
-    if candidates.is_empty() {
+    let Some(values) = call_values_of_response(text) else {
         return Vec::new();
-    }
-    if let Some(call) = candidates
-        .iter()
-        .find(|call| call.fn_name == "run_shell_command")
-    {
-        return vec![call.clone()];
-    }
-    candidates.last().cloned().into_iter().collect()
-}
+    };
+    let allowed: HashSet<&str> = available_tool_names.iter().map(String::as_str).collect();
 
-fn collect_json_candidates(text: &str) -> Vec<Value> {
-    let mut candidates = Vec::new();
-    for block in extract_fenced_json_blocks(text) {
-        if let Ok(v) = serde_json::from_str::<Value>(&block) {
-            candidates.push(v);
-        }
-    }
-    for obj in extract_balanced_json_objects(text) {
-        if let Ok(v) = serde_json::from_str::<Value>(&obj) {
-            candidates.push(v);
-        }
-    }
-    candidates
-}
-
-fn extract_fenced_json_blocks(text: &str) -> Vec<String> {
-    let mut blocks = Vec::new();
-    let mut rest = text;
-    while let Some(start) = rest.find("```") {
-        let after_fence = &rest[start + 3..];
-        let lang_end = after_fence.find('\n').unwrap_or(0);
-        let body_start = &after_fence[lang_end..];
-        let body_start = body_start.strip_prefix('\n').unwrap_or(body_start);
-        if let Some(end) = body_start.find("```") {
-            let body = body_start[..end].trim();
-            if !body.is_empty() {
-                blocks.push(body.to_owned());
-            }
-            rest = &body_start[end + 3..];
-        } else {
-            break;
-        }
-    }
-    blocks
-}
-
-fn extract_balanced_json_objects(text: &str) -> Vec<String> {
-    let mut objects = Vec::new();
-    let bytes = text.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'{' {
-            if let Some(end) = find_json_object_end(text, i) {
-                objects.push(text[i..=end].to_owned());
-                i = end + 1;
-                continue;
-            }
-        }
-        i += 1;
-    }
-    objects
-}
-
-fn find_json_object_end(text: &str, start: usize) -> Option<usize> {
-    let mut depth = 0i32;
-    let mut in_string = false;
-    let mut escape = false;
-    for (idx, ch) in text[start..].char_indices() {
-        if in_string {
-            if escape {
-                escape = false;
-            } else if ch == '\\' {
-                escape = true;
-            } else if ch == '"' {
-                in_string = false;
-            }
+    let mut calls: Vec<ToolCall> = Vec::with_capacity(values.len());
+    for value in &values {
+        let Some((name, arguments)) = parse_call_object(value, &allowed) else {
+            return Vec::new();
+        };
+        // A model that repeats itself asks for the call once.
+        if calls
+            .iter()
+            .any(|call| call.fn_name == name && call.fn_arguments == arguments)
+        {
             continue;
         }
-        match ch {
-            '"' => in_string = true,
-            '{' => depth += 1,
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    return Some(start + idx);
-                }
-            }
-            _ => {}
-        }
+        calls.push(ToolCall {
+            call_id: Uuid::new_v4().to_string(),
+            fn_name: name.to_owned(),
+            fn_arguments: arguments,
+            thought_signatures: None,
+        });
     }
-    None
+    calls
 }
 
-fn parse_tool_call_value(value: &Value, allowed: &HashSet<&str>) -> Option<ToolCall> {
-    let (raw_name, args) = extract_name_and_args(value)?;
-    let (name, args) = normalize_tool_call(raw_name, args)?;
-    if !allowed.contains(name.as_str()) {
+/// The candidate call objects of a response that consists of calls only, or
+/// None when the response holds anything else.
+fn call_values_of_response(text: &str) -> Option<Vec<Value>> {
+    let body = strip_leading_think_blocks(text).trim();
+    if body.is_empty() {
         return None;
     }
-    Some(ToolCall {
-        call_id: Uuid::new_v4().to_string(),
-        fn_name: name,
-        fn_arguments: args,
-        thought_signatures: None,
-    })
-}
+    let payloads = if body.starts_with(TOOL_CALL_OPEN) {
+        tagged_payloads(body)?
+    } else if body.starts_with(CODE_FENCE) {
+        vec![fenced_payload(body)?]
+    } else {
+        vec![body]
+    };
 
-fn extract_name_and_args(value: &Value) -> Option<(String, Value)> {
-    let obj = value.as_object()?;
-    if obj.get("type").and_then(Value::as_str) == Some("function") {
-        if let Some(function) = obj.get("function").and_then(Value::as_object) {
-            let name = function.get("name")?.as_str()?.to_owned();
-            let args = function
-                .get("arguments")
-                .or_else(|| function.get("parameters"))
-                .cloned()
-                .unwrap_or(Value::Object(Default::default()));
-            return Some((name, coerce_args_value(args)));
-        }
-        let name = obj.get("name")?.as_str()?.to_owned();
-        let args = obj
-            .get("parameters")
-            .or_else(|| obj.get("arguments"))
-            .cloned()
-            .unwrap_or(Value::Object(Default::default()));
-        return Some((name, coerce_args_value(args)));
-    }
-    let name = obj.get("name")?.as_str()?.to_owned();
-    let args = obj
-        .get("arguments")
-        .or_else(|| obj.get("parameters"))
-        .or_else(|| obj.get("input"))
-        .cloned()
-        .unwrap_or(Value::Object(Default::default()));
-    Some((name, coerce_args_value(args)))
-}
-
-fn coerce_args_value(args: Value) -> Value {
-    if let Some(raw) = args.as_str() {
-        if let Ok(parsed) = serde_json::from_str::<Value>(raw) {
-            return parsed;
+    let mut values = Vec::new();
+    for payload in payloads {
+        for value in serde_json::Deserializer::from_str(payload).into_iter::<Value>() {
+            collect_call_values(value.ok()?, &mut values)?;
         }
     }
-    args
+    Some(values)
 }
 
-fn normalize_tool_call(raw_name: String, args: Value) -> Option<(String, Value)> {
-    match raw_name.as_str() {
-        "echo" => {
-            let command = echo_args_to_command(&args)?;
-            Some(("run_shell_command".to_owned(), shell_command_args(command)))
-        }
-        "write_to_long_running_shell_command" => {
-            if args.get("command_id").is_some() {
-                return Some((raw_name, args));
+/// Reasoning is never searched for calls: leading `<think>` blocks are skipped
+/// whole. An unterminated block is left in place, which makes the text fail.
+fn strip_leading_think_blocks(text: &str) -> &str {
+    let mut rest = text.trim_start();
+    while let Some(after_open) = rest.strip_prefix(THINK_OPEN) {
+        let Some((_reasoning, after_close)) = after_open.split_once(THINK_CLOSE) else {
+            return rest;
+        };
+        rest = after_close.trim_start();
+    }
+    rest
+}
+
+/// The contents of the `<tool_call>` blocks of a text made of such blocks only.
+fn tagged_payloads(body: &str) -> Option<Vec<&str>> {
+    let mut payloads = Vec::new();
+    let mut rest = body;
+    while !rest.is_empty() {
+        let after_open = rest.strip_prefix(TOOL_CALL_OPEN)?;
+        let (payload, after_close) = after_open.split_once(TOOL_CALL_CLOSE)?;
+        payloads.push(payload);
+        rest = after_close.trim_start();
+    }
+    Some(payloads)
+}
+
+/// The content of a text that is one code fence, with no language or `json`.
+fn fenced_payload(body: &str) -> Option<&str> {
+    let after_open = body.strip_prefix(CODE_FENCE)?;
+    let (language, rest) = after_open.split_once('\n')?;
+    let language = language.trim();
+    if !language.is_empty() && !language.eq_ignore_ascii_case("json") {
+        return None;
+    }
+    let payload = rest.strip_suffix(CODE_FENCE)?;
+    (!payload.contains(CODE_FENCE)).then_some(payload)
+}
+
+/// Appends the call objects a top-level JSON value stands for: the object
+/// itself, the items of an array, or the items of a `tool_calls` wrapper.
+fn collect_call_values(value: Value, values: &mut Vec<Value>) -> Option<()> {
+    match value {
+        Value::Array(items) => {
+            if !items.iter().all(Value::is_object) {
+                return None;
             }
-            remap_shell_from_command_arg(args)
+            values.extend(items);
         }
-        "run_code_command"
-        | "run_command"
-        | "execute_command"
-        | "shell_command"
-        | "execute_shell_command"
-        | "run_shell"
-        | "shell"
-        | "bash"
-        | "terminal_command" => remap_shell_from_command_arg(args),
-        name if super::tools::lookup(name).is_some() => {
-            if name == "run_shell_command" {
-                if let Some(command) = args.get("command").and_then(Value::as_str) {
-                    return Some((raw_name, shell_command_args(command.to_owned())));
-                }
+        Value::Object(mut object) => match object.remove("tool_calls") {
+            Some(Value::Array(items)) if object.is_empty() => values.extend(items),
+            // A wrapper with other keys, or whose `tool_calls` is not a list.
+            Some(_) => return None,
+            None => values.push(Value::Object(object)),
+        },
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => return None,
+    }
+    Some(())
+}
+
+/// The name and arguments of a call object, when it has one of the accepted
+/// shapes and names an offered tool.
+fn parse_call_object<'a>(value: &'a Value, allowed: &HashSet<&str>) -> Option<(&'a str, Value)> {
+    let object = value.as_object()?;
+    if !has_call_type(object) {
+        return None;
+    }
+    let (name, arguments) = match object.get("function") {
+        Some(function) => {
+            if !has_only_keys(object, WRAPPED_CALL_KEYS) {
+                return None;
             }
-            Some((raw_name, args))
-        }
-        _ => {
-            // Local models invent tool names but often include a shell `command` field.
-            if args.get("command_id").is_none() {
-                if let Some((name, args)) = remap_shell_from_command_arg(args) {
-                    return Some((name, args));
-                }
+            let function = function.as_object()?;
+            if !has_only_keys(function, FUNCTION_KEYS) {
+                return None;
             }
-            None
+            (
+                function.get("name")?.as_str()?,
+                arguments_of(function, FUNCTION_ARGUMENT_KEYS)?,
+            )
         }
-    }
-}
-
-fn remap_shell_from_command_arg(args: Value) -> Option<(String, Value)> {
-    if let Some(command) = args.get("command").and_then(Value::as_str) {
-        if !command.is_empty() {
-            return Some((
-                "run_shell_command".to_owned(),
-                shell_command_args(command.to_owned()),
-            ));
+        None => {
+            if !has_only_keys(object, FLAT_CALL_KEYS) {
+                return None;
+            }
+            (
+                object.get("name")?.as_str()?,
+                arguments_of(object, FLAT_CALL_ARGUMENT_KEYS)?,
+            )
         }
-    }
-    None
+    };
+    allowed.contains(name).then_some((name, arguments))
 }
 
-fn echo_args_to_command(args: &Value) -> Option<String> {
-    if let Some(command) = args.get("command").and_then(Value::as_str) {
-        return Some(command.to_owned());
+fn has_call_type(object: &Map<String, Value>) -> bool {
+    match object.get("type") {
+        Some(call_type) => matches!(call_type.as_str(), Some("function" | "tool_use")),
+        None => true,
     }
-    if let Some(message) = args.get("message").and_then(Value::as_str) {
-        return Some(format!("echo {message}"));
-    }
-    if let Some(text) = args.as_str() {
-        return Some(format!("echo {text}"));
-    }
-    None
 }
 
-fn shell_command_args(command: String) -> Value {
-    serde_json::json!({ "command": command })
+fn has_only_keys(object: &Map<String, Value>, keys: &[&str]) -> bool {
+    object.keys().all(|key| keys.contains(&key.as_str()))
+}
+
+/// The arguments of a call: the value under the one of `keys` that is present,
+/// which must be a JSON object or a string holding one.
+fn arguments_of(object: &Map<String, Value>, keys: &[&str]) -> Option<Value> {
+    let mut present = keys.iter().filter_map(|key| object.get(*key));
+    let arguments = present.next()?;
+    if present.next().is_some() {
+        return None;
+    }
+    match arguments {
+        Value::Object(_) => Some(arguments.clone()),
+        Value::String(raw) => serde_json::from_str::<Value>(raw)
+            .ok()
+            .filter(Value::is_object),
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Array(_) => None,
+    }
 }
 
 #[cfg(test)]
