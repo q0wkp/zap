@@ -2743,6 +2743,25 @@ const PLAN_MODE_BLOCKED_TOOLS: &[&str] = &[
     "suggest_prompt",
 ];
 
+/// The tools a CLI subagent may use: the turn that tags the agent into a running command.
+/// Its confirmations are shown by the CLI-agent popover over the command, which can present
+/// only these, so a call to any other tool would wait for an approval nobody can give. The
+/// set is the one Warp offers its own CLI agent (`get_supported_cli_agent_tools`).
+const CLI_SUBAGENT_TOOLS: &[&str] = &[
+    "write_to_long_running_shell_command",
+    "read_shell_command_output",
+    "grep",
+    "file_glob",
+    "transfer_shell_command_control_to_user",
+    "read_files",
+];
+
+/// Whether this turn runs as a CLI subagent. A turn that is only attached to a running command
+/// (`lrc_command_id` alone) is an ordinary agent turn and keeps its tools.
+fn is_cli_subagent_turn(params: &RequestParams) -> bool {
+    params.lrc_should_spawn_subagent
+}
+
 /// 列出本轮真正会喂给上游模型的 tool name(内置 REGISTRY + 当前 MCP 工具),
 /// 与 `build_tools_array` 共享同一套 gating(LRC / `web_search_enabled` /
 /// `suggest_new_conversation` / `plan_mode`)。供 `prompt_renderer` 注入到
@@ -2751,9 +2770,13 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
     let is_lrc = params.lrc_command_id.is_some();
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
+    let cli_subagent = is_cli_subagent_turn(params);
     let mut names: Vec<String> = tools::REGISTRY
         .iter()
         .filter(|t| {
+            if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
             if is_lrc && t.name == "run_shell_command" {
                 return false;
             }
@@ -2772,7 +2795,8 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
         })
         .map(|t| t.name.to_owned())
         .collect();
-    if let Some(ctx) = params.mcp_context.as_ref() {
+    // A CLI subagent gets no MCP tools: see `CLI_SUBAGENT_TOOLS`.
+    if let Some(ctx) = params.mcp_context.as_ref().filter(|_| !cli_subagent) {
         for (name, _description, _parameters) in tools::mcp::build_mcp_tool_defs(ctx) {
             names.push(name);
         }
@@ -2798,6 +2822,7 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let is_lrc = params.lrc_command_id.is_some();
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
+    let cli_subagent = is_cli_subagent_turn(params);
     // Zap BYOP:`suggest_prompt` chip UI 已通过 view 层订阅
     // PromptSuggestionExecutorEvent 恢复(见 `terminal/view.rs::
     // handle_suggest_prompt_executor_event`),可以暴露给模型。
@@ -2811,6 +2836,10 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let mut out: Vec<GenaiTool> = tools::REGISTRY
         .iter()
         .filter(|t| {
+            // A CLI subagent is offered only what its popover can ask the user to confirm.
+            if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
             if is_lrc && t.name == "run_shell_command" {
                 return false;
             }
@@ -2848,7 +2877,8 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
         })
         .collect();
 
-    if let Some(ctx) = params.mcp_context.as_ref() {
+    // A CLI subagent gets no MCP tools: see `CLI_SUBAGENT_TOOLS`.
+    if let Some(ctx) = params.mcp_context.as_ref().filter(|_| !cli_subagent) {
         for (name, description, parameters) in tools::mcp::build_mcp_tool_defs(ctx) {
             out.push(
                 GenaiTool::new(name)
@@ -2857,7 +2887,13 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
             );
         }
     }
-    if is_lrc {
+    if cli_subagent {
+        log::info!(
+            "[byop] CLI subagent turn: tools array limited to the CLI agent tools, \
+             total tools={}",
+            out.len()
+        );
+    } else if is_lrc {
         log::info!(
             "[byop] LRC tag-in: tools array filtered (removed run_shell_command), \
              total tools={}",
@@ -5669,6 +5705,95 @@ fn make_finished_done(
                 request_cost: None,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod cli_subagent_tools_tests {
+    use super::*;
+    use crate::ai::agent::{MCPContext, MCPServer};
+
+    fn params_with_mcp_tool() -> RequestParams {
+        let schema = json!({ "type": "object", "properties": {} })
+            .as_object()
+            .unwrap()
+            .clone();
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.web_search_enabled = true;
+        params.mcp_context = Some(MCPContext {
+            #[allow(deprecated)]
+            resources: vec![],
+            #[allow(deprecated)]
+            tools: vec![],
+            servers: vec![MCPServer {
+                id: "id-a".to_owned(),
+                name: "server-a".to_owned(),
+                description: String::new(),
+                resources: vec![],
+                tools: vec![rmcp::model::Tool::new(
+                    "lookup",
+                    "Looks things up",
+                    Arc::new(schema),
+                )],
+            }],
+        });
+        params
+    }
+
+    fn offered_tools(params: &RequestParams) -> Vec<String> {
+        let names = available_tool_names(params);
+        let array: Vec<String> = build_tools_array(params)
+            .into_iter()
+            .map(|tool| AsRef::<str>::as_ref(&tool.name).to_owned())
+            .collect();
+        assert_eq!(
+            names, array,
+            "the prompt and the request must list the same tools"
+        );
+        names
+    }
+
+    #[test]
+    fn cli_subagent_turn_is_offered_only_the_cli_agent_tools() {
+        let mut params = params_with_mcp_tool();
+        params.lrc_command_id = Some("block-1".to_owned());
+        params.lrc_should_spawn_subagent = true;
+
+        let mut offered = offered_tools(&params);
+        offered.sort();
+        let mut expected: Vec<String> = CLI_SUBAGENT_TOOLS
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect();
+        expected.sort();
+        assert_eq!(offered, expected);
+    }
+
+    #[test]
+    fn every_cli_agent_tool_is_a_registered_tool() {
+        for name in CLI_SUBAGENT_TOOLS {
+            assert!(tools::lookup(name).is_some(), "{name} is not in the registry");
+        }
+    }
+
+    #[test]
+    fn turn_attached_to_a_running_command_keeps_its_tools() {
+        let mut params = params_with_mcp_tool();
+        params.lrc_command_id = Some("block-1".to_owned());
+
+        let offered = offered_tools(&params);
+        assert!(!offered.iter().any(|name| name == "run_shell_command"));
+        for name in [
+            "apply_file_diffs",
+            "ask_user_question",
+            tools::webfetch::TOOL_NAME,
+        ] {
+            assert!(offered.iter().any(|tool| tool == name), "{name}");
+        }
+        assert!(
+            offered.iter().any(|name| tools::mcp::is_mcp_function(name)),
+            "{offered:?}"
+        );
     }
 }
 
