@@ -5,7 +5,7 @@ use crate::adapter::openai::OpenAIAdapter;
 use crate::chat::{ChatOptionsSet, StopReason, ToolCall};
 use crate::webc::{Event, EventSourceStream};
 use crate::{Error, ModelIden, Result};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::collections::VecDeque;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -45,6 +45,18 @@ fn take_finish_reason_usage(
 			.x_take("usage")
 			.ok()
 			.map(|v| OpenAIAdapter::into_usage(adapter_kind, v)),
+	}
+}
+
+/// Parses the arguments of a captured tool call, a string when they were accumulated from fragments.
+fn parse_captured_arguments(fn_arguments: Value) -> Value {
+	match fn_arguments {
+		// A tool that takes no arguments may be called with none at all: an empty
+		// object, as the Anthropic streamer gives, not a string that cannot be parsed.
+		Value::String(arguments) if arguments.trim().is_empty() => Value::Object(Map::new()),
+		// NOTE: Here we are resilient for now, if we cannot parse, just return the original String
+		Value::String(arguments) => serde_json::from_str(&arguments).unwrap_or(Value::String(arguments)),
+		Value::Null | Value::Bool(_) | Value::Number(_) | Value::Array(_) | Value::Object(_) => fn_arguments,
 	}
 }
 
@@ -189,17 +201,7 @@ impl futures::Stream for OpenAIStreamer {
 										fn_arguments,
 										..
 									} = tool_call;
-									// parse fn_arguments if needed
-									let fn_arguments = match fn_arguments {
-										Value::String(fn_arguments_string) => {
-											// NOTE: Here we are resilient for now, if we cannot parse, just return the original String
-											match serde_json::from_str::<Value>(&fn_arguments_string) {
-												Ok(fn_arguments) => fn_arguments,
-												Err(_) => Value::String(fn_arguments_string),
-											}
-										}
-										_ => fn_arguments,
-									};
+									let fn_arguments = parse_captured_arguments(fn_arguments);
 
 									ToolCall {
 										call_id,

@@ -283,6 +283,9 @@ pub async fn run_webfetch(client: &reqwest::Client, args: FetchArgs) -> Result<F
     response_to_fetch_output(resp, &args.url, &format).await
 }
 
+/// How much of an Exa error response goes into the error.
+const EXA_ERROR_BODY_CHARS: usize = 500;
+
 /// 共享的 Response → FetchOutput 转换逻辑。
 ///
 /// 由 `run_webfetch` 和测试辅助函数共同调用，避免重复实现状态检查、
@@ -647,12 +650,16 @@ pub async fn run_websearch(
         .json(&body)
         .send()
         .await
-        .with_context(|| format!("Exa POST {url}"))?;
+        // The endpoint URL carries the Exa API key in its query string, and reqwest's errors
+        // print the URL: keep it out of the error, which reaches the log and the model.
+        .map_err(reqwest::Error::without_url)
+        .context("Exa search request failed")?;
 
     let status = resp.status();
     if !status.is_success() {
         let body_text = resp.text().await.unwrap_or_default();
-        bail!("Exa returned HTTP {} ({})", status.as_u16(), body_text);
+        let body_excerpt: String = body_text.chars().take(EXA_ERROR_BODY_CHARS).collect();
+        bail!("Exa returned HTTP {} ({body_excerpt})", status.as_u16());
     }
     let body_text = resp.text().await.context("read Exa SSE body")?;
 

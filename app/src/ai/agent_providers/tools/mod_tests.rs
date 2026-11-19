@@ -34,6 +34,26 @@ fn parses_the_todowrite_payload() {
 }
 
 #[test]
+fn parses_the_truncated_output_payload() {
+    let payload = json!({
+        "error": "truncated_output",
+        "reason": "token_limit",
+        "detail": "The response reached the output token limit.",
+        "tool": "create_file",
+        "received_args_bytes": 4096,
+        "hint": "Make the call again with a smaller payload.",
+    })
+    .to_string();
+    assert_eq!(
+        parse_invalid_tool_call(&payload),
+        Some(InvalidToolCall {
+            tool_name: Some("create_file".to_owned()),
+            detail: Some("The response reached the output token limit.".to_owned()),
+        })
+    );
+}
+
+#[test]
 fn missing_or_empty_fields_are_none() {
     assert_eq!(
         parse_invalid_tool_call(r#"{"error":"invalid_arguments","tool":" ","detail":""}"#),

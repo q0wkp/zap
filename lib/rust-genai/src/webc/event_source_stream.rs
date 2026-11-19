@@ -25,9 +25,8 @@ pub struct Message {
 
 impl EventSourceStream {
 	pub fn new(reqwest_builder: RequestBuilder) -> Self {
-		// Standard EventSource uses \n\n as event separator
 		Self {
-			inner: WebStream::new_with_delimiter(reqwest_builder, "\n\n"),
+			inner: WebStream::new_with_event_stream(reqwest_builder),
 			opened: false,
 		}
 	}

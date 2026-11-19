@@ -19,6 +19,10 @@ use super::state::CompletedCompaction;
 /// `user_msg_id` 选最后一条 AgentOutput 之前最近一条真实 UserQuery 的 id;
 /// 没有时合成一个独立 uuid(只用作 marker key,build_chat_request 的 hidden
 /// 投影不会命中真实 message)。
+///
+/// A skill invocation is a user turn for this anchor as well: a run started with `/skill` has
+/// no UserQuery, and a synthetic id matches no message, so the summary would never be inserted
+/// into later requests while the head stayed hidden.
 pub fn commit_summarization(
     conversation: &mut AIConversation,
     overflow: bool,
@@ -56,7 +60,8 @@ pub fn commit_summarization(
                 .iter()
                 .rev()
                 .find_map(|m| match m.message.as_ref() {
-                    Some(api::message::Message::UserQuery(_)) => Some(m.id.clone()),
+                    Some(api::message::Message::UserQuery(_))
+                    | Some(api::message::Message::InvokeSkill(_)) => Some(m.id.clone()),
                     _ => None,
                 })
         })

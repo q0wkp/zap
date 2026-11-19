@@ -41,6 +41,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::StreamExt;
 use instant::Instant;
@@ -51,7 +52,8 @@ use warp_multi_agent_api as api;
 use genai::adapter::AdapterKind;
 use genai::chat::{
     Binary, BinarySource, CacheControl, ChatMessage, ChatOptions, ChatRequest, ChatRole,
-    ChatStreamEvent, ContentPart, MessageContent, Tool as GenaiTool, ToolCall, ToolResponse,
+    ChatStreamEvent, ContentPart, MessageContent, StopReason, Tool as GenaiTool, ToolCall,
+    ToolResponse,
 };
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget, WebConfig};
@@ -565,6 +567,52 @@ fn collect_linearized_task_messages(tasks: &[api::Task]) -> Vec<&api::Message> {
     out
 }
 
+/// The file a skill was loaded from. Bundled skills have none the model could read.
+fn skill_file_path(skill: &api::Skill) -> Option<&str> {
+    use api::skill_descriptor::{scope, SkillReference};
+
+    let descriptor = skill.descriptor.as_ref()?;
+    let is_bundled = matches!(
+        descriptor.scope.as_ref().and_then(|s| s.r#type.as_ref()),
+        Some(scope::Type::Bundled(_))
+    );
+    if is_bundled {
+        return None;
+    }
+    match descriptor.skill_reference.as_ref()? {
+        SkillReference::Path(path) if !path.is_empty() => Some(path.as_str()),
+        SkillReference::Path(_) | SkillReference::BundledSkillId(_) => None,
+    }
+}
+
+/// The user message a skill invocation becomes: the skill's instructions, the file they came
+/// from (what the skill refers to, such as its scripts, is found relative to it) and what the
+/// user typed after the skill's name. The request that carries the invocation and every later
+/// request, which replays it from the task's history, render it here, so the text never changes.
+fn render_skill_invocation(skill: Option<&api::Skill>, user_query: Option<&str>) -> String {
+    let name = skill
+        .and_then(|skill| skill.descriptor.as_ref())
+        .map(|descriptor| descriptor.name.as_str())
+        .unwrap_or_default();
+    let content = skill
+        .and_then(|skill| skill.content.as_ref())
+        .map(|content| content.content.as_str())
+        .unwrap_or_default();
+    let mut composed = format!(
+        "Perform the task following the guidance of the skill \"{name}\" below:\n\n{content}\n\n---\n"
+    );
+    if let Some(path) = skill.and_then(skill_file_path) {
+        composed.push_str(&format!(
+            "The skill was loaded from the file {path}. Paths it mentions are relative to that \
+             file's directory.\n"
+        ));
+    }
+    if let Some(query) = user_query {
+        composed.push_str(&format!("Further user instructions: {query}"));
+    }
+    composed
+}
+
 struct SerializerProjectionBuilder {
     items: Vec<ProjectionItem>,
     pending_tool_calls: Vec<ProjectedToolCall>,
@@ -711,14 +759,19 @@ fn persisted_tool_result_kind(
                 .unwrap_or(false)
             {
                 TerminalResultKind::LocalInterception
-            } else if value.get("error").and_then(Value::as_str) == Some("invalid_arguments") {
+            } else if matches!(
+                value.get("error").and_then(Value::as_str),
+                Some("invalid_arguments" | TRUNCATED_OUTPUT_ERROR)
+            ) {
                 TerminalResultKind::StructuredError
             } else {
                 TerminalResultKind::Real
             }
         }
         Err(_)
-            if content.contains("_byop_intercepted") || content.contains("invalid_arguments") =>
+            if content.contains("_byop_intercepted")
+                || content.contains("invalid_arguments")
+                || content.contains(TRUNCATED_OUTPUT_ERROR) =>
         {
             TerminalResultKind::UnreadableLocalInterception
         }
@@ -767,7 +820,8 @@ fn build_serializer_readiness_projection(
         };
 
         match inner {
-            api::message::Message::UserQuery(_) => {
+            // A persisted skill invocation is replayed as a user message, like a query.
+            api::message::Message::UserQuery(_) | api::message::Message::InvokeSkill(_) => {
                 builder.push_user_boundary(msg.task_id.clone(), msg.id.clone());
             }
             api::message::Message::AgentOutput(_) => {
@@ -801,7 +855,6 @@ fn build_serializer_readiness_projection(
             | api::message::Message::WebFetch(_)
             | api::message::Message::DebugOutput(_)
             | api::message::Message::ArtifactEvent(_)
-            | api::message::Message::InvokeSkill(_)
             | api::message::Message::MessagesReceivedFromAgents(_)
             | api::message::Message::ModelUsed(_)
             | api::message::Message::EventsFromAgents(_)
@@ -931,7 +984,8 @@ fn build_controller_readiness_projection(
         };
 
         match inner {
-            api::message::Message::UserQuery(_) => {
+            // A persisted skill invocation is replayed as a user message, like a query.
+            api::message::Message::UserQuery(_) | api::message::Message::InvokeSkill(_) => {
                 builder.push_user_boundary(msg.task_id.clone(), msg.id.clone());
             }
             api::message::Message::AgentOutput(_) => {
@@ -965,7 +1019,6 @@ fn build_controller_readiness_projection(
             | api::message::Message::WebFetch(_)
             | api::message::Message::DebugOutput(_)
             | api::message::Message::ArtifactEvent(_)
-            | api::message::Message::InvokeSkill(_)
             | api::message::Message::MessagesReceivedFromAgents(_)
             | api::message::Message::ModelUsed(_)
             | api::message::Message::EventsFromAgents(_)
@@ -1411,6 +1464,18 @@ fn build_chat_request(
                     ));
                 }
             }
+            api::message::Message::InvokeSkill(invoke_skill) => {
+                // The skill's instructions and the user's query have to stay in every later
+                // request of the run, in the words the model first saw them in.
+                flush_assistant_buffer(&mut buf, &mut messages, &mut outbound_tool_groups);
+                messages.push(ChatMessage::user(render_skill_invocation(
+                    invoke_skill.skill.as_ref(),
+                    invoke_skill
+                        .user_query
+                        .as_ref()
+                        .map(|user_query| user_query.query.as_str()),
+                )));
+            }
             api::message::Message::AgentReasoning(r) => {
                 // 把上一轮的 reasoning 挂到下一个要 flush 的 assistant message 上。
                 // genai 0.6 的 with_reasoning_content 会按当前 adapter 序列化:
@@ -1615,14 +1680,13 @@ fn build_chat_request(
             AIAgentInput::InvokeSkill {
                 skill, user_query, ..
             } => {
-                let mut composed = format!(
-                    "Perform the task following the guidance of the skill \"{}\" below:\n\n{}\n\n---\n",
-                    skill.name, skill.content,
-                );
-                if let Some(uq) = user_query {
-                    composed.push_str(&format!("Further user instructions: {}", uq.query));
-                }
-                messages.push(ChatMessage::user(composed));
+                // Rendered from the form the invocation is persisted in, so that the replay of
+                // the persisted message in later requests gives this very text.
+                let api_skill = api::Skill::from(skill.clone());
+                messages.push(ChatMessage::user(render_skill_invocation(
+                    Some(&api_skill),
+                    user_query.as_ref().map(|uq| uq.query.as_str()),
+                )));
             }
             AIAgentInput::ResumeConversation { context } => {
                 // BYOP 没有 server 端 resume prompt 注入层。LRC auto-resume 时必须显式
@@ -1796,8 +1860,21 @@ fn should_replace_tool_response(existing: &ToolResponse, candidate: &ToolRespons
         || !is_placeholder_tool_response_content(&candidate.content)
 }
 
+/// Whether BYOP diagnostics may write conversation content (queries, tool results, the full
+/// request) to the log. Off by default: zap.log is a plain file, and the content carries whatever
+/// the terminal and the files showed. `ZAP_BYOP_DIAG=1` turns it on for debugging a provider.
+fn byop_content_diag_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("ZAP_BYOP_DIAG").is_ok_and(|value| !value.is_empty() && value != "0")
+    })
+}
+
 fn snippet_for_log(s: &str, max_chars: usize) -> String {
     use std::fmt::Write as _;
+    if !byop_content_diag_enabled() {
+        return format!("<{} chars; ZAP_BYOP_DIAG=1 logs content>", s.chars().count());
+    }
 
     let mut out = String::new();
     for (idx, ch) in s.chars().enumerate() {
@@ -2679,6 +2756,25 @@ const PLAN_MODE_BLOCKED_TOOLS: &[&str] = &[
     "suggest_prompt",
 ];
 
+/// The tools a CLI subagent may use: the turn that tags the agent into a running command.
+/// Its confirmations are shown by the CLI-agent popover over the command, which can present
+/// only these, so a call to any other tool would wait for an approval nobody can give. The
+/// set is the one Warp offers its own CLI agent (`get_supported_cli_agent_tools`).
+const CLI_SUBAGENT_TOOLS: &[&str] = &[
+    "write_to_long_running_shell_command",
+    "read_shell_command_output",
+    "grep",
+    "file_glob",
+    "transfer_shell_command_control_to_user",
+    "read_files",
+];
+
+/// Whether this turn runs as a CLI subagent. A turn that is only attached to a running command
+/// (`lrc_command_id` alone) is an ordinary agent turn and keeps its tools.
+fn is_cli_subagent_turn(params: &RequestParams) -> bool {
+    params.lrc_should_spawn_subagent
+}
+
 /// 列出本轮真正会喂给上游模型的 tool name(内置 REGISTRY + 当前 MCP 工具),
 /// 与 `build_tools_array` 共享同一套 gating(LRC / `web_search_enabled` /
 /// `suggest_new_conversation` / `plan_mode`)。供 `prompt_renderer` 注入到
@@ -2687,9 +2783,13 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
     let is_lrc = params.lrc_command_id.is_some();
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
+    let cli_subagent = is_cli_subagent_turn(params);
     let mut names: Vec<String> = tools::REGISTRY
         .iter()
         .filter(|t| {
+            if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
             if is_lrc && t.name == "run_shell_command" {
                 return false;
             }
@@ -2708,7 +2808,8 @@ pub fn available_tool_names(params: &RequestParams) -> Vec<String> {
         })
         .map(|t| t.name.to_owned())
         .collect();
-    if let Some(ctx) = params.mcp_context.as_ref() {
+    // A CLI subagent gets no MCP tools: see `CLI_SUBAGENT_TOOLS`.
+    if let Some(ctx) = params.mcp_context.as_ref().filter(|_| !cli_subagent) {
         for (name, _description, _parameters) in tools::mcp::build_mcp_tool_defs(ctx) {
             names.push(name);
         }
@@ -2734,6 +2835,7 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let is_lrc = params.lrc_command_id.is_some();
     let web_enabled = params.web_search_enabled;
     let plan_mode = is_plan_mode_turn(&params.input);
+    let cli_subagent = is_cli_subagent_turn(params);
     // Zap BYOP:`suggest_prompt` chip UI 已通过 view 层订阅
     // PromptSuggestionExecutorEvent 恢复(见 `terminal/view.rs::
     // handle_suggest_prompt_executor_event`),可以暴露给模型。
@@ -2747,6 +2849,10 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
     let mut out: Vec<GenaiTool> = tools::REGISTRY
         .iter()
         .filter(|t| {
+            // A CLI subagent is offered only what its popover can ask the user to confirm.
+            if cli_subagent && !CLI_SUBAGENT_TOOLS.contains(&t.name) {
+                return false;
+            }
             if is_lrc && t.name == "run_shell_command" {
                 return false;
             }
@@ -2784,7 +2890,8 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
         })
         .collect();
 
-    if let Some(ctx) = params.mcp_context.as_ref() {
+    // A CLI subagent gets no MCP tools: see `CLI_SUBAGENT_TOOLS`.
+    if let Some(ctx) = params.mcp_context.as_ref().filter(|_| !cli_subagent) {
         for (name, description, parameters) in tools::mcp::build_mcp_tool_defs(ctx) {
             out.push(
                 GenaiTool::new(name)
@@ -2793,7 +2900,13 @@ fn build_tools_array(params: &RequestParams) -> Vec<GenaiTool> {
             );
         }
     }
-    if is_lrc {
+    if cli_subagent {
+        log::info!(
+            "[byop] CLI subagent turn: tools array limited to the CLI agent tools, \
+             total tools={}",
+            out.len()
+        );
+    } else if is_lrc {
         log::info!(
             "[byop] LRC tag-in: tools array filtered (removed run_shell_command), \
              total tools={}",
@@ -2948,6 +3061,20 @@ pub(super) fn normalize_endpoint_url(api_type: AgentProviderApiType, base_url: &
     format!("{stripped}/")
 }
 
+/// How long a provider may take to accept the connection (DNS, TCP and TLS).
+const BYOP_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+/// How long a provider may stay silent, before its response starts and between two reads of
+/// the stream. Not a limit on the whole response: every read starts it anew. Generous, since a
+/// reasoning model may think for minutes before its first byte.
+const BYOP_READ_IDLE_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// The deadlines of BYOP requests. Without them a relay that accepts the connection and then
+/// stalls would leave the turn waiting for ever.
+fn apply_byop_timeouts(web_config: &mut WebConfig) {
+    web_config.connect_timeout = Some(BYOP_CONNECT_TIMEOUT);
+    web_config.read_timeout = Some(BYOP_READ_IDLE_TIMEOUT);
+}
+
 /// 构造 genai Client。每次请求新建(开销低 — Client 内部只是 reqwest::Client + adapter 表)。
 /// `ServiceTargetResolver` capture 当前请求的 endpoint/key/api_type 后,把每次 exec_chat_stream
 /// 都强制路由到指定 AdapterKind,完全绕过 genai 默认的"按模型名识别"。
@@ -3008,6 +3135,7 @@ pub(super) fn build_client(
         default_headers: Some(headers),
         ..WebConfig::default()
     };
+    apply_byop_timeouts(&mut web_config);
     let proxy_cfg = current_proxy_config();
     match proxy_cfg.mode {
         http_client::ProxyMode::Off => {
@@ -3273,7 +3401,20 @@ fn build_chat_options(
 }
 
 fn map_genai_error(err: genai::Error) -> OpenAiCompatibleError {
+    use genai::webc::Error as W;
     use genai::Error as G;
+
+    fn status_error(status: u16, canonical_reason: &str, body: &str) -> OpenAiCompatibleError {
+        OpenAiCompatibleError::Status {
+            status,
+            body: if canonical_reason.is_empty() {
+                body.to_owned()
+            } else {
+                format!("{canonical_reason}: {body}")
+            },
+        }
+    }
+
     match err {
         // 真·解析失败:JSON 反序列化阶段
         G::StreamParse { .. }
@@ -3281,28 +3422,145 @@ fn map_genai_error(err: genai::Error) -> OpenAiCompatibleError {
         | G::JsonValueExt(_)
         | G::InvalidJsonResponseElement { .. } => OpenAiCompatibleError::Decode(format!("{err}")),
 
-        // 网络/流式发送阶段失败(reqwest 连接、TLS、DNS、超时、流中断等)
-        G::WebStream { .. } | G::WebAdapterCall { .. } | G::WebModelCall { .. } => {
-            OpenAiCompatibleError::Stream(format!("{err}"))
+        // A streamed request that the provider rejects reaches us as a stream error boxing the
+        // HTTP error: keep the status, so that a 4xx is not taken for a dropped connection.
+        G::WebStream { ref error, .. } => match error.downcast_ref::<G>() {
+            Some(G::HttpError {
+                status,
+                body,
+                canonical_reason,
+            }) => status_error(status.as_u16(), canonical_reason, body),
+            // 网络/流式发送阶段失败(reqwest 连接、TLS、DNS、超时、流中断等)
+            Some(_) | None => OpenAiCompatibleError::Stream(format!("{err}")),
+        },
+
+        G::WebAdapterCall {
+            ref webc_error, ..
         }
+        | G::WebModelCall {
+            ref webc_error, ..
+        } => match webc_error {
+            W::ResponseFailedStatus { status, body, .. } => {
+                status_error(status.as_u16(), "", body)
+            }
+            W::ResponseFailedNotJson { .. }
+            | W::ResponseFailedInvalidJson { .. }
+            | W::JsonValueExt(_)
+            | W::Reqwest(_) => OpenAiCompatibleError::Stream(format!("{err}")),
+        },
 
         // 服务端返回的 HTTP 错误状态
         G::HttpError {
             status,
             body,
             canonical_reason,
-        } => OpenAiCompatibleError::Status {
-            status: status.as_u16(),
-            body: if canonical_reason.is_empty() {
-                body
-            } else {
-                format!("{canonical_reason}: {body}")
-            },
-        },
+        } => status_error(status.as_u16(), &canonical_reason, &body),
 
         // 其余(请求构造、鉴权、能力不支持等)归为通用错误,避免误导成"解析失败"
         other => OpenAiCompatibleError::Other(format!("{other}")),
     }
+}
+
+/// Turns a failed provider call into the error the response stream acts on. The variant decides
+/// whether the request is tried again (`AIApiError::is_retryable`): a rejected request (a 4xx
+/// other than 408 and 429) fails the same way every time, while an interrupted connection is
+/// worth another attempt.
+fn byop_api_error(stage: &str, err: OpenAiCompatibleError) -> AIApiError {
+    match err {
+        OpenAiCompatibleError::Status { status, body } => {
+            match http::StatusCode::from_u16(status) {
+                Ok(status) => AIApiError::ErrorStatus(status, body),
+                Err(_) => AIApiError::Other(anyhow::anyhow!(
+                    "BYOP {stage} failed: HTTP status {status}: {body}"
+                )),
+            }
+        }
+        OpenAiCompatibleError::Stream(message) => AIApiError::Stream {
+            stream_type: "BYOP",
+            source: anyhow::anyhow!("{stage} failed: {message}"),
+        },
+        other @ (OpenAiCompatibleError::InvalidBaseUrl(_)
+        | OpenAiCompatibleError::Http(_)
+        | OpenAiCompatibleError::Decode(_)
+        | OpenAiCompatibleError::Other(_)) => {
+            AIApiError::Other(anyhow::anyhow!("BYOP {stage} failed: {other}"))
+        }
+    }
+}
+
+/// The `error` of the result that answers a tool call whose arguments were cut off. The
+/// controller's auto-resume check looks for it in the result's `server_message_data`.
+pub(crate) const TRUNCATED_OUTPUT_ERROR: &str = "truncated_output";
+
+/// Why a generation ended before the model had finished it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GenerationCutOff {
+    /// The provider stopped the generation at the output token limit.
+    TokenLimit,
+    /// The stream closed without its closing event, as when a relay drops the connection.
+    StreamDropped,
+}
+
+/// Tells whether the generation was cut off, from the stop reason the provider reported and the
+/// number of closing events the stream delivered.
+fn generation_cut_off(
+    stop_reason: Option<&StopReason>,
+    end_events: u32,
+) -> Option<GenerationCutOff> {
+    if stop_reason.is_some_and(StopReason::is_max_tokens) {
+        Some(GenerationCutOff::TokenLimit)
+    } else if end_events == 0 {
+        Some(GenerationCutOff::StreamDropped)
+    } else {
+        None
+    }
+}
+
+/// Whether a tool call's arguments are still the raw text the model streamed, and that text is
+/// not a complete JSON document. In a generation that was cut off these are arguments the model
+/// never got to finish, not arguments it got wrong.
+fn tool_call_arguments_are_incomplete(call: &ToolCall) -> bool {
+    match &call.fn_arguments {
+        Value::String(raw) => serde_json::from_str::<Value>(raw).is_err(),
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::Array(_) | Value::Object(_) => {
+            false
+        }
+    }
+}
+
+/// The result that answers a tool call whose arguments were cut off. An `invalid_arguments`
+/// result would send the model looking for a schema mistake it did not make; this one says the
+/// output was cut short and that the call has to be made again, smaller.
+fn truncated_output_result(
+    cut_off: GenerationCutOff,
+    tool_name: &str,
+    received_args: &str,
+) -> Value {
+    let (reason, detail, hint) = match cut_off {
+        GenerationCutOff::TokenLimit => (
+            "token_limit",
+            "The response reached the output token limit before the arguments of this tool call \
+             were complete, so the call was not run.",
+            "The arguments were cut off, not wrong: do not change their schema. Make the call \
+             again with a smaller payload, for example by splitting the work into several \
+             smaller calls (write a large file in parts, change fewer places at a time).",
+        ),
+        GenerationCutOff::StreamDropped => (
+            "stream_interrupted",
+            "The connection to the provider closed before the arguments of this tool call were \
+             complete, so the call was not run. No token limit was reported.",
+            "The arguments were cut off, not wrong: do not change their schema. Make the same \
+             call again; if it is cut off once more, use a smaller payload.",
+        ),
+    };
+    json!({
+        "error": TRUNCATED_OUTPUT_ERROR,
+        "reason": reason,
+        "detail": detail,
+        "tool": tool_name,
+        "received_args_bytes": received_args.len(),
+        "hint": hint,
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -3464,7 +3722,9 @@ pub async fn generate_byop_output(
     }))
     .unwrap_or_default();
     log::info!("[byop] diag_body_approx_len={}", diag_body_json.len());
-    log::info!("[byop-diag] full_request_json={diag_body_json}");
+    if byop_content_diag_enabled() {
+        log::info!("[byop-diag] full_request_json={diag_body_json}");
+    }
 
     // 主动扫描原始文本里的"可疑反斜杠序列":serde_json 把源字符串里的字面
     // `\` 序列化为 `\\`,所以 wire body 里出现"两个连续反斜杠 + u/x" 才意味着
@@ -3602,6 +3862,24 @@ pub async fn generate_byop_output(
                         content,
                     ));
                 }
+                AIAgentInput::InvokeSkill {
+                    skill, user_query, ..
+                } => {
+                    // Without this the invocation reaches the model only in the request that
+                    // carries it: from the request after the skill's first tool call on, its
+                    // instructions and the user's query would be gone.
+                    persistence_order.push(format!(
+                        "{input_idx}:InvokeSkill(skill={},query_len={})",
+                        skill.name,
+                        user_query.as_ref().map(|uq| uq.query.len()).unwrap_or(0)
+                    ));
+                    persistence_messages.push(make_invoke_skill_message(
+                        persistence_task_id,
+                        &request_id,
+                        skill,
+                        user_query.as_ref().map(|uq| uq.query.as_str()),
+                    ));
+                }
                 _ => {}
             }
         }
@@ -3734,9 +4012,7 @@ pub async fn generate_byop_output(
                 if let Some(call) = inspector_call.take() {
                     call.fail(&mapped);
                 }
-                yield Err(Arc::new(AIApiError::Other(anyhow::anyhow!(
-                    "BYOP open stream failed: {mapped}"
-                ))));
+                yield Err(Arc::new(byop_api_error("open stream", mapped)));
                 return;
             }
         };
@@ -3794,6 +4070,9 @@ pub async fn generate_byop_output(
         // 依然保持 0。
         let mut captured_cache_read_tokens: i32 = 0;
         let mut captured_cache_create_tokens: i32 = 0;
+        // The stop reason of the closing event, to tell a generation that was cut off at the
+        // token limit from one the model finished.
+        let mut captured_stop_reason: Option<StopReason> = None;
 
         while let Some(item) = sdk_stream.next().await {
             let event = match item {
@@ -3805,12 +4084,16 @@ pub async fn generate_byop_output(
                     if let Some(call) = inspector_call.take() {
                         call.fail(&err_text);
                     }
-                    log::error!("[byop-diag] full_request_json_on_error={diag_body_json}");
+                    if byop_content_diag_enabled() {
+                        log::error!("[byop-diag] full_request_json_on_error={diag_body_json}");
+                    }
                     // 从错误消息里 parse "column N",dump diag_body_json 该位置 ±200 char 上下文 + 字节 hex。
+                    // 只在开了 ZAP_BYOP_DIAG 时 dump:上下文是请求原文。
                     if let Some(col) = err_text
                         .split("column ")
                         .nth(1)
                         .and_then(|s| s.chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse::<usize>().ok())
+                        .filter(|_| byop_content_diag_enabled())
                     {
                         let body = &diag_body_json;
                         let byte_len = body.len();
@@ -3826,9 +4109,7 @@ pub async fn generate_byop_output(
                             log::error!("[byop] error bytes[{hex_start}..{hex_end}] hex={slice:02x?}");
                         }
                     }
-                    yield Err(Arc::new(AIApiError::Other(anyhow::anyhow!(
-                        "BYOP stream error: {mapped}"
-                    ))));
+                    yield Err(Arc::new(byop_api_error("stream", mapped)));
                     return;
                 }
             };
@@ -4041,6 +4322,9 @@ pub async fn generate_byop_output(
                 }
                 ChatStreamEvent::End(end) => {
                     end_count += 1;
+                    if let Some(reason) = end.captured_stop_reason.as_ref() {
+                        captured_stop_reason = Some(reason.clone());
+                    }
                     if let (Some(call), Some(usage)) =
                         (&inspector_call, end.captured_usage.as_ref())
                     {
@@ -4211,6 +4495,18 @@ pub async fn generate_byop_output(
             );
         }
 
+        let cut_off = generation_cut_off(captured_stop_reason.as_ref(), end_count);
+        if let Some(cut_off) = cut_off {
+            log::warn!(
+                "[byop] generation cut off: {cut_off:?} stop_reason={} ends={end_count} \
+                 captured_tools={total_tools}",
+                captured_stop_reason
+                    .as_ref()
+                    .map(StopReason::raw)
+                    .unwrap_or("(none)"),
+            );
+        }
+
         // 流结束:把累积的 tool_calls 一次性发出。
         let mut final_messages: Vec<api::Message> = Vec::new();
         let mut ordered_tool_calls: Vec<ToolCall> = Vec::with_capacity(tool_bufs.len());
@@ -4270,6 +4566,35 @@ pub async fn generate_byop_output(
                     call.call_id,
                     args_repr,
                 );
+            }
+
+            // A call left unfinished by a generation that was cut off is answered as such, before
+            // any tool looks at its arguments: they are incomplete, not invalid.
+            if let Some(cut_off) = cut_off.filter(|_| tool_call_arguments_are_incomplete(&call)) {
+                let args_str = call.fn_arguments.as_str().unwrap_or("");
+                log::warn!(
+                    "[byop] tool_call cut off ({cut_off:?}) → emit truncated_output tool_result: \
+                     tool={} call_id={} args_bytes={}",
+                    call.fn_name,
+                    call.call_id,
+                    args_str.len(),
+                );
+                let error_content =
+                    truncated_output_result(cut_off, &call.fn_name, args_str).to_string();
+                final_messages.push(make_tool_call_carrier_message(
+                    &current_task_id,
+                    &request_id,
+                    &call.call_id,
+                    &call.fn_name,
+                    args_str,
+                ));
+                final_messages.push(make_tool_call_result_message(
+                    &current_task_id,
+                    &request_id,
+                    call.call_id.clone(),
+                    error_content,
+                ));
+                continue;
             }
 
             // Zap BYOP todowrite 拦截:不映射到 protobuf executor,合成
@@ -5023,6 +5348,32 @@ fn make_user_query_message(
     }
 }
 
+/// The task message that keeps a skill invocation in the conversation's history.
+fn make_invoke_skill_message(
+    task_id: &str,
+    request_id: &str,
+    skill: &ai::skills::ParsedSkill,
+    user_query: Option<&str>,
+) -> api::Message {
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_owned(),
+        server_message_data: String::new(),
+        citations: vec![],
+        message: Some(api::message::Message::InvokeSkill(
+            api::message::InvokeSkill {
+                skill: Some(skill.clone().into()),
+                user_query: user_query.map(|query| api::message::UserQuery {
+                    query: query.to_owned(),
+                    ..Default::default()
+                }),
+            },
+        )),
+        request_id: request_id.to_owned(),
+        timestamp: None,
+    }
+}
+
 /// BYOP 拦截 websearch 时,emit `Message::WebSearch(Searching{query})`,UI 据此渲染
 /// "Searching the web for \"query\"" loading 卡(`inline_action::web_search`)。
 fn make_web_search_searching_message(
@@ -5373,6 +5724,297 @@ fn make_finished_done(
                 request_cost: None,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod cli_subagent_tools_tests {
+    use super::*;
+    use crate::ai::agent::{MCPContext, MCPServer};
+
+    fn params_with_mcp_tool() -> RequestParams {
+        let schema = json!({ "type": "object", "properties": {} })
+            .as_object()
+            .unwrap()
+            .clone();
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.web_search_enabled = true;
+        params.mcp_context = Some(MCPContext {
+            #[allow(deprecated)]
+            resources: vec![],
+            #[allow(deprecated)]
+            tools: vec![],
+            servers: vec![MCPServer {
+                id: "id-a".to_owned(),
+                name: "server-a".to_owned(),
+                description: String::new(),
+                resources: vec![],
+                tools: vec![rmcp::model::Tool::new(
+                    "lookup",
+                    "Looks things up",
+                    Arc::new(schema),
+                )],
+            }],
+        });
+        params
+    }
+
+    fn offered_tools(params: &RequestParams) -> Vec<String> {
+        let names = available_tool_names(params);
+        let array: Vec<String> = build_tools_array(params)
+            .into_iter()
+            .map(|tool| AsRef::<str>::as_ref(&tool.name).to_owned())
+            .collect();
+        assert_eq!(
+            names, array,
+            "the prompt and the request must list the same tools"
+        );
+        names
+    }
+
+    #[test]
+    fn cli_subagent_turn_is_offered_only_the_cli_agent_tools() {
+        let mut params = params_with_mcp_tool();
+        params.lrc_command_id = Some("block-1".to_owned());
+        params.lrc_should_spawn_subagent = true;
+
+        let mut offered = offered_tools(&params);
+        offered.sort();
+        let mut expected: Vec<String> = CLI_SUBAGENT_TOOLS
+            .iter()
+            .map(|name| (*name).to_owned())
+            .collect();
+        expected.sort();
+        assert_eq!(offered, expected);
+    }
+
+    #[test]
+    fn every_cli_agent_tool_is_a_registered_tool() {
+        for name in CLI_SUBAGENT_TOOLS {
+            assert!(tools::lookup(name).is_some(), "{name} is not in the registry");
+        }
+    }
+
+    #[test]
+    fn turn_attached_to_a_running_command_keeps_its_tools() {
+        let mut params = params_with_mcp_tool();
+        params.lrc_command_id = Some("block-1".to_owned());
+
+        let offered = offered_tools(&params);
+        assert!(!offered.iter().any(|name| name == "run_shell_command"));
+        for name in [
+            "apply_file_diffs",
+            "ask_user_question",
+            tools::webfetch::TOOL_NAME,
+        ] {
+            assert!(offered.iter().any(|tool| tool == name), "{name}");
+        }
+        assert!(
+            offered.iter().any(|name| tools::mcp::is_mcp_function(name)),
+            "{offered:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod truncated_output_tests {
+    use super::*;
+
+    fn call(fn_arguments: Value) -> ToolCall {
+        ToolCall {
+            call_id: "call-1".to_owned(),
+            fn_name: "create_file".to_owned(),
+            fn_arguments,
+            thought_signatures: None,
+        }
+    }
+
+    #[test]
+    fn token_limit_and_dropped_stream_are_cut_offs() {
+        let max_tokens = StopReason::from("length".to_owned());
+        let anthropic_max_tokens = StopReason::from("max_tokens".to_owned());
+        let completed = StopReason::from("stop".to_owned());
+        let tool_use = StopReason::from("tool_calls".to_owned());
+
+        assert_eq!(
+            generation_cut_off(Some(&max_tokens), 1),
+            Some(GenerationCutOff::TokenLimit)
+        );
+        assert_eq!(
+            generation_cut_off(Some(&anthropic_max_tokens), 1),
+            Some(GenerationCutOff::TokenLimit)
+        );
+        assert_eq!(generation_cut_off(Some(&completed), 1), None);
+        assert_eq!(generation_cut_off(Some(&tool_use), 1), None);
+        // A provider that reports no stop reason but closes its stream properly.
+        assert_eq!(generation_cut_off(None, 1), None);
+        // No closing event at all: the connection was dropped.
+        assert_eq!(
+            generation_cut_off(None, 0),
+            Some(GenerationCutOff::StreamDropped)
+        );
+    }
+
+    #[test]
+    fn only_unfinished_raw_arguments_are_incomplete() {
+        assert!(tool_call_arguments_are_incomplete(&call(json!(
+            "{\"path\":\"a.rs\",\"content\":\"fn main() {"
+        ))));
+        assert!(tool_call_arguments_are_incomplete(&call(json!(""))));
+        // Complete arguments, parsed or still a string, are left to the tool to judge.
+        assert!(!tool_call_arguments_are_incomplete(&call(json!({"path": "a.rs"}))));
+        assert!(!tool_call_arguments_are_incomplete(&call(json!(
+            "{\"path\":\"a.rs\"}"
+        ))));
+        assert!(!tool_call_arguments_are_incomplete(&call(json!({}))));
+    }
+
+    #[test]
+    fn result_tells_a_token_limit_from_a_dropped_stream() {
+        let token_limit =
+            truncated_output_result(GenerationCutOff::TokenLimit, "create_file", "{\"path\":");
+        let dropped =
+            truncated_output_result(GenerationCutOff::StreamDropped, "create_file", "{\"path\":");
+
+        for result in [&token_limit, &dropped] {
+            assert_eq!(result["error"], "truncated_output");
+            assert_eq!(result["tool"], "create_file");
+            assert_eq!(result["received_args_bytes"], 8);
+            assert!(result["hint"].as_str().unwrap().contains("smaller payload"));
+            // The controller's auto-resume check looks for this exact text.
+            assert!(result
+                .to_string()
+                .contains(r#""error":"truncated_output""#));
+        }
+        assert_eq!(token_limit["reason"], "token_limit");
+        assert!(token_limit["detail"].as_str().unwrap().contains("token limit"));
+        assert_eq!(dropped["reason"], "stream_interrupted");
+        assert!(dropped["detail"]
+            .as_str()
+            .unwrap()
+            .contains("connection to the provider closed"));
+    }
+
+    #[test]
+    fn result_is_classified_like_an_invalid_arguments_result() {
+        let content =
+            truncated_output_result(GenerationCutOff::TokenLimit, "create_file", "{").to_string();
+        let result = make_tool_call_result_message("task-1", "req-1", "call-1".to_owned(), content);
+        assert!(matches!(
+            persisted_tool_result_kind(&result, None),
+            TerminalResultKind::StructuredError
+        ));
+
+        let unreadable = make_tool_call_result_message(
+            "task-1",
+            "req-1",
+            "call-1".to_owned(),
+            r#"{"error":"truncated_output","tool":"create_file""#.to_owned(),
+        );
+        assert!(matches!(
+            persisted_tool_result_kind(&unreadable, None),
+            TerminalResultKind::UnreadableLocalInterception
+        ));
+    }
+}
+
+#[cfg(test)]
+mod provider_error_tests {
+    use super::*;
+
+    fn http_error(status: http::StatusCode) -> genai::Error {
+        genai::Error::HttpError {
+            status,
+            canonical_reason: status.canonical_reason().unwrap_or_default().to_owned(),
+            body: "{\"error\":\"nope\"}".to_owned(),
+        }
+    }
+
+    /// The streamers hand over a rejected request as a stream error boxing the HTTP error.
+    fn streamed(err: genai::Error) -> genai::Error {
+        genai::Error::WebStream {
+            model_iden: ModelIden::new(AdapterKind::OpenAI, "test-model"),
+            cause: err.to_string(),
+            error: Box::new(err),
+        }
+    }
+
+    fn api_error(err: genai::Error) -> AIApiError {
+        byop_api_error("stream", map_genai_error(err))
+    }
+
+    #[test]
+    fn rejected_request_keeps_its_status_and_is_not_retried() {
+        for status in [
+            http::StatusCode::BAD_REQUEST,
+            http::StatusCode::UNAUTHORIZED,
+            http::StatusCode::NOT_FOUND,
+            http::StatusCode::UNPROCESSABLE_ENTITY,
+        ] {
+            for err in [http_error(status), streamed(http_error(status))] {
+                let mapped = api_error(err);
+                assert!(
+                    matches!(&mapped, AIApiError::ErrorStatus(got, body)
+                        if *got == status && body.contains("nope")),
+                    "{status}: {mapped:?}"
+                );
+                assert!(!mapped.is_retryable(), "{status} must not be retried");
+            }
+        }
+    }
+
+    #[test]
+    fn transient_statuses_are_retried() {
+        for status in [
+            http::StatusCode::REQUEST_TIMEOUT,
+            http::StatusCode::TOO_MANY_REQUESTS,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            http::StatusCode::BAD_GATEWAY,
+            http::StatusCode::SERVICE_UNAVAILABLE,
+        ] {
+            let mapped = api_error(streamed(http_error(status)));
+            assert!(
+                matches!(&mapped, AIApiError::ErrorStatus(got, _) if *got == status),
+                "{status}: {mapped:?}"
+            );
+            assert!(mapped.is_retryable(), "{status} must be retried");
+        }
+    }
+
+    #[test]
+    fn interrupted_stream_is_a_retryable_stream_error() {
+        let interrupted = genai::Error::WebStream {
+            model_iden: ModelIden::new(AdapterKind::OpenAI, "test-model"),
+            cause: "connection reset".to_owned(),
+            error: "connection reset".into(),
+        };
+        let mapped = api_error(interrupted);
+        assert!(
+            matches!(&mapped, AIApiError::Stream { stream_type: "BYOP", .. }),
+            "{mapped:?}"
+        );
+        assert!(mapped.is_retryable());
+    }
+
+    #[test]
+    fn requests_have_connect_and_read_idle_deadlines() {
+        let mut web_config = WebConfig::default();
+        assert_eq!(web_config.connect_timeout, None);
+        assert_eq!(web_config.read_timeout, None);
+
+        apply_byop_timeouts(&mut web_config);
+
+        assert_eq!(web_config.connect_timeout, Some(Duration::from_secs(20)));
+        assert_eq!(web_config.read_timeout, Some(Duration::from_secs(300)));
+        // The whole response has no deadline: a long generation must not be cut off.
+        assert_eq!(web_config.timeout, None);
+    }
+
+    #[test]
+    fn other_failures_stay_generic() {
+        let mapped = api_error(genai::Error::Internal("boom".to_owned()));
+        assert!(matches!(&mapped, AIApiError::Other(_)), "{mapped:?}");
+        assert!(mapped.to_string().contains("boom"));
     }
 }
 
@@ -6306,6 +6948,101 @@ mod serializer_readiness_tests {
             running_command: None,
             intended_agent: None,
         }
+    }
+
+    fn demo_skill(scope: ai::skills::SkillScope) -> ai::skills::ParsedSkill {
+        ai::skills::ParsedSkill {
+            path: std::path::PathBuf::from("/repo/.agents/skills/demo/SKILL.md"),
+            name: "demo".to_owned(),
+            description: "A demo skill.".to_owned(),
+            content: "Run scripts/check.sh and report.".to_owned(),
+            line_range: None,
+            provider: ai::skills::SkillProvider::Agents,
+            scope,
+        }
+    }
+
+    fn invoke_skill_input(skill: ai::skills::ParsedSkill, query: Option<&str>) -> AIAgentInput {
+        AIAgentInput::InvokeSkill {
+            context: Arc::<[AIAgentContext]>::from([]),
+            skill,
+            user_query: query.map(|query| crate::ai::agent::InvokeSkillUserQuery {
+                query: query.to_owned(),
+                referenced_attachments: HashMap::new(),
+            }),
+        }
+    }
+
+    fn user_texts(request: &ChatRequest) -> Vec<String> {
+        request
+            .messages
+            .iter()
+            .filter(|message| message.role == ChatRole::User)
+            .filter_map(|message| message.content.first_text().map(str::to_owned))
+            .collect()
+    }
+
+    #[test]
+    fn skill_invocation_is_replayed_from_history_with_the_live_text() {
+        let skill = demo_skill(ai::skills::SkillScope::Project);
+
+        // The request that carries the invocation.
+        let live = build_openai_request(&request_params(
+            vec![],
+            vec![invoke_skill_input(skill.clone(), Some("only the tests"))],
+        ))
+        .unwrap();
+        let live_texts = user_texts(&live);
+        let [live_text] = live_texts.as_slice() else {
+            panic!("expected one user message, got {live_texts:?}");
+        };
+        assert!(live_text.contains("skill \"demo\""));
+        assert!(live_text.contains("Run scripts/check.sh and report."));
+        assert!(live_text.contains("/repo/.agents/skills/demo/SKILL.md"));
+        assert!(live_text.ends_with("Further user instructions: only the tests"));
+
+        // A later request of the same run: the invocation is in the task's history now, and
+        // the input is something else.
+        let persisted =
+            make_invoke_skill_message("task-1", "req-1", &skill, Some("only the tests"));
+        let answer = make_agent_output_message("task-1", "req-1", "Done.".to_owned());
+        let later = build_openai_request(&request_params(
+            vec![persisted, answer],
+            vec![user_query_input("and the docs?")],
+        ))
+        .unwrap();
+        assert_eq!(
+            user_texts(&later),
+            [live_text.clone(), "and the docs?".to_owned()]
+        );
+    }
+
+    #[test]
+    fn skill_invocation_names_no_file_for_a_bundled_skill() {
+        let bundled = api::Skill::from(demo_skill(ai::skills::SkillScope::Bundled));
+        let text = render_skill_invocation(Some(&bundled), None);
+        assert!(text.contains("Run scripts/check.sh and report."));
+        assert!(!text.contains("SKILL.md"));
+        assert!(!text.contains("Further user instructions"));
+
+        let project = api::Skill::from(demo_skill(ai::skills::SkillScope::Project));
+        assert_eq!(
+            skill_file_path(&project),
+            Some("/repo/.agents/skills/demo/SKILL.md")
+        );
+        assert_eq!(skill_file_path(&bundled), None);
+    }
+
+    #[test]
+    fn persisted_skill_invocation_is_a_user_turn_for_readiness() {
+        let skill = demo_skill(ai::skills::SkillScope::Project);
+        let persisted = make_invoke_skill_message("task-1", "req-1", &skill, None);
+        let answer = make_agent_output_message("task-1", "req-1", "Done.".to_owned());
+        let params = request_params(vec![persisted, answer], vec![user_query_input("next")]);
+
+        let report = classify_byop_controller_readiness(&params);
+
+        assert!(matches!(report.state, ReadinessState::Ready));
     }
 
     fn cancelled_action_result_input(call_id: &str) -> AIAgentInput {

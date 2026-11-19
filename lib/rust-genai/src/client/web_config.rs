@@ -143,9 +143,8 @@ impl WebConfig {
 			builder = builder.proxy(proxy.clone());
 		}
 		// Performance optimizations
-		if self.gzip {
-			builder = builder.gzip(true);
-		}
+		// Set in both cases: left alone, reqwest negotiates gzip by itself.
+		builder = builder.gzip(self.gzip);
 		if self.tcp_nodelay {
 			builder = builder.tcp_nodelay(true);
 		}
@@ -163,6 +162,73 @@ impl WebConfig {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	/// Sends one request with a client built from `config` and returns the head of
+	/// the request as a local server received it, in lower case.
+	async fn request_head_sent_with(config: WebConfig) -> String {
+		use std::io::{Read, Write};
+
+		let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind a local port");
+		let address = listener.local_addr().expect("local address");
+		let server = std::thread::spawn(move || {
+			let (mut socket, _) = listener.accept().expect("accept the request");
+			// The request has no body: it ends with the empty line after its headers.
+			let mut request = Vec::new();
+			let mut buffer = [0; 1024];
+			while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+				match socket.read(&mut buffer) {
+					Ok(0) | Err(_) => break,
+					Ok(read) => request.extend_from_slice(&buffer[..read]),
+				}
+			}
+			socket
+				.write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n")
+				.expect("write the response");
+			String::from_utf8_lossy(&request).to_lowercase()
+		});
+
+		let client = config
+			.apply_to_builder(reqwest::Client::builder())
+			.build()
+			.expect("http client");
+		client
+			.get(format!("http://{address}/"))
+			.send()
+			.await
+			.expect("the request is answered");
+
+		server.join().expect("the server thread ends")
+	}
+
+	#[tokio::test]
+	async fn gzip_is_not_negotiated_by_default() {
+		let config = WebConfig {
+			no_proxy: true,
+			..WebConfig::default()
+		};
+		assert!(!config.gzip);
+
+		let head = request_head_sent_with(config).await;
+
+		assert!(!head.contains("accept-encoding"), "unexpected header in: {head}");
+	}
+
+	#[tokio::test]
+	async fn gzip_is_negotiated_when_enabled() {
+		let config = WebConfig {
+			no_proxy: true,
+			gzip: true,
+			..WebConfig::default()
+		};
+
+		let head = request_head_sent_with(config).await;
+
+		let accept_encoding = head
+			.lines()
+			.find(|line| line.starts_with("accept-encoding:"))
+			.expect("an accept-encoding header");
+		assert!(accept_encoding.contains("gzip"), "no gzip in: {accept_encoding}");
+	}
 
 	#[test]
 	fn set_proxy_settings_valid_http_url() {

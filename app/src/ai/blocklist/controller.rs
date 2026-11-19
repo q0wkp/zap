@@ -2008,10 +2008,10 @@ impl BlocklistAIController {
             }
             log::info!(
                 "[byop-diag] LRC running_command filled: {filled_count}/{total_inputs} \
-                 UserQuery slot(s); should_spawn={} grid_contents_len={} command={:?} is_alt_screen={}",
+                 UserQuery slot(s); should_spawn={} grid_contents_len={} command_len={} is_alt_screen={}",
                 request_params.lrc_should_spawn_subagent,
                 running_command.grid_contents.len(),
-                running_command.command,
+                running_command.command.len(),
                 running_command.is_alt_screen_active
             );
         } else {
@@ -3501,27 +3501,8 @@ impl BlocklistAIController {
                             .join(", "),
                         conversation_id,
                     );
-                    // Zap:LRC tag-in 首轮自动授权 agent 工具执行。
-                    //
-                    // 触发条件:发起本轮请求时 active_block 处于
-                    // InteractionMode::User { did_user_tag_in_agent: true }。不能用当前
-                    // active_block 的 monitored metadata 兜底,否则同一 CLI subagent 会话里的
-                    // 后续普通请求也会被自动确认,导致确认 UI 不显示。
-                    let auto_accept_for_lrc_tag_in =
-                        response_stream.as_ref(ctx).is_lrc_tag_in_request();
-                    if auto_accept_for_lrc_tag_in {
-                        log::info!(
-                            "[byop] LRC tag-in: queue with auto-accept ({} action(s))",
-                            actions_to_queue.len()
-                        );
-                    }
                     self.action_model.update(ctx, |action_model, ctx| {
-                        action_model.queue_actions_with_options(
-                            actions_to_queue,
-                            conversation_id,
-                            auto_accept_for_lrc_tag_in,
-                            ctx,
-                        );
+                        action_model.queue_actions(actions_to_queue, conversation_id, ctx);
                     });
                 } else {
                     // Zap BYOP:from_args 解析失败时,chat_stream 走 fallback emit
@@ -3537,7 +3518,8 @@ impl BlocklistAIController {
                     // 同标记反复命中导致死循环。
                     // Zap BYOP:没有进入 AIAgentAction 队列的 synthetic
                     // ToolCallResult 需要 auto-resume,否则 exchange 静默结束,模型卡死等结果。
-                    // 1. invalid_arguments — from_args 解析失败兜底(原始)。
+                    // 1. invalid_arguments — from_args 解析失败兜底(原始);truncated_output —
+                    //    生成被截断导致参数不完整,同样要让模型重发。
                     // 2. _byop_intercepted — todowrite / webfetch / websearch 等本地拦截
                     //    工具结果。这类工具不走 protobuf executor,直接合成 result,
                     //    没有 AIAgentAction 入队。
@@ -3555,13 +3537,16 @@ impl BlocklistAIController {
                                     .contains(r#""error":"invalid_arguments""#)
                                     || msg
                                         .server_message_data
+                                        .contains(r#""error":"truncated_output""#)
+                                    || msg
+                                        .server_message_data
                                         .contains(r#""_byop_intercepted":true"#))
                         })
                     });
                     if needs_byop_local_resume {
                         log::info!(
-                            "[byop] detected synthetic local tool_result (invalid_arguments \
-                             or _byop_intercepted) without queued action → schedule auto-resume. \
+                            "[byop] detected synthetic local tool_result (invalid_arguments, \
+                             truncated_output or _byop_intercepted) without queued action → schedule auto-resume. \
                              conversation_id={conversation_id:?}"
                         );
                         let network_status = NetworkStatus::handle(ctx);
