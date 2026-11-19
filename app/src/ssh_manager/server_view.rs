@@ -35,7 +35,7 @@ use warpui::{
 use warp_ssh_manager::{
     AuthType, ConnectionStatus, KeychainSecretStore, NodeKind, OneKeyCredentialKind, SecretKind,
     SshEndpointError, SshNode, SshOneKeyCredential, SshRepository, SshSecretStore,
-    SshSecretStoreError, SshServerInfo, ZmxSession, ZmxSessionsError,
+    SshSecretStoreError, SshServerInfo, UnknownHostKey, ZmxSession, ZmxSessionsError,
 };
 use zeroize::Zeroizing;
 
@@ -77,6 +77,10 @@ pub enum SshServerAction {
     ListZmxSessions,
     /// 选中列出的第 index 个 session,把名字写入 zmx session editor。
     SelectZmxSession(usize),
+    /// Trust the host key shown, and run again what stopped at it.
+    TrustHostKey,
+    /// Dismiss the host key shown without trusting it.
+    RejectHostKey,
 }
 
 /// 一次性显示在 Save 按钮上方/下方的状态标签。
@@ -95,6 +99,23 @@ enum ZmxSessionList {
     Loading,
     Loaded(Vec<ZmxSession>),
     Failed(String),
+}
+
+/// What stopped at an unknown host key, to run again once the user has confirmed the key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HostKeyRetry {
+    TestConnection,
+    ListZmxSessions,
+}
+
+/// A host key ssh has no record of, waiting for the user to compare its fingerprint.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PendingHostKey {
+    /// The server the key was offered by, as the form named it when the key was seen.
+    host: String,
+    port: u16,
+    key: UnknownHostKey,
+    retry: HostKeyRetry,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,6 +172,8 @@ pub struct SshServerView {
     onekey_manager_row_states: Vec<MouseStateHandle>,
     zmx_list_btn_state: MouseStateHandle,
     zmx_session_row_states: Vec<MouseStateHandle>,
+    host_key_trust_btn_state: MouseStateHandle,
+    host_key_reject_btn_state: MouseStateHandle,
 
     /// 分组下拉选择器。
     group_dropdown: ViewHandle<Dropdown<SshServerAction>>,
@@ -171,6 +194,8 @@ pub struct SshServerView {
     connection_status: ConnectionStatus,
     latency_ms: Option<u64>,
     is_testing: bool,
+    /// The unknown host key the last test or zmx listing stopped at, until the user answers.
+    pending_host_key: Option<PendingHostKey>,
     zmx_session_list: ZmxSessionList,
     scroll_state: ClippedScrollStateHandle,
 }
@@ -263,6 +288,8 @@ impl SshServerView {
             onekey_manager_row_states: Vec::new(),
             zmx_list_btn_state: MouseStateHandle::default(),
             zmx_session_row_states: Vec::new(),
+            host_key_trust_btn_state: MouseStateHandle::default(),
+            host_key_reject_btn_state: MouseStateHandle::default(),
             group_dropdown,
             onekey_credential_dropdown,
             onekey_credentials: Vec::new(),
@@ -277,6 +304,7 @@ impl SshServerView {
             connection_status: ConnectionStatus::Unknown,
             latency_ms: None,
             is_testing: false,
+            pending_host_key: None,
             zmx_session_list: ZmxSessionList::NotLoaded,
             scroll_state: ClippedScrollStateHandle::default(),
         };
@@ -944,23 +972,54 @@ impl SshServerView {
     }
 
     fn on_test_connection(&mut self, ctx: &mut ViewContext<Self>) {
+        self.start_connection_test(None, ctx);
+    }
+
+    /// Tests the connection the form describes. `confirmed` is the host key the user has just
+    /// chosen to trust for it, if the previous test stopped at one.
+    fn start_connection_test(
+        &mut self,
+        confirmed: Option<PendingHostKey>,
+        ctx: &mut ViewContext<Self>,
+    ) {
         let Some((server, password)) = self.form_server_and_password(ctx) else {
             return;
         };
+        let trusted_fingerprint = trusted_fingerprint_for(confirmed.as_ref(), &server);
 
         self.is_testing = true;
         self.status = None;
+        self.pending_host_key = None;
         ctx.notify();
 
         let node_id = self.node_id.clone();
+        let host = server.host.clone();
+        let port = server.port;
         ctx.spawn(
             async move {
-                let result =
-                    warp_ssh_manager::ssh_command::test_connection(&server, password).await;
+                let result = warp_ssh_manager::ssh_command::test_connection(
+                    &server,
+                    password,
+                    trusted_fingerprint.as_deref(),
+                )
+                .await;
                 (node_id, result)
             },
-            |me, (_node_id, result), ctx| {
+            move |me, (_node_id, result), ctx| {
                 me.is_testing = false;
+                if let Some(key) = result.unknown_host_key {
+                    // Nothing was sent to the server: ask before going any further.
+                    me.connection_status = ConnectionStatus::Unknown;
+                    me.latency_ms = None;
+                    me.pending_host_key = Some(PendingHostKey {
+                        host,
+                        port,
+                        key,
+                        retry: HostKeyRetry::TestConnection,
+                    });
+                    ctx.notify();
+                    return;
+                }
                 me.connection_status = result.status;
                 me.latency_ms = result.latency_ms;
                 match result.status {
@@ -999,20 +1058,41 @@ impl SshServerView {
 
     /// 用表单当前的连接信息连到服务器,列出它上面的 zmx session。
     fn on_list_zmx_sessions(&mut self, ctx: &mut ViewContext<Self>) {
+        self.start_zmx_session_list(None, ctx);
+    }
+
+    /// Lists the zmx sessions of the server the form describes. `confirmed` is the host key the
+    /// user has just chosen to trust for it, if the previous listing stopped at one.
+    fn start_zmx_session_list(
+        &mut self,
+        confirmed: Option<PendingHostKey>,
+        ctx: &mut ViewContext<Self>,
+    ) {
         if matches!(self.zmx_session_list, ZmxSessionList::Loading) {
             return;
         }
         let Some((server, password)) = self.form_server_and_password(ctx) else {
             return;
         };
+        let trusted_fingerprint = trusted_fingerprint_for(confirmed.as_ref(), &server);
 
         self.zmx_session_list = ZmxSessionList::Loading;
         self.status = None;
+        self.pending_host_key = None;
         ctx.notify();
 
+        let host = server.host.clone();
+        let port = server.port;
         ctx.spawn(
-            async move { warp_ssh_manager::list_zmx_sessions(&server, password).await },
-            |me, result, ctx| {
+            async move {
+                warp_ssh_manager::list_zmx_sessions(
+                    &server,
+                    password,
+                    trusted_fingerprint.as_deref(),
+                )
+                .await
+            },
+            move |me, result, ctx| {
                 me.zmx_session_list = match result {
                     Ok(sessions) => {
                         me.zmx_session_row_states = sessions
@@ -1024,11 +1104,38 @@ impl SshServerView {
                     Err(ZmxSessionsError::NotInstalled) => ZmxSessionList::Failed(crate::t!(
                         "workspace-left-panel-ssh-manager-zmx-not-installed"
                     )),
+                    Err(ZmxSessionsError::UnknownHostKey(key)) => {
+                        // Nothing was sent to the server: ask before going any further.
+                        me.pending_host_key = Some(PendingHostKey {
+                            host,
+                            port,
+                            key,
+                            retry: HostKeyRetry::ListZmxSessions,
+                        });
+                        ZmxSessionList::NotLoaded
+                    }
                     Err(ZmxSessionsError::Failed(message)) => ZmxSessionList::Failed(message),
                 };
                 ctx.notify();
             },
         );
+    }
+
+    /// The user compared the fingerprint and trusts the key: run again what stopped at it.
+    fn on_trust_host_key(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some(pending) = self.pending_host_key.take() else {
+            return;
+        };
+        let retry = pending.retry;
+        match retry {
+            HostKeyRetry::TestConnection => self.start_connection_test(Some(pending), ctx),
+            HostKeyRetry::ListZmxSessions => self.start_zmx_session_list(Some(pending), ctx),
+        }
+    }
+
+    fn on_reject_host_key(&mut self, ctx: &mut ViewContext<Self>) {
+        self.pending_host_key = None;
+        ctx.notify();
     }
 
     fn on_select_zmx_session(&mut self, index: usize, ctx: &mut ViewContext<Self>) {
@@ -1839,6 +1946,89 @@ impl SshServerView {
         )
     }
 
+    /// The question asked when ssh has no record of the server's host key: the fingerprint to
+    /// compare with the server's, and the choice to trust it or not.
+    fn render_host_key_prompt(
+        &self,
+        pending: &PendingHostKey,
+        appearance: &Appearance,
+    ) -> Box<dyn Element> {
+        let theme = appearance.theme();
+        let text_color = theme.main_text_color(theme.background());
+        let host = if pending.port == 22 {
+            pending.host.clone()
+        } else {
+            format!("{}:{}", pending.host, pending.port)
+        };
+        let question = Text::new(
+            crate::t!(
+                "workspace-left-panel-ssh-manager-host-key-unknown",
+                host = host,
+                algorithm = pending.key.key_type.clone()
+            ),
+            appearance.ui_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(text_color.into())
+        .finish();
+        let fingerprint = Text::new(
+            pending.key.fingerprint.clone(),
+            appearance.monospace_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(text_color.into())
+        .finish();
+        let advice = Text::new(
+            crate::t!("workspace-left-panel-ssh-manager-host-key-advice"),
+            appearance.ui_font_family(),
+            appearance.ui_font_size(),
+        )
+        .with_color(theme.sub_text_color(theme.background()).into())
+        .finish();
+
+        let trust_button = appearance
+            .ui_builder()
+            .button(ButtonVariant::Accent, self.host_key_trust_btn_state.clone())
+            .with_text_label(crate::t!("workspace-left-panel-ssh-manager-host-key-trust"))
+            .build()
+            .on_click(move |ctx, _, _| ctx.dispatch_typed_action(SshServerAction::TrustHostKey))
+            .finish();
+        let reject_button = appearance
+            .ui_builder()
+            .button(
+                ButtonVariant::Secondary,
+                self.host_key_reject_btn_state.clone(),
+            )
+            .with_text_label(crate::t!("common-cancel"))
+            .build()
+            .on_click(move |ctx, _, _| ctx.dispatch_typed_action(SshServerAction::RejectHostKey))
+            .finish();
+        let buttons = Flex::row()
+            .with_cross_axis_alignment(CrossAxisAlignment::Center)
+            .with_spacing(8.0)
+            .with_child(trust_button)
+            .with_child(reject_button)
+            .with_main_axis_size(MainAxisSize::Min)
+            .finish();
+
+        Container::new(
+            Flex::column()
+                .with_cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_spacing(8.0)
+                .with_child(question)
+                .with_child(fingerprint)
+                .with_child(advice)
+                .with_child(buttons)
+                .finish(),
+        )
+        .with_uniform_padding(12.0)
+        .with_margin_top(8.0)
+        .with_margin_bottom(8.0)
+        .with_border(Border::all(1.0).with_border_fill(theme.outline()))
+        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.0)))
+        .finish()
+    }
+
     /// 分组下拉字段:label + dropdown。
     fn render_group_field(&self, appearance: &Appearance) -> Box<dyn Element> {
         let label = self.render_label(
@@ -2243,6 +2433,17 @@ fn make_editor(
     })
 }
 
+/// The fingerprint to let ssh accept for `server`: that of the host key the user confirmed, as
+/// long as the form still names the server the key was offered by.
+fn trusted_fingerprint_for(
+    confirmed: Option<&PendingHostKey>,
+    server: &SshServerInfo,
+) -> Option<String> {
+    confirmed
+        .filter(|pending| pending.host == server.host && pending.port == server.port)
+        .map(|pending| pending.key.fingerprint.clone())
+}
+
 /// Validates the endpoint typed into the form. A OneKey server takes its user name from the
 /// credential, so the form's hidden user field isn't checked.
 fn validate_form_endpoint(
@@ -2426,6 +2627,8 @@ impl TypedActionView for SshServerView {
             }
             SshServerAction::ListZmxSessions => self.on_list_zmx_sessions(ctx),
             SshServerAction::SelectZmxSession(index) => self.on_select_zmx_session(*index, ctx),
+            SshServerAction::TrustHostKey => self.on_trust_host_key(ctx),
+            SshServerAction::RejectHostKey => self.on_reject_host_key(ctx),
             SshServerAction::SelectGroup(index) => {
                 let new_group_id =
                     index.and_then(|i| self.folders.get(i).map(|(id, _)| id.clone()));
@@ -2534,6 +2737,9 @@ impl View for SshServerView {
 
         if let Some(banner) = self.render_status_banner(appearance) {
             col.add_child(banner);
+        }
+        if let Some(pending) = self.pending_host_key.as_ref() {
+            col.add_child(self.render_host_key_prompt(pending, appearance));
         }
 
         col.add_child(self.render_text_field(

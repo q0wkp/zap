@@ -97,7 +97,7 @@ fn test_connection_requires_password_for_password_auth() {
     let s = server();
     // test_connection 应该在没有密码时返回 Offline + 错误信息
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(test_connection(&s, None));
+    let result = rt.block_on(test_connection(&s, None, None));
     assert_eq!(result.status, ConnectionStatus::Offline);
     assert!(result
         .error_message
@@ -110,7 +110,7 @@ fn test_connection_requires_password_for_onekey_auth() {
     let mut s = server();
     s.auth_type = AuthType::OneKey;
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(test_connection(&s, None));
+    let result = rt.block_on(test_connection(&s, None, None));
     assert_eq!(result.status, ConnectionStatus::Offline);
     assert!(result
         .error_message
@@ -166,31 +166,44 @@ fn connection_status_equality() {
 /// Runs the askpass helper the way ssh does, with the prompt as its only argument, and returns
 /// what it printed, or `None` if it gave no answer.
 fn askpass_answer(prompt: &str, secret: Option<(AskpassSecretKind, &str)>) -> Option<String> {
+    let output = run_askpass(prompt, secret, None);
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8(output.stdout).unwrap())
+}
+
+/// Runs the askpass helper with the environment `run_ssh` gives ssh.
+fn run_askpass(
+    prompt: &str,
+    secret: Option<(AskpassSecretKind, &str)>,
+    trusted_fingerprint: Option<&str>,
+) -> std::process::Output {
     let helper = AskpassHelper::create().unwrap();
     let mut command = command::blocking::Command::new(helper.path());
     command
         .arg(prompt)
         .env_remove(ASKPASS_SECRET_ENV)
-        .env_remove(ASKPASS_SECRET_KIND_ENV);
+        .env_remove(ASKPASS_SECRET_KIND_ENV)
+        .env_remove(ASKPASS_HOST_KEY_ENV);
     if let Some((kind, secret)) = secret {
         command
             .env(ASKPASS_SECRET_ENV, secret)
             .env(ASKPASS_SECRET_KIND_ENV, kind.as_env_value());
     }
+    if let Some(fingerprint) = trusted_fingerprint {
+        command.env(ASKPASS_HOST_KEY_ENV, fingerprint);
+    }
     // Another test thread forking at the wrong moment briefly holds the script open for
     // writing, which makes running it fail as "text file busy".
-    let output = loop {
+    loop {
         match command.output() {
             Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy => {
                 std::thread::sleep(Duration::from_millis(10));
             }
             other => break other.unwrap(),
         }
-    };
-    output
-        .status
-        .success()
-        .then(|| String::from_utf8(output.stdout).unwrap())
+    }
 }
 
 #[test]
@@ -530,10 +543,128 @@ fn test_connection_refuses_an_option_like_host_without_running_ssh() {
     let mut s = server();
     s.host = "-oProxyCommand=id".into();
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(test_connection(&s, Some(Zeroizing::new("pw".into()))));
+    let result = rt.block_on(test_connection(&s, Some(Zeroizing::new("pw".into())), None));
     assert_eq!(result.status, ConnectionStatus::Offline);
     assert_eq!(
         result.error_message.as_deref(),
         Some("Host cannot start with '-' or contain spaces or control characters")
+    );
+}
+
+// -------- host keys --------
+
+/// The question ssh asks about a host key it has no record of (OpenSSH 9.6).
+const HOST_KEY_QUESTION: &str = "The authenticity of host 'example.com (203.0.113.7)' can't be \
+    established.\nED25519 key fingerprint is SHA256:jq1oZMhXkPYmtQ5uuWcWN8rAyW0mLAU8Yp0J0y6t9cE.\n\
+    This key is not known by any other names.\n\
+    Are you sure you want to continue connecting (yes/no/[fingerprint])? ";
+const HOST_KEY_FINGERPRINT: &str = "SHA256:jq1oZMhXkPYmtQ5uuWcWN8rAyW0mLAU8Yp0J0y6t9cE";
+
+#[test]
+fn test_args_do_not_turn_host_key_checking_off() {
+    let s = server();
+    for args in [
+        build_password_auth_cmd_args(&s, "echo ok"),
+        build_key_auth_cmd_args(&s, "echo ok"),
+    ] {
+        assert!(
+            !args.iter().any(|arg| arg.contains("StrictHostKeyChecking")),
+            "{args:?}"
+        );
+        // In batch mode ssh refuses an unknown key without asking, and the key could never
+        // be shown to the user.
+        assert!(args.contains(&"BatchMode=no".to_string()), "{args:?}");
+    }
+}
+
+/// Without a fingerprint the user confirmed, the helper refuses the key, hands ssh's question
+/// back on standard error, and gives away no secret.
+#[test]
+fn askpass_refuses_an_unknown_host_key_and_reports_it() {
+    let output = run_askpass(
+        HOST_KEY_QUESTION,
+        Some((AskpassSecretKind::Password, "s3cret-pass")),
+        None,
+    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "no\n");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(
+        parse_unknown_host_key(&stderr),
+        Some(UnknownHostKey {
+            key_type: "ED25519".into(),
+            fingerprint: HOST_KEY_FINGERPRINT.into(),
+        })
+    );
+    assert!(!stderr.contains("s3cret-pass"));
+}
+
+/// ssh compares a fingerprint given as the answer with the key the server offered, so this
+/// accepts the confirmed key and no other.
+#[test]
+fn askpass_answers_the_host_key_question_with_the_confirmed_fingerprint() {
+    let output = run_askpass(HOST_KEY_QUESTION, None, Some(HOST_KEY_FINGERPRINT));
+    assert_eq!(
+        String::from_utf8(output.stdout).unwrap(),
+        format!("{HOST_KEY_FINGERPRINT}\n")
+    );
+    assert_eq!(
+        parse_unknown_host_key(&String::from_utf8_lossy(&output.stderr)),
+        None
+    );
+}
+
+/// When the fingerprint is not the key's, ssh asks again; repeating it would never end.
+#[test]
+fn askpass_gives_up_when_ssh_does_not_accept_the_fingerprint() {
+    let output = run_askpass(
+        "Please type 'yes', 'no' or the fingerprint: ",
+        None,
+        Some(HOST_KEY_FINGERPRINT),
+    );
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "no\n");
+}
+
+#[test]
+fn unknown_host_key_is_read_only_from_the_reported_question() {
+    // What a server prints, or ssh's own messages, is not taken for the question.
+    assert_eq!(
+        parse_unknown_host_key("ED25519 key fingerprint is SHA256:abc.\nPermission denied."),
+        None
+    );
+    assert_eq!(parse_unknown_host_key(""), None);
+
+    let stderr = format!(
+        "{HOST_KEY_PROMPT_BEGIN}\n{HOST_KEY_QUESTION}\n{HOST_KEY_PROMPT_END}\n\
+         Host key verification failed.\n"
+    );
+    assert_eq!(
+        parse_unknown_host_key(&stderr).map(|key| key.fingerprint),
+        Some(HOST_KEY_FINGERPRINT.to_string())
+    );
+}
+
+#[test]
+fn only_a_fingerprint_is_accepted_as_a_trusted_host_key() {
+    assert!(is_host_key_fingerprint(HOST_KEY_FINGERPRINT));
+    assert!(is_host_key_fingerprint(
+        "MD5:16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48"
+    ));
+    // `yes` would make ssh accept whatever key the server offers.
+    for value in ["yes", "", "SHA256:", "SHA256:abc def", "SHA256:abc\nyes"] {
+        assert!(!is_host_key_fingerprint(value), "{value:?}");
+    }
+
+    let s = server();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let result = rt.block_on(run_remote_command(
+        &s,
+        Some(Zeroizing::new("pw".into())),
+        Some("yes"),
+        "echo ok",
+        TEST_TIMEOUT,
+    ));
+    assert_eq!(
+        result.unwrap_err(),
+        SshRunError::Failed("Invalid host key fingerprint".into())
     );
 }

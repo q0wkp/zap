@@ -501,3 +501,60 @@ fn form_endpoint_ignores_the_hidden_user_field_of_a_onekey_server() {
         Ok(22)
     );
 }
+
+fn pending_host_key(host: &str, port: u16) -> PendingHostKey {
+    PendingHostKey {
+        host: host.to_string(),
+        port,
+        key: UnknownHostKey {
+            key_type: "ED25519".to_string(),
+            fingerprint: "SHA256:jq1oZMhXkPYmtQ5uuWcWN8rAyW0mLAU8Yp0J0y6t9cE".to_string(),
+        },
+        retry: HostKeyRetry::TestConnection,
+    }
+}
+
+#[test]
+fn confirmed_host_key_is_trusted_for_the_server_it_was_offered_by() {
+    let mut server = SshServerInfo::new_default("n".to_string());
+    server.host = "example.com".to_string();
+    let pending = pending_host_key("example.com", 22);
+    assert_eq!(
+        trusted_fingerprint_for(Some(&pending), &server),
+        Some(pending.key.fingerprint.clone())
+    );
+    assert_eq!(trusted_fingerprint_for(None, &server), None);
+}
+
+/// The form may have been edited while the question was on screen: a key confirmed for one
+/// server is never passed on as trusted for another.
+#[test]
+fn confirmed_host_key_is_not_trusted_for_another_server() {
+    let mut server = SshServerInfo::new_default("n".to_string());
+    server.host = "other.example.com".to_string();
+    let pending = pending_host_key("example.com", 22);
+    assert_eq!(trusted_fingerprint_for(Some(&pending), &server), None);
+
+    server.host = "example.com".to_string();
+    server.port = 2222;
+    assert_eq!(trusted_fingerprint_for(Some(&pending), &server), None);
+}
+
+#[test]
+fn unknown_host_key_question_renders_and_goes_away_when_rejected() {
+    App::test((), |mut app| async move {
+        let (window_id, view) = open_server_view(&mut app);
+
+        view.update(&mut app, |view, ctx| {
+            view.pending_host_key = Some(pending_host_key("example.com", 2222));
+            ctx.notify();
+        });
+        build_scene(&mut app, window_id);
+
+        view.update(&mut app, |view, ctx| {
+            view.handle_action(&SshServerAction::RejectHostKey, ctx);
+            assert_eq!(view.pending_host_key, None);
+        });
+        build_scene(&mut app, window_id);
+    });
+}

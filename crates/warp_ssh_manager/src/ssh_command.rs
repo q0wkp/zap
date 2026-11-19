@@ -12,6 +12,14 @@
 //! process) and `SSH_ASKPASS_REQUIRE=force`, and the secret travels in an environment variable
 //! of that one ssh process, which only the same user can read. It is never part of an argument
 //! list (visible to every user through `ps` and `/proc/<pid>/cmdline`) nor written to a file.
+//!
+//! ## Host keys
+//!
+//! These ssh processes check the server's host key the way an interactive `ssh` does. When ssh
+//! has no record of the key it asks whether to continue; the askpass helper refuses and passes
+//! the question back, and the caller gets an [`UnknownHostKey`] to show the user before
+//! anything is sent to the server. Once the user confirms the fingerprint, the caller runs the
+//! command again with it; ssh then accepts exactly that key and records it in `known_hosts`.
 
 use crate::types::{AuthType, ConnectionStatus, SshServerInfo};
 use std::borrow::Cow;
@@ -121,15 +129,39 @@ pub fn build_ssh_command_line(server: &SshServerInfo) -> String {
 
 const TEST_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// A host key ssh has no record of, as ssh describes it when asking whether to trust it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UnknownHostKey {
+    /// The key's type as ssh names it, such as `ED25519`.
+    pub key_type: String,
+    /// The key's fingerprint, such as `SHA256:...`.
+    pub fingerprint: String,
+}
+
+/// Why a remote command did not run.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum SshRunError {
+    /// ssh has no record of the server's host key. Nothing was sent to the server.
+    UnknownHostKey(UnknownHostKey),
+    /// A message that can be shown as it is.
+    Failed(String),
+}
+
 pub struct ConnectionTestResult {
     pub status: ConnectionStatus,
     pub latency_ms: Option<u64>,
     pub error_message: Option<String>,
+    /// Set, with `status` left `Unknown`, when the test stopped at a host key ssh has no record
+    /// of: show it to the user and test again with its fingerprint once they confirm it.
+    pub unknown_host_key: Option<UnknownHostKey>,
 }
 
+/// Tests whether `server` can be signed in to. `trusted_fingerprint` is the fingerprint of a
+/// host key the user has just confirmed, from an earlier result's `unknown_host_key`.
 pub async fn test_connection(
     server: &SshServerInfo,
     password: Option<Zeroizing<String>>,
+    trusted_fingerprint: Option<&str>,
 ) -> ConnectionTestResult {
     let start = instant::Instant::now();
 
@@ -138,12 +170,29 @@ pub async fn test_connection(
             status: ConnectionStatus::Offline,
             latency_ms: None,
             error_message: Some(e.to_string()),
+            unknown_host_key: None,
         };
     }
 
-    let result = match run_remote_command(server, password, "echo ok", TEST_TIMEOUT).await {
+    let result = match run_remote_command(
+        server,
+        password,
+        trusted_fingerprint,
+        "echo ok",
+        TEST_TIMEOUT,
+    )
+    .await
+    {
         Ok(output) => finalize_test_result(&output, server.auth_type),
-        Err(e) => Err(e),
+        Err(SshRunError::UnknownHostKey(key)) => {
+            return ConnectionTestResult {
+                status: ConnectionStatus::Unknown,
+                latency_ms: None,
+                error_message: None,
+                unknown_host_key: Some(key),
+            };
+        }
+        Err(SshRunError::Failed(e)) => Err(e),
     };
 
     let latency = start.elapsed().as_millis() as u64;
@@ -153,11 +202,13 @@ pub async fn test_connection(
             status: ConnectionStatus::Online,
             latency_ms: Some(latency),
             error_message: None,
+            unknown_host_key: None,
         },
         Err(e) => ConnectionTestResult {
             status: ConnectionStatus::Offline,
             latency_ms: Some(latency),
             error_message: Some(e),
+            unknown_host_key: None,
         },
     }
 }
@@ -177,6 +228,11 @@ fn finalize_test_result(output: &std::process::Output, auth_type: AuthType) -> R
     // 会让 banner / motd 末尾碰巧以 "ok" 结尾时误判为成功,这里去掉。
     if output.status.success() && stdout.trim() == "ok" {
         Ok(())
+    } else if stderr_trimmed.contains("Host key verification failed") {
+        // The key differs from the one in `known_hosts`, or from the fingerprint the user
+        // confirmed. ssh's own explanation, when it gives one, comes before this line.
+        let snippet: String = stderr_trimmed.chars().take(400).collect();
+        Err(format!("Host key verification failed ({snippet})"))
     } else if stderr_trimmed.contains("Permission denied")
         || stderr_trimmed.contains("Authentication failed")
     {
@@ -229,6 +285,11 @@ impl AskpassSecretKind {
 /// The environment variables the askpass helper reads.
 const ASKPASS_SECRET_ENV: &str = "ZAP_SSH_ASKPASS_SECRET";
 const ASKPASS_SECRET_KIND_ENV: &str = "ZAP_SSH_ASKPASS_SECRET_KIND";
+const ASKPASS_HOST_KEY_ENV: &str = "ZAP_SSH_ASKPASS_HOST_KEY";
+
+/// The lines the askpass helper puts around ssh's host key question on standard error.
+const HOST_KEY_PROMPT_BEGIN: &str = "ZAP_SSH_HOST_KEY_PROMPT_BEGIN";
+const HOST_KEY_PROMPT_END: &str = "ZAP_SSH_HOST_KEY_PROMPT_END";
 
 const ASKPASS_SCRIPT: &str = include_str!("askpass.sh");
 
@@ -265,15 +326,57 @@ impl AskpassHelper {
     }
 }
 
+/// Whether `value` has the form of a host key fingerprint as ssh prints it. Anything else must
+/// never be given to ssh as the answer to its host key question, where `yes` accepts any key.
+fn is_host_key_fingerprint(value: &str) -> bool {
+    ["SHA256:", "MD5:"].iter().any(|prefix| {
+        value.strip_prefix(prefix).is_some_and(|digest| {
+            !digest.is_empty() && digest.chars().all(|c| c.is_ascii_graphic())
+        })
+    })
+}
+
+/// Finds the host key question the askpass helper handed back in ssh's standard error:
+///
+/// ```text
+/// ZAP_SSH_HOST_KEY_PROMPT_BEGIN
+/// The authenticity of host 'example.com (203.0.113.7)' can't be established.
+/// ED25519 key fingerprint is SHA256:....
+/// This key is not known by any other names.
+/// Are you sure you want to continue connecting (yes/no/[fingerprint])?
+/// ZAP_SSH_HOST_KEY_PROMPT_END
+/// ```
+fn parse_unknown_host_key(stderr: &str) -> Option<UnknownHostKey> {
+    stderr
+        .lines()
+        .skip_while(|line| line.trim() != HOST_KEY_PROMPT_BEGIN)
+        .skip(1)
+        .take_while(|line| line.trim() != HOST_KEY_PROMPT_END)
+        .find_map(|line| {
+            let (key_type, fingerprint) = line.trim().split_once(" key fingerprint is ")?;
+            let fingerprint = fingerprint.trim_end_matches('.');
+            is_host_key_fingerprint(fingerprint).then(|| UnknownHostKey {
+                key_type: key_type.to_string(),
+                fingerprint: fingerprint.to_string(),
+            })
+        })
+}
+
 /// Runs `ssh` with `cmd_args` and returns its output. `secret` is what the askpass helper
 /// answers the matching prompt with; without one, a prompt gets no answer and ssh gives up.
+/// `trusted_fingerprint` is the host key the user confirmed, the only one ssh may accept if it
+/// has no record of the server's key.
 async fn run_ssh(
     cmd_args: &[String],
     secret: Option<(AskpassSecretKind, &Zeroizing<String>)>,
+    trusted_fingerprint: Option<&str>,
     timeout: Duration,
-) -> Result<std::process::Output, String> {
+) -> Result<std::process::Output, SshRunError> {
+    if trusted_fingerprint.is_some_and(|fingerprint| !is_host_key_fingerprint(fingerprint)) {
+        return Err(SshRunError::Failed("Invalid host key fingerprint".into()));
+    }
     let askpass = AskpassHelper::create()
-        .map_err(|e| format!("Failed to prepare the askpass helper: {e}"))?;
+        .map_err(|e| SshRunError::Failed(format!("Failed to prepare the askpass helper: {e}")))?;
 
     // A session of its own leaves ssh without a controlling terminal, so it can never prompt
     // on the terminal Zap was started from.
@@ -284,6 +387,7 @@ async fn run_ssh(
         .env("SSH_ASKPASS_REQUIRE", "force")
         .env_remove(ASKPASS_SECRET_ENV)
         .env_remove(ASKPASS_SECRET_KIND_ENV)
+        .env_remove(ASKPASS_HOST_KEY_ENV)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -293,18 +397,30 @@ async fn run_ssh(
             .env(ASKPASS_SECRET_ENV, secret.as_str())
             .env(ASKPASS_SECRET_KIND_ENV, kind.as_env_value());
     }
+    if let Some(fingerprint) = trusted_fingerprint {
+        command.env(ASKPASS_HOST_KEY_ENV, fingerprint);
+    }
     let child = command
         .spawn()
-        .map_err(|e| format!("Failed to start ssh: {e}"))?;
+        .map_err(|e| SshRunError::Failed(format!("Failed to start ssh: {e}")))?;
 
     let result = match tokio::time::timeout(timeout, child.output()).await {
         Ok(Ok(out)) => Ok(out),
-        Ok(Err(e)) => Err(format!("Failed to read ssh output: {e}")),
-        Err(_) => Err("Connection timeout".into()),
+        Ok(Err(e)) => Err(SshRunError::Failed(format!(
+            "Failed to read ssh output: {e}"
+        ))),
+        Err(_) => Err(SshRunError::Failed("Connection timeout".into())),
     };
     // ssh has exited (or was killed with the timed-out future), so the helper can go.
     drop(askpass);
-    result
+
+    let output = result?;
+    if !output.status.success() {
+        if let Some(key) = parse_unknown_host_key(&String::from_utf8_lossy(&output.stderr)) {
+            return Err(SshRunError::UnknownHostKey(key));
+        }
+    }
+    Ok(output)
 }
 
 /// 拼出 password 认证测试时给 ssh 子进程的完整 argv。
@@ -323,8 +439,9 @@ async fn run_ssh(
 ///   prompt 次数,kbd-int 仍可走;两个开关都设才是 defense in depth。
 /// - `NumberOfPasswordPrompts=1`:password 子方法只允许 1 次重试。
 /// - `ConnectTimeout=5`:单次 TCP 连接超时。
-/// - `StrictHostKeyChecking=no`:不拦 known_hosts(测试场景下避免 host key
-///   变化导致误报,真实终端连接走别的路径)。
+/// - `StrictHostKeyChecking` is left to the user's ssh configuration (by default ssh asks
+///   about a key it has no record of, see the module documentation); it was `no` here once,
+///   which sent the password to whatever server answered.
 /// - `LogLevel=ERROR`:抑制 host key 提示 / banner 等噪音。
 ///
 /// 连接测试以 `echo ok` 作为远端命令,严格匹配 stdout 判定成功(避免 banner /
@@ -349,8 +466,6 @@ fn build_password_auth_cmd_args(server: &SshServerInfo, remote_command: &str) ->
         "NumberOfPasswordPrompts=1".into(),
         "-o".into(),
         "ConnectTimeout=5".into(),
-        "-o".into(),
-        "StrictHostKeyChecking=no".into(),
         "-o".into(),
         "LogLevel=ERROR".into(),
     ]);
@@ -380,8 +495,6 @@ fn build_key_auth_cmd_args(server: &SshServerInfo, remote_command: &str) -> Vec<
         "-o".into(),
         "ConnectTimeout=5".into(),
         "-o".into(),
-        "StrictHostKeyChecking=no".into(),
-        "-o".into(),
         "LogLevel=ERROR".into(),
     ]);
     args.push(target);
@@ -391,15 +504,17 @@ fn build_key_auth_cmd_args(server: &SshServerInfo, remote_command: &str) -> Vec<
 
 /// Runs a remote command on the server and returns the output of the ssh process. With key
 /// authentication `password` is the key's passphrase, if it has one; otherwise it is the
-/// account's password.
+/// account's password. `trusted_fingerprint` is the fingerprint of a host key the user has just
+/// confirmed, from an earlier [`SshRunError::UnknownHostKey`].
 pub(crate) async fn run_remote_command(
     server: &SshServerInfo,
     password: Option<Zeroizing<String>>,
+    trusted_fingerprint: Option<&str>,
     remote_command: &str,
     timeout: Duration,
-) -> Result<std::process::Output, String> {
+) -> Result<std::process::Output, SshRunError> {
     validate_ssh_endpoint(&server.host, &server.username, server.port)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| SshRunError::Failed(e.to_string()))?;
     match server.auth_type {
         AuthType::Key => {
             let cmd_args = build_key_auth_cmd_args(server, remote_command);
@@ -408,14 +523,16 @@ pub(crate) async fn run_remote_command(
                 .as_ref()
                 .filter(|passphrase| !passphrase.is_empty())
                 .map(|passphrase| (AskpassSecretKind::Passphrase, passphrase));
-            run_ssh(&cmd_args, passphrase, timeout).await
+            run_ssh(&cmd_args, passphrase, trusted_fingerprint, timeout).await
         }
         AuthType::Password | AuthType::OneKey => {
-            let password = password.ok_or("Password not provided")?;
+            let password =
+                password.ok_or_else(|| SshRunError::Failed("Password not provided".into()))?;
             let cmd_args = build_password_auth_cmd_args(server, remote_command);
             run_ssh(
                 &cmd_args,
                 Some((AskpassSecretKind::Password, &password)),
+                trusted_fingerprint,
                 timeout,
             )
             .await

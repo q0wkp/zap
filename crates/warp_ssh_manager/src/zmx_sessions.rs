@@ -10,7 +10,7 @@ use std::time::Duration;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-use crate::ssh_command::run_remote_command;
+use crate::ssh_command::{SshRunError, UnknownHostKey, run_remote_command};
 use crate::types::SshServerInfo;
 
 /// 整次查询的上限:一次 ssh 握手 + `zmx list` + 每个 session 一次 `zmx history`。
@@ -46,20 +46,36 @@ pub struct ZmxSession {
 pub enum ZmxSessionsError {
     /// 服务器上找不到 zmx。
     NotInstalled,
+    /// ssh has no record of the server's host key: show it to the user and list again with its
+    /// fingerprint once they confirm it.
+    UnknownHostKey(UnknownHostKey),
     /// ssh 失败或输出无法解析;内容是可以直接显示的原因。
     Failed(String),
 }
 
 /// 列出 `server` 上的 zmx session。
+///
+/// `trusted_fingerprint` is the fingerprint of a host key the user has just confirmed, from an
+/// earlier [`ZmxSessionsError::UnknownHostKey`].
 pub async fn list_zmx_sessions(
     server: &SshServerInfo,
     password: Option<Zeroizing<String>>,
+    trusted_fingerprint: Option<&str>,
 ) -> Result<Vec<ZmxSession>, ZmxSessionsError> {
     let marker = format!("ZMX{}", Uuid::new_v4().simple());
     let command = build_list_command(&marker);
-    let output = run_remote_command(server, password, &command, LIST_TIMEOUT)
-        .await
-        .map_err(ZmxSessionsError::Failed)?;
+    let output = run_remote_command(
+        server,
+        password,
+        trusted_fingerprint,
+        &command,
+        LIST_TIMEOUT,
+    )
+    .await
+    .map_err(|e| match e {
+        SshRunError::UnknownHostKey(key) => ZmxSessionsError::UnknownHostKey(key),
+        SshRunError::Failed(message) => ZmxSessionsError::Failed(message),
+    })?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     if !stdout.contains(&marker) {
