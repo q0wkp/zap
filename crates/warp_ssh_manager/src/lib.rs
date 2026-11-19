@@ -3,6 +3,7 @@
 //! 模块,这里保持纯 Rust、无 warpui 依赖、可单独 `cargo test` 跑。
 
 pub mod db;
+pub mod node_secrets;
 pub mod repository;
 pub mod secrets;
 pub mod ssh_command;
@@ -12,6 +13,7 @@ pub mod types;
 pub mod zmx_sessions;
 
 pub use db::{set_database_path, with_conn};
+pub use node_secrets::{NodeSecretsError, clone_server_with_secrets, delete_node_with_secrets};
 pub use repository::{SshRepository, SshRepositoryError, SyncMetaRepository};
 pub use secrets::{KeychainSecretStore, SecretKind, SshSecretStore, SshSecretStoreError};
 pub use ssh_command::{

@@ -32,8 +32,7 @@ use warpui::{
 };
 
 use warp_ssh_manager::{
-    AuthType, KeychainSecretStore, NodeKind, SecretKind, SshNode, SshRepository, SshSecretStore,
-    SshServerInfo,
+    AuthType, KeychainSecretStore, NodeKind, SshNode, SshRepository, SshServerInfo,
 };
 
 use settings::Setting;
@@ -459,33 +458,27 @@ impl SshManagerPanel {
     fn on_clone_server(&mut self, source_id: &str, ctx: &mut ViewContext<Self>) {
         let source_id = source_id.to_string();
         let result = warp_ssh_manager::with_conn(|c| {
-            let source_info = SshRepository::get_server(c, &source_id)?
-                .ok_or_else(|| warp_ssh_manager::SshRepositoryError::NotFound(source_id.clone()))?;
             let source_node = SshRepository::list_nodes(c)?
                 .into_iter()
                 .find(|n| n.id == source_id)
                 .ok_or_else(|| warp_ssh_manager::SshRepositoryError::NotFound(source_id.clone()))?;
 
             let parent = source_node.parent_id;
-            let cloned_info = SshServerInfo::clone_from_template(&source_info, String::new());
             let name = unique_name(
                 c,
                 parent.as_deref(),
                 &format!("{} (copy)", source_node.name),
             )?;
 
-            let new_node = SshRepository::create_server(c, parent.as_deref(), &name, &cloned_info)?;
-
-            // 源服务器在上面已校验存在,直接把 keychain 里的密码 / 私钥口令复制到新节点。
-            let store = KeychainSecretStore;
-            if let Ok(Some(password)) = store.get(&source_id, SecretKind::Password) {
-                let _ = store.set(&new_node.id, SecretKind::Password, &password);
-            }
-            if let Ok(Some(passphrase)) = store.get(&source_id, SecretKind::Passphrase) {
-                let _ = store.set(&new_node.id, SecretKind::Passphrase, &passphrase);
-            }
-
-            Ok(new_node)
+            // The copy and its password and passphrase are made together: if the keychain
+            // refuses one, no half-made copy is left behind.
+            Ok(warp_ssh_manager::clone_server_with_secrets(
+                c,
+                &KeychainSecretStore,
+                &source_id,
+                parent.as_deref(),
+                &name,
+            )?)
         });
         match result {
             Ok(node) => {
@@ -505,16 +498,20 @@ impl SshManagerPanel {
         let Some(id) = self.selected_id.clone() else {
             return;
         };
-        let result = warp_ssh_manager::with_conn(|c| Ok(SshRepository::delete_node(c, &id)?));
+        // The node, everything below it and the keychain secrets of the servers among them go
+        // together, or not at all.
+        let result = warp_ssh_manager::with_conn(|c| {
+            Ok(warp_ssh_manager::delete_node_with_secrets(
+                c,
+                &KeychainSecretStore,
+                &id,
+            )?)
+        });
         if let Err(e) = result {
             log::error!("ssh_manager: delete failed: {e:?}");
             ctx.emit(SshManagerPanelEvent::PersistenceError(e.to_string()));
             return;
         }
-        let store = KeychainSecretStore;
-        let _ = store.delete(&id, SecretKind::Password);
-        let _ = store.delete(&id, SecretKind::Passphrase);
-        let _ = store.delete(&id, SecretKind::RootPassword);
 
         self.selected_id = None;
         self.refresh_tree(ctx);

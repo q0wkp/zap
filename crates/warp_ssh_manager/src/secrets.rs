@@ -118,6 +118,13 @@ pub(crate) mod test_support {
         inner: Mutex<HashMap<String, String>>,
     }
 
+    impl InMemorySecretStore {
+        /// The number of secrets stored.
+        pub fn count(&self) -> usize {
+            self.inner.lock().unwrap().len()
+        }
+    }
+
     impl SshSecretStore for InMemorySecretStore {
         fn set(
             &self,
