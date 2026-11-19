@@ -167,6 +167,31 @@ fn vim_inner_paragraph_blank_lines() {
 }
 
 #[test]
+fn vim_inner_paragraph_leading_blank_lines() {
+    // The blank lines at the start of the buffer start at offset 0: no line precedes them.
+    assert_eq!(vim_inner_paragraph("\nfoo\n", 0), Some(0.into()..0.into()));
+    assert_eq!(vim_inner_paragraph("\n", 0), Some(0.into()..0.into()));
+
+    let text = "\n\n\nfoo\n";
+    for offset in 0..=2 {
+        let range = vim_inner_paragraph(text, offset).unwrap();
+        assert_eq!(range, 0.into()..2.into());
+    }
+}
+
+#[test]
+fn vim_a_paragraph_leading_blank_lines() {
+    let text = "\nfoo\n";
+    assert_eq!(vim_a_paragraph(text, 0), Some(0.into()..text.len().into()));
+
+    let text = "\n\nfoo\n\nbar";
+    for offset in 0..=1 {
+        let range = vim_a_paragraph(text, offset).unwrap();
+        assert_eq!(range, 0.into()..5.into());
+    }
+}
+
+#[test]
 fn vim_a_paragraph_blank_lines() {
     let text = "first\n\n\nsecond\n";
 

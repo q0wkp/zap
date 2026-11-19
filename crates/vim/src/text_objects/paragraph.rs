@@ -19,13 +19,8 @@ where
     let offset = offset.into();
     let mut chars = buffer.chars_at(offset).ok()?.peekable();
     if chars.peek().is_some_and(|c| *c == '\n') {
-        let paragraph_end = offset - 1 + chars.take_while(|c| *c == '\n').count();
-        let paragraph_start = offset + 1
-            - buffer
-                .chars_rev_at(offset)
-                .ok()?
-                .take_while(|c| *c == '\n')
-                .count();
+        let paragraph_end = offset + chars.take_while(|c| *c == '\n').count() - 1;
+        let paragraph_start = blank_lines_start(buffer, offset)?;
         return Some(paragraph_start..paragraph_end);
     }
     let paragraph_start = find_previous_paragraph_start(buffer, offset)
@@ -57,12 +52,7 @@ where
         let paragraph_end = find_next_paragraph_end(buffer, offset)
             .map(|i| i - 1)
             .unwrap_or_else(|| offset + chars.count());
-        let paragraph_start = offset + 1
-            - buffer
-                .chars_rev_at(offset)
-                .ok()?
-                .take_while(|c| *c == '\n')
-                .count();
+        let paragraph_start = blank_lines_start(buffer, offset)?;
         return Some(paragraph_start..paragraph_end);
     }
     let end_offset = find_next_paragraph_end(buffer, offset);
@@ -95,6 +85,25 @@ where
         .unwrap_or_else(|| offset + chars.count());
 
     Some(paragraph_start..paragraph_end)
+}
+
+/// Returns where the blank lines around `offset` start, for an `offset` that is at a newline.
+fn blank_lines_start<T>(buffer: &T, offset: CharOffset) -> Option<CharOffset>
+where
+    T: TextBuffer + ?Sized,
+{
+    let newlines_before = buffer
+        .chars_rev_at(offset)
+        .ok()?
+        .take_while(|c| *c == '\n')
+        .count();
+    if newlines_before == offset.as_usize() {
+        // Only newlines precede `offset`, so the buffer starts with a blank line.
+        Some(CharOffset::zero())
+    } else {
+        // The first newline of the run ends the line above the blank lines.
+        Some(offset + 1 - newlines_before)
+    }
 }
 
 #[cfg(test)]
