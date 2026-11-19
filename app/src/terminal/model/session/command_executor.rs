@@ -33,7 +33,7 @@ pub use local_command_executor::LocalCommandExecutor;
 pub use noop_command_executor::NoOpCommandExecutor;
 #[cfg(feature = "local_tty")]
 pub use remote_command_executor::RemoteCommandExecutor;
-pub use shared::{shell_escape_single_quotes, ExecutorCommandEvent};
+pub use shared::{shell_escape_single_quotes, shell_quote_arg, ExecutorCommandEvent};
 
 /// Trait to be implemented by structs that execute command in context that emulates or actually is
 /// identical to the active terminal session's context. `CommandExecutor` is commonly used to

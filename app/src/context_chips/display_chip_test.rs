@@ -1,4 +1,5 @@
-use super::{truncate_from_beginning, GitLineChanges};
+use super::{truncate_from_beginning, GitBranch, GitLineChanges};
+use crate::context_chips::display_chip::PromptChipShellCommand;
 use crate::context_chips::{github_pr_display_text_from_url, ContextChipKind};
 
 #[test]
@@ -37,6 +38,16 @@ fn test_github_pr_chip_display_value_falls_back_to_raw_value() {
     assert_eq!(
         ContextChipKind::GithubPullRequest.display_value(&value),
         "https://example.com/not-a-pr"
+    );
+}
+
+#[test]
+fn test_format_git_branch_command_checks_out_normal_branch() {
+    assert_eq!(
+        GitBranch("feature/alice's-work".to_string()).prompt_chip_command(),
+        PromptChipShellCommand::GitCheckout {
+            branch_name: "feature/alice's-work".to_string()
+        }
     );
 }
 

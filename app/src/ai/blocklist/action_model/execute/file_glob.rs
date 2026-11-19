@@ -18,7 +18,8 @@ use crate::{
     ai::agent::AIAgentActionResultType,
     send_telemetry_from_app_ctx,
     terminal::{
-        model::session::active_session::ActiveSession, model::session::Session, shell::ShellType,
+        model::session::active_session::ActiveSession, model::session::shell_quote_arg,
+        model::session::Session, shell::ShellType,
     },
     TelemetryEvent,
 };
@@ -233,7 +234,9 @@ async fn run_git_ls_files_command(
                 join_paths(&[target_path, "*", pattern]),
             ]
         })
-        .map(|pattern| format!("'{pattern}'"))
+        // Patterns can originate from model output: keep them as data arguments so shell
+        // substitutions like $() are inert.
+        .map(|pattern| shell_quote_arg(&pattern, session.shell().shell_type()))
         .join(" ");
     let command = format!("git ls-files -c -o --exclude-standard -- {pattern_args}");
 
@@ -265,11 +268,15 @@ async fn run_find_command(
     session: &Session,
 ) -> anyhow::Result<FileGlobV2Result> {
     // Build a find command with -name for each pattern
+    let shell_type = session.shell().shell_type();
     let pattern_args = patterns
         .iter()
-        .map(|pattern| format!(" -name '{pattern}'"))
+        .map(|pattern| format!(" -name {}", shell_quote_arg(pattern, shell_type)))
         .join(" -o");
-    let find_command = format!("find \"{target_path}\" -type f {pattern_args}");
+    let find_command = format!(
+        "find {} -type f {pattern_args}",
+        shell_quote_arg(target_path, shell_type)
+    );
 
     let command_output = session
         .execute_command(find_command.as_str(), Some(target_path), None)
@@ -305,10 +312,11 @@ async fn run_powershell_get_childitem_command(
 ) -> anyhow::Result<FileGlobV2Result> {
     let pattern_args = patterns
         .iter()
-        .map(|pattern| format!("'{pattern}'"))
+        .map(|pattern| shell_quote_arg(pattern, ShellType::PowerShell))
         .join(",");
     let command = format!(
-        "Get-ChildItem -File -Recurse -Include {pattern_args} -Path \"{target_path}\" | ForEach-Object {{ $_.FullName }}"
+        "Get-ChildItem -File -Recurse -Include {pattern_args} -Path {} | ForEach-Object {{ $_.FullName }}",
+        shell_quote_arg(target_path, ShellType::PowerShell)
     );
 
     let command_output = session
