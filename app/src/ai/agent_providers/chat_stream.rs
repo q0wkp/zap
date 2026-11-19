@@ -41,6 +41,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures::StreamExt;
 use instant::Instant;
@@ -2948,6 +2949,20 @@ pub(super) fn normalize_endpoint_url(api_type: AgentProviderApiType, base_url: &
     format!("{stripped}/")
 }
 
+/// How long a provider may take to accept the connection (DNS, TCP and TLS).
+const BYOP_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+/// How long a provider may stay silent, before its response starts and between two reads of
+/// the stream. Not a limit on the whole response: every read starts it anew. Generous, since a
+/// reasoning model may think for minutes before its first byte.
+const BYOP_READ_IDLE_TIMEOUT: Duration = Duration::from_secs(300);
+
+/// The deadlines of BYOP requests. Without them a relay that accepts the connection and then
+/// stalls would leave the turn waiting for ever.
+fn apply_byop_timeouts(web_config: &mut WebConfig) {
+    web_config.connect_timeout = Some(BYOP_CONNECT_TIMEOUT);
+    web_config.read_timeout = Some(BYOP_READ_IDLE_TIMEOUT);
+}
+
 /// 构造 genai Client。每次请求新建(开销低 — Client 内部只是 reqwest::Client + adapter 表)。
 /// `ServiceTargetResolver` capture 当前请求的 endpoint/key/api_type 后,把每次 exec_chat_stream
 /// 都强制路由到指定 AdapterKind,完全绕过 genai 默认的"按模型名识别"。
@@ -3008,6 +3023,7 @@ pub(super) fn build_client(
         default_headers: Some(headers),
         ..WebConfig::default()
     };
+    apply_byop_timeouts(&mut web_config);
     let proxy_cfg = current_proxy_config();
     match proxy_cfg.mode {
         http_client::ProxyMode::Off => {
@@ -5503,6 +5519,20 @@ mod provider_error_tests {
             "{mapped:?}"
         );
         assert!(mapped.is_retryable());
+    }
+
+    #[test]
+    fn requests_have_connect_and_read_idle_deadlines() {
+        let mut web_config = WebConfig::default();
+        assert_eq!(web_config.connect_timeout, None);
+        assert_eq!(web_config.read_timeout, None);
+
+        apply_byop_timeouts(&mut web_config);
+
+        assert_eq!(web_config.connect_timeout, Some(Duration::from_secs(20)));
+        assert_eq!(web_config.read_timeout, Some(Duration::from_secs(300)));
+        // The whole response has no deadline: a long generation must not be cut off.
+        assert_eq!(web_config.timeout, None);
     }
 
     #[test]
