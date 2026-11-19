@@ -430,15 +430,15 @@ pub fn parse_checksum_file(contents: &str) -> Option<String> {
 }
 
 /// The URL of the signature that a release publishes beside the SHA-256 file at `checksum_url`:
-/// that file's name with `.sig` appended, as .github/workflows/release.yml writes it.
+/// that file's name with `.asc` appended, as .github/workflows/release.yml writes it.
 pub fn signature_url(checksum_url: &str) -> String {
-    format!("{checksum_url}.sig")
+    format!("{checksum_url}.asc")
 }
 
-/// The Ed25519 public key, in base64, of the key that releases sign their SHA-256 files with. The
-/// private half is the release workflow's secret REMOTE_SERVER_SIGNING_KEY. A release's own
-/// client is the only one that checks its signature, so the pair can be replaced between two
-/// releases.
+/// The Ed25519 public key, in base64, of the OpenPGP key that releases sign their SHA-256 files
+/// with: the key that signs the packages of q0wkp/pkgs, whose secret half is the release
+/// workflow's secret PKGS_SIGNING_KEY. A release's own client is the only one that checks its
+/// signature, so the key can be replaced between two releases.
 #[cfg(not(target_family = "wasm"))]
 const RELEASE_SIGNING_PUBLIC_KEY: &str = include_str!("release_signing_key.pub");
 
@@ -476,11 +476,13 @@ fn sha256_signed_with(
     let public_key = BASE64_STANDARD
         .decode(public_key.trim())
         .map_err(|error| anyhow!("the release signing key is not base64: {error}"))?;
-    let signature = BASE64_STANDARD
-        .decode(signature_file.trim())
-        .map_err(|error| anyhow!("the signature of {tarball_url}.sha256 is not base64: {error}"))?;
+    let signature = OpenPgpSignature::parse(signature_file)
+        .map_err(|error| anyhow!("the signature of {tarball_url}.sha256 can't be read: {error}"))?;
     UnparsedPublicKey::new(&ED25519, public_key)
-        .verify(checksum_file.as_bytes(), &signature)
+        .verify(
+            signature.digest_of(checksum_file.as_bytes()).as_ref(),
+            &signature.signature,
+        )
         .map_err(|_| {
             anyhow!("the SHA-256 file of {tarball_url} does not carry the release's signature")
         })?;
@@ -501,6 +503,140 @@ fn sha256_signed_with(
     }
     parse_checksum_file(checksum_file)
         .ok_or_else(|| anyhow!("the SHA-256 file of {tarball_url} holds no SHA-256"))
+}
+
+/// An ASCII-armored detached OpenPGP signature as `gpg --armor --detach-sign` writes one with an
+/// Ed25519 key: a version 4 signature packet over a binary document (RFC 4880, section 5.2.3,
+/// with the EdDSA algorithm of RFC 9580, section 9.1). Nothing else is accepted.
+#[cfg(not(target_family = "wasm"))]
+struct OpenPgpSignature {
+    /// The packet's fields that are hashed after the document, with the trailer that ends them.
+    hashed_trailer: Vec<u8>,
+    digest: &'static ring::digest::Algorithm,
+    /// The signature's two halves, R and S, 32 bytes each.
+    signature: [u8; 64],
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl OpenPgpSignature {
+    const SIGNATURE_PACKET: u8 = 2;
+    const BINARY_DOCUMENT: u8 = 0;
+    const EDDSA: u8 = 22;
+    const SHA256: u8 = 8;
+    const SHA512: u8 = 10;
+
+    fn parse(armored: &str) -> Result<Self> {
+        use base64::prelude::{Engine as _, BASE64_STANDARD};
+
+        // The armor is a header line, optional `Key: Value` lines, a blank line, the data in
+        // base64, a checksum line starting with `=` and a footer line.
+        let mut lines = armored.lines().map(str::trim);
+        if lines.next() != Some("-----BEGIN PGP SIGNATURE-----") {
+            return Err(anyhow!("it is not an armored OpenPGP signature"));
+        }
+        let data: String = lines
+            .skip_while(|line| !line.is_empty())
+            .take_while(|line| !line.starts_with('=') && !line.starts_with("-----"))
+            .collect();
+        let packet = BASE64_STANDARD
+            .decode(data)
+            .map_err(|error| anyhow!("its base64 is damaged: {error}"))?;
+
+        let body = Self::packet_body(&packet)?;
+        let malformed = || anyhow!("its signature packet is cut short");
+        let [version, kind, key_algorithm, hash_algorithm, hashed_high, hashed_low, ..] = *body
+        else {
+            return Err(malformed());
+        };
+        if version != 4 || kind != Self::BINARY_DOCUMENT || key_algorithm != Self::EDDSA {
+            return Err(anyhow!(
+                "it is not a version 4 EdDSA signature of a binary document"
+            ));
+        }
+        let digest = match hash_algorithm {
+            Self::SHA256 => &ring::digest::SHA256,
+            Self::SHA512 => &ring::digest::SHA512,
+            other => return Err(anyhow!("it uses the unsupported hash algorithm {other}")),
+        };
+        let hashed_end = 6 + usize::from(u16::from_be_bytes([hashed_high, hashed_low]));
+        let hashed = body.get(..hashed_end).ok_or_else(malformed)?;
+        let [unhashed_high, unhashed_low] = *body
+            .get(hashed_end..hashed_end + 2)
+            .ok_or_else(malformed)?
+        else {
+            return Err(malformed());
+        };
+        // After the unhashed subpackets come two bytes of the digest, then R and S.
+        let numbers_start =
+            hashed_end + 2 + usize::from(u16::from_be_bytes([unhashed_high, unhashed_low])) + 2;
+        let mut numbers = body.get(numbers_start..).ok_or_else(malformed)?;
+        let mut signature = [0; 64];
+        for half in signature.chunks_exact_mut(32) {
+            let [bits_high, bits_low, rest @ ..] = numbers else {
+                return Err(malformed());
+            };
+            // A multiprecision integer drops its leading zero bytes.
+            let length = usize::from(u16::from_be_bytes([*bits_high, *bits_low])).div_ceil(8);
+            let (number, rest) = rest.split_at_checked(length).ok_or_else(malformed)?;
+            if length > 32 {
+                return Err(anyhow!("it is not an Ed25519 signature"));
+            }
+            half[32 - length..].copy_from_slice(number);
+            numbers = rest;
+        }
+
+        let mut hashed_trailer = hashed.to_vec();
+        hashed_trailer.extend([4, 0xff]);
+        hashed_trailer.extend(u32::try_from(hashed.len())?.to_be_bytes());
+        Ok(Self {
+            hashed_trailer,
+            digest,
+            signature,
+        })
+    }
+
+    /// The body of the signature packet that `packet` starts with, in either header format.
+    fn packet_body(packet: &[u8]) -> Result<&[u8]> {
+        let malformed = || anyhow!("its packet header is damaged");
+        let (&tag, rest) = packet.split_first().ok_or_else(malformed)?;
+        let (kind, length_bytes) = if tag & 0xc0 == 0xc0 {
+            // New format: the length is one byte below 192, two bytes below 224.
+            let first = *rest.first().ok_or_else(malformed)?;
+            (tag & 0x3f, if first < 192 { 1 } else { 2 })
+        } else if tag & 0x80 == 0x80 {
+            // Old format: the tag's low two bits give the length's size.
+            let length_bytes = match tag & 3 {
+                0 => 1,
+                1 => 2,
+                2 => 4,
+                _ => return Err(malformed()),
+            };
+            ((tag >> 2) & 0xf, length_bytes)
+        } else {
+            return Err(malformed());
+        };
+        if kind != Self::SIGNATURE_PACKET {
+            return Err(anyhow!("it does not start with a signature packet"));
+        }
+        let (length, body) = rest.split_at_checked(length_bytes).ok_or_else(malformed)?;
+        let length = if tag & 0xc0 == 0xc0 && length_bytes == 2 {
+            ((usize::from(length[0]) - 192) << 8) + usize::from(length[1]) + 192
+        } else {
+            length
+                .iter()
+                .fold(0, |length, &byte| (length << 8) | usize::from(byte))
+        };
+        body.get(..length).ok_or_else(malformed)
+    }
+
+    /// What the key signed for `document`: the digest of the document followed by the packet's
+    /// hashed fields.
+    fn digest_of(&self, document: &[u8]) -> ring::digest::Digest {
+        let mut context = ring::digest::Context::new(self.digest);
+        context.update(document);
+        context.update(&self.hashed_trailer);
+        context.finish()
+    }
 }
 
 /// Checks that the file at `path` has the SHA-256 that `checksum_file`, the contents of the

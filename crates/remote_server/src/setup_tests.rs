@@ -890,13 +890,19 @@ fn install_script_takes_the_sha256_from_the_client_without_downloading_it() {
     assert!(!installed_binary(run.home.path()).exists());
 }
 
-/// A key pair made for these tests, and what `openssl pkeyutl -sign -rawin`, the release
-/// workflow's command, signed [`SIGNED_CHECKSUM_FILE`] with.
-const TEST_PUBLIC_KEY: &str = "Rd3unk+4SZ2Sdr7TgWRWd1II7kZrxZgvcJQruCPAFUI=";
+/// An OpenPGP key made for these tests, and what `gpg --armor --detach-sign`, the release
+/// workflow's command, signed [`SIGNED_CHECKSUM_FILE`] with (GnuPG 2.4.4).
+const TEST_PUBLIC_KEY: &str = "/1CxipBN0xWbm8pT/BXouq8zuNKgyJY/dDL1QwIVnXM=";
 const SIGNED_CHECKSUM_FILE: &str =
     "db4b4d0d1cb480bf9aeea253771c00febe627f236765fa37d6a5614f079a3aa0  zap-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz\n";
-const TEST_SIGNATURE: &str =
-    "jGW6buVrEiEb9H3TiVIFBlq4aauTKaQLMBarIJhJfOqg3qyQzyMko4abga7Zih8rz7x3JiNI5d2hNZ4V2akpCA==\n";
+const TEST_SIGNATURE: &str = "-----BEGIN PGP SIGNATURE-----
+
+iHUEABYKAB0WIQTpdBW/6rmUSJFXeecVwMIr8yphuAUCav9sWwAKCRAVwMIr8yph
+uL6uAQC4KMLlO+B2izseAXQM9PhlNsBN0PuVxBdSVyU+b8ehhgEA0jfaOfzC0Msg
+hDX6QBx/VYO31P5UmU9MtGGVqLkoJw8=
+=s2uT
+-----END PGP SIGNATURE-----
+";
 
 #[test]
 fn signed_sha256_file_gives_its_sha256() {
@@ -924,9 +930,18 @@ fn sha256_file_changed_after_signing_is_refused() {
     .unwrap_err();
     assert!(error.to_string().contains("signature"), "{error}");
 
-    let error =
-        sha256_signed_with(TEST_PUBLIC_KEY, SIGNED_CHECKSUM_FILE, "not base64", &url).unwrap_err();
-    assert!(error.to_string().contains("base64"), "{error}");
+    // Not a signature at all, one cut short, and one with a byte of its hashed fields changed.
+    let truncated = TEST_SIGNATURE.replacen("hDX6QBx/VYO31P5UmU9MtGGVqLkoJw8=\n", "", 1);
+    let altered = TEST_SIGNATURE.replacen("iHUEABYKAB0W", "iHUEABYKAB0X", 1);
+    for (signature, expected) in [
+        ("not a signature", "can't be read"),
+        (truncated.as_str(), "can't be read"),
+        (altered.as_str(), "does not carry"),
+    ] {
+        let error = sha256_signed_with(TEST_PUBLIC_KEY, SIGNED_CHECKSUM_FILE, signature, &url)
+            .unwrap_err();
+        assert!(error.to_string().contains(expected), "{error}");
+    }
 }
 
 #[test]

@@ -562,7 +562,7 @@ async fn release_sha256(download_url: &str, dir: &Path) -> Result<String> {
             .ok_or_else(|| anyhow!("the SHA-256 file of {download_url} holds no SHA-256"));
     }
 
-    let signature_path = dir.join("zap.tar.gz.sha256.sig");
+    let signature_path = dir.join("zap.tar.gz.sha256.asc");
     download_release_file(
         &remote_server::setup::signature_url(&checksum_url),
         &signature_path,
