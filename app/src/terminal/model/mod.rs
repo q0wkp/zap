@@ -31,6 +31,7 @@ pub mod image_map;
 pub mod index;
 pub mod iterm_image;
 pub mod kitty;
+pub mod kitty_placeholder;
 pub mod secrets;
 pub mod selection;
 pub mod session;

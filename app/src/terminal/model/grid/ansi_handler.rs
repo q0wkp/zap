@@ -35,7 +35,7 @@ use crate::terminal::model::image_map::{ImagePlacementData, ImageType, StoredIma
 use crate::terminal::model::index::{Point, VisibleRow};
 use crate::terminal::model::iterm_image::{ITermImage, ITermImageDimensionUnit};
 use crate::terminal::model::kitty::{
-    CursorMovementPolicy, KittyAction, KittyError, KittyResponse, StorageError,
+    CursorMovementPolicy, KittyAction, KittyError, KittyPlacementData, KittyResponse, StorageError,
 };
 use crate::terminal::model::selection::ScrollDelta;
 use crate::terminal::model::ObfuscateSecrets;
@@ -46,6 +46,13 @@ use super::{AbsolutePoint, GridHandler, PerformResetGridChecks, TermMode};
 use tab_stops::TabStops;
 
 const MAX_IMAGE_CELL_HEIGHT: u32 = 255;
+
+/// The size of a Kitty image placement, in pixels and in the cells it covers.
+struct KittyPlacementSize {
+    image_size: Vector2F,
+    width_cells: usize,
+    height_cells: usize,
+}
 
 /// State needed for the grid-level implementation of [`ansi::Handler`].
 #[derive(Clone)]
@@ -1330,6 +1337,8 @@ impl ansi::Handler for GridHandler {
         // Convert the visual dimension in pixels to cells. We want to round up if this doesn't perfectly fit within an amount of cells.
         let height_cells =
             (height_px as f32 / (self.ansi_handler_state.cell_height as f32)).ceil() as usize;
+        let width_cells =
+            (width_px as f32 / (self.ansi_handler_state.cell_width as f32)).ceil() as usize;
 
         // Convert the user requested dimension in pixels to cells. This is needed to scroll the cursor by the space the user requested.
         // If preserve_aspect_ratio is true, this may be larger than the visual dimension of the image.
@@ -1363,6 +1372,7 @@ impl ansi::Handler for GridHandler {
             placement_id,
             ImagePlacementData {
                 z_index: 0,
+                width_cells,
                 height_cells,
                 image_size,
             },
@@ -1772,47 +1782,26 @@ impl GridHandler {
                     }
                 };
 
-                if metadata.image_size.x() == 0.0 || metadata.image_size.y() == 0.0 {
+                // A virtual placement takes no room in the grid: the image is stored, and drawn
+                // where the client prints placeholder cells.
+                if action.placement_data.unicode_placeholder {
+                    if metadata.image_size.x() != 0.0 && metadata.image_size.y() != 0.0 {
+                        self.ansi_handler_state.event_proxy.send_terminal_event(
+                            Event::ImageReceived {
+                                image_id: action.image_id,
+                                image_data: action.image.data,
+                                image_protocol: ImageProtocol::Kitty,
+                            },
+                        );
+                    }
                     return Ok(());
                 }
 
-                if let Some(0) = action.placement_data.cols {
+                let Some(placement) =
+                    self.kitty_placement_size(&action.placement_data, metadata.image_size)
+                else {
                     return Ok(());
-                }
-
-                if let Some(0) = action.placement_data.rows {
-                    return Ok(());
-                }
-
-                let max_width =
-                    (self.columns() - self.cursor_point().col) * self.ansi_handler_state.cell_width;
-
-                let max_height =
-                    MAX_IMAGE_CELL_HEIGHT as usize * self.ansi_handler_state.cell_height;
-
-                let desired_dimensions = action.placement_data.get_desired_dimensions(
-                    metadata.image_size,
-                    self.ansi_handler_state.cell_height,
-                    self.ansi_handler_state.cell_width,
-                    max_width,
-                    max_height,
-                );
-
-                let (width_px, height_px) = resize_dimensions(
-                    metadata.image_size.x() as u32,
-                    metadata.image_size.y() as u32,
-                    desired_dimensions.x() as u32,
-                    desired_dimensions.y() as u32,
-                    FitType::Stretch,
-                );
-
-                let image_size = Vector2F::new(width_px as f32, height_px as f32);
-
-                // Convert the dimension in pixels to cells. We want to round up if this doesn't perfectly fit within an amount of cells.
-                let height_cells = (height_px as f32 / (self.ansi_handler_state.cell_height as f32))
-                    .ceil() as usize;
-                let width_cells =
-                    (width_px as f32 / (self.ansi_handler_state.cell_width as f32)).ceil() as usize;
+                };
 
                 self.ansi_handler_state
                     .event_proxy
@@ -1822,46 +1811,12 @@ impl GridHandler {
                         image_protocol: ImageProtocol::Kitty,
                     });
 
-                self.images.add_image_placement_data(
+                self.place_kitty_image(
                     action.image_id,
                     action.placement_id,
-                    ImagePlacementData {
-                        z_index: action.placement_data.z_index,
-                        height_cells,
-                        image_size,
-                    },
+                    &action.placement_data,
+                    placement,
                 );
-
-                self.images.place(
-                    action.image_id,
-                    action.placement_id,
-                    AbsolutePoint::from_point(self.cursor_point(), self),
-                    ImageType::Kitty,
-                    self.num_lines_truncated(),
-                );
-
-                if !matches!(
-                    action.placement_data.cursor_movement_policy,
-                    CursorMovementPolicy::MoveCursor
-                ) {
-                    return Ok(());
-                }
-
-                // Create the whitespace to fit the image on.
-                for _ in 0..height_cells - 1 {
-                    self.newline();
-                }
-
-                let num_cols = self.columns();
-
-                // Move the cursor to the same row but after the image.
-                self.move_cursor_forward(|cursor| {
-                    if cursor.point.col + width_cells < num_cols {
-                        cursor.point.col += width_cells;
-                    } else {
-                        cursor.input_needs_wrap = true;
-                    }
-                });
             }
             KittyAction::DisplayStoredImage(action) => {
                 let metadata = match metadata.get(&action.image_id) {
@@ -1874,89 +1829,136 @@ impl GridHandler {
                     }
                 };
 
-                if let Some(0) = action.placement_data.cols {
+                if action.placement_data.unicode_placeholder {
                     return Ok(());
                 }
 
-                if let Some(0) = action.placement_data.rows {
+                let Some(placement) =
+                    self.kitty_placement_size(&action.placement_data, metadata.image_size)
+                else {
                     return Ok(());
-                }
+                };
 
-                let max_width =
-                    (self.columns() - self.cursor_point().col) * self.ansi_handler_state.cell_width;
-
-                let max_height =
-                    MAX_IMAGE_CELL_HEIGHT as usize * self.ansi_handler_state.cell_height;
-
-                let desired_dimensions = action.placement_data.get_desired_dimensions(
-                    metadata.image_size,
-                    self.ansi_handler_state.cell_height,
-                    self.ansi_handler_state.cell_width,
-                    max_width,
-                    max_height,
-                );
-
-                let (width_px, height_px) = resize_dimensions(
-                    metadata.image_size.x() as u32,
-                    metadata.image_size.y() as u32,
-                    desired_dimensions.x() as u32,
-                    desired_dimensions.y() as u32,
-                    FitType::Stretch,
-                );
-
-                let image_size = Vector2F::new(width_px as f32, height_px as f32);
-
-                // Convert the dimension in pixels to cells. We want to round up if this doesn't perfectly fit within an amount of cells.
-                let height_cells = (height_px as f32 / (self.ansi_handler_state.cell_height as f32))
-                    .ceil() as usize;
-                let width_cells =
-                    (width_px as f32 / (self.ansi_handler_state.cell_width as f32)).ceil() as usize;
-
-                self.images.add_image_placement_data(
+                self.place_kitty_image(
                     action.image_id,
                     action.placement_id,
-                    ImagePlacementData {
-                        z_index: action.placement_data.z_index,
-                        height_cells,
-                        image_size,
-                    },
+                    &action.placement_data,
+                    placement,
                 );
-
-                self.images.place(
-                    action.image_id,
-                    action.placement_id,
-                    AbsolutePoint::from_point(self.cursor_point(), self),
-                    ImageType::Kitty,
-                    self.num_lines_truncated(),
-                );
-
-                if !matches!(
-                    action.placement_data.cursor_movement_policy,
-                    CursorMovementPolicy::MoveCursor
-                ) {
-                    return Ok(());
-                }
-
-                // Create the whitespace to fit the image on.
-                for _ in 0..height_cells - 1 {
-                    self.newline();
-                }
-
-                let num_cols = self.columns();
-
-                // Move the cursor to the same row but after the image.
-                self.move_cursor_forward(|cursor| {
-                    if cursor.point.col + width_cells < num_cols {
-                        cursor.point.col += width_cells;
-                    } else {
-                        cursor.input_needs_wrap = true;
-                    }
-                });
             }
             KittyAction::QuerySupport(_) => {}
             KittyAction::Delete { .. } => {}
         }
 
         Ok(())
+    }
+
+    /// Computes the size a Kitty placement takes up at the cursor, or `None` if there is nothing
+    /// to draw: the image has no pixels, the placement asks for zero rows or columns, or the
+    /// scaled image rounds down to nothing.
+    fn kitty_placement_size(
+        &self,
+        placement_data: &KittyPlacementData,
+        image_size: Vector2F,
+    ) -> Option<KittyPlacementSize> {
+        if image_size.x() == 0.0 || image_size.y() == 0.0 {
+            return None;
+        }
+
+        if placement_data.cols == Some(0) || placement_data.rows == Some(0) {
+            return None;
+        }
+
+        let max_width = self.columns().saturating_sub(self.cursor_point().col)
+            * self.ansi_handler_state.cell_width;
+
+        let max_height = MAX_IMAGE_CELL_HEIGHT as usize * self.ansi_handler_state.cell_height;
+
+        let desired_dimensions = placement_data.get_desired_dimensions(
+            image_size,
+            self.ansi_handler_state.cell_height,
+            self.ansi_handler_state.cell_width,
+            max_width,
+            max_height,
+        );
+
+        let (width_px, height_px) = resize_dimensions(
+            image_size.x() as u32,
+            image_size.y() as u32,
+            desired_dimensions.x() as u32,
+            desired_dimensions.y() as u32,
+            FitType::Stretch,
+        );
+
+        // An image much wider than it is tall (or the reverse) that is scaled down to a given
+        // number of columns (or rows) can end up less than a pixel high (or wide).
+        if width_px == 0 || height_px == 0 {
+            return None;
+        }
+
+        // Convert the dimension in pixels to cells. We want to round up if this doesn't perfectly fit within an amount of cells.
+        let height_cells =
+            (height_px as f32 / (self.ansi_handler_state.cell_height as f32)).ceil() as usize;
+        let width_cells =
+            (width_px as f32 / (self.ansi_handler_state.cell_width as f32)).ceil() as usize;
+
+        Some(KittyPlacementSize {
+            image_size: Vector2F::new(width_px as f32, height_px as f32),
+            width_cells,
+            height_cells,
+        })
+    }
+
+    /// Places a Kitty image at the cursor and, unless the placement asks for the cursor to stay,
+    /// moves the cursor past it.
+    fn place_kitty_image(
+        &mut self,
+        image_id: u32,
+        placement_id: u32,
+        placement_data: &KittyPlacementData,
+        size: KittyPlacementSize,
+    ) {
+        self.images.add_image_placement_data(
+            image_id,
+            placement_id,
+            ImagePlacementData {
+                z_index: placement_data.z_index,
+                width_cells: size.width_cells,
+                height_cells: size.height_cells,
+                image_size: size.image_size,
+            },
+        );
+
+        self.images.place(
+            image_id,
+            placement_id,
+            AbsolutePoint::from_point(self.cursor_point(), self),
+            ImageType::Kitty,
+            self.num_lines_truncated(),
+        );
+
+        if !matches!(
+            placement_data.cursor_movement_policy,
+            CursorMovementPolicy::MoveCursor
+        ) {
+            return;
+        }
+
+        // Create the whitespace to fit the image on.
+        for _ in 0..size.height_cells.saturating_sub(1) {
+            self.newline();
+        }
+
+        let num_cols = self.columns();
+        let width_cells = size.width_cells;
+
+        // Move the cursor to the same row but after the image.
+        self.move_cursor_forward(|cursor| {
+            if cursor.point.col + width_cells < num_cols {
+                cursor.point.col += width_cells;
+            } else {
+                cursor.input_needs_wrap = true;
+            }
+        });
     }
 }

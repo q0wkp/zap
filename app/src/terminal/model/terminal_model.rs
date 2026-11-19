@@ -39,8 +39,9 @@ use super::grid::grid_handler::{
 use super::image_map::StoredImageMetadata;
 use super::index::Point;
 use super::kitty::{
-    create_kitty_error_reply, create_kitty_ok_reply, DeletionType, KittyAction, KittyChunk,
-    KittyMessage, KittyResponse, PendingKittyMessage,
+    create_kitty_error_reply, create_kitty_ok_reply, DeletionType, InvalidControlData, KittyAction,
+    KittyChunk, KittyMessage, KittyPlacementAction, KittyReplyIds, KittyResponse,
+    PendingKittyMessage, VirtualPlacement,
 };
 use super::secrets::{RespectObfuscatedSecrets, SecretAndHandle};
 use super::selection::ScrollDelta;
@@ -77,7 +78,7 @@ use instant::Instant;
 use itertools::{Either, Itertools};
 use serde::Serialize;
 use std::cmp::{max, min};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::num::ParseIntError;
 use std::ops::{Range, RangeInclusive};
 use std::path::PathBuf;
@@ -609,6 +610,10 @@ pub struct TerminalModel {
     /// Next ID to use for images where the ID is not explicitly specified
     /// by the Kitty protocol
     pub next_kitty_image_id: u32,
+
+    /// The newest image transmitted with each Kitty image number (`I`), which is the image a
+    /// later command with that number means.
+    kitty_image_ids_by_number: HashMap<u32, u32>,
 }
 
 #[derive(Clone, Debug)]
@@ -1170,6 +1175,7 @@ impl TerminalModel {
             image_id_to_metadata: HashMap::new(),
             // Start mid-way through the u32 range to avoid collisions
             next_kitty_image_id: 2147483647,
+            kitty_image_ids_by_number: HashMap::new(),
         }
     }
 
@@ -2353,6 +2359,135 @@ macro_rules! delegate {
 }
 
 impl TerminalModel {
+    /// Applies a Kitty delete command: removes the placements it selects and, for the uppercase
+    /// form of a specifier, frees the selected images that are left without a placement.
+    fn delete_kitty_images(&mut self, deletion_type: &DeletionType, delete_placements_only: bool) {
+        let mut image_ids = HashSet::new();
+        match deletion_type {
+            // A cell is one of the screen the client draws on, which is the active grid.
+            DeletionType::AtCursor
+            | DeletionType::AtCell { .. }
+            | DeletionType::InColumn(_)
+            | DeletionType::InRow(_) => {
+                let grid = if self.alt_screen_active {
+                    self.alt_screen.grid_handler_mut()
+                } else {
+                    self.block_list_mut().active_block_mut().grid_handler_mut()
+                };
+                image_ids.extend(grid.delete_kitty_placements(deletion_type));
+            }
+            DeletionType::DeleteAll
+            | DeletionType::DeleteById(_)
+            | DeletionType::WithZIndex(_)
+            | DeletionType::InIdRange { .. } => {
+                self.delete_kitty_virtual_placements(deletion_type);
+
+                if self.alt_screen_active {
+                    image_ids.extend(
+                        self.alt_screen
+                            .grid_handler_mut()
+                            .delete_kitty_placements(deletion_type),
+                    );
+                } else {
+                    for block in self.block_list_mut().blocks_mut() {
+                        image_ids.extend(
+                            block
+                                .grid_handler_mut()
+                                .delete_kitty_placements(deletion_type),
+                        );
+                    }
+                }
+            }
+        }
+
+        if delete_placements_only {
+            return;
+        }
+
+        // The images a command names are freed whether or not they had a placement to lose.
+        match deletion_type {
+            DeletionType::DeleteAll => image_ids.extend(self.image_id_to_metadata.keys()),
+            DeletionType::DeleteById(delete_by_id) => {
+                image_ids.insert(delete_by_id.image_id);
+            }
+            DeletionType::InIdRange { first, last } => image_ids.extend(
+                self.image_id_to_metadata
+                    .keys()
+                    .filter(|image_id| (*first..=*last).contains(image_id)),
+            ),
+            DeletionType::AtCursor
+            | DeletionType::AtCell { .. }
+            | DeletionType::InColumn(_)
+            | DeletionType::InRow(_)
+            | DeletionType::WithZIndex(_) => {}
+        }
+
+        for image_id in image_ids {
+            let is_kitty_image = matches!(
+                self.image_id_to_metadata.get(&image_id),
+                Some(StoredImageMetadata::Kitty(_))
+            );
+            if is_kitty_image && !self.is_image_placed(image_id) {
+                self.image_id_to_metadata.remove(&image_id);
+            }
+        }
+    }
+
+    /// Removes the virtual placements a Kitty delete command selects. They have no cell or
+    /// z-index of their own, so only the commands that name images reach them.
+    fn delete_kitty_virtual_placements(&mut self, deletion_type: &DeletionType) {
+        for (image_id, metadata) in &mut self.image_id_to_metadata {
+            let StoredImageMetadata::Kitty(metadata) = metadata else {
+                continue;
+            };
+
+            match deletion_type {
+                DeletionType::DeleteAll => metadata.virtual_placements.clear(),
+                DeletionType::DeleteById(delete_by_id) => {
+                    if delete_by_id.image_id != *image_id {
+                        continue;
+                    }
+                    match delete_by_id.placement_id {
+                        Some(placement_id) => {
+                            metadata.virtual_placements.remove(&placement_id);
+                        }
+                        None => metadata.virtual_placements.clear(),
+                    }
+                }
+                DeletionType::InIdRange { first, last } => {
+                    if (*first..=*last).contains(image_id) {
+                        metadata.virtual_placements.clear();
+                    }
+                }
+                DeletionType::AtCursor
+                | DeletionType::AtCell { .. }
+                | DeletionType::InColumn(_)
+                | DeletionType::InRow(_)
+                | DeletionType::WithZIndex(_) => {}
+            }
+        }
+    }
+
+    /// Whether the image with the given id is still shown: in a grid, or through placeholder
+    /// cells.
+    fn is_image_placed(&self, image_id: u32) -> bool {
+        let has_virtual_placement = matches!(
+            self.image_id_to_metadata.get(&image_id),
+            Some(StoredImageMetadata::Kitty(metadata)) if !metadata.virtual_placements.is_empty()
+        );
+
+        has_virtual_placement
+            || self
+                .alt_screen
+                .grid_handler()
+                .has_placement_of_image(image_id)
+            || self
+                .block_list
+                .blocks()
+                .iter()
+                .any(|block| block.grid_handler().has_placement_of_image(image_id))
+    }
+
     pub fn needs_bracketed_paste(&mut self) -> bool {
         delegate!(self.needs_bracketed_paste())
     }
@@ -3405,9 +3540,40 @@ impl ansi::Handler for TerminalModel {
         };
 
         let message_id = pending.control_data.image_id;
+        let image_number = pending.control_data.image_number;
+        let placement_id = pending.control_data.placement_id;
         let verbosity = pending.control_data.verbosity;
 
-        if message_id.is_none() {
+        // A command names its image by id or by number, never by both.
+        if let (Some(image_id), Some(_)) = (message_id, image_number) {
+            if verbosity.send_error() {
+                let _ = writer.write_all(&create_kitty_error_reply(
+                    KittyReplyIds {
+                        image_id,
+                        image_number,
+                        placement_id,
+                    },
+                    InvalidControlData::IdAndNumberGiven.into(),
+                ));
+            }
+            return;
+        }
+
+        // A command that displays or deletes an image by its number means the newest image
+        // transmitted with that number.
+        let numbered_image_id = match pending.control_data.placement_action {
+            KittyPlacementAction::DisplayStoredImage | KittyPlacementAction::Delete => image_number
+                .and_then(|image_number| self.kitty_image_ids_by_number.get(&image_number))
+                .copied(),
+            KittyPlacementAction::StoreOnly
+            | KittyPlacementAction::StoreAndDisplay
+            | KittyPlacementAction::QuerySupport
+            | KittyPlacementAction::Unknown => None,
+        };
+
+        if let Some(numbered_image_id) = numbered_image_id {
+            pending.control_data.image_id = Some(numbered_image_id);
+        } else if message_id.is_none() {
             pending.control_data.image_id = Some(self.next_kitty_image_id);
             self.next_kitty_image_id = self.next_kitty_image_id.wrapping_add(1);
             // 0 is an invalid ID for kitty images
@@ -3416,13 +3582,29 @@ impl ansi::Handler for TerminalModel {
             }
         }
 
+        // A command is answered if it named its image, by id or by number. One that left the id
+        // to the terminal learns it from the answer.
+        let reply_ids = match (message_id, image_number) {
+            (Some(image_id), _) => Some(KittyReplyIds {
+                image_id,
+                image_number: None,
+                placement_id,
+            }),
+            (None, Some(_)) => pending.control_data.image_id.map(|image_id| KittyReplyIds {
+                image_id,
+                image_number,
+                placement_id,
+            }),
+            (None, None) => None,
+        };
+
         let message = match KittyMessage::try_from(pending) {
             Ok(message) => message,
             Err(err) => {
                 log::warn!("{err:?}");
-                if let Some(message_id) = message_id {
+                if let Some(reply_ids) = reply_ids {
                     if verbosity.send_error() {
-                        let _ = writer.write_all(&create_kitty_error_reply(message_id, err.into()));
+                        let _ = writer.write_all(&create_kitty_error_reply(reply_ids, err.into()));
                     }
                 }
                 return;
@@ -3430,6 +3612,15 @@ impl ansi::Handler for TerminalModel {
         };
 
         match KittyAction::try_from(message) {
+            // A query changes nothing in a grid, so it is answered here: a client that probes for
+            // support must get its answer even where the active grid takes no image.
+            Ok(KittyAction::QuerySupport(_)) => {
+                if let Some(reply_ids) = reply_ids {
+                    if verbosity.send_ok() {
+                        let _ = writer.write_all(&create_kitty_ok_reply(reply_ids));
+                    }
+                }
+            }
             Ok(action) => {
                 match &action {
                     KittyAction::StoreOnly(action) => {
@@ -3437,76 +3628,64 @@ impl ansi::Handler for TerminalModel {
                             action.image_id,
                             StoredImageMetadata::Kitty(action.image.metadata.clone()),
                         );
+                        if let Some(image_number) = image_number {
+                            self.kitty_image_ids_by_number
+                                .insert(image_number, action.image_id);
+                        }
                     }
                     KittyAction::StoreAndDisplay(action) => {
-                        self.image_id_to_metadata.insert(
-                            action.image_id,
-                            StoredImageMetadata::Kitty(action.image.metadata.clone()),
-                        );
+                        let mut metadata = action.image.metadata.clone();
+                        if action.placement_data.unicode_placeholder {
+                            metadata.virtual_placements.insert(
+                                placement_id.unwrap_or(0),
+                                VirtualPlacement {
+                                    cols: action.placement_data.cols,
+                                    rows: action.placement_data.rows,
+                                },
+                            );
+                        }
+                        self.image_id_to_metadata
+                            .insert(action.image_id, StoredImageMetadata::Kitty(metadata));
+                        if let Some(image_number) = image_number {
+                            self.kitty_image_ids_by_number
+                                .insert(image_number, action.image_id);
+                        }
                     }
-                    KittyAction::DisplayStoredImage(_) => {}
+                    KittyAction::DisplayStoredImage(action) => {
+                        if action.placement_data.unicode_placeholder {
+                            if let Some(StoredImageMetadata::Kitty(metadata)) =
+                                self.image_id_to_metadata.get_mut(&action.image_id)
+                            {
+                                metadata.virtual_placements.insert(
+                                    placement_id.unwrap_or(0),
+                                    VirtualPlacement {
+                                        cols: action.placement_data.cols,
+                                        rows: action.placement_data.rows,
+                                    },
+                                );
+                            }
+                        }
+                    }
                     KittyAction::QuerySupport(_) => {}
                     KittyAction::Delete {
                         delete_placements_only,
                         deletion_type,
-                    } => match deletion_type {
-                        DeletionType::DeleteAll => {
-                            if !delete_placements_only {
-                                self.image_id_to_metadata.clear();
-                            }
-
-                            if self.alt_screen_active {
-                                self.alt_screen.grid_handler_mut().evict_all_images();
-                            } else {
-                                for block in self.block_list_mut().blocks_mut() {
-                                    block.grid_handler_mut().evict_all_images();
-                                }
-                            }
-                        }
-                        DeletionType::DeleteById(delete_by_id) => {
-                            if !delete_placements_only {
-                                self.image_id_to_metadata.remove(&delete_by_id.image_id);
-                            }
-
-                            if self.alt_screen_active {
-                                if let Some(placement_id) = delete_by_id.placement_id {
-                                    self.alt_screen
-                                        .grid_handler_mut()
-                                        .evict_placement(delete_by_id.image_id, placement_id);
-                                } else {
-                                    self.alt_screen
-                                        .grid_handler_mut()
-                                        .evict_image(delete_by_id.image_id);
-                                }
-                            } else {
-                                for block in self.block_list_mut().blocks_mut() {
-                                    if let Some(placement_id) = delete_by_id.placement_id {
-                                        block
-                                            .grid_handler_mut()
-                                            .evict_placement(delete_by_id.image_id, placement_id);
-                                    } else {
-                                        block.grid_handler_mut().evict_image(delete_by_id.image_id);
-                                    }
-                                }
-                            }
-                        }
-                    },
+                    } => self.delete_kitty_images(deletion_type, *delete_placements_only),
                 }
 
                 match self.handle_completed_kitty_action(action.clone(), &mut HashMap::new()) {
                     Some(Ok(_)) => {
-                        if let Some(message_id) = message_id {
+                        if let Some(reply_ids) = reply_ids {
                             if verbosity.send_ok() {
-                                let _ = writer.write_all(&create_kitty_ok_reply(message_id));
+                                let _ = writer.write_all(&create_kitty_ok_reply(reply_ids));
                             }
                         }
                     }
                     Some(Err(err)) => {
                         log::warn!("{err:?}");
-                        if let Some(message_id) = message_id {
+                        if let Some(reply_ids) = reply_ids {
                             if verbosity.send_error() {
-                                let _ =
-                                    writer.write_all(&create_kitty_error_reply(message_id, err));
+                                let _ = writer.write_all(&create_kitty_error_reply(reply_ids, err));
                             }
                         }
                     }
@@ -3515,9 +3694,9 @@ impl ansi::Handler for TerminalModel {
             }
             Err(err) => {
                 log::warn!("{err:?}");
-                if let Some(message_id) = message_id {
+                if let Some(reply_ids) = reply_ids {
                     if verbosity.send_error() {
-                        let _ = writer.write_all(&create_kitty_error_reply(message_id, err));
+                        let _ = writer.write_all(&create_kitty_error_reply(reply_ids, err));
                     }
                 }
             }
