@@ -163,3 +163,83 @@ fn preemption_logic_covers_until_completion_timeout() {
         DurationDelay(Duration::from_secs(1))
     ));
 }
+
+const ALL_SHELL_TYPES: [ShellType; 4] = [
+    ShellType::Bash,
+    ShellType::Zsh,
+    ShellType::Fish,
+    ShellType::PowerShell,
+];
+
+/// The last line of a wrapped command, which must be the scope's closing token alone.
+fn closing_line(shell_type: ShellType, command: &str) -> String {
+    let wrapped = wrap_command_without_pager(Some(shell_type), command);
+    wrapped.lines().last().unwrap_or_default().to_owned()
+}
+
+fn closing_token(shell_type: ShellType) -> &'static str {
+    match shell_type {
+        ShellType::Bash | ShellType::Zsh => ")",
+        ShellType::Fish => "end",
+        ShellType::PowerShell => "}",
+    }
+}
+
+#[test]
+fn pager_wrapper_keeps_a_plain_command_on_one_line() {
+    assert_eq!(
+        wrap_command_without_pager(Some(ShellType::Bash), "cargo check"),
+        format!("({POSIX_NO_PAGER_PRELUDE}; cargo check)")
+    );
+    assert_eq!(
+        wrap_command_without_pager(Some(ShellType::Zsh), "cargo check"),
+        format!("({POSIX_NO_PAGER_PRELUDE}; cargo check)")
+    );
+    assert_eq!(
+        wrap_command_without_pager(Some(ShellType::Fish), "cargo check"),
+        format!("begin; {FISH_NO_PAGER_PRELUDE}; cargo check; end")
+    );
+    assert_eq!(
+        wrap_command_without_pager(Some(ShellType::PowerShell), "cargo check"),
+        format!("& {{ {POWERSHELL_NO_PAGER_PRELUDE}; cargo check }}")
+    );
+}
+
+#[test]
+fn pager_wrapper_closes_after_a_trailing_comment() {
+    for command in [
+        "git status # what changed",
+        "echo start\necho done # trailing comment",
+    ] {
+        for shell_type in ALL_SHELL_TYPES {
+            let wrapped = wrap_command_without_pager(Some(shell_type), command);
+            assert!(wrapped.contains(command), "{shell_type:?}: {wrapped}");
+            assert_eq!(
+                closing_line(shell_type, command),
+                closing_token(shell_type),
+                "{shell_type:?}: {wrapped}"
+            );
+        }
+    }
+}
+
+#[test]
+fn pager_wrapper_leaves_a_here_document_delimiter_alone_on_its_line() {
+    let command = "python3 - <<'PY'\nprint('ok')\nPY";
+    for shell_type in ALL_SHELL_TYPES {
+        let wrapped = wrap_command_without_pager(Some(shell_type), command);
+        let lines: Vec<_> = wrapped.lines().collect();
+        assert_eq!(lines[lines.len() - 2], "PY", "{shell_type:?}: {wrapped}");
+        assert_eq!(
+            lines[lines.len() - 1],
+            closing_token(shell_type),
+            "{shell_type:?}: {wrapped}"
+        );
+    }
+}
+
+#[test]
+fn pager_wrapper_passes_a_command_through_for_an_unknown_shell() {
+    let command = "echo start\necho done # trailing comment";
+    assert_eq!(wrap_command_without_pager(None, command), command);
+}

@@ -255,26 +255,7 @@ impl ShellCommandExecutor {
     /// 即便上述都失效,`action_result_future` 的 `MAX_UNTIL_COMPLETION_DURATION` 兜底
     /// 会保证 agent 不会**永久**挂起。
     fn turn_off_pager_for_command(&self, command: &String, ctx: &mut ModelContext<Self>) -> String {
-        match self.active_session.as_ref(ctx).shell_type(ctx) {
-            // 子壳里 export,子壳退出码 = 最后一条命令的退出码,从而保留真实 $?。
-            // 先 unset 清理继承自父 shell 的 PAGER/GIT_PAGER/MANPAGER,再 export=cat。
-            Some(ShellType::Zsh) | Some(ShellType::Bash) => format!(
-                "(unset PAGER GIT_PAGER MANPAGER; export PAGER=cat GIT_PAGER=cat MANPAGER=cat GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.pager GIT_CONFIG_VALUE_0=cat; {command})"
-            ),
-            // fish: set -lx 在 begin/end 块内是局部 export, $status 取最后一条命令。
-            // 用 `set -e` 先清掉继承变量,再 `set -lx` 赋 cat。
-            Some(ShellType::Fish) => format!(
-                "begin; set -e PAGER; set -e GIT_PAGER; set -e MANPAGER; set -lx PAGER cat; set -lx GIT_PAGER cat; set -lx MANPAGER cat; set -lx GIT_CONFIG_COUNT 1; set -lx GIT_CONFIG_KEY_0 core.pager; set -lx GIT_CONFIG_VALUE_0 cat; {command}; end"
-            ),
-            // pwsh: script block 局部 $env: 不污染外层会话, $LASTEXITCODE 透出。
-            // Remove-Item Env: 清理继承值,再赋 cat;对不存在变量用 -ErrorAction SilentlyContinue。
-            Some(ShellType::PowerShell) => format!(
-                "& {{ Remove-Item Env:PAGER -ErrorAction SilentlyContinue; Remove-Item Env:GIT_PAGER -ErrorAction SilentlyContinue; Remove-Item Env:MANPAGER -ErrorAction SilentlyContinue; $env:PAGER='cat'; $env:GIT_PAGER='cat'; $env:MANPAGER='cat'; $env:GIT_CONFIG_COUNT='1'; $env:GIT_CONFIG_KEY_0='core.pager'; $env:GIT_CONFIG_VALUE_0='cat'; {command} }}"
-            ),
-            // 未知 shell 无法安全装饰,直接放过 —— 此路径下 pager 抑制完全无效,只能
-            // 依靠 MAX_UNTIL_COMPLETION_DURATION 兜底超时避免永久挂起。
-            None => command.clone(),
-        }
+        wrap_command_without_pager(self.active_session.as_ref(ctx).shell_type(ctx), command)
     }
 
     pub(super) fn execute(
@@ -1210,6 +1191,43 @@ enum ActionResult {
     },
     Cancelled,
     BlockNotFound,
+}
+
+// 先 unset 清理继承自父 shell 的 PAGER/GIT_PAGER/MANPAGER,再 export=cat。
+const POSIX_NO_PAGER_PRELUDE: &str = "unset PAGER GIT_PAGER MANPAGER; export PAGER=cat GIT_PAGER=cat MANPAGER=cat GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.pager GIT_CONFIG_VALUE_0=cat";
+// 用 `set -e` 先清掉继承变量,再 `set -lx` 赋 cat。
+const FISH_NO_PAGER_PRELUDE: &str = "set -e PAGER; set -e GIT_PAGER; set -e MANPAGER; set -lx PAGER cat; set -lx GIT_PAGER cat; set -lx MANPAGER cat; set -lx GIT_CONFIG_COUNT 1; set -lx GIT_CONFIG_KEY_0 core.pager; set -lx GIT_CONFIG_VALUE_0 cat";
+// Remove-Item Env: 清理继承值,再赋 cat;对不存在变量用 -ErrorAction SilentlyContinue。
+const POWERSHELL_NO_PAGER_PRELUDE: &str = "Remove-Item Env:PAGER -ErrorAction SilentlyContinue; Remove-Item Env:GIT_PAGER -ErrorAction SilentlyContinue; Remove-Item Env:MANPAGER -ErrorAction SilentlyContinue; $env:PAGER='cat'; $env:GIT_PAGER='cat'; $env:MANPAGER='cat'; $env:GIT_CONFIG_COUNT='1'; $env:GIT_CONFIG_KEY_0='core.pager'; $env:GIT_CONFIG_VALUE_0='cat'";
+
+/// Wraps `command` in a scope of the shell that has the pagers turned off, see
+/// `ShellCommandExecutor::turn_off_pager_for_command`.
+///
+/// The token closing the scope goes on a line of its own when something at the end of the command
+/// could take it for part of itself: a comment (`ls # list` would comment out the `)`), or the
+/// last line of a multi-line command (a here-document's delimiter must stand alone on its line).
+fn wrap_command_without_pager(shell_type: Option<ShellType>, command: &str) -> String {
+    let closer_on_own_line = command.contains(['\n', '#']);
+    match shell_type {
+        // 子壳里 export,子壳退出码 = 最后一条命令的退出码,从而保留真实 $?。
+        Some(ShellType::Zsh) | Some(ShellType::Bash) => {
+            let closer = if closer_on_own_line { "\n)" } else { ")" };
+            format!("({POSIX_NO_PAGER_PRELUDE}; {command}{closer}")
+        }
+        // fish: set -lx 在 begin/end 块内是局部 export, $status 取最后一条命令。
+        Some(ShellType::Fish) => {
+            let closer = if closer_on_own_line { "\nend" } else { "; end" };
+            format!("begin; {FISH_NO_PAGER_PRELUDE}; {command}{closer}")
+        }
+        // pwsh: script block 局部 $env: 不污染外层会话, $LASTEXITCODE 透出。
+        Some(ShellType::PowerShell) => {
+            let closer = if closer_on_own_line { "\n}" } else { " }" };
+            format!("& {{ {POWERSHELL_NO_PAGER_PRELUDE}; {command}{closer}")
+        }
+        // 未知 shell 无法安全装饰,直接放过 —— 此路径下 pager 抑制完全无效,只能
+        // 依靠 MAX_UNTIL_COMPLETION_DURATION 兜底超时避免永久挂起。
+        None => command.to_owned(),
+    }
 }
 
 #[cfg(test)]
