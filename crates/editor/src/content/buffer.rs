@@ -5989,7 +5989,7 @@ fn convert_text_with_style_to_formatted_text(
             // Headers only support single line. When we have active header styling, we should only
             // insert the first line as Heading block style. The rest of the delta should be in plain text
             // styling.
-            let mut is_first_fragment = false;
+            let mut is_first_fragment = true;
             let mut formatted_lines = vec![];
             for line in text.lines() {
                 if line.is_empty() {
@@ -6001,7 +6001,7 @@ fn convert_text_with_style_to_formatted_text(
                     }));
                 } else {
                     formatted_lines.push(FormattedTextLine::Line(text_to_formatted_fragment(
-                        text, style,
+                        line, style,
                     )));
                 }
                 is_first_fragment = false;
