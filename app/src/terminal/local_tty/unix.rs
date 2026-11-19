@@ -40,7 +40,7 @@ use std::{
     mem::MaybeUninit,
     os::unix::{
         fs::DirBuilderExt,
-        io::{AsRawFd, FromRawFd, RawFd},
+        io::{AsRawFd, FromRawFd, IntoRawFd, OwnedFd, RawFd},
     },
     path::{Path, PathBuf},
     ptr,
@@ -50,23 +50,31 @@ use warpui::{AppContext, SingletonEntity};
 
 const BASH_HISTORY_SIZE_SENTINEL: &str = "57265949261";
 
-/// Get raw fds for leader/follower ends of a new PTY.
-fn make_pty(size: winsize) -> Result<(RawFd, RawFd)> {
+/// Get the leader/follower ends of a new PTY.
+fn make_pty(size: winsize) -> Result<(OwnedFd, OwnedFd)> {
     let mut win_size = size;
     win_size.ws_xpixel = 0;
     win_size.ws_ypixel = 0;
 
     let ends = openpty(Some(&win_size), None).context("openpty failed")?;
+    // Take ownership of both ends right away, so that they are closed on
+    // every path that doesn't hand them on.
+    let (leader, follower) = unsafe {
+        (
+            OwnedFd::from_raw_fd(ends.master),
+            OwnedFd::from_raw_fd(ends.slave),
+        )
+    };
     // Configure the two new file descriptors to be closed on exec.  This keeps
     // us from leaking tty fds into spawned shells.  FD_CLOEXEC is _not_ shared
     // across duplicated fds, so when we call `libc::dup2()` below, those fds
     // will _not_ be closed when we exec the shell.
     unsafe {
-        libc::fcntl(ends.master, libc::F_SETFD, libc::FD_CLOEXEC);
-        libc::fcntl(ends.slave, libc::F_SETFD, libc::FD_CLOEXEC);
+        libc::fcntl(leader.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC);
+        libc::fcntl(follower.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC);
     }
 
-    Ok((ends.master, ends.slave))
+    Ok((leader, follower))
 }
 
 fn docker_sandbox_run_args(starter: &DockerSandboxShellStarter) -> Vec<std::ffi::OsString> {
@@ -455,17 +463,17 @@ fn spawn_command_in_pty(
     size: &SizeInfo,
     close_fds: bool,
 ) -> Result<PtySpawnInfo> {
+    // Both ends are closed when this function returns, unless the leader is
+    // handed to the caller below.  The follower only needs to stay alive long
+    // enough for fork().
     let (leader, follower) = make_pty(size.to_winsize())?;
-
-    // Close the follower at the end of this function.
-    // We need to keep it alive long enough for fork().
-    let _file = unsafe { File::from_raw_fd(follower) };
+    let follower_fd = follower.as_raw_fd();
 
     #[cfg(any(target_os = "linux", target_os = "macos"))]
-    if let Ok(mut termios) = termios::tcgetattr(leader) {
+    if let Ok(mut termios) = termios::tcgetattr(leader.as_raw_fd()) {
         // Set character encoding to UTF-8.
         termios.input_flags.set(InputFlags::IUTF8, true);
-        let _ = termios::tcsetattr(leader, SetArg::TCSANOW, &termios);
+        let _ = termios::tcsetattr(leader.as_raw_fd(), SetArg::TCSANOW, &termios);
     }
 
     // Detect isolation platform outside pre_exec, since detect() is not async-signal-safe.
@@ -511,9 +519,9 @@ fn spawn_command_in_pty(
             libc::sigprocmask(libc::SIG_SETMASK, &signals, ptr::null_mut());
 
             // Set up stdin/stdout/stderr.
-            cvt(libc::dup2(follower, libc::STDIN_FILENO))?;
-            cvt(libc::dup2(follower, libc::STDOUT_FILENO))?;
-            cvt(libc::dup2(follower, libc::STDERR_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDIN_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDOUT_FILENO))?;
+            cvt(libc::dup2(follower_fd, libc::STDERR_FILENO))?;
 
             // Create a new process group.
             cvt(libc::setsid())?;
@@ -524,7 +532,7 @@ fn spawn_command_in_pty(
             // there are no issues. To allow such a generic cast the clippy warning
             // is disabled.
             #[allow(clippy::cast_lossless)]
-            cvt(libc::ioctl(follower, TIOCSCTTY as _, 0))?;
+            cvt(libc::ioctl(follower_fd, TIOCSCTTY as _, 0))?;
 
             // Mark all other FDs close-on-exec to avoid leaking any other
             // non-pty FDs into the shell process.  They must not be closed
@@ -574,7 +582,7 @@ fn spawn_command_in_pty(
     Ok(PtySpawnInfo {
         result: PtySpawnResult {
             pid: spawned.id(),
-            leader_fd: leader,
+            leader_fd: leader.into_raw_fd(),
         },
         child: spawned,
     })
@@ -1092,6 +1100,43 @@ mod tests {
 
         let status = spawned.child.wait().expect("wait for the child");
         assert!(status.success());
+    }
+
+    /// The descriptors of this process that are PTY leaders.
+    #[cfg(target_os = "linux")]
+    fn open_pty_leader_fds() -> std::collections::HashSet<RawFd> {
+        std::fs::read_dir("/proc/self/fd")
+            .expect("read /proc/self/fd")
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let target = std::fs::read_link(entry.path()).ok()?;
+                if target != Path::new("/dev/ptmx") && target != Path::new("/dev/pts/ptmx") {
+                    return None;
+                }
+                entry.file_name().to_str()?.parse().ok()
+            })
+            .collect()
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn failed_spawn_closes_the_pty_leader() {
+        const ATTEMPTS: usize = 32;
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+        let before = open_pty_leader_fds();
+
+        for _ in 0..ATTEMPTS {
+            let command = Command::new("/nonexistent/warp-test-shell");
+            assert!(spawn_command_in_pty(command, &size, false).is_err());
+        }
+
+        // Other tests may hold PTYs of their own while this one runs, so only
+        // require that the failed spawns didn't each leave a leader behind.
+        let leaked = open_pty_leader_fds().difference(&before).count();
+        assert!(
+            leaked < ATTEMPTS,
+            "{leaked} PTY leaders left open after {ATTEMPTS} failed spawns"
+        );
     }
 }
 
