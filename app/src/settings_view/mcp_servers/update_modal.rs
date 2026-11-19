@@ -51,6 +51,8 @@ pub struct UpdateModalBody {
     update_mouse_state: MouseStateHandle,
     close_button_mouse_state: MouseStateHandle,
     option_mouse_states: Vec<MouseStateHandle>,
+    /// Hover state of each option's checkbox, kept here so it outlives a render.
+    checkbox_mouse_states: Vec<MouseStateHandle>,
 }
 
 impl UpdateModalBody {
@@ -71,6 +73,9 @@ impl UpdateModalBody {
         self.option_mouse_states = (0..self.update_options.len())
             .map(|_| MouseStateHandle::default())
             .collect();
+        self.checkbox_mouse_states = (0..self.update_options.len())
+            .map(|_| MouseStateHandle::default())
+            .collect();
     }
 
     pub fn clear(&mut self) {
@@ -79,6 +84,7 @@ impl UpdateModalBody {
         self.update_options = vec![];
         self.selected_updates = vec![];
         self.option_mouse_states = vec![];
+        self.checkbox_mouse_states = vec![];
     }
 
     fn render_title(&self, appearance: &Appearance) -> Box<dyn Element> {
@@ -206,7 +212,7 @@ impl UpdateModalBody {
 
         let checkbox = appearance
             .ui_builder()
-            .checkbox(MouseStateHandle::default(), None)
+            .checkbox(self.checkbox_mouse_states[index].clone(), None)
             .check(is_selected)
             .build()
             .finish();
