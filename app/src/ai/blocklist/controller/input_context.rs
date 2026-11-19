@@ -13,7 +13,7 @@ use crate::{
             DocumentContentAttachmentSource, DriveObjectPayload,
         },
         block_context::BlockContext,
-        blocklist::BlocklistAIContextModel,
+        blocklist::{BlocklistAIContextModel, SessionContext},
         document::ai_document_model::{AIDocumentId, AIDocumentModel},
         facts::AIFactObjectModel,
         skills::list_skills,
@@ -57,6 +57,16 @@ pub(super) fn input_context_for_request(
 ) -> Arc<[AIAgentContext]> {
     let mut context = context_model.pending_context(app, is_user_query);
 
+    // Project rules and skill files are looked up on this machine's disk. In an SSH session the
+    // working directory is on the remote host, so they would be another directory's rules, or a
+    // same-named local directory's, and skills the agent's commands cannot reach there.
+    let session_context = SessionContext::from_session(active_session, app);
+    let session_is_on_this_machine =
+        !session_context.is_remote() && !session_context.is_legacy_ssh();
+    if !session_is_on_this_machine {
+        context.retain(|item| !matches!(item, AIAgentContext::ProjectRules { .. }));
+    }
+
     context.push(AIAgentContext::CurrentTime {
         current_time: Local::now(),
     });
@@ -69,10 +79,16 @@ pub(super) fn input_context_for_request(
         // 项目去云端后,system prompt 每轮在客户端完整重渲(BYOP 无状态),
         // skills 必须每轮全量送达,不再做差量。空列表时也不 push,保持
         // context 紧凑(模板侧 `{% if skills %}` 守卫即可正常省略 section)。
-        let skills = list_skills(
+        let mut skills = list_skills(
             active_session.current_working_directory().map(Path::new),
             app,
         );
+        if !session_is_on_this_machine {
+            // Only the skills bundled with Zap don't depend on the session's host.
+            skills.retain(|skill| {
+                matches!(skill.reference, ai::skills::SkillReference::BundledSkillId(_))
+            });
+        }
         if !skills.is_empty() {
             context.push(AIAgentContext::Skills { skills });
         }
