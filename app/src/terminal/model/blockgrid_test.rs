@@ -1,9 +1,19 @@
+use std::collections::HashMap;
+
+use pathfinder_geometry::vector::Vector2F;
+use warp_core::features::FeatureFlag;
+
 use crate::terminal::event_listener::ChannelEventListener;
 use crate::terminal::model::ansi::{self, Handler};
 use crate::terminal::model::blockgrid::{BlockGrid, CursorDisplayPoint};
 use crate::terminal::model::grid::grid_handler::PerformResetGridChecks;
 use crate::terminal::model::grid::Dimensions;
+use crate::terminal::model::image_map::StoredImageMetadata;
 use crate::terminal::model::index::{Point, VisibleRow};
+use crate::terminal::model::kitty::{
+    DisplayStoredImage, KittyAction, KittyImage, KittyImageMetadata, KittyPlacementData,
+    StoreAndDisplay,
+};
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::SizeInfo;
 use crate::test_util::mock_blockgrid;
@@ -174,6 +184,93 @@ pub fn test_trim_trailing_blank_rows_uses_active_floor_for_blank_started_grid() 
         block_grid.cursor_display_point(),
         Some(CursorDisplayPoint::HiddenCache(Point::new(0, 0)))
     );
+}
+
+fn kitty_test_blockgrid() -> BlockGrid {
+    BlockGrid::new(
+        SizeInfo::new_without_font_metrics(10, 10),
+        1000,
+        ChannelEventListener::new_for_test(),
+        ObfuscateSecrets::No,
+        PerformResetGridChecks::default(),
+    )
+}
+
+fn kitty_metadata_with_size(
+    image_id: u32,
+    width: f32,
+    height: f32,
+) -> HashMap<u32, StoredImageMetadata> {
+    HashMap::from([(
+        image_id,
+        StoredImageMetadata::Kitty(KittyImageMetadata {
+            image_size: Vector2F::new(width, height),
+            ..Default::default()
+        }),
+    )])
+}
+
+/// An image a thousand times wider than it is tall, shown one column wide, is less than a pixel
+/// high. It must be skipped instead of scrolling the grid by `0 - 1` rows.
+#[test]
+pub fn test_kitty_image_scaled_to_nothing_is_not_placed() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut block_grid = kitty_test_blockgrid();
+    let mut metadata = kitty_metadata_with_size(1, 1000.0, 1.0);
+    let action = KittyAction::StoreAndDisplay(StoreAndDisplay {
+        image: KittyImage {
+            metadata: KittyImageMetadata {
+                image_size: Vector2F::new(1000.0, 1.0),
+                ..Default::default()
+            },
+            data: vec![0],
+        },
+        placement_data: KittyPlacementData {
+            cols: Some(1),
+            ..Default::default()
+        },
+        image_id: 1,
+        placement_id: 1,
+    });
+
+    block_grid
+        .handle_completed_kitty_action(action, &mut metadata)
+        .expect("kitty action should be handled")
+        .expect("kitty action should be ignored");
+
+    assert_eq!(block_grid.grid_handler().cursor_point(), Point::new(0, 0));
+    assert!(block_grid
+        .grid_handler()
+        .get_image_placement_data(1, 1)
+        .is_none());
+}
+
+/// An image stored without pixels has no aspect ratio to scale by, so placing it later must be
+/// ignored like placing it while it is stored.
+#[test]
+pub fn test_kitty_display_of_stored_image_without_pixels_is_ignored() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut block_grid = kitty_test_blockgrid();
+    let mut metadata = kitty_metadata_with_size(1, 0.0, 0.0);
+    let action = KittyAction::DisplayStoredImage(DisplayStoredImage {
+        placement_data: KittyPlacementData {
+            cols: Some(1),
+            ..Default::default()
+        },
+        image_id: 1,
+        placement_id: 1,
+    });
+
+    block_grid
+        .handle_completed_kitty_action(action, &mut metadata)
+        .expect("kitty action should be handled")
+        .expect("kitty action should be ignored");
+
+    assert_eq!(block_grid.grid_handler().cursor_point(), Point::new(0, 0));
+    assert!(block_grid
+        .grid_handler()
+        .get_image_placement_data(1, 1)
+        .is_none());
 }
 
 #[test]
