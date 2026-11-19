@@ -4,7 +4,7 @@
 //! 覆盖范围:
 //! - `build_ssh_args` / `build_ssh_command_line` 参数构建
 //! - `test_connection` 在缺密码 / 错认证类型时的错误路径
-//! - `build_password_auth_stdin` 字节流构造(顺带覆盖 stdin 注入的关键安全路径)
+//! - the askpass helper that hands the password or passphrase to ssh
 //!
 //! 注意:实际派生 ssh 子进程的端到端测试在 `app/src/ssh_manager/server_view.rs` 的
 //! 集成测试 / 手测里覆盖 — 单测不做网络连接。
@@ -130,16 +130,25 @@ fn onekey_key_auth_emits_dash_i_when_key_path_is_resolved() {
     );
 }
 
+/// `BatchMode=yes` makes ssh skip the passphrase prompt, so a key with a passphrase could never
+/// be tested. The prompts that would need a password typed are turned off one by one instead.
 #[test]
-fn test_connection_key_auth_uses_batch_mode() {
+fn key_auth_args_leave_the_passphrase_prompt_on() {
     let mut s = server();
     s.auth_type = AuthType::Key;
     s.key_path = Some("/home/user/.ssh/id_rsa".into());
-    // 对于密钥认证,应该走 BatchMode=yes 路径(由 run_ssh_test 携带);
-    // 这里只验证 build_ssh_args 带了 -i 和 key_path。
-    let args = build_ssh_args(&s);
+    let args = build_key_auth_cmd_args(&s, "echo ok");
     assert!(args.contains(&"-i".to_string()));
     assert!(args.contains(&"/home/user/.ssh/id_rsa".to_string()));
+    assert!(args.contains(&"BatchMode=no".to_string()), "{args:?}");
+    assert!(
+        args.contains(&"PasswordAuthentication=no".to_string()),
+        "{args:?}"
+    );
+    assert!(
+        args.contains(&"KbdInteractiveAuthentication=no".to_string()),
+        "{args:?}"
+    );
 }
 
 #[test]
@@ -152,35 +161,124 @@ fn connection_status_equality() {
     assert_ne!(ConnectionStatus::Offline, ConnectionStatus::Unknown);
 }
 
-// -------- 密码 stdin 注入安全相关 --------
+// -------- the askpass helper --------
 
-/// 验证 `build_password_auth_stdin` 把密码 + 换行正确编码。
-/// 这是密码泄露修复的关键:必须确认写进 ssh stdin 的字节流就是密码字面量 +
-/// `\n`,而不是任何会让密码意外走 argv / 环境变量 / 临时文件的形态。
-#[test]
-fn build_password_auth_stdin_contains_password_with_newline() {
-    let password: Zeroizing<String> = Zeroizing::new("s3cret-pass".into());
-    let bytes = build_password_auth_stdin(&password);
-    assert_eq!(&*bytes, b"s3cret-pass\n");
+/// Runs the askpass helper the way ssh does, with the prompt as its only argument, and returns
+/// what it printed, or `None` if it gave no answer.
+fn askpass_answer(prompt: &str, secret: Option<(AskpassSecretKind, &str)>) -> Option<String> {
+    let helper = AskpassHelper::create().unwrap();
+    let mut command = command::blocking::Command::new(helper.path());
+    command
+        .arg(prompt)
+        .env_remove(ASKPASS_SECRET_ENV)
+        .env_remove(ASKPASS_SECRET_KIND_ENV);
+    if let Some((kind, secret)) = secret {
+        command
+            .env(ASKPASS_SECRET_ENV, secret)
+            .env(ASKPASS_SECRET_KIND_ENV, kind.as_env_value());
+    }
+    // Another test thread forking at the wrong moment briefly holds the script open for
+    // writing, which makes running it fail as "text file busy".
+    let output = loop {
+        match command.output() {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            other => break other.unwrap(),
+        }
+    };
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8(output.stdout).unwrap())
 }
 
-/// 边界:空密码仍要写一个 `\n`,这样 ssh 会立即拿到 EOF 并判定认证失败
-/// (而不是卡在等待 prompt 的状态)。
 #[test]
-fn build_password_auth_stdin_empty_password_still_has_newline() {
-    let password: Zeroizing<String> = Zeroizing::new(String::new());
-    let bytes = build_password_auth_stdin(&password);
-    assert_eq!(&*bytes, b"\n");
+fn askpass_helper_is_private_to_the_user() {
+    let helper = AskpassHelper::create().unwrap();
+    let file_mode = std::fs::metadata(helper.path())
+        .unwrap()
+        .permissions()
+        .mode();
+    assert_eq!(file_mode & 0o777, 0o700);
+    let dir_mode = std::fs::metadata(helper.path().parent().unwrap())
+        .unwrap()
+        .permissions()
+        .mode();
+    assert_eq!(dir_mode & 0o777, 0o700);
+
+    let path = helper.path().to_path_buf();
+    drop(helper);
+    assert!(!path.exists());
 }
 
-/// Unicode 密码:走 UTF-8 字节原样写入。
 #[test]
-fn build_password_auth_stdin_unicode_password() {
-    let password: Zeroizing<String> = Zeroizing::new("密码🔐".into());
-    let bytes = build_password_auth_stdin(&password);
-    let mut expected = "密码🔐".as_bytes().to_vec();
-    expected.push(b'\n');
-    assert_eq!(&*bytes, expected.as_slice());
+fn askpass_answers_the_password_prompt_with_the_password() {
+    assert_eq!(
+        askpass_answer(
+            "alice@1.2.3.4's password: ",
+            Some((AskpassSecretKind::Password, "s3cret-pass"))
+        )
+        .as_deref(),
+        Some("s3cret-pass\n")
+    );
+}
+
+/// The secret is printed as it is: nothing in it is expanded or split by the shell.
+#[test]
+fn askpass_passes_the_secret_through_unchanged() {
+    let secret = "pa ss  $HOME `id` \\ 'q' \"d\" * 密码🔐";
+    assert_eq!(
+        askpass_answer(
+            "alice@1.2.3.4's password: ",
+            Some((AskpassSecretKind::Password, secret))
+        ),
+        Some(format!("{secret}\n"))
+    );
+}
+
+#[test]
+fn askpass_answers_the_passphrase_prompt_with_the_passphrase() {
+    assert_eq!(
+        askpass_answer(
+            "Enter passphrase for key '/home/u/.ssh/id_ed25519': ",
+            Some((AskpassSecretKind::Passphrase, "key-pass"))
+        )
+        .as_deref(),
+        Some("key-pass\n")
+    );
+}
+
+/// A server that rejects the key and falls back to asking for a password must not be sent
+/// the key's passphrase, nor a key's passphrase prompt the account's password.
+#[test]
+fn askpass_keeps_a_secret_for_the_prompt_it_is_meant_for() {
+    assert_eq!(
+        askpass_answer(
+            "alice@1.2.3.4's password: ",
+            Some((AskpassSecretKind::Passphrase, "key-pass"))
+        ),
+        None
+    );
+    assert_eq!(
+        askpass_answer(
+            "Enter passphrase for key '/home/u/.ssh/id_ed25519': ",
+            Some((AskpassSecretKind::Password, "s3cret-pass"))
+        ),
+        None
+    );
+}
+
+#[test]
+fn askpass_gives_no_answer_without_a_secret_or_to_other_prompts() {
+    assert_eq!(askpass_answer("alice@1.2.3.4's password: ", None), None);
+    assert_eq!(
+        askpass_answer(
+            "Verification code: ",
+            Some((AskpassSecretKind::Password, "s3cret-pass"))
+        ),
+        None
+    );
 }
 
 /// 回归:`build_ssh_args` 不应再带 `sshpass`,防止有人误把它加回 cmd_args

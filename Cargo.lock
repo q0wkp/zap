@@ -15214,7 +15214,6 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dirs 6.0.0",
- "futures-lite 1.13.0",
  "instant",
  "keyring",
  "libsqlite3-sys",
