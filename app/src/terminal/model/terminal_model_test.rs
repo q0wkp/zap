@@ -968,3 +968,61 @@ fn unknown_user_vars_are_ignored() {
     model.process_bytes("\x1b]1337;SetUserVar=something_else=Y2xhdWRl\x07");
     assert_eq!(model.zmx_foreground(), None);
 }
+
+/// Feeds `bytes` to the model as PTY output and returns what the model wrote back.
+fn kitty_replies(model: &mut TerminalModel, bytes: &str) -> String {
+    let mut written = Vec::new();
+    Processor::new().parse_bytes(model, bytes.as_bytes(), &mut written);
+    String::from_utf8(written).expect("kitty replies should be UTF-8")
+}
+
+/// A one-pixel 24-bit RGB image, transmitted directly.
+const KITTY_PIXEL: &str = "s=1,v=1,f=24;AAAA";
+
+#[test]
+fn test_kitty_reply_echoes_placement_id() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+
+    assert_eq!(
+        kitty_replies(
+            &mut model,
+            &format!("\x1b_Ga=T,i=5,p=9,{KITTY_PIXEL}\x1b\\")
+        ),
+        "\x1b_Gi=5,p=9;OK\x1b\\"
+    );
+    assert_eq!(
+        kitty_replies(&mut model, &format!("\x1b_Ga=T,i=6,{KITTY_PIXEL}\x1b\\")),
+        "\x1b_Gi=6;OK\x1b\\"
+    );
+}
+
+#[test]
+fn test_kitty_error_reply_uses_protocol_error_code() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+
+    // Image 5 was never transmitted.
+    let reply = kitty_replies(&mut model, "\x1b_Ga=p,i=5,p=2\x1b\\");
+    assert!(
+        reply.starts_with("\x1b_Gi=5,p=2;ENOENT:"),
+        "unexpected reply: {reply:?}"
+    );
+
+    // With `q=2` errors are not reported either.
+    assert_eq!(kitty_replies(&mut model, "\x1b_Ga=p,i=5,q=2\x1b\\"), "");
+}
+
+#[test]
+fn test_kitty_query_is_answered_without_storing_the_image() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+
+    assert_eq!(
+        kitty_replies(&mut model, &format!("\x1b_Ga=q,i=31,{KITTY_PIXEL}\x1b\\")),
+        "\x1b_Gi=31;OK\x1b\\"
+    );
+    assert!(!model.image_id_to_metadata.contains_key(&31));
+}

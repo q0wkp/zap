@@ -647,14 +647,15 @@ fn parse_kitty_control_data(control_data: &[u8]) -> KittyControlData {
                     _ => KittyTransmissionMedium::default(),
                 }
             }
+            // Ids start at 1: the protocol's default of 0 means that none was given.
             b"i" => {
                 if let Some(value) = parse_u32(value) {
-                    parsed_control_data.image_id = Some(value);
+                    parsed_control_data.image_id = (value != 0).then_some(value);
                 }
             }
             b"p" => {
                 if let Some(value) = parse_u32(value) {
-                    parsed_control_data.placement_id = Some(value);
+                    parsed_control_data.placement_id = (value != 0).then_some(value);
                 }
             }
             b"a" => {
@@ -953,20 +954,60 @@ pub fn set_kitty_rgb_headers(mut image: KittyImage) -> Result<KittyImage, KittyR
     Ok(image)
 }
 
-fn create_kitty_reply(image_id: u32, message: String) -> Vec<u8> {
-    [
-        C1::APC,
-        b"G",
-        format!("i={image_id};{message}").as_bytes(),
-        C1::ST,
-    ]
-    .concat()
+impl KittyError {
+    /// The error code a failed response starts with, which is what clients match on.
+    fn code(&self) -> &'static str {
+        match self {
+            KittyError::KittyFeatureDisabled => "ENOTSUPP",
+            KittyError::StorageError(StorageError::UnknownId { .. }) => "ENOENT",
+            KittyError::InvalidKittyAction(action) => match action {
+                InvalidKittyAction::UnsupportedAction => "ENOTSUPP",
+                InvalidKittyAction::InvalidControlData(_) => "EINVAL",
+                InvalidKittyAction::InvalidKittyPayload(payload) => match payload {
+                    InvalidKittyPayload::InvalidTransmissionMedium(_)
+                    | InvalidKittyPayload::KittyDecodeError(_)
+                    | InvalidKittyPayload::InvalidKittyImage(_) => "EINVAL",
+                    InvalidKittyPayload::FileError(FileError::UnsupportedPlatform)
+                    | InvalidKittyPayload::ShmError(ShmError::UnsupportedPlatform) => "ENOTSUPP",
+                    InvalidKittyPayload::FileError(FileError::FileReadError(_))
+                    | InvalidKittyPayload::ShmError(
+                        ShmError::ObjectOpenError(_)
+                        | ShmError::MmapError
+                        | ShmError::EmptyObject
+                        | ShmError::ObjectTooSmall { .. }
+                        | ShmError::InvalidObjectSize
+                        | ShmError::FileStatError(_),
+                    ) => "EBADF",
+                },
+            },
+        }
+    }
 }
 
-pub fn create_kitty_ok_reply(image_id: u32) -> Vec<u8> {
-    create_kitty_reply(image_id, "OK".to_string())
+/// Builds a response to the message with the given ids. A message's placement id is echoed back,
+/// so that a client can tell the responses to several placements of one image apart.
+fn create_kitty_reply(image_id: u32, placement_id: Option<u32>, message: &str) -> Vec<u8> {
+    let ids = match placement_id {
+        Some(placement_id) => format!("i={image_id},p={placement_id}"),
+        None => format!("i={image_id}"),
+    };
+
+    [C1::APC, b"G", format!("{ids};{message}").as_bytes(), C1::ST].concat()
 }
 
-pub fn create_kitty_error_reply(image_id: u32, err: KittyError) -> Vec<u8> {
-    create_kitty_reply(image_id, format!("{err:?}"))
+pub fn create_kitty_ok_reply(image_id: u32, placement_id: Option<u32>) -> Vec<u8> {
+    create_kitty_reply(image_id, placement_id, "OK")
 }
+
+pub fn create_kitty_error_reply(
+    image_id: u32,
+    placement_id: Option<u32>,
+    err: KittyError,
+) -> Vec<u8> {
+    let code = err.code();
+    create_kitty_reply(image_id, placement_id, &format!("{code}:{err:?}"))
+}
+
+#[cfg(test)]
+#[path = "kitty_test.rs"]
+mod tests;

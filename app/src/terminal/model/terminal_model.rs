@@ -3402,6 +3402,7 @@ impl ansi::Handler for TerminalModel {
         };
 
         let message_id = pending.control_data.image_id;
+        let placement_id = pending.control_data.placement_id;
         let verbosity = pending.control_data.verbosity;
 
         if message_id.is_none() {
@@ -3419,7 +3420,11 @@ impl ansi::Handler for TerminalModel {
                 log::warn!("{err:?}");
                 if let Some(message_id) = message_id {
                     if verbosity.send_error() {
-                        let _ = writer.write_all(&create_kitty_error_reply(message_id, err.into()));
+                        let _ = writer.write_all(&create_kitty_error_reply(
+                            message_id,
+                            placement_id,
+                            err.into(),
+                        ));
                     }
                 }
                 return;
@@ -3427,6 +3432,15 @@ impl ansi::Handler for TerminalModel {
         };
 
         match KittyAction::try_from(message) {
+            // A query changes nothing in a grid, so it is answered here: a client that probes for
+            // support must get its answer even where the active grid takes no image.
+            Ok(KittyAction::QuerySupport(_)) => {
+                if let Some(message_id) = message_id {
+                    if verbosity.send_ok() {
+                        let _ = writer.write_all(&create_kitty_ok_reply(message_id, placement_id));
+                    }
+                }
+            }
             Ok(action) => {
                 match &action {
                     KittyAction::StoreOnly(action) => {
@@ -3494,7 +3508,8 @@ impl ansi::Handler for TerminalModel {
                     Some(Ok(_)) => {
                         if let Some(message_id) = message_id {
                             if verbosity.send_ok() {
-                                let _ = writer.write_all(&create_kitty_ok_reply(message_id));
+                                let _ = writer
+                                    .write_all(&create_kitty_ok_reply(message_id, placement_id));
                             }
                         }
                     }
@@ -3502,8 +3517,11 @@ impl ansi::Handler for TerminalModel {
                         log::warn!("{err:?}");
                         if let Some(message_id) = message_id {
                             if verbosity.send_error() {
-                                let _ =
-                                    writer.write_all(&create_kitty_error_reply(message_id, err));
+                                let _ = writer.write_all(&create_kitty_error_reply(
+                                    message_id,
+                                    placement_id,
+                                    err,
+                                ));
                             }
                         }
                     }
@@ -3514,7 +3532,11 @@ impl ansi::Handler for TerminalModel {
                 log::warn!("{err:?}");
                 if let Some(message_id) = message_id {
                     if verbosity.send_error() {
-                        let _ = writer.write_all(&create_kitty_error_reply(message_id, err));
+                        let _ = writer.write_all(&create_kitty_error_reply(
+                            message_id,
+                            placement_id,
+                            err,
+                        ));
                     }
                 }
             }
