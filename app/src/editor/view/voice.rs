@@ -36,7 +36,10 @@ pub(super) enum VoiceInputState {
     Stopped,
 
     /// We are listening for voice input. This is happening in the singleton voice transcriber.
-    Listening,
+    Listening {
+        /// The handle to the future that waits for the recording's result.
+        handle: SpawnedFutureHandle,
+    },
 
     /// We are done listening and are transcribing voice input.
     Transcribing {
@@ -49,13 +52,13 @@ impl VoiceInputState {
     pub(super) fn is_active(&self) -> bool {
         matches!(
             self,
-            VoiceInputState::Listening | VoiceInputState::Transcribing { .. }
+            VoiceInputState::Listening { .. } | VoiceInputState::Transcribing { .. }
         )
     }
 
     pub(super) fn icon(&self) -> Option<icons::Icon> {
         match self {
-            VoiceInputState::Listening => Some(icons::Icon::Microphone),
+            VoiceInputState::Listening { .. } => Some(icons::Icon::Microphone),
             VoiceInputState::Transcribing { .. } => Some(icons::Icon::DotsHorizontal),
             VoiceInputState::Stopped => None,
         }
@@ -183,9 +186,16 @@ impl EditorView {
 
     pub(super) fn stop_transcribing_voice_input(&mut self, ctx: &mut ViewContext<Self>) {
         VoiceInput::handle(ctx).update(ctx, |voice, _| voice.set_transcribing_active(false));
-        if let VoiceInputState::Transcribing { handle, .. } = &self.voice_input_state {
-            log::debug!("Aborting voice input transcription");
-            handle.abort();
+        match &self.voice_input_state {
+            VoiceInputState::Listening { handle } => {
+                log::debug!("Aborting voice input recording callback");
+                handle.abort();
+            }
+            VoiceInputState::Transcribing { handle } => {
+                log::debug!("Aborting voice input transcription");
+                handle.abort();
+            }
+            VoiceInputState::Stopped => {}
         }
         self.set_voice_input_state(VoiceInputState::Stopped, ctx);
         ctx.notify();
@@ -246,7 +256,7 @@ impl EditorView {
                     // if the user is not focused on Zap (since we lose the ability to listen to modifier
                     // key events). Thus, the user cannot enter a state where we're listening for voice input
                     // but the key is not held already.
-                    VoiceInputState::Listening => {
+                    VoiceInputState::Listening { .. } => {
                         if matches!(state, warpui::event::KeyState::Pressed) {
                             return false;
                         }
@@ -294,8 +304,13 @@ impl EditorView {
                         }
                     };
 
-                    // Immediately transition to Listening state
-                    self.set_voice_input_state(VoiceInputState::Listening, ctx);
+                    // Immediately transition to Listening state, keeping the handle of the
+                    // future that waits for the session result so that cancelling can abort it.
+                    let handle = ctx.spawn(
+                        async move { session.await_result().await },
+                        Self::handle_voice_session_result,
+                    );
+                    self.set_voice_input_state(VoiceInputState::Listening { handle }, ctx);
 
                     // Send telemetry for start
                     let is_udi_enabled = crate::settings::InputSettings::handle(ctx)
@@ -314,12 +329,6 @@ impl EditorView {
                             current_input_mode,
                         },
                         ctx
-                    );
-
-                    // Spawn future to await the session result
-                    ctx.spawn(
-                        async move { session.await_result().await },
-                        Self::handle_voice_session_result,
                     );
 
                     if matches!(*source, voice_input::VoiceInputToggledFrom::Button) {
@@ -343,7 +352,7 @@ impl EditorView {
                     return true;
                 }
             }
-            VoiceInputState::Listening => {
+            VoiceInputState::Listening { .. } => {
                 self.stop_voice_input(false, ctx);
             }
             VoiceInputState::Transcribing { .. } => {
@@ -373,12 +382,12 @@ impl EditorView {
         ctx: &mut ViewContext<Self>,
     ) {
         let was_active = self.is_voice_input_active();
-        let is_listening = matches!(voice_input_state, VoiceInputState::Listening);
+        let is_listening = matches!(voice_input_state, VoiceInputState::Listening { .. });
         let is_transcribing = matches!(voice_input_state, VoiceInputState::Transcribing { .. });
 
         let will_be_active = matches!(
             voice_input_state,
-            VoiceInputState::Listening | VoiceInputState::Transcribing { .. }
+            VoiceInputState::Listening { .. } | VoiceInputState::Transcribing { .. }
         );
 
         if !was_active && will_be_active {

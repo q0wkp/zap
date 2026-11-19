@@ -223,6 +223,8 @@ pub struct AgentInputFooter {
     #[cfg(feature = "voice_input")]
     cli_voice_input_state: CLIVoiceInputState,
     #[cfg(feature = "voice_input")]
+    cli_recording_handle: Option<SpawnedFutureHandle>,
+    #[cfg(feature = "voice_input")]
     cli_transcription_handle: Option<SpawnedFutureHandle>,
     v2_model_selector: Option<ViewHandle<ModelSelector>>,
 }
@@ -707,6 +709,8 @@ impl AgentInputFooter {
             fast_forward_button,
             #[cfg(feature = "voice_input")]
             cli_voice_input_state: CLIVoiceInputState::default(),
+            #[cfg(feature = "voice_input")]
+            cli_recording_handle: None,
             #[cfg(feature = "voice_input")]
             cli_transcription_handle: None,
             ftu_callout_close_button: ctx.add_typed_action_view(|_ctx| {
@@ -1420,24 +1424,22 @@ impl AgentInputFooter {
             return;
         }
 
-        if matches!(self.cli_voice_input_state, CLIVoiceInputState::Listening) {
-            voice_input::VoiceInput::handle(ctx).update(ctx, |voice_input, _| {
+        // Abort the callbacks first, so that neither the recording (which may already be
+        // converting to WAV) nor the transcription can deliver a result for this session.
+        if let Some(handle) = self.cli_recording_handle.take() {
+            handle.abort();
+        }
+        if let Some(handle) = self.cli_transcription_handle.take() {
+            handle.abort();
+        }
+        voice_input::VoiceInput::handle(ctx).update(ctx, |voice_input, _| {
+            if voice_input.is_listening() {
                 voice_input.abort_listening();
-            });
-        }
-
-        if matches!(self.cli_voice_input_state, CLIVoiceInputState::Transcribing) {
-            if let Some(handle) = self.cli_transcription_handle.take() {
-                handle.abort();
             }
-
-            voice_input::VoiceInput::handle(ctx).update(ctx, |voice, _| {
-                voice.set_transcribing_active(false);
-            });
-        }
+            voice_input.set_transcribing_active(false);
+        });
 
         self.cli_voice_input_state = CLIVoiceInputState::Stopped;
-        self.cli_transcription_handle = None;
         self.update_cli_mic_button_state(ctx);
     }
 
@@ -1496,10 +1498,10 @@ impl AgentInputFooter {
                             self.maybe_show_first_time_cli_voice_toast(ctx);
                         }
 
-                        ctx.spawn(
+                        self.cli_recording_handle = Some(ctx.spawn(
                             async move { session.await_result().await },
                             Self::handle_cli_voice_session_result,
-                        );
+                        ));
                     }
                     Err(StartListeningError::AccessDenied) => {
                         self.show_cli_microphone_access_toast(ctx);
@@ -1530,6 +1532,7 @@ impl AgentInputFooter {
         ctx: &mut ViewContext<Self>,
     ) {
         use crate::editor::VoiceTranscriber;
+        self.cli_recording_handle = None;
 
         match result {
             VoiceSessionResult::Audio {
