@@ -72,6 +72,21 @@ fn estimate_message(msg: &api::Message) -> usize {
         .as_ref()
         .map(|inner| match inner {
             M::UserQuery(u) => u.query.chars().count(),
+            // Replayed as a user message holding the skill's instructions and the user's query.
+            M::InvokeSkill(invoke_skill) => {
+                let skill_chars = invoke_skill
+                    .skill
+                    .as_ref()
+                    .and_then(|skill| skill.content.as_ref())
+                    .map(|content| content.content.chars().count())
+                    .unwrap_or(0);
+                let query_chars = invoke_skill
+                    .user_query
+                    .as_ref()
+                    .map(|user_query| user_query.query.chars().count())
+                    .unwrap_or(0);
+                skill_chars + query_chars
+            }
             M::AgentOutput(a) => a.text.chars().count(),
             M::AgentReasoning(r) => r.reasoning.chars().count(),
             M::ToolCall(_) => msg.server_message_data.chars().count().max(64),
@@ -105,7 +120,8 @@ impl<'a> MessageRef for WarpMessageView<'a> {
     fn role(&self) -> Role {
         use api::message::Message as M;
         match &self.msg.message {
-            Some(M::UserQuery(_)) => Role::User,
+            // A skill invocation is what the user sent in that turn, like a query.
+            Some(M::UserQuery(_)) | Some(M::InvokeSkill(_)) => Role::User,
             Some(M::ToolCallResult(_)) => Role::Tool,
             // AgentOutput / AgentReasoning / ToolCall / 其他 → Assistant
             _ => Role::Assistant,

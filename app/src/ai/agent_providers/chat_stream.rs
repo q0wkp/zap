@@ -567,6 +567,52 @@ fn collect_linearized_task_messages(tasks: &[api::Task]) -> Vec<&api::Message> {
     out
 }
 
+/// The file a skill was loaded from. Bundled skills have none the model could read.
+fn skill_file_path(skill: &api::Skill) -> Option<&str> {
+    use api::skill_descriptor::{scope, SkillReference};
+
+    let descriptor = skill.descriptor.as_ref()?;
+    let is_bundled = matches!(
+        descriptor.scope.as_ref().and_then(|s| s.r#type.as_ref()),
+        Some(scope::Type::Bundled(_))
+    );
+    if is_bundled {
+        return None;
+    }
+    match descriptor.skill_reference.as_ref()? {
+        SkillReference::Path(path) if !path.is_empty() => Some(path.as_str()),
+        SkillReference::Path(_) | SkillReference::BundledSkillId(_) => None,
+    }
+}
+
+/// The user message a skill invocation becomes: the skill's instructions, the file they came
+/// from (what the skill refers to, such as its scripts, is found relative to it) and what the
+/// user typed after the skill's name. The request that carries the invocation and every later
+/// request, which replays it from the task's history, render it here, so the text never changes.
+fn render_skill_invocation(skill: Option<&api::Skill>, user_query: Option<&str>) -> String {
+    let name = skill
+        .and_then(|skill| skill.descriptor.as_ref())
+        .map(|descriptor| descriptor.name.as_str())
+        .unwrap_or_default();
+    let content = skill
+        .and_then(|skill| skill.content.as_ref())
+        .map(|content| content.content.as_str())
+        .unwrap_or_default();
+    let mut composed = format!(
+        "Perform the task following the guidance of the skill \"{name}\" below:\n\n{content}\n\n---\n"
+    );
+    if let Some(path) = skill.and_then(skill_file_path) {
+        composed.push_str(&format!(
+            "The skill was loaded from the file {path}. Paths it mentions are relative to that \
+             file's directory.\n"
+        ));
+    }
+    if let Some(query) = user_query {
+        composed.push_str(&format!("Further user instructions: {query}"));
+    }
+    composed
+}
+
 struct SerializerProjectionBuilder {
     items: Vec<ProjectionItem>,
     pending_tool_calls: Vec<ProjectedToolCall>,
@@ -774,7 +820,8 @@ fn build_serializer_readiness_projection(
         };
 
         match inner {
-            api::message::Message::UserQuery(_) => {
+            // A persisted skill invocation is replayed as a user message, like a query.
+            api::message::Message::UserQuery(_) | api::message::Message::InvokeSkill(_) => {
                 builder.push_user_boundary(msg.task_id.clone(), msg.id.clone());
             }
             api::message::Message::AgentOutput(_) => {
@@ -808,7 +855,6 @@ fn build_serializer_readiness_projection(
             | api::message::Message::WebFetch(_)
             | api::message::Message::DebugOutput(_)
             | api::message::Message::ArtifactEvent(_)
-            | api::message::Message::InvokeSkill(_)
             | api::message::Message::MessagesReceivedFromAgents(_)
             | api::message::Message::ModelUsed(_)
             | api::message::Message::EventsFromAgents(_)
@@ -938,7 +984,8 @@ fn build_controller_readiness_projection(
         };
 
         match inner {
-            api::message::Message::UserQuery(_) => {
+            // A persisted skill invocation is replayed as a user message, like a query.
+            api::message::Message::UserQuery(_) | api::message::Message::InvokeSkill(_) => {
                 builder.push_user_boundary(msg.task_id.clone(), msg.id.clone());
             }
             api::message::Message::AgentOutput(_) => {
@@ -972,7 +1019,6 @@ fn build_controller_readiness_projection(
             | api::message::Message::WebFetch(_)
             | api::message::Message::DebugOutput(_)
             | api::message::Message::ArtifactEvent(_)
-            | api::message::Message::InvokeSkill(_)
             | api::message::Message::MessagesReceivedFromAgents(_)
             | api::message::Message::ModelUsed(_)
             | api::message::Message::EventsFromAgents(_)
@@ -1418,6 +1464,18 @@ fn build_chat_request(
                     ));
                 }
             }
+            api::message::Message::InvokeSkill(invoke_skill) => {
+                // The skill's instructions and the user's query have to stay in every later
+                // request of the run, in the words the model first saw them in.
+                flush_assistant_buffer(&mut buf, &mut messages, &mut outbound_tool_groups);
+                messages.push(ChatMessage::user(render_skill_invocation(
+                    invoke_skill.skill.as_ref(),
+                    invoke_skill
+                        .user_query
+                        .as_ref()
+                        .map(|user_query| user_query.query.as_str()),
+                )));
+            }
             api::message::Message::AgentReasoning(r) => {
                 // 把上一轮的 reasoning 挂到下一个要 flush 的 assistant message 上。
                 // genai 0.6 的 with_reasoning_content 会按当前 adapter 序列化:
@@ -1622,14 +1680,13 @@ fn build_chat_request(
             AIAgentInput::InvokeSkill {
                 skill, user_query, ..
             } => {
-                let mut composed = format!(
-                    "Perform the task following the guidance of the skill \"{}\" below:\n\n{}\n\n---\n",
-                    skill.name, skill.content,
-                );
-                if let Some(uq) = user_query {
-                    composed.push_str(&format!("Further user instructions: {}", uq.query));
-                }
-                messages.push(ChatMessage::user(composed));
+                // Rendered from the form the invocation is persisted in, so that the replay of
+                // the persisted message in later requests gives this very text.
+                let api_skill = api::Skill::from(skill.clone());
+                messages.push(ChatMessage::user(render_skill_invocation(
+                    Some(&api_skill),
+                    user_query.as_ref().map(|uq| uq.query.as_str()),
+                )));
             }
             AIAgentInput::ResumeConversation { context } => {
                 // BYOP 没有 server 端 resume prompt 注入层。LRC auto-resume 时必须显式
@@ -3754,6 +3811,24 @@ pub async fn generate_byop_output(
                         content,
                     ));
                 }
+                AIAgentInput::InvokeSkill {
+                    skill, user_query, ..
+                } => {
+                    // Without this the invocation reaches the model only in the request that
+                    // carries it: from the request after the skill's first tool call on, its
+                    // instructions and the user's query would be gone.
+                    persistence_order.push(format!(
+                        "{input_idx}:InvokeSkill(skill={},query_len={})",
+                        skill.name,
+                        user_query.as_ref().map(|uq| uq.query.len()).unwrap_or(0)
+                    ));
+                    persistence_messages.push(make_invoke_skill_message(
+                        persistence_task_id,
+                        &request_id,
+                        skill,
+                        user_query.as_ref().map(|uq| uq.query.as_str()),
+                    ));
+                }
                 _ => {}
             }
         }
@@ -5213,6 +5288,32 @@ fn make_user_query_message(
             context,
             ..Default::default()
         })),
+        request_id: request_id.to_owned(),
+        timestamp: None,
+    }
+}
+
+/// The task message that keeps a skill invocation in the conversation's history.
+fn make_invoke_skill_message(
+    task_id: &str,
+    request_id: &str,
+    skill: &ai::skills::ParsedSkill,
+    user_query: Option<&str>,
+) -> api::Message {
+    api::Message {
+        id: Uuid::new_v4().to_string(),
+        task_id: task_id.to_owned(),
+        server_message_data: String::new(),
+        citations: vec![],
+        message: Some(api::message::Message::InvokeSkill(
+            api::message::InvokeSkill {
+                skill: Some(skill.clone().into()),
+                user_query: user_query.map(|query| api::message::UserQuery {
+                    query: query.to_owned(),
+                    ..Default::default()
+                }),
+            },
+        )),
         request_id: request_id.to_owned(),
         timestamp: None,
     }
@@ -6703,6 +6804,101 @@ mod serializer_readiness_tests {
             running_command: None,
             intended_agent: None,
         }
+    }
+
+    fn demo_skill(scope: ai::skills::SkillScope) -> ai::skills::ParsedSkill {
+        ai::skills::ParsedSkill {
+            path: std::path::PathBuf::from("/repo/.agents/skills/demo/SKILL.md"),
+            name: "demo".to_owned(),
+            description: "A demo skill.".to_owned(),
+            content: "Run scripts/check.sh and report.".to_owned(),
+            line_range: None,
+            provider: ai::skills::SkillProvider::Agents,
+            scope,
+        }
+    }
+
+    fn invoke_skill_input(skill: ai::skills::ParsedSkill, query: Option<&str>) -> AIAgentInput {
+        AIAgentInput::InvokeSkill {
+            context: Arc::<[AIAgentContext]>::from([]),
+            skill,
+            user_query: query.map(|query| crate::ai::agent::InvokeSkillUserQuery {
+                query: query.to_owned(),
+                referenced_attachments: HashMap::new(),
+            }),
+        }
+    }
+
+    fn user_texts(request: &ChatRequest) -> Vec<String> {
+        request
+            .messages
+            .iter()
+            .filter(|message| message.role == ChatRole::User)
+            .filter_map(|message| message.content.first_text().map(str::to_owned))
+            .collect()
+    }
+
+    #[test]
+    fn skill_invocation_is_replayed_from_history_with_the_live_text() {
+        let skill = demo_skill(ai::skills::SkillScope::Project);
+
+        // The request that carries the invocation.
+        let live = build_openai_request(&request_params(
+            vec![],
+            vec![invoke_skill_input(skill.clone(), Some("only the tests"))],
+        ))
+        .unwrap();
+        let live_texts = user_texts(&live);
+        let [live_text] = live_texts.as_slice() else {
+            panic!("expected one user message, got {live_texts:?}");
+        };
+        assert!(live_text.contains("skill \"demo\""));
+        assert!(live_text.contains("Run scripts/check.sh and report."));
+        assert!(live_text.contains("/repo/.agents/skills/demo/SKILL.md"));
+        assert!(live_text.ends_with("Further user instructions: only the tests"));
+
+        // A later request of the same run: the invocation is in the task's history now, and
+        // the input is something else.
+        let persisted =
+            make_invoke_skill_message("task-1", "req-1", &skill, Some("only the tests"));
+        let answer = make_agent_output_message("task-1", "req-1", "Done.".to_owned());
+        let later = build_openai_request(&request_params(
+            vec![persisted, answer],
+            vec![user_query_input("and the docs?")],
+        ))
+        .unwrap();
+        assert_eq!(
+            user_texts(&later),
+            [live_text.clone(), "and the docs?".to_owned()]
+        );
+    }
+
+    #[test]
+    fn skill_invocation_names_no_file_for_a_bundled_skill() {
+        let bundled = api::Skill::from(demo_skill(ai::skills::SkillScope::Bundled));
+        let text = render_skill_invocation(Some(&bundled), None);
+        assert!(text.contains("Run scripts/check.sh and report."));
+        assert!(!text.contains("SKILL.md"));
+        assert!(!text.contains("Further user instructions"));
+
+        let project = api::Skill::from(demo_skill(ai::skills::SkillScope::Project));
+        assert_eq!(
+            skill_file_path(&project),
+            Some("/repo/.agents/skills/demo/SKILL.md")
+        );
+        assert_eq!(skill_file_path(&bundled), None);
+    }
+
+    #[test]
+    fn persisted_skill_invocation_is_a_user_turn_for_readiness() {
+        let skill = demo_skill(ai::skills::SkillScope::Project);
+        let persisted = make_invoke_skill_message("task-1", "req-1", &skill, None);
+        let answer = make_agent_output_message("task-1", "req-1", "Done.".to_owned());
+        let params = request_params(vec![persisted, answer], vec![user_query_input("next")]);
+
+        let report = classify_byop_controller_readiness(&params);
+
+        assert!(matches!(report.state, ReadinessState::Ready));
     }
 
     fn cancelled_action_result_input(call_id: &str) -> AIAgentInput {

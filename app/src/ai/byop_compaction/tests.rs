@@ -594,6 +594,32 @@ fn agent_output(id: &str, task_id: &str, request_id: &str, seconds: i64) -> api:
     }
 }
 
+fn invoke_skill(id: &str, task_id: &str, request_id: &str, seconds: i64) -> api::Message {
+    let skill = ai::skills::ParsedSkill {
+        path: std::path::PathBuf::from("/repo/.agents/skills/demo/SKILL.md"),
+        name: "demo".to_string(),
+        description: "A demo skill.".to_string(),
+        content: "Run the checks and report.".to_string(),
+        line_range: None,
+        provider: ai::skills::SkillProvider::Agents,
+        scope: ai::skills::SkillScope::Project,
+    };
+    api::Message {
+        id: id.to_string(),
+        task_id: task_id.to_string(),
+        server_message_data: String::new(),
+        citations: vec![],
+        message: Some(api::message::Message::InvokeSkill(
+            api::message::InvokeSkill {
+                skill: Some(skill.into()),
+                user_query: None,
+            },
+        )),
+        request_id: request_id.to_string(),
+        timestamp: Some(ts(seconds)),
+    }
+}
+
 fn conversation_with_messages(messages: Vec<api::Message>) -> AIConversation {
     let task = api::Task {
         id: "root".to_string(),
@@ -628,4 +654,46 @@ fn commit_summarization_records_head_message_ids() {
     assert_eq!(completed.assistant_msg_id, "a3");
     assert_eq!(completed.tail_start_id.as_deref(), Some("u3"));
     assert_eq!(completed.head_message_ids, ["u1", "a1", "u2", "a2"]);
+}
+
+/// A run started with a skill invocation has no UserQuery: the summary has to be anchored on
+/// the invocation, or it is keyed by an id no message has and never reaches later requests.
+#[test]
+fn commit_summarization_anchors_on_a_skill_invocation() {
+    let mut conversation = conversation_with_messages(vec![
+        invoke_skill("s1", "root", "r1", 1),
+        agent_output("a1", "root", "r1", 2),
+        agent_output("a2", "root", "r2", 3),
+    ]);
+    let cfg = CompactionConfig {
+        tail_turns: 1,
+        preserve_recent_tokens: Some(1_000),
+        ..Default::default()
+    };
+
+    assert!(commit_summarization(&mut conversation, false, &cfg));
+    let completed = conversation.compaction_state.completed().last().unwrap();
+    assert_eq!(completed.user_msg_id, "s1");
+    assert_eq!(completed.assistant_msg_id, "a2");
+    assert!(conversation
+        .compaction_state
+        .hidden_message_ids()
+        .contains("s1"));
+}
+
+#[test]
+fn skill_invocation_is_a_user_turn_for_compaction() {
+    use super::message_view::{build_tool_name_lookup, project};
+    use super::state::CompactionState;
+
+    let skill = invoke_skill("s1", "root", "r1", 1);
+    let output = agent_output("a1", "root", "r1", 2);
+    let messages = [&skill, &output];
+    let state = CompactionState::default();
+    let tool_names = build_tool_name_lookup(messages.iter().copied());
+    let views = project(&messages, &state, &tool_names);
+
+    assert!(views[0].role() == Role::User);
+    assert!(views[0].estimate_size() > 0);
+    assert_eq!(turns(&views).len(), 1);
 }
