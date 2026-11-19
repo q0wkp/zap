@@ -180,13 +180,23 @@ where
         // Clear the dependency cache for this view as it is being rendered again
         remove_view_internal(view, cache);
         cache.rendering_view = Some(view);
+    });
 
-        let return_value = render_callback();
+    // The callback runs outside of `with_cache`: reads of `Tracked` values in it go through
+    // `with_cache` themselves, and the cache reference must not be held across them.
+    let _rendering_guard = RenderingGuard;
+    render_callback()
+}
 
-        cache.rendering_view = None;
+/// Marks the end of a view's render when dropped, so that the view also stops being tracked when
+/// its render unwinds. Otherwise every later read of a `Tracked` value outside of a render would
+/// be recorded as a dependency of that view.
+struct RenderingGuard;
 
-        return_value
-    })
+impl Drop for RenderingGuard {
+    fn drop(&mut self) {
+        with_cache(|cache| cache.rendering_view = None);
+    }
 }
 
 /// Returns the list of windows that have invalidations caused by the

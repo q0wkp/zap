@@ -291,3 +291,23 @@ fn test_model_updates_multiple_views() {
         assert_eq!(second_render_counter.load(Ordering::Relaxed), 3);
     });
 }
+
+/// A render that unwinds must not leave its view registered as the one being rendered: a later
+/// read of a `Tracked` value outside of any render would become a dependency of that view.
+#[test]
+fn test_render_that_panics_stops_tracking_its_view() {
+    let window_id = WindowId::new();
+    let view_id = EntityId::new();
+
+    let result = std::panic::catch_unwind(|| {
+        render_view::<_, ()>(window_id, view_id, || panic!("the render failed"));
+    });
+    assert!(result.is_err());
+
+    // Read and then update a value outside of any render. Had the view stayed registered, the
+    // read would have made the value one of its dependencies, and the update would invalidate it.
+    let mut tracked = Tracked::new(0usize);
+    assert_eq!(*tracked, 0);
+    *tracked = 1;
+    assert!(take_invalidations_for_window(window_id).is_empty());
+}
