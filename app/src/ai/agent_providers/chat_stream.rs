@@ -3273,7 +3273,20 @@ fn build_chat_options(
 }
 
 fn map_genai_error(err: genai::Error) -> OpenAiCompatibleError {
+    use genai::webc::Error as W;
     use genai::Error as G;
+
+    fn status_error(status: u16, canonical_reason: &str, body: &str) -> OpenAiCompatibleError {
+        OpenAiCompatibleError::Status {
+            status,
+            body: if canonical_reason.is_empty() {
+                body.to_owned()
+            } else {
+                format!("{canonical_reason}: {body}")
+            },
+        }
+    }
+
     match err {
         // 真·解析失败:JSON 反序列化阶段
         G::StreamParse { .. }
@@ -3281,27 +3294,69 @@ fn map_genai_error(err: genai::Error) -> OpenAiCompatibleError {
         | G::JsonValueExt(_)
         | G::InvalidJsonResponseElement { .. } => OpenAiCompatibleError::Decode(format!("{err}")),
 
-        // 网络/流式发送阶段失败(reqwest 连接、TLS、DNS、超时、流中断等)
-        G::WebStream { .. } | G::WebAdapterCall { .. } | G::WebModelCall { .. } => {
-            OpenAiCompatibleError::Stream(format!("{err}"))
+        // A streamed request that the provider rejects reaches us as a stream error boxing the
+        // HTTP error: keep the status, so that a 4xx is not taken for a dropped connection.
+        G::WebStream { ref error, .. } => match error.downcast_ref::<G>() {
+            Some(G::HttpError {
+                status,
+                body,
+                canonical_reason,
+            }) => status_error(status.as_u16(), canonical_reason, body),
+            // 网络/流式发送阶段失败(reqwest 连接、TLS、DNS、超时、流中断等)
+            Some(_) | None => OpenAiCompatibleError::Stream(format!("{err}")),
+        },
+
+        G::WebAdapterCall {
+            ref webc_error, ..
         }
+        | G::WebModelCall {
+            ref webc_error, ..
+        } => match webc_error {
+            W::ResponseFailedStatus { status, body, .. } => {
+                status_error(status.as_u16(), "", body)
+            }
+            W::ResponseFailedNotJson { .. }
+            | W::ResponseFailedInvalidJson { .. }
+            | W::JsonValueExt(_)
+            | W::Reqwest(_) => OpenAiCompatibleError::Stream(format!("{err}")),
+        },
 
         // 服务端返回的 HTTP 错误状态
         G::HttpError {
             status,
             body,
             canonical_reason,
-        } => OpenAiCompatibleError::Status {
-            status: status.as_u16(),
-            body: if canonical_reason.is_empty() {
-                body
-            } else {
-                format!("{canonical_reason}: {body}")
-            },
-        },
+        } => status_error(status.as_u16(), &canonical_reason, &body),
 
         // 其余(请求构造、鉴权、能力不支持等)归为通用错误,避免误导成"解析失败"
         other => OpenAiCompatibleError::Other(format!("{other}")),
+    }
+}
+
+/// Turns a failed provider call into the error the response stream acts on. The variant decides
+/// whether the request is tried again (`AIApiError::is_retryable`): a rejected request (a 4xx
+/// other than 408 and 429) fails the same way every time, while an interrupted connection is
+/// worth another attempt.
+fn byop_api_error(stage: &str, err: OpenAiCompatibleError) -> AIApiError {
+    match err {
+        OpenAiCompatibleError::Status { status, body } => {
+            match http::StatusCode::from_u16(status) {
+                Ok(status) => AIApiError::ErrorStatus(status, body),
+                Err(_) => AIApiError::Other(anyhow::anyhow!(
+                    "BYOP {stage} failed: HTTP status {status}: {body}"
+                )),
+            }
+        }
+        OpenAiCompatibleError::Stream(message) => AIApiError::Stream {
+            stream_type: "BYOP",
+            source: anyhow::anyhow!("{stage} failed: {message}"),
+        },
+        other @ (OpenAiCompatibleError::InvalidBaseUrl(_)
+        | OpenAiCompatibleError::Http(_)
+        | OpenAiCompatibleError::Decode(_)
+        | OpenAiCompatibleError::Other(_)) => {
+            AIApiError::Other(anyhow::anyhow!("BYOP {stage} failed: {other}"))
+        }
     }
 }
 
@@ -3734,9 +3789,7 @@ pub async fn generate_byop_output(
                 if let Some(call) = inspector_call.take() {
                     call.fail(&mapped);
                 }
-                yield Err(Arc::new(AIApiError::Other(anyhow::anyhow!(
-                    "BYOP open stream failed: {mapped}"
-                ))));
+                yield Err(Arc::new(byop_api_error("open stream", mapped)));
                 return;
             }
         };
@@ -3826,9 +3879,7 @@ pub async fn generate_byop_output(
                             log::error!("[byop] error bytes[{hex_start}..{hex_end}] hex={slice:02x?}");
                         }
                     }
-                    yield Err(Arc::new(AIApiError::Other(anyhow::anyhow!(
-                        "BYOP stream error: {mapped}"
-                    ))));
+                    yield Err(Arc::new(byop_api_error("stream", mapped)));
                     return;
                 }
             };
@@ -5373,6 +5424,92 @@ fn make_finished_done(
                 request_cost: None,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod provider_error_tests {
+    use super::*;
+
+    fn http_error(status: http::StatusCode) -> genai::Error {
+        genai::Error::HttpError {
+            status,
+            canonical_reason: status.canonical_reason().unwrap_or_default().to_owned(),
+            body: "{\"error\":\"nope\"}".to_owned(),
+        }
+    }
+
+    /// The streamers hand over a rejected request as a stream error boxing the HTTP error.
+    fn streamed(err: genai::Error) -> genai::Error {
+        genai::Error::WebStream {
+            model_iden: ModelIden::new(AdapterKind::OpenAI, "test-model"),
+            cause: err.to_string(),
+            error: Box::new(err),
+        }
+    }
+
+    fn api_error(err: genai::Error) -> AIApiError {
+        byop_api_error("stream", map_genai_error(err))
+    }
+
+    #[test]
+    fn rejected_request_keeps_its_status_and_is_not_retried() {
+        for status in [
+            http::StatusCode::BAD_REQUEST,
+            http::StatusCode::UNAUTHORIZED,
+            http::StatusCode::NOT_FOUND,
+            http::StatusCode::UNPROCESSABLE_ENTITY,
+        ] {
+            for err in [http_error(status), streamed(http_error(status))] {
+                let mapped = api_error(err);
+                assert!(
+                    matches!(&mapped, AIApiError::ErrorStatus(got, body)
+                        if *got == status && body.contains("nope")),
+                    "{status}: {mapped:?}"
+                );
+                assert!(!mapped.is_retryable(), "{status} must not be retried");
+            }
+        }
+    }
+
+    #[test]
+    fn transient_statuses_are_retried() {
+        for status in [
+            http::StatusCode::REQUEST_TIMEOUT,
+            http::StatusCode::TOO_MANY_REQUESTS,
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+            http::StatusCode::BAD_GATEWAY,
+            http::StatusCode::SERVICE_UNAVAILABLE,
+        ] {
+            let mapped = api_error(streamed(http_error(status)));
+            assert!(
+                matches!(&mapped, AIApiError::ErrorStatus(got, _) if *got == status),
+                "{status}: {mapped:?}"
+            );
+            assert!(mapped.is_retryable(), "{status} must be retried");
+        }
+    }
+
+    #[test]
+    fn interrupted_stream_is_a_retryable_stream_error() {
+        let interrupted = genai::Error::WebStream {
+            model_iden: ModelIden::new(AdapterKind::OpenAI, "test-model"),
+            cause: "connection reset".to_owned(),
+            error: "connection reset".into(),
+        };
+        let mapped = api_error(interrupted);
+        assert!(
+            matches!(&mapped, AIApiError::Stream { stream_type: "BYOP", .. }),
+            "{mapped:?}"
+        );
+        assert!(mapped.is_retryable());
+    }
+
+    #[test]
+    fn other_failures_stay_generic() {
+        let mapped = api_error(genai::Error::Internal("boom".to_owned()));
+        assert!(matches!(&mapped, AIApiError::Other(_)), "{mapped:?}");
+        assert!(mapped.to_string().contains("boom"));
     }
 }
 
