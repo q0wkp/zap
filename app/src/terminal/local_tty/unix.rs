@@ -526,13 +526,16 @@ fn spawn_command_in_pty(
             #[allow(clippy::cast_lossless)]
             cvt(libc::ioctl(follower, TIOCSCTTY as _, 0))?;
 
-            // Close all other FDs to avoid leaking any other non-pty FDs
-            // into the shell process.  Don't propagate up errors, as most
-            // of these won't be active file descriptors, and attempting to
-            // close() them produces EINVAL.
+            // Mark all other FDs close-on-exec to avoid leaking any other
+            // non-pty FDs into the shell process.  They must not be closed
+            // here: one of them is the pipe through which Command reports a
+            // failed exec to the parent process, and without it spawn()
+            // returns a child that has already exited.  Don't propagate up
+            // errors, as most of these won't be active file descriptors,
+            // and fcntl() on them produces EBADF.
             if close_fds {
                 for fd in 3..fdlimit {
-                    libc::close(fd);
+                    libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC);
                 }
             }
 
@@ -1049,6 +1052,46 @@ mod tests {
             env_value(&command, "WARP_INITIAL_HISTSIZE"),
             Some(Some(BASH_HISTORY_SIZE_SENTINEL.to_owned()))
         );
+    }
+
+    #[test]
+    fn spawn_reports_missing_executable_when_closing_fds() {
+        let command = Command::new("/nonexistent/warp-test-shell");
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+
+        let err = match spawn_command_in_pty(command, &size, true) {
+            Ok(_) => panic!("spawning a missing executable should fail"),
+            Err(err) => err,
+        };
+
+        assert_eq!(
+            err.downcast_ref::<io::Error>().map(io::Error::kind),
+            Some(io::ErrorKind::NotFound)
+        );
+    }
+
+    #[test]
+    fn spawn_does_not_pass_other_fds_to_the_child_when_closing_fds() {
+        // A duplicated descriptor is inherited by child processes, since
+        // FD_CLOEXEC is not shared across duplicates.
+        let file = File::open("/dev/null").expect("open /dev/null");
+        let inherited = unsafe { File::from_raw_fd(libc::dup(file.as_raw_fd())) };
+
+        let mut command = Command::new("/bin/sh");
+        command.arg("-c").arg(format!(
+            "test ! -e /dev/fd/{inherited_fd}",
+            inherited_fd = inherited.as_raw_fd()
+        ));
+        let size = SizeInfo::new_without_font_metrics(24, 80);
+
+        let mut spawned = match spawn_command_in_pty(command, &size, true) {
+            Ok(spawned) => spawned,
+            Err(err) => panic!("spawning /bin/sh should succeed: {err:#}"),
+        };
+        let _leader = unsafe { File::from_raw_fd(spawned.result.leader_fd) };
+
+        let status = spawned.child.wait().expect("wait for the child");
+        assert!(status.success());
     }
 }
 
