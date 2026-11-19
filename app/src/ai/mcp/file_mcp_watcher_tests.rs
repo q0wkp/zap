@@ -1,4 +1,4 @@
-use super::substitute_env_vars;
+use super::{parse_mcp_config_file, substitute_env_vars, FileMCPConfigParseOutcome, MCPProvider};
 use std::env;
 
 fn cleanup_env_vars(vars: &[&str]) {
@@ -71,4 +71,40 @@ fn test_substitute_env_vars_missing_or_empty() {
 
     // Cleanup
     cleanup_env_vars(&["EMPTY_VAR"]);
+}
+
+fn parse_config_with_contents(contents: Option<&str>) -> FileMCPConfigParseOutcome {
+    let directory = tempfile::tempdir().expect("failed to create a temporary directory");
+    let config_path = directory.path().join(".mcp.json");
+    if let Some(contents) = contents {
+        std::fs::write(&config_path, contents).expect("failed to write the config file");
+    }
+    futures::executor::block_on(parse_mcp_config_file(&config_path, MCPProvider::Claude))
+}
+
+/// A config that fails to parse (here, one caught half-written) must not be taken for a config
+/// that defines no servers, which would stop the servers of the last valid snapshot.
+#[test]
+fn test_unparsable_config_is_not_an_empty_snapshot() {
+    assert!(matches!(
+        parse_config_with_contents(Some(r#"{"mcpServers": {"#)),
+        FileMCPConfigParseOutcome::Error
+    ));
+}
+
+#[test]
+fn test_missing_config_is_reported_as_missing() {
+    assert!(matches!(
+        parse_config_with_contents(None),
+        FileMCPConfigParseOutcome::Missing
+    ));
+}
+
+#[test]
+fn test_config_without_servers_is_an_empty_snapshot() {
+    let outcome = parse_config_with_contents(Some(r#"{"mcpServers": {}}"#));
+    assert!(
+        matches!(&outcome, FileMCPConfigParseOutcome::Parsed(servers) if servers.is_empty()),
+        "a valid config without servers should parse to an empty snapshot"
+    );
 }

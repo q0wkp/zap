@@ -5,6 +5,7 @@ use std::{
 
 use async_channel::Sender;
 use async_fs::OpenOptions;
+use futures::channel::oneshot;
 use futures::AsyncWriteExt as _;
 use warpui::r#async::executor::{Background, BackgroundTask};
 
@@ -33,6 +34,19 @@ impl LogFileWriter {
     }
 }
 
+/// Resolves once a logger's background writing task has ended, at which point
+/// it has written everything that was queued and no longer touches its file.
+///
+/// The task owns the sending half and never sends on it: the channel resolves
+/// when the task drops it, however the task ends.
+pub(crate) struct WriterFinished(oneshot::Receiver<()>);
+
+impl WriterFinished {
+    async fn wait(self) {
+        let _ = self.0.await;
+    }
+}
+
 /// A simple file-based logger for server stderr output.
 /// Writes timestamped log entries to a file asynchronously.
 #[derive(Clone)]
@@ -44,14 +58,35 @@ pub struct SimpleLogger {
 impl SimpleLogger {
     /// Creates a new logger that writes to the specified file path.
     /// The file is truncated on creation.
-    pub(crate) fn new(log_path: PathBuf, executor: Arc<Background>) -> Self {
+    ///
+    /// `predecessor` is the previous logger of the same path, if there was one.
+    /// Closing or dropping a logger only closes its channel: its task keeps
+    /// writing the lines still queued. The new logger therefore opens (and
+    /// truncates) the file only after the predecessor has finished, so the two
+    /// never write to the file at the same time. Lines logged in the meantime
+    /// wait in the new logger's channel.
+    ///
+    /// Also returns the [`WriterFinished`] of the new logger, to be handed to
+    /// its own successor.
+    pub(crate) fn new(
+        log_path: PathBuf,
+        executor: Arc<Background>,
+        predecessor: Option<WriterFinished>,
+    ) -> (Self, WriterFinished) {
         let (log_tx, log_rx) = async_channel::unbounded::<String>();
+        let (finished_tx, finished_rx) = oneshot::channel::<()>();
 
         if let Some(directory) = log_path.parent() {
             let _ = std::fs::create_dir_all(directory);
         }
 
         let logging_task = executor.spawn(async move {
+            // Held until the task ends, which is what resolves `WriterFinished`.
+            let _finished_tx = finished_tx;
+            if let Some(predecessor) = predecessor {
+                predecessor.wait().await;
+            }
+
             let mut log_file = match OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -92,12 +127,13 @@ impl SimpleLogger {
             let _ = log_file.flush().await;
         });
 
-        Self {
+        let logger = Self {
             writer: Arc::new(LogFileWriter {
                 log_tx,
                 _logging_task: logging_task,
             }),
-        }
+        };
+        (logger, WriterFinished(finished_rx))
     }
 
     /// Log a message to the file.

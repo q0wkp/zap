@@ -530,18 +530,14 @@ impl FileMCPWatcher {
         let root_path_for_callback = root_path.clone();
         let _ = ctx.spawn(
             async move { parse_mcp_config_file(&config_path, provider).await },
-            move |_me, parsed, ctx| {
-                ctx.emit(FileMCPWatcherEvent::ConfigParsed {
-                    root_path: root_path_for_callback,
-                    provider,
-                    servers: parsed,
-                });
+            move |_me, outcome, ctx| {
+                emit_parse_outcome(outcome, root_path_for_callback, provider, ctx);
             },
         );
     }
 
     /// Asynchronously reads and parses the MCP configuration file at `config_file_path`,
-    /// then emits a [`FileMCPWatcherEvent::ConfigParsed`] event.
+    /// then emits the [`FileMCPWatcherEvent`] for its outcome, if any.
     fn update_servers_from_config_file(
         &mut self,
         config_file_path: &Path,
@@ -552,12 +548,8 @@ impl FileMCPWatcher {
         let config_file_path = config_file_path.to_path_buf();
         let _ = ctx.spawn(
             async move { parse_mcp_config_file(&config_file_path, provider).await },
-            move |_, servers, ctx| {
-                ctx.emit(FileMCPWatcherEvent::ConfigParsed {
-                    root_path,
-                    provider,
-                    servers,
-                });
+            move |_, outcome, ctx| {
+                emit_parse_outcome(outcome, root_path, provider, ctx);
             },
         );
     }
@@ -608,16 +600,51 @@ fn substitute_env_vars(json_content: &str) -> Result<String, anyhow::Error> {
     Ok(result)
 }
 
-/// Asynchronously reads and parses an MCP config file and returns parsed MCP servers.
+/// What reading and parsing an MCP config file came to.
+enum FileMCPConfigParseOutcome {
+    /// The file does not exist.
+    Missing,
+    /// The file holds this snapshot of servers.
+    Parsed(Vec<ParsedTemplatableMCPServerResult>),
+    /// The file could not be read or parsed. This says nothing about which servers it defines
+    /// (it may be half-written, or temporarily unreadable), so it is not an empty snapshot.
+    Error,
+}
+
+/// Emits the event for a parse outcome. A failed read or parse emits nothing, which leaves the
+/// servers of the last valid snapshot in place.
+fn emit_parse_outcome(
+    outcome: FileMCPConfigParseOutcome,
+    root_path: PathBuf,
+    provider: MCPProvider,
+    ctx: &mut ModelContext<FileMCPWatcher>,
+) {
+    match outcome {
+        FileMCPConfigParseOutcome::Missing => ctx.emit(FileMCPWatcherEvent::ConfigRemoved {
+            root_path,
+            provider,
+        }),
+        FileMCPConfigParseOutcome::Parsed(servers) => ctx.emit(FileMCPWatcherEvent::ConfigParsed {
+            root_path,
+            provider,
+            servers,
+        }),
+        FileMCPConfigParseOutcome::Error => {}
+    }
+}
+
+/// Asynchronously reads and parses an MCP config file.
 /// Dispatches to the appropriate parser based on `provider` rather than inferring from path.
-/// Returns an empty vec if the file doesn't exist or parsing fails.
+///
+/// A missing file, a valid snapshot and a file that cannot be read or parsed are distinct
+/// outcomes, so that a transient error does not look like a config without servers.
 async fn parse_mcp_config_file(
     file_path: &Path,
     provider: MCPProvider,
-) -> Vec<ParsedTemplatableMCPServerResult> {
+) -> FileMCPConfigParseOutcome {
     let file_contents = match async_fs::read_to_string(file_path).await {
         Ok(contents) => contents,
-        Err(err) if err.kind() == ErrorKind::NotFound => return vec![],
+        Err(err) if err.kind() == ErrorKind::NotFound => return FileMCPConfigParseOutcome::Missing,
         Err(err) => {
             safe_warn!(
                 safe: (
@@ -630,7 +657,7 @@ async fn parse_mcp_config_file(
                     err
                 )
             );
-            return vec![];
+            return FileMCPConfigParseOutcome::Error;
         }
     };
 
@@ -649,7 +676,7 @@ async fn parse_mcp_config_file(
                         err
                     )
                 );
-                return vec![];
+                return FileMCPConfigParseOutcome::Error;
             }
         },
         MCPProvider::Claude | MCPProvider::Zap | MCPProvider::Agents => file_contents,
@@ -669,12 +696,12 @@ async fn parse_mcp_config_file(
                     err
                 )
             );
-            return vec![];
+            return FileMCPConfigParseOutcome::Error;
         }
     };
 
     match ParsedTemplatableMCPServerResult::from_config_file_json(&resolved_contents) {
-        Ok(parsed_servers) => parsed_servers,
+        Ok(parsed_servers) => FileMCPConfigParseOutcome::Parsed(parsed_servers),
         Err(err) => {
             safe_warn!(
                 safe: (
@@ -687,7 +714,7 @@ async fn parse_mcp_config_file(
                     err
                 )
             );
-            vec![]
+            FileMCPConfigParseOutcome::Error
         }
     }
 }

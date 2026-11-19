@@ -52,7 +52,6 @@ fn test_spawn_from_view() {
     });
 }
 
-#[ignore]
 #[test]
 fn test_spawn_abortable_from_view() {
     #[derive(Debug, Default, PartialEq)]

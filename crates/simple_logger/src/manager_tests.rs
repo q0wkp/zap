@@ -85,3 +85,50 @@ fn register_reclaims_closed_logger() {
     drop(new_logger);
     cleanup_log_path(&log_path);
 }
+
+/// A logger that is closed with lines still queued keeps writing them after its
+/// path has been reclaimed. The logger that takes the path over must not open
+/// the file until then: otherwise the old lines land in the new logger's file,
+/// at the old logger's file offset.
+#[test]
+fn reclaiming_a_path_waits_for_the_previous_logger_to_finish_writing() {
+    let mut manager = LogManager::new();
+    let executor = Arc::new(Background::default());
+    let log_path = temp_path("reclaim-while-flushing").join("server.log");
+
+    let old_logger = manager
+        .register_resolved_path(log_path.clone(), executor.clone())
+        .expect("initial registration should succeed");
+    for i in 0..2000 {
+        old_logger.log(format!("old line {i}"));
+    }
+    old_logger.close();
+
+    let new_logger = manager
+        // Keep the executor: dropping it cancels the logging tasks awaited below.
+        .register_resolved_path(log_path.clone(), executor.clone())
+        .expect("closed logger should be reclaimed");
+    new_logger.log("new line".to_string());
+    new_logger.close();
+
+    let writer = Arc::try_unwrap(new_logger.writer)
+        .unwrap_or_else(|_| panic!("logger should have no other owners"));
+    futures::executor::block_on(writer._logging_task).expect("logging task should finish");
+
+    let contents = std::fs::read_to_string(&log_path).expect("read log file");
+    let lines: Vec<&str> = contents.lines().collect();
+    assert_eq!(
+        lines.len(),
+        1,
+        "only the new logger's line should be in the file, got {} lines",
+        lines.len()
+    );
+    assert!(
+        lines[0].ends_with(" | new line"),
+        "unexpected line: {:?}",
+        lines[0]
+    );
+
+    drop(old_logger);
+    cleanup_log_path(&log_path);
+}

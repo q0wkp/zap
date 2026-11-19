@@ -1,4 +1,4 @@
-use crate::{LogFileWriter, SimpleLogger};
+use crate::{LogFileWriter, SimpleLogger, WriterFinished};
 use std::collections::{HashMap, HashSet};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -55,9 +55,19 @@ fn log_directory_path(namespace: &str) -> PathBuf {
 ///
 /// Supporting both cases lets callers opt into eager, explicit shutdown without
 /// tying path reuse strictly to the last clone being dropped.
+///
+/// A stale logger may still be writing its queued lines when its path is
+/// reclaimed, so the logger that takes the path over waits for it to finish
+/// before opening the file.
 pub struct LogManager {
     namespaces: HashSet<String>,
-    loggers: HashMap<PathBuf, Weak<LogFileWriter>>,
+    loggers: HashMap<PathBuf, RegisteredLogger>,
+}
+
+/// The most recent logger registered for a path.
+struct RegisteredLogger {
+    writer: Weak<LogFileWriter>,
+    finished: WriterFinished,
 }
 
 impl Default for LogManager {
@@ -122,7 +132,7 @@ impl LogManager {
         executor: Arc<Background>,
     ) -> Result<SimpleLogger, LogManagerError> {
         if let Some(existing) = self.loggers.get(&path) {
-            if let Some(writer) = existing.upgrade() {
+            if let Some(writer) = existing.writer.upgrade() {
                 // A live `Arc` alone is not enough to keep the path reserved.
                 // Callers may explicitly close a logger to mark the stream as
                 // finished before every clone has been dropped.
@@ -133,9 +143,20 @@ impl LogManager {
         }
 
         // In the absence of an active logger at this path, initialize and return a new logger,
-        // which truncates any existing log file on creation.
-        let logger = SimpleLogger::new(path.clone(), executor);
-        self.loggers.insert(path, logger.downgrade());
+        // which truncates any existing log file on creation, once the logger it replaces has
+        // written out what it still had queued.
+        let predecessor = self
+            .loggers
+            .remove(&path)
+            .map(|registered| registered.finished);
+        let (logger, finished) = SimpleLogger::new(path.clone(), executor, predecessor);
+        self.loggers.insert(
+            path,
+            RegisteredLogger {
+                writer: logger.downgrade(),
+                finished,
+            },
+        );
         Ok(logger)
     }
 }

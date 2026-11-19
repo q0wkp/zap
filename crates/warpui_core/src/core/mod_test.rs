@@ -21,6 +21,9 @@ use crate::{
 #[path = "transfer_view_tests.rs"]
 mod transfer_view_tests;
 
+#[path = "ref_count_tests.rs"]
+mod ref_count_tests;
+
 #[test]
 fn test_subscribe_and_emit_from_model() {
     #[derive(Default)]
@@ -307,7 +310,6 @@ fn test_spawn_from_model() {
     });
 }
 
-#[ignore]
 #[test]
 fn test_spawn_abortable_from_model() {
     #[derive(Debug, Default, PartialEq)]
@@ -368,7 +370,62 @@ fn test_spawn_abortable_from_model() {
         });
         rx.await.unwrap();
 
-        // The future should be successfully resolved since we never called abort.
+        // The future should be aborted, whether or not it resolved in the background before the
+        // call to abort.
+        handle.read(&app, |model, _| {
+            assert_eq!(model.spawned_outcome, SpawnedOutcome::Aborted)
+        });
+    });
+}
+
+/// Aborting a spawned future on the main thread must keep `on_resolve` from running even when the
+/// future has already resolved in the background and its output is only waiting to be delivered.
+#[test]
+fn test_abort_after_spawned_future_resolved_from_model() {
+    #[derive(Debug, Default, PartialEq)]
+    enum SpawnedOutcome {
+        #[default]
+        NotCompleted,
+        Aborted,
+        Resolved,
+    }
+
+    #[derive(Default)]
+    struct Model {
+        spawned_outcome: SpawnedOutcome,
+    }
+
+    impl Entity for Model {
+        type Event = ();
+    }
+
+    App::test((), |mut app| async move {
+        let handle = app.add_model(|_| Model::default());
+
+        let (resolving_tx, resolving_rx) = std::sync::mpsc::channel();
+        handle
+            .update(&mut app, |_, c| {
+                let spawned_future = c.spawn_abortable(
+                    async move {
+                        let _ = resolving_tx.send(());
+                    },
+                    |model, _, _| model.spawned_outcome = SpawnedOutcome::Resolved,
+                    |model, _| model.spawned_outcome = SpawnedOutcome::Aborted,
+                );
+
+                // Block the main thread until the future has resolved on the background executor,
+                // and a little longer, so that its output is on its way back by the time of the
+                // abort.
+                resolving_rx
+                    .recv()
+                    .expect("the spawned future should have run");
+                std::thread::sleep(Duration::from_millis(50));
+                spawned_future.abort();
+
+                c.await_spawned_future(spawned_future.future_id())
+            })
+            .await;
+
         handle.read(&app, |model, _| {
             assert_eq!(model.spawned_outcome, SpawnedOutcome::Aborted)
         });

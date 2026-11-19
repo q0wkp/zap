@@ -12,6 +12,7 @@ use rubato::{
 };
 use thiserror::Error;
 
+use warpui::r#async::SpawnedFutureHandle;
 use warpui::event::KeyState;
 use warpui::{Entity, ModelContext, SingletonEntity, platform::MicrophoneAccessState};
 
@@ -26,6 +27,9 @@ pub struct VoiceInput {
     state: VoiceInputState,
     pub should_suppress_new_feature_popup: bool,
     voice_session_start: Option<instant::Instant>,
+    /// The WAV conversion of the recording that was just stopped, aborted when the session is
+    /// cancelled before its result is delivered.
+    wav_conversion_handle: Option<SpawnedFutureHandle>,
 }
 
 #[derive(Default)]
@@ -109,6 +113,7 @@ impl VoiceInput {
             state: VoiceInputState::Idle,
             should_suppress_new_feature_popup: false,
             voice_session_start: None,
+            wav_conversion_handle: None,
         }
     }
 
@@ -138,7 +143,7 @@ impl VoiceInput {
         ctx: &mut ModelContext<Self>,
         source: VoiceInputToggledFrom,
     ) -> Result<VoiceSession, StartListeningError> {
-        if self.is_listening() {
+        if self.is_active() {
             log::debug!("Already listening, not starting again");
             return Err(StartListeningError::AlreadyRunning);
         }
@@ -260,6 +265,9 @@ impl VoiceInput {
         if active {
             self.state = VoiceInputState::Transcribing;
         } else {
+            if let Some(handle) = self.wav_conversion_handle.take() {
+                handle.abort();
+            }
             self.state = VoiceInputState::Idle;
         }
     }
@@ -289,9 +297,10 @@ impl VoiceInput {
             let result_tx = result_tx.take();
 
             // Spawn WAV conversion and send result through channel
-            let _ = ctx.spawn(
+            self.wav_conversion_handle = Some(ctx.spawn(
                 Self::convert_to_wav(resampled.clone()),
                 move |me, wav_result, _ctx| {
+                    me.wav_conversion_handle = None;
                     if let Some(tx) = result_tx {
                         let result = match wav_result {
                             Ok(wav_base64) => VoiceSessionResult::Audio {
@@ -310,7 +319,7 @@ impl VoiceInput {
                     // Move to Idle after sending result
                     me.state = VoiceInputState::Idle;
                 },
-            );
+            ));
 
             // Move to Transcribing state while conversion is happening
             self.state = VoiceInputState::Transcribing;
@@ -420,3 +429,7 @@ impl Entity for VoiceInput {
 }
 
 impl SingletonEntity for VoiceInput {}
+
+#[cfg(test)]
+#[path = "lib_tests.rs"]
+mod tests;

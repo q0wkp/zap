@@ -438,7 +438,8 @@ impl<'a, T: Entity> ModelContext<'a, T> {
             }))
             .detach();
 
-        let future = self.spawn_local(rx, |model, rx_result, ctx| {
+        let callback_abort_handle = abort_handle.clone();
+        let future = self.spawn_local(rx, move |model, rx_result, ctx| {
             let output = match rx_result {
                 Ok(output) => output,
                 Err(_) => {
@@ -451,7 +452,14 @@ impl<'a, T: Entity> ModelContext<'a, T> {
             // Call the appropriate callback based on the output of resolving the future. If the
             // future returned `Ok`, the future was not aborted so we can call `on_resolve`. If
             // the future returned `Err`--the future was aborted.
+            //
+            // Aborting has no effect on a future that has already resolved on the background
+            // executor, whose output may still be waiting for the main thread. The handle is
+            // checked again here, on the main thread, so that an abort made there before the
+            // output is delivered always wins: the caller that aborted no longer expects
+            // `on_resolve`, and may already have started the work that replaces this future.
             match output {
+                Ok(_) if callback_abort_handle.is_aborted() => on_abort(model, ctx),
                 Ok(output) => on_resolve(model, output, ctx),
                 Err(_) => on_abort(model, ctx),
             }
