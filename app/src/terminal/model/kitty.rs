@@ -56,10 +56,31 @@ pub struct QuerySupport {
     pub image_id: u32,
 }
 
+/// What a delete command (`a=d`) selects, by its `d` key. Cells are counted from 1, as the
+/// protocol does.
 #[derive(Debug, Clone)]
 pub enum DeletionType {
+    /// `d=a`: every placement.
     DeleteAll,
+    /// `d=i` and `d=n`: the placements of one image, or the one with the given placement id.
     DeleteById(DeleteById),
+    /// `d=c`: the placements that cover the cursor's cell.
+    AtCursor,
+    /// `d=p` and `d=q`: the placements that cover a cell, for `d=q` only those with the given
+    /// z-index.
+    AtCell {
+        column: u32,
+        row: u32,
+        z_index: Option<i32>,
+    },
+    /// `d=x`: the placements that cover a column.
+    InColumn(u32),
+    /// `d=y`: the placements that cover a row.
+    InRow(u32),
+    /// `d=z`: the placements with the given z-index.
+    WithZIndex(i32),
+    /// `d=r`: the placements of the images whose id is in the range, both ends included.
+    InIdRange { first: u32, last: u32 },
 }
 
 #[derive(Debug, Clone)]
@@ -173,6 +194,8 @@ impl From<InvalidKittyAction> for KittyError {
 pub enum InvalidControlData {
     IdMissing,
     UnicodePlaceholderUnsupported,
+    UnknownDeleteSpecifier,
+    IdAndNumberGiven,
 }
 
 impl From<InvalidControlData> for KittyError {
@@ -390,18 +413,44 @@ impl TryFrom<KittyMessage> for KittyAction {
                 Ok(KittyAction::QuerySupport(action))
             }
             KittyPlacementAction::Delete => {
-                let deletion_type = match message.control_data.delete_action {
+                let control_data = &message.control_data;
+                let deletion_type = match control_data.delete_action {
                     DeleteAction::DeleteAll => DeletionType::DeleteAll,
-                    DeleteAction::DeleteById => {
-                        let image_id = match message.control_data.image_id {
+                    DeleteAction::DeleteById | DeleteAction::DeleteByNumber => {
+                        let image_id = match control_data.image_id {
                             Some(image_id) => image_id,
                             None => return Err(InvalidControlData::IdMissing.into()),
                         };
 
                         DeletionType::DeleteById(DeleteById {
                             image_id,
-                            placement_id: message.control_data.placement_id,
+                            placement_id: control_data.placement_id,
                         })
+                    }
+                    DeleteAction::AtCursor => DeletionType::AtCursor,
+                    DeleteAction::AtCell => DeletionType::AtCell {
+                        column: control_data.x,
+                        row: control_data.y,
+                        z_index: None,
+                    },
+                    DeleteAction::AtCellWithZIndex => DeletionType::AtCell {
+                        column: control_data.x,
+                        row: control_data.y,
+                        z_index: Some(control_data.z_index),
+                    },
+                    DeleteAction::InColumn => DeletionType::InColumn(control_data.x),
+                    DeleteAction::InRow => DeletionType::InRow(control_data.y),
+                    DeleteAction::WithZIndex => DeletionType::WithZIndex(control_data.z_index),
+                    DeleteAction::InIdRange => DeletionType::InIdRange {
+                        first: control_data.x,
+                        last: control_data.y,
+                    },
+                    // Animation frames are not stored, so there are none to delete.
+                    DeleteAction::Frames => {
+                        return Err(InvalidKittyAction::UnsupportedAction.into());
+                    }
+                    DeleteAction::Unknown => {
+                        return Err(InvalidControlData::UnknownDeleteSpecifier.into());
                     }
                 };
 
@@ -517,12 +566,18 @@ pub struct KittyControlData {
     transmission_medium: KittyTransmissionMedium,
     pub further_chunks: bool,
     pub image_id: Option<u32>,
+    /// The image number (`I`), by which a client that leaves the image id to the terminal names
+    /// the image afterwards.
+    pub image_number: Option<u32>,
     pub placement_id: Option<u32>,
     pub placement_action: KittyPlacementAction,
     pub verbosity: KittyResponseVerbosity,
     pub z_index: i32,
     pub delete_action: DeleteAction,
     delete_placements_only: bool,
+    /// The `x` and `y` keys. A delete command gives a cell or a range of image ids in them.
+    x: u32,
+    y: u32,
     pub rows: Option<u32>,
     pub cols: Option<u32>,
     pub cursor_movement_policy: CursorMovementPolicy,
@@ -539,12 +594,15 @@ impl Default for KittyControlData {
             transmission_medium: KittyTransmissionMedium::default(),
             further_chunks: false,
             image_id: None,
+            image_number: None,
             placement_id: None,
             placement_action: KittyPlacementAction::default(),
             verbosity: KittyResponseVerbosity::default(),
             z_index: 0,
             delete_action: DeleteAction::default(),
             delete_placements_only: true,
+            x: 0,
+            y: 0,
             rows: None,
             cols: None,
             cursor_movement_policy: CursorMovementPolicy::default(),
@@ -558,6 +616,16 @@ pub enum DeleteAction {
     #[default]
     DeleteAll,
     DeleteById,
+    DeleteByNumber,
+    AtCursor,
+    Frames,
+    AtCell,
+    AtCellWithZIndex,
+    InIdRange,
+    InColumn,
+    InRow,
+    WithZIndex,
+    Unknown,
 }
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -653,9 +721,24 @@ fn parse_kitty_control_data(control_data: &[u8]) -> KittyControlData {
                     parsed_control_data.image_id = (value != 0).then_some(value);
                 }
             }
+            b"I" => {
+                if let Some(value) = parse_u32(value) {
+                    parsed_control_data.image_number = (value != 0).then_some(value);
+                }
+            }
             b"p" => {
                 if let Some(value) = parse_u32(value) {
                     parsed_control_data.placement_id = (value != 0).then_some(value);
+                }
+            }
+            b"x" => {
+                if let Some(value) = parse_u32(value) {
+                    parsed_control_data.x = value;
+                }
+            }
+            b"y" => {
+                if let Some(value) = parse_u32(value) {
+                    parsed_control_data.y = value;
                 }
             }
             b"a" => {
@@ -682,16 +765,27 @@ fn parse_kitty_control_data(control_data: &[u8]) -> KittyControlData {
                 }
             }
             b"d" => {
-                if value.iter().all(|x| x.is_ascii_uppercase()) {
-                    parsed_control_data.delete_placements_only = false;
-                }
+                // The uppercase form of a specifier also frees the image data.
+                parsed_control_data.delete_placements_only =
+                    !value.iter().all(|x| x.is_ascii_uppercase());
 
                 parsed_control_data.delete_action = match &value.to_ascii_lowercase()[..] {
                     // Note: Kitty Protocol specifies "a" as "Delete all placements on screen",
                     // we're just starting with DeleteAll placements to expedite the launch.
                     b"a" => DeleteAction::DeleteAll,
                     b"i" => DeleteAction::DeleteById,
-                    _ => DeleteAction::default(),
+                    b"n" => DeleteAction::DeleteByNumber,
+                    b"c" => DeleteAction::AtCursor,
+                    b"f" => DeleteAction::Frames,
+                    b"p" => DeleteAction::AtCell,
+                    b"q" => DeleteAction::AtCellWithZIndex,
+                    b"r" => DeleteAction::InIdRange,
+                    b"x" => DeleteAction::InColumn,
+                    b"y" => DeleteAction::InRow,
+                    b"z" => DeleteAction::WithZIndex,
+                    // Falling back to the default here would turn a specifier this terminal
+                    // doesn't know into "delete everything".
+                    _ => DeleteAction::Unknown,
                 }
             }
             b"c" => {
@@ -984,28 +1078,42 @@ impl KittyError {
     }
 }
 
-/// Builds a response to the message with the given ids. A message's placement id is echoed back,
-/// so that a client can tell the responses to several placements of one image apart.
-fn create_kitty_reply(image_id: u32, placement_id: Option<u32>, message: &str) -> Vec<u8> {
-    let ids = match placement_id {
-        Some(placement_id) => format!("i={image_id},p={placement_id}"),
-        None => format!("i={image_id}"),
-    };
-
-    [C1::APC, b"G", format!("{ids};{message}").as_bytes(), C1::ST].concat()
+/// The ids a response carries, which are those of the command it answers.
+#[derive(Debug, Clone, Copy)]
+pub struct KittyReplyIds {
+    pub image_id: u32,
+    /// Set for a command that named its image by number instead of by id.
+    pub image_number: Option<u32>,
+    pub placement_id: Option<u32>,
 }
 
-pub fn create_kitty_ok_reply(image_id: u32, placement_id: Option<u32>) -> Vec<u8> {
-    create_kitty_reply(image_id, placement_id, "OK")
+/// Builds a response to the command with the given ids. A command's image number and placement
+/// id are echoed back, so that a client can tell which of its commands a response answers.
+fn create_kitty_reply(ids: KittyReplyIds, message: &str) -> Vec<u8> {
+    let mut keys = format!("i={}", ids.image_id);
+    if let Some(image_number) = ids.image_number {
+        keys.push_str(&format!(",I={image_number}"));
+    }
+    if let Some(placement_id) = ids.placement_id {
+        keys.push_str(&format!(",p={placement_id}"));
+    }
+
+    [
+        C1::APC,
+        b"G",
+        format!("{keys};{message}").as_bytes(),
+        C1::ST,
+    ]
+    .concat()
 }
 
-pub fn create_kitty_error_reply(
-    image_id: u32,
-    placement_id: Option<u32>,
-    err: KittyError,
-) -> Vec<u8> {
+pub fn create_kitty_ok_reply(ids: KittyReplyIds) -> Vec<u8> {
+    create_kitty_reply(ids, "OK")
+}
+
+pub fn create_kitty_error_reply(ids: KittyReplyIds, err: KittyError) -> Vec<u8> {
     let code = err.code();
-    create_kitty_reply(image_id, placement_id, &format!("{code}:{err:?}"))
+    create_kitty_reply(ids, &format!("{code}:{err:?}"))
 }
 
 #[cfg(test)]

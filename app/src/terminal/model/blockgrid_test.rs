@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use pathfinder_geometry::vector::Vector2F;
 use warp_core::features::FeatureFlag;
@@ -11,8 +11,8 @@ use crate::terminal::model::grid::Dimensions;
 use crate::terminal::model::image_map::StoredImageMetadata;
 use crate::terminal::model::index::{Point, VisibleRow};
 use crate::terminal::model::kitty::{
-    DisplayStoredImage, KittyAction, KittyImage, KittyImageMetadata, KittyPlacementData,
-    StoreAndDisplay,
+    CursorMovementPolicy, DeleteById, DeletionType, DisplayStoredImage, KittyAction, KittyImage,
+    KittyImageMetadata, KittyPlacementData, StoreAndDisplay,
 };
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::SizeInfo;
@@ -271,6 +271,123 @@ pub fn test_kitty_display_of_stored_image_without_pixels_is_ignored() {
         .grid_handler()
         .get_image_placement_data(1, 1)
         .is_none());
+}
+
+/// Places a 2x2-cell Kitty image at the cursor, leaving the cursor where it is.
+fn place_kitty_image(
+    block_grid: &mut BlockGrid,
+    metadata: &mut HashMap<u32, StoredImageMetadata>,
+    image_id: u32,
+    z_index: i32,
+) {
+    metadata.extend(kitty_metadata_with_size(image_id, 10.0, 10.0));
+    let action = KittyAction::DisplayStoredImage(DisplayStoredImage {
+        placement_data: KittyPlacementData {
+            z_index,
+            cols: Some(2),
+            rows: Some(2),
+            cursor_movement_policy: CursorMovementPolicy::DoNotMoveCursor,
+        },
+        image_id,
+        placement_id: 1,
+    });
+
+    block_grid
+        .handle_completed_kitty_action(action, metadata)
+        .expect("kitty action should be handled")
+        .expect("kitty image should be placed");
+}
+
+/// A grid with image 1 over columns 1-2 and image 2, behind the text, over columns 5-6, both on
+/// rows 1-2. The cursor ends on the first cell of image 2.
+fn blockgrid_with_two_kitty_images() -> BlockGrid {
+    let mut block_grid = kitty_test_blockgrid();
+    let mut metadata = HashMap::new();
+    place_kitty_image(&mut block_grid, &mut metadata, 1, 0);
+    block_grid.goto(VisibleRow(0), 4);
+    place_kitty_image(&mut block_grid, &mut metadata, 2, -1);
+    block_grid
+}
+
+#[test]
+pub fn test_kitty_delete_by_position() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let delete = |deletion_type: DeletionType| {
+        let mut block_grid = blockgrid_with_two_kitty_images();
+        block_grid
+            .grid_handler_mut()
+            .delete_kitty_placements(&deletion_type)
+    };
+
+    assert_eq!(delete(DeletionType::AtCursor), HashSet::from([2]));
+    assert_eq!(
+        delete(DeletionType::AtCell {
+            column: 2,
+            row: 2,
+            z_index: None
+        }),
+        HashSet::from([1])
+    );
+    assert_eq!(
+        delete(DeletionType::AtCell {
+            column: 3,
+            row: 1,
+            z_index: None
+        }),
+        HashSet::new()
+    );
+    assert_eq!(
+        delete(DeletionType::AtCell {
+            column: 5,
+            row: 1,
+            z_index: Some(0)
+        }),
+        HashSet::new()
+    );
+    assert_eq!(
+        delete(DeletionType::AtCell {
+            column: 5,
+            row: 1,
+            z_index: Some(-1)
+        }),
+        HashSet::from([2])
+    );
+    assert_eq!(delete(DeletionType::InColumn(6)), HashSet::from([2]));
+    assert_eq!(delete(DeletionType::InColumn(0)), HashSet::new());
+    assert_eq!(delete(DeletionType::InRow(2)), HashSet::from([1, 2]));
+    assert_eq!(delete(DeletionType::InRow(3)), HashSet::new());
+}
+
+#[test]
+pub fn test_kitty_delete_by_id_and_z_index() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let delete = |deletion_type: DeletionType| {
+        let mut block_grid = blockgrid_with_two_kitty_images();
+        block_grid
+            .grid_handler_mut()
+            .delete_kitty_placements(&deletion_type)
+    };
+
+    assert_eq!(delete(DeletionType::DeleteAll), HashSet::from([1, 2]));
+    assert_eq!(delete(DeletionType::WithZIndex(-1)), HashSet::from([2]));
+    assert_eq!(
+        delete(DeletionType::InIdRange { first: 2, last: 9 }),
+        HashSet::from([2])
+    );
+    assert_eq!(
+        delete(DeletionType::DeleteById(DeleteById {
+            image_id: 1,
+            placement_id: Some(7)
+        })),
+        HashSet::new()
+    );
+    assert_eq!(
+        delete(DeletionType::DeleteById(DeleteById {
+            image_id: 1,
+            placement_id: None
+        })),
+        HashSet::from([1])
+    );
 }
 
 #[test]

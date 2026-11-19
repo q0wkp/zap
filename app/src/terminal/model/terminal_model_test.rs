@@ -1026,3 +1026,104 @@ fn test_kitty_query_is_answered_without_storing_the_image() {
     );
     assert!(!model.image_id_to_metadata.contains_key(&31));
 }
+
+/// A model that runs a command which has transmitted and displayed image 5.
+fn model_showing_kitty_image() -> TerminalModel {
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+    assert_eq!(
+        kitty_replies(&mut model, &format!("\x1b_Ga=T,i=5,{KITTY_PIXEL}\x1b\\")),
+        "\x1b_Gi=5;OK\x1b\\"
+    );
+    assert!(model.is_image_placed(5));
+    model
+}
+
+#[test]
+fn test_kitty_delete_keeps_or_frees_the_image_by_the_specifiers_case() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+
+    let mut model = model_showing_kitty_image();
+    kitty_replies(&mut model, "\x1b_Ga=d,d=i,i=5\x1b\\");
+    assert!(!model.is_image_placed(5));
+    assert!(model.image_id_to_metadata.contains_key(&5));
+
+    let mut model = model_showing_kitty_image();
+    kitty_replies(&mut model, "\x1b_Ga=d,d=I,i=5\x1b\\");
+    assert!(!model.is_image_placed(5));
+    assert!(!model.image_id_to_metadata.contains_key(&5));
+
+    // The cursor is past the one-cell image, so nothing is under it.
+    let mut model = model_showing_kitty_image();
+    kitty_replies(&mut model, "\x1b_Ga=d,d=C\x1b\\");
+    assert!(model.is_image_placed(5));
+    assert!(model.image_id_to_metadata.contains_key(&5));
+
+    let mut model = model_showing_kitty_image();
+    kitty_replies(&mut model, "\x1b_Ga=d,d=X,x=1\x1b\\");
+    assert!(!model.is_image_placed(5));
+    assert!(!model.image_id_to_metadata.contains_key(&5));
+}
+
+/// `d=w` is no delete specifier. It used to be read as `d=a` and delete every image.
+#[test]
+fn test_kitty_unknown_delete_specifier_deletes_nothing() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = model_showing_kitty_image();
+
+    let reply = kitty_replies(&mut model, "\x1b_Ga=d,d=w,i=5\x1b\\");
+
+    assert!(
+        reply.starts_with("\x1b_Gi=5;EINVAL:"),
+        "unexpected reply: {reply:?}"
+    );
+    assert!(model.is_image_placed(5));
+}
+
+#[test]
+fn test_kitty_image_number_names_the_newest_image_with_it() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+    let first_id = model.next_kitty_image_id;
+    let second_id = first_id + 1;
+
+    // The terminal picks the id and reports it together with the number.
+    assert_eq!(
+        kitty_replies(&mut model, &format!("\x1b_Ga=t,I=3,{KITTY_PIXEL}\x1b\\")),
+        format!("\x1b_Gi={first_id},I=3;OK\x1b\\")
+    );
+    assert_eq!(
+        kitty_replies(&mut model, &format!("\x1b_Ga=t,I=3,{KITTY_PIXEL}\x1b\\")),
+        format!("\x1b_Gi={second_id},I=3;OK\x1b\\")
+    );
+
+    assert_eq!(
+        kitty_replies(&mut model, "\x1b_Ga=p,I=3,p=8\x1b\\"),
+        format!("\x1b_Gi={second_id},I=3,p=8;OK\x1b\\")
+    );
+    assert!(model.is_image_placed(second_id));
+    assert!(!model.is_image_placed(first_id));
+
+    kitty_replies(&mut model, "\x1b_Ga=d,d=N,I=3\x1b\\");
+    assert!(!model.image_id_to_metadata.contains_key(&second_id));
+    assert!(model.image_id_to_metadata.contains_key(&first_id));
+}
+
+#[test]
+fn test_kitty_image_id_and_number_together_are_an_error() {
+    let _kitty_images = FeatureFlag::KittyImages.override_enabled(true);
+    let mut model = TerminalModel::mock(None, None);
+    model.simulate_long_running_block("icat", "");
+
+    let reply = kitty_replies(
+        &mut model,
+        &format!("\x1b_Ga=t,i=5,I=3,{KITTY_PIXEL}\x1b\\"),
+    );
+
+    assert!(
+        reply.starts_with("\x1b_Gi=5,I=3;EINVAL:"),
+        "unexpected reply: {reply:?}"
+    );
+    assert!(!model.image_id_to_metadata.contains_key(&5));
+}

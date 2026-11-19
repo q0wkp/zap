@@ -268,6 +268,51 @@ impl ImageMap {
         }
     }
 
+    /// Evicts the placements of images of the given type that `should_evict` selects, and returns
+    /// the ids of the images that lost a placement.
+    pub fn evict_placements_with_type_where(
+        &mut self,
+        image_type: &ImageType,
+        should_evict: impl Fn(&PlacedImage) -> bool,
+    ) -> HashSet<u32> {
+        let placements_to_evict = self
+            .point_by_image_id
+            .iter()
+            .filter_map(|(&(image_id, placement_id), &top_left)| {
+                if self.image_type_by_image_id.get(&image_id) != Some(image_type) {
+                    return None;
+                }
+
+                let placement_data = self.image_placement_data.get(&(image_id, placement_id))?;
+                let placed_image = PlacedImage {
+                    image_id,
+                    placement_id,
+                    top_left,
+                    z_index: placement_data.z_index,
+                    width_cells: placement_data.width_cells,
+                    height_cells: placement_data.height_cells,
+                };
+
+                should_evict(&placed_image).then_some((image_id, placement_id))
+            })
+            .collect_vec();
+
+        let mut evicted_image_ids = HashSet::new();
+        for (image_id, placement_id) in placements_to_evict {
+            self.evict_placement(image_id, placement_id);
+            evicted_image_ids.insert(image_id);
+        }
+
+        evicted_image_ids
+    }
+
+    /// Whether the image with the given id has a placement in this map.
+    pub fn has_placement_of_image(&self, image_id: u32) -> bool {
+        self.point_by_image_id
+            .keys()
+            .any(|&(placed_image_id, _)| placed_image_id == image_id)
+    }
+
     pub fn evict_placement(&mut self, image_id: u32, placement_id: u32) {
         self.image_placement_data.remove(&(image_id, placement_id));
         if let Some(point) = self.point_by_image_id.get(&(image_id, placement_id)) {
@@ -288,6 +333,31 @@ pub struct AbsoluteImagePlacement {
     pub placement_id: u32,
     pub z_index: i32,
     pub top_left: AbsolutePoint,
+}
+
+/// A placement together with where it is and the cells it covers.
+#[derive(Debug, Clone, Copy)]
+pub struct PlacedImage {
+    pub image_id: u32,
+    pub placement_id: u32,
+    pub top_left: AbsolutePoint,
+    pub z_index: i32,
+    pub width_cells: usize,
+    pub height_cells: usize,
+}
+
+impl PlacedImage {
+    pub fn covers_row(&self, row: u64) -> bool {
+        row >= self.top_left.row && row - self.top_left.row < self.height_cells as u64
+    }
+
+    pub fn covers_column(&self, column: usize) -> bool {
+        column >= self.top_left.col && column - self.top_left.col < self.width_cells
+    }
+
+    pub fn covers(&self, point: AbsolutePoint) -> bool {
+        self.covers_row(point.row) && self.covers_column(point.col)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -321,6 +391,11 @@ impl StoredImageMetadata {
 #[derive(Debug, Clone)]
 pub struct ImagePlacementData {
     pub z_index: i32,
+    pub width_cells: usize,
     pub height_cells: usize,
     pub image_size: Vector2F,
 }
+
+#[cfg(test)]
+#[path = "image_map_test.rs"]
+mod tests;

@@ -1337,6 +1337,8 @@ impl ansi::Handler for GridHandler {
         // Convert the visual dimension in pixels to cells. We want to round up if this doesn't perfectly fit within an amount of cells.
         let height_cells =
             (height_px as f32 / (self.ansi_handler_state.cell_height as f32)).ceil() as usize;
+        let width_cells =
+            (width_px as f32 / (self.ansi_handler_state.cell_width as f32)).ceil() as usize;
 
         // Convert the user requested dimension in pixels to cells. This is needed to scroll the cursor by the space the user requested.
         // If preserve_aspect_ratio is true, this may be larger than the visual dimension of the image.
@@ -1370,6 +1372,7 @@ impl ansi::Handler for GridHandler {
             placement_id,
             ImagePlacementData {
                 z_index: 0,
+                width_cells,
                 height_cells,
                 image_size,
             },
@@ -1901,6 +1904,7 @@ impl GridHandler {
             placement_id,
             ImagePlacementData {
                 z_index: placement_data.z_index,
+                width_cells: size.width_cells,
                 height_cells: size.height_cells,
                 image_size: size.image_size,
             },
