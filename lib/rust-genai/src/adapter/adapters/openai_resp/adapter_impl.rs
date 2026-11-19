@@ -471,12 +471,23 @@ impl OpenAIRespAdapter {
 									}));
 									item_message_content = Vec::new();
 								}
+								// Arguments that are already a string (kept raw because they did
+								// not parse) are sent as they are: serializing them would encode
+								// them a second time.
+								let arguments = match tool_call.fn_arguments {
+									Value::String(arguments) => arguments,
+									arguments @ (Value::Null
+									| Value::Bool(_)
+									| Value::Number(_)
+									| Value::Array(_)
+									| Value::Object(_)) => arguments.to_string(),
+								};
 								// NOTE: Flatten for OpenAI Responsess API
 								input_items.push(json!({
 									"type": "function_call",
 									"call_id": tool_call.call_id,
 									"name": tool_call.fn_name,
-									"arguments": tool_call.fn_arguments.to_string(),
+									"arguments": arguments,
 								}))
 							}
 
