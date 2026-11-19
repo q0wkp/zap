@@ -2775,6 +2775,24 @@ fn is_cli_subagent_turn(params: &RequestParams) -> bool {
     params.lrc_should_spawn_subagent
 }
 
+/// Whether the model may call `fn_name` this turn. Warp's server only emits tools from the
+/// request's supported tool list, so BYOP likewise accepts only the tools it offered
+/// (`available_tool_names`): a model can still name a tool it saw earlier in the conversation, or
+/// one that is withheld this turn (webfetch with web access off, a write tool in plan mode).
+fn is_offered_tool(offered_tool_names: &[String], fn_name: &str) -> bool {
+    offered_tool_names.iter().any(|name| name == fn_name)
+}
+
+/// The synthetic tool result for a call to a tool that was not offered this turn.
+fn tool_not_available_error(fn_name: &str) -> String {
+    serde_json::json!({
+        "error": "tool_not_available",
+        "detail": "This tool is not available in this turn. Use only the tools listed for this turn.",
+        "tool": fn_name,
+    })
+    .to_string()
+}
+
 /// 列出本轮真正会喂给上游模型的 tool name(内置 REGISTRY + 当前 MCP 工具),
 /// 与 `build_tools_array` 共享同一套 gating(LRC / `web_search_enabled` /
 /// `suggest_new_conversation` / `plan_mode`)。供 `prompt_renderer` 注入到
@@ -4254,9 +4272,11 @@ pub async fn generate_byop_output(
                     // 这里跳过避免双卡。
                     // todowrite 走 BYOP todo 拦截器,合成 Message::UpdateTodos 触发 chip,
                     // 这里也跳过占位避免出现一张无意义的"调用 todowrite"卡。
+                    // 本轮没提供的工具在流结束时被拒绝,也不发占位卡。
                     if call.fn_name != tools::webfetch::TOOL_NAME
                         && call.fn_name != tools::websearch::TOOL_NAME
                         && call.fn_name != tools::todowrite::TOOL_NAME
+                        && is_offered_tool(&tool_names_for_extract, &call.fn_name)
                     {
                         if let Some(msg_id) = tool_msg_ids.get(&call.call_id).cloned() {
                             // 已 emit 占位 → 节流增量刷新。
@@ -4566,6 +4586,38 @@ pub async fn generate_byop_output(
                     call.call_id,
                     args_repr,
                 );
+            }
+
+            // Only a tool offered on this turn may run (see `is_offered_tool`). Any other call is
+            // answered with an error result before an interceptor or an action sees it. The
+            // controller does not auto-resume on this result, so a model that keeps naming a
+            // withheld tool can't loop; it sees the error with the next request.
+            if !is_offered_tool(&tool_names_for_extract, &call.fn_name) {
+                let args_str = if call.fn_arguments.is_string() {
+                    call.fn_arguments.as_str().unwrap_or("").to_owned()
+                } else {
+                    call.fn_arguments.to_string()
+                };
+                log::warn!(
+                    "[byop] tool_call for a tool not offered this turn → emit synthetic error \
+                     tool_result: tool={} call_id={}",
+                    call.fn_name,
+                    call.call_id
+                );
+                final_messages.push(make_tool_call_carrier_message(
+                    &current_task_id,
+                    &request_id,
+                    &call.call_id,
+                    &call.fn_name,
+                    &args_str,
+                ));
+                final_messages.push(make_tool_call_result_message(
+                    &current_task_id,
+                    &request_id,
+                    call.call_id.clone(),
+                    tool_not_available_error(&call.fn_name),
+                ));
+                continue;
             }
 
             // A call left unfinished by a generation that was cut off is answered as such, before
@@ -5793,6 +5845,38 @@ mod cli_subagent_tools_tests {
         for name in CLI_SUBAGENT_TOOLS {
             assert!(tools::lookup(name).is_some(), "{name} is not in the registry");
         }
+    }
+
+    /// Only offered tools may run: webfetch is rejected while web access is off, and a tag-in
+    /// turn rejects the tools it did not offer.
+    #[test]
+    fn unoffered_tool_calls_are_rejected() {
+        let mut params = RequestParams::new_for_test(vec![], vec![]);
+        params.web_search_enabled = false;
+        let offered = available_tool_names(&params);
+        assert!(!is_offered_tool(&offered, tools::webfetch::TOOL_NAME));
+        assert!(is_offered_tool(&offered, "apply_file_diffs"));
+
+        params.lrc_command_id = Some("block-1".to_owned());
+        params.lrc_should_spawn_subagent = true;
+        let offered = available_tool_names(&params);
+        for name in ["apply_file_diffs", "run_shell_command"] {
+            assert!(
+                !is_offered_tool(&offered, name),
+                "{name} accepted on a tag-in turn"
+            );
+        }
+        assert!(is_offered_tool(
+            &offered,
+            "write_to_long_running_shell_command"
+        ));
+
+        let error = tool_not_available_error("apply_file_diffs");
+        assert!(
+            error.contains(r#""error":"tool_not_available""#),
+            "{error}"
+        );
+        assert!(error.contains(r#""tool":"apply_file_diffs""#), "{error}");
     }
 
     #[test]
