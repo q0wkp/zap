@@ -35,12 +35,27 @@ pub enum StreamMode {
 	Delimiter(&'static str),
 	// This is for Gemini (standard JSON array, pretty formatted)
 	PrettyJsonArray,
+	// This is for `text/event-stream`: events end with a blank line, and a line
+	// ends with `\n`, `\r\n` or `\r`
+	EventStream,
 }
 
 impl WebStream {
 	pub fn new_with_delimiter(reqwest_builder: RequestBuilder, message_delimiter: &'static str) -> Self {
 		Self {
 			stream_mode: StreamMode::Delimiter(message_delimiter),
+			reqwest_builder: Some(reqwest_builder),
+			response_future: None,
+			bytes_stream: None,
+			partial_message: None,
+			remaining_messages: None,
+			utf8_carry: Vec::new(),
+		}
+	}
+
+	pub fn new_with_event_stream(reqwest_builder: RequestBuilder) -> Self {
+		Self {
+			stream_mode: StreamMode::EventStream,
 			reqwest_builder: Some(reqwest_builder),
 			response_future: None,
 			bytes_stream: None,
@@ -148,6 +163,9 @@ impl Stream for WebStream {
 							}
 							StreamMode::PrettyJsonArray => {
 								new_with_pretty_json_array(buff_string, &mut this.partial_message)
+							}
+							StreamMode::EventStream => {
+								process_buff_string_event_stream(buff_string, &mut this.partial_message)
 							}
 						};
 
@@ -361,3 +379,42 @@ fn process_buff_string_delimited(
 		candidate_message,
 	})
 }
+
+/// Process a string buffer for the event stream mode (`text/event-stream`).
+///
+/// The messages are the events, split at the blank lines between them, with their line
+/// endings as `\n`: behind an HTTP/1.1 proxy the lines often end with `\r\n`, so an event
+/// ends with `\r\n\r\n`, which a split at `\n\n` would never find.
+fn process_buff_string_event_stream(
+	buff_string: String,
+	partial_message: &mut Option<String>,
+) -> Result<BuffResponse, crate::webc::Error> {
+	let mut full_string = if let Some(partial) = partial_message.take() {
+		format!("{partial}{buff_string}")
+	} else {
+		buff_string
+	};
+
+	// A `\r` at the end may be the first half of a `\r\n` whose `\n` comes with the
+	// next chunk: it is held back, so that it is not taken for a line ending of its own.
+	let held_carriage_return = full_string.ends_with('\r');
+	if held_carriage_return {
+		full_string.pop();
+	}
+
+	if full_string.contains('\r') {
+		full_string = full_string.replace("\r\n", "\n").replace('\r', "\n");
+	}
+
+	let mut buff_response = process_buff_string_delimited(full_string, partial_message, "\n\n")?;
+
+	if held_carriage_return {
+		buff_response.candidate_message.get_or_insert_default().push('\r');
+	}
+
+	Ok(buff_response)
+}
+
+#[cfg(test)]
+#[path = "web_stream_tests.rs"]
+mod tests;
