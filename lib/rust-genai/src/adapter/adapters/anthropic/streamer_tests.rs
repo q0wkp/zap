@@ -105,3 +105,73 @@ fn tool_use_deltas_accumulate_the_arguments() {
 	assert_eq!(call.fn_name, "read_files");
 	assert_eq!(call.fn_arguments, Value::String(r#"{"path":"a.rs"}"#.to_string()));
 }
+
+#[test]
+fn message_delta_usage_replaces_the_counts_of_message_start() {
+	let options = ChatOptions::default().with_capture_usage(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer
+		.capture_usage(
+			"message_start",
+			r#"{"type":"message_start","message":{"usage":{"input_tokens":25,"cache_creation_input_tokens":100,"cache_read_input_tokens":2000,"output_tokens":3}}}"#,
+		)
+		.expect("usage of message_start");
+	streamer
+		.capture_usage(
+			"message_delta",
+			r#"{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":25,"cache_creation_input_tokens":100,"cache_read_input_tokens":2000,"output_tokens":40}}"#,
+		)
+		.expect("usage of message_delta");
+
+	let usage = streamer.captured_data.usage.expect("captured usage");
+	assert_eq!(usage.prompt_tokens, Some(2125));
+	assert_eq!(usage.completion_tokens, Some(40));
+	let details = usage.prompt_tokens_details.expect("cache details");
+	assert_eq!(details.cache_creation_tokens, Some(100));
+	assert_eq!(details.cached_tokens, Some(2000));
+}
+
+#[test]
+fn message_delta_with_output_tokens_only_keeps_the_input_tokens() {
+	let options = ChatOptions::default().with_capture_usage(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer
+		.capture_usage(
+			"message_start",
+			r#"{"type":"message_start","message":{"usage":{"input_tokens":25,"output_tokens":1}}}"#,
+		)
+		.expect("usage of message_start");
+	streamer
+		.capture_usage("message_delta", r#"{"type":"message_delta","delta":{},"usage":{"output_tokens":15}}"#)
+		.expect("usage of message_delta");
+
+	let usage = streamer.captured_data.usage.expect("captured usage");
+	assert_eq!(usage.prompt_tokens, Some(25));
+	assert_eq!(usage.completion_tokens, Some(15));
+	assert!(usage.prompt_tokens_details.is_none());
+}
+
+#[test]
+fn input_tokens_reported_only_in_message_delta_are_captured() {
+	let options = ChatOptions::default().with_capture_usage(true);
+	let mut streamer = test_streamer(&options);
+
+	streamer
+		.capture_usage(
+			"message_start",
+			r#"{"type":"message_start","message":{"usage":{"input_tokens":0,"output_tokens":0}}}"#,
+		)
+		.expect("usage of message_start");
+	streamer
+		.capture_usage(
+			"message_delta",
+			r#"{"type":"message_delta","delta":{},"usage":{"input_tokens":310,"output_tokens":12}}"#,
+		)
+		.expect("usage of message_delta");
+
+	let usage = streamer.captured_data.usage.expect("captured usage");
+	assert_eq!(usage.prompt_tokens, Some(310));
+	assert_eq!(usage.completion_tokens, Some(12));
+}

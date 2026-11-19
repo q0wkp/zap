@@ -1,7 +1,7 @@
 use crate::adapter::adapters::support::{StreamerCapturedData, StreamerOptions};
 use crate::adapter::anthropic::parse_cache_creation_details;
 use crate::adapter::inter_stream::{InterStreamEnd, InterStreamEvent};
-use crate::chat::{ChatOptionsSet, PromptTokensDetails, StopReason, ToolCall, Usage};
+use crate::chat::{CacheCreationDetails, ChatOptionsSet, PromptTokensDetails, StopReason, ToolCall, Usage};
 use crate::webc::{Event, EventSourceStream};
 use crate::{Error, ModelIden, Result};
 use serde_json::{Map, Value};
@@ -19,6 +19,60 @@ pub struct AnthropicStreamer {
 
 	captured_data: StreamerCapturedData,
 	in_progress_block: InProgressBlock,
+	usage_counts: UsageCounts,
+}
+
+/// The usage counts as Anthropic reports them, each the highest value seen so far.
+#[derive(Default)]
+struct UsageCounts {
+	input_tokens: Option<i32>,
+	output_tokens: Option<i32>,
+	cache_creation_tokens: Option<i32>,
+	cache_read_tokens: Option<i32>,
+	cache_creation_details: Option<CacheCreationDetails>,
+}
+
+impl UsageCounts {
+	/// Same normalization as the non-streaming `AnthropicAdapter::into_usage()`.
+	fn to_usage(&self) -> Usage {
+		let cache_creation = self.cache_creation_tokens.unwrap_or(0);
+		let cache_read = self.cache_read_tokens.unwrap_or(0);
+
+		// NOTE: Anthropic's input_tokens does NOT include cached tokens, so we must add them.
+		let prompt_tokens = if self.input_tokens.is_some() || cache_creation > 0 || cache_read > 0 {
+			Some(self.input_tokens.unwrap_or(0) + cache_creation + cache_read)
+		} else {
+			None
+		};
+
+		let prompt_tokens_details = if cache_creation > 0 || cache_read > 0 || self.cache_creation_details.is_some() {
+			Some(PromptTokensDetails {
+				cache_creation_tokens: Some(cache_creation),
+				cache_creation_details: self.cache_creation_details.clone(),
+				cached_tokens: Some(cache_read),
+				audio_tokens: None,
+			})
+		} else {
+			None
+		};
+
+		Usage {
+			prompt_tokens,
+			prompt_tokens_details,
+			completion_tokens: self.output_tokens,
+			completion_tokens_details: None,
+			// Computed at `message_stop`.
+			total_tokens: None,
+		}
+	}
+}
+
+/// Raises `count` to the value of `key` in `usage_data`, when it is present.
+fn merge_count(count: &mut Option<i32>, usage_data: &Value, key: &str) {
+	if let Some(value) = usage_data.get(key).and_then(Value::as_i64) {
+		let value = value as i32;
+		*count = Some(count.map_or(value, |current| current.max(value)));
+	}
 }
 
 enum InProgressBlock {
@@ -38,6 +92,7 @@ impl AnthropicStreamer {
 			options: StreamerOptions::new(model_iden, options_set),
 			captured_data: Default::default(),
 			in_progress_block: InProgressBlock::Text,
+			usage_counts: Default::default(),
 		}
 	}
 }
@@ -279,74 +334,39 @@ impl AnthropicStreamer {
 	fn capture_usage(&mut self, message_type: &str, message_data: &str) -> Result<()> {
 		if self.options.capture_usage {
 			let data = self.parse_message_data(message_data)?;
-			// TODO: Might want to exit early if usage is not found
 
-			let (input_path, output_path) = if message_type == "message_start" {
-				("/message/usage/input_tokens", "/message/usage/output_tokens")
+			let usage_path = if message_type == "message_start" {
+				"/message/usage"
 			} else if message_type == "message_delta" {
-				("/usage/input_tokens", "/usage/output_tokens")
+				"/usage"
 			} else {
-				// TODO: Use tracing
 				tracing::debug!(
 					"TRACING DEBUG - Anthropic message type not supported for input/output tokens: {message_type}"
 				);
 				return Ok(()); // For now permissive
 			};
 
-			// -- Capture/Add the eventual input_tokens
-			// NOTE: Permissive on this one; if an error occurs, treat it as nonexistent (for now)
-			if let Ok(input_tokens) = data.x_get::<i32>(input_path) {
-				let val = self
-					.captured_data
-					.usage
-					.get_or_insert(Usage::default())
-					.prompt_tokens
-					.get_or_insert(0);
-				*val += input_tokens;
+			// NOTE: Permissive on this one; if the usage is not found, there is nothing to capture (for now)
+			let Ok(usage_data) = data.x_get::<Value>(usage_path) else {
+				return Ok(());
+			};
+
+			// The counts of `message_delta` are cumulative: they restate those of
+			// `message_start` (the input and cache tokens too, when present), so each
+			// count replaces the previous one instead of being added to it. Taking the
+			// higher of the two also covers the servers that report the input tokens
+			// only in one of the two messages and zero in the other.
+			let counts = &mut self.usage_counts;
+			merge_count(&mut counts.input_tokens, &usage_data, "input_tokens");
+			merge_count(&mut counts.output_tokens, &usage_data, "output_tokens");
+			merge_count(&mut counts.cache_creation_tokens, &usage_data, "cache_creation_input_tokens");
+			merge_count(&mut counts.cache_read_tokens, &usage_data, "cache_read_input_tokens");
+			// TTL-specific breakdown of the cache creation tokens
+			if let Some(details) = usage_data.get("cache_creation").and_then(parse_cache_creation_details) {
+				counts.cache_creation_details = Some(details);
 			}
 
-			if let Ok(output_tokens) = data.x_get::<i32>(output_path) {
-				let val = self
-					.captured_data
-					.usage
-					.get_or_insert(Usage::default())
-					.completion_tokens
-					.get_or_insert(0);
-				*val += output_tokens;
-			}
-
-			// -- Capture cache tokens (only present in message_start)
-			// NOTE: Anthropic's input_tokens does NOT include cached tokens, so we must add them.
-			// See also: AnthropicAdapter::into_usage() for non-streaming equivalent.
-			if message_type == "message_start" {
-				let cache_creation: i32 = data.x_get("/message/usage/cache_creation_input_tokens").unwrap_or(0);
-				let cache_read: i32 = data.x_get("/message/usage/cache_read_input_tokens").unwrap_or(0);
-
-				// Parse cache_creation breakdown if present (TTL-specific breakdown)
-				// Use x_get with JSON pointer to navigate to /message/usage/cache_creation
-				let cache_creation_details = data
-					.x_get::<Value>("/message/usage/cache_creation")
-					.ok()
-					.as_ref()
-					.and_then(parse_cache_creation_details);
-
-				if cache_creation > 0 || cache_read > 0 || cache_creation_details.is_some() {
-					let usage = self.captured_data.usage.get_or_insert(Usage::default());
-
-					// Add cache tokens to prompt_tokens (same as into_usage does)
-					if let Some(ref mut pt) = usage.prompt_tokens {
-						*pt += cache_creation + cache_read;
-					}
-
-					// Set prompt_tokens_details (match into_usage behavior: always Some(value))
-					usage.prompt_tokens_details = Some(PromptTokensDetails {
-						cache_creation_tokens: Some(cache_creation),
-						cache_creation_details,
-						cached_tokens: Some(cache_read),
-						audio_tokens: None,
-					});
-				}
-			}
+			self.captured_data.usage = Some(self.usage_counts.to_usage());
 		}
 
 		Ok(())
