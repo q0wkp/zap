@@ -138,9 +138,10 @@ async fn verify_installed_binary(socket_path: &Path) -> Result<()> {
 async fn run_install_script(
     socket_path: &Path,
     staging_tarball_path: Option<&str>,
+    expected_sha256: Option<&str>,
     timeout: std::time::Duration,
 ) -> core::result::Result<(), InstallError> {
-    let script = remote_server::setup::install_script(staging_tarball_path);
+    let script = remote_server::setup::install_script(staging_tarball_path, expected_sha256);
     match remote_server::ssh::run_ssh_script(socket_path, &script, timeout).await {
         Ok(output) if output.status.success() => Ok(()),
         Ok(output) => {
@@ -541,6 +542,48 @@ async fn latest_release_tag() -> Result<String> {
         })
 }
 
+/// The SHA-256 that the release publishes for the remote server's tarball at `download_url`,
+/// downloaded into `dir`. A build made from a release also downloads the release's signature of
+/// it and fails without a valid one. A build made from none installs the newest release, which
+/// may be older than the signing key it was built with, so it takes the SHA-256 as published.
+async fn release_sha256(download_url: &str, dir: &Path) -> Result<String> {
+    // A release made before checksums were published has none, and its tarball isn't installed
+    // unverified.
+    let checksum_url = remote_server::setup::checksum_url(download_url);
+    let checksum_path = dir.join("zap.tar.gz.sha256");
+    download_release_file(&checksum_url, &checksum_path)
+        .await
+        .map_err(|error| {
+            anyhow!("could not download the SHA-256 of the remote server: {error:#}")
+        })?;
+    let checksum_file = std::fs::read_to_string(&checksum_path)?;
+    if remote_server::setup::release_tag().is_none() {
+        return remote_server::setup::parse_checksum_file(&checksum_file)
+            .ok_or_else(|| anyhow!("the SHA-256 file of {download_url} holds no SHA-256"));
+    }
+
+    let signature_path = dir.join("zap.tar.gz.sha256.sig");
+    download_release_file(
+        &remote_server::setup::signature_url(&checksum_url),
+        &signature_path,
+    )
+    .await
+    .map_err(|error| {
+        anyhow!("could not download the signature of the remote server's SHA-256: {error:#}")
+    })?;
+    let signature_file = std::fs::read_to_string(&signature_path)?;
+    remote_server::setup::signed_sha256(&checksum_file, &signature_file, download_url)
+}
+
+/// The SHA-256 the tarball of this build's release must have on the host behind `socket_path`,
+/// for the install script there to check its download against.
+async fn signed_release_sha256(socket_path: &Path, tag: &str) -> Result<String> {
+    let platform = detect_remote_platform(socket_path).await?;
+    let download_url = remote_server::setup::download_tarball_url(tag, &platform);
+    let tempdir = tempfile::tempdir()?;
+    release_sha256(&download_url, tempdir.path()).await
+}
+
 async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     let platform = detect_remote_platform(socket_path).await?;
     let tag = match remote_server::setup::release_tag() {
@@ -566,21 +609,13 @@ async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     }
 
     let tempdir = tempfile::tempdir()?;
-    // The SHA-256 the release publishes first: a release made before checksums were published has
-    // none, and its tarball isn't installed unverified.
-    let checksum_url = remote_server::setup::checksum_url(&download_url);
-    let checksum_path = tempdir.path().join("zap.tar.gz.sha256");
-    download_release_file(&checksum_url, &checksum_path)
-        .await
-        .map_err(|error| {
-            anyhow!("could not download the SHA-256 of the remote server: {error:#}")
-        })?;
-    let checksum_file = std::fs::read_to_string(&checksum_path)?;
+    // The SHA-256 first, so that a release without one isn't downloaded for nothing.
+    let sha256 = release_sha256(&download_url, tempdir.path()).await?;
     let tarball_path = tempdir.path().join("zap.tar.gz");
     download_release_file(&download_url, &tarball_path).await?;
     // Uploaded, the tarball is extracted without another check: the remote host may have no
     // program to compute a SHA-256 with.
-    remote_server::setup::verify_sha256(&tarball_path, &checksum_file, &download_url)?;
+    remote_server::setup::verify_sha256(&tarball_path, &sha256, &download_url)?;
 
     let remote_tarball_path = format!(
         "{remote_server_dir}/{}",
@@ -597,6 +632,7 @@ async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     run_install_script(
         socket_path,
         Some(&remote_tarball_path),
+        None,
         remote_server::setup::SCP_INSTALL_TIMEOUT,
     )
     .await
@@ -731,8 +767,25 @@ impl RemoteTransport for SshTransport {
                 }
             }
 
-            match run_install_script(&socket_path, None, remote_server::setup::INSTALL_TIMEOUT)
-                .await
+            // The remote host can check a download against a SHA-256 but not a signature, so a
+            // build made from a release checks its release's signature here and hands over the
+            // SHA-256. Without a valid signature nothing is installed.
+            let expected_sha256 = match remote_server::setup::release_tag() {
+                Some(tag) => Some(
+                    signed_release_sha256(&socket_path, tag)
+                        .await
+                        .map_err(|error| format!("{error:#}"))?,
+                ),
+                None => None,
+            };
+
+            match run_install_script(
+                &socket_path,
+                None,
+                expected_sha256.as_deref(),
+                remote_server::setup::INSTALL_TIMEOUT,
+            )
+            .await
             {
                 Ok(()) => verify_installed_binary(&socket_path)
                     .await

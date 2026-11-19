@@ -30,7 +30,7 @@ jobs:
       matrix:
         # Per project: the systems the release ships for, each with the name its files carry:
         # zap-<version>-<name>.dmg and .tar.gz on macOS, .AppImage and .tar.gz on Linux, the version
-        # being the tag without its v, and github-release adds each .tar.gz's .tar.gz.sha256. Zap's
+        # being the tag without its v, and github-release adds each .tar.gz's .sha256 and .sha256.sig. Zap's
         # auto-update (app/src/autoupdate/github.rs), its remote server
         # (crates/remote_server/src/setup.rs) and q0wkp/pkgs look for these names. The deb,
         # rpm and Arch packages keep the names their package managers give them.
@@ -269,6 +269,43 @@ jobs:
             echo "::error::no CLI archive zap-$version-*.tar.gz to write the SHA-256 of"
             exit 1
           fi
+
+      # A .sha256 comes from where its archive does, so it only tells a damaged download from a
+      # whole one. Zap built from this tag installs the archive only when the .sha256 also has a
+      # signature, <archive>.sha256.sig (base64), by the key whose public half that Zap was built
+      # with, crates/remote_server/src/release_signing_key.pub at this tag. Each signature is
+      # checked against that file here, so a secret that doesn't match it fails the release
+      # instead of publishing archives no Zap would install.
+      - name: Sign the SHA-256 files
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          SIGNING_KEY: ${{ secrets.REMOTE_SERVER_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::the secret REMOTE_SERVER_SIGNING_KEY, the Ed25519 private key in PEM, is not set"
+            exit 1
+          fi
+          umask 077
+          key_dir=$(mktemp -d)
+          trap 'rm -rf "$key_dir"' EXIT
+          printf '%s\n' "$SIGNING_KEY" > "$key_dir/private.pem"
+          gh api -H 'Accept: application/vnd.github.raw' \
+            "repos/$GITHUB_REPOSITORY/contents/crates/remote_server/src/release_signing_key.pub?ref=$TAG" \
+            > "$key_dir/public.base64"
+          # The file holds the 32 bytes of the key; openssl reads them after this DER header.
+          {
+            printf '\060\052\060\005\006\003\053\145\160\003\041\000'
+            base64 -d "$key_dir/public.base64"
+          } | openssl pkey -pubin -inform DER -out "$key_dir/public.pem"
+
+          version="${GITHUB_REF_NAME#v}"
+          for checksum in zap-"$version"-*.tar.gz.sha256; do
+            openssl pkeyutl -sign -rawin -inkey "$key_dir/private.pem" -in "$checksum" -out "$key_dir/signature"
+            openssl pkeyutl -verify -rawin -pubin -inkey "$key_dir/public.pem" -in "$checksum" -sigfile "$key_dir/signature"
+            base64 -w0 "$key_dir/signature" > "$checksum.sig"
+          done
 
       - name: Create the release
         env:

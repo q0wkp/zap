@@ -8,6 +8,9 @@
 #   {download_url}          - the release's tarball for this system, with shell variables:
 #                             .../releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz
 #   {checksum_url}          - the tarball's SHA-256 file that the release publishes beside it, {download_url}.sha256
+#   {expected_sha256}       - the tarball's SHA-256, which a client built from a release read from that file
+#                             after checking the release's signature of it; empty for a build without a
+#                             release tag, and the script then downloads {checksum_url} itself
 #   {install_dir}           - 例如 ~/.zap/remote-server
 #   {binary_name}           - 例如 zap-oss
 #   {version_suffix}        - 例如 -v0.2026...,没有 release tag 时为空
@@ -103,19 +106,23 @@ else
   # The URL names the release with $release_version, and this system with $os_name and $arch_name.
   url="{download_url}"
 
-  # The SHA-256 first, so that a release without one isn't downloaded for nothing.
   checksum_url="{checksum_url}"
-  if [ "$downloader" = curl ]; then
-    curl -fsSL --connect-timeout 15 "$checksum_url" -o "$tmpdir/zap.tar.gz.sha256" || checksum_status=$?
-  else
-    wget -q -O "$tmpdir/zap.tar.gz.sha256" "$checksum_url" || checksum_status=$?
+  # From the client when it has one: it checked the release's signature, which this host can't.
+  expected_sha256="{expected_sha256}"
+  if [ -z "$expected_sha256" ]; then
+    # The SHA-256 first, so that a release without one isn't downloaded for nothing.
+    if [ "$downloader" = curl ]; then
+      curl -fsSL --connect-timeout 15 "$checksum_url" -o "$tmpdir/zap.tar.gz.sha256" || checksum_status=$?
+    else
+      wget -q -O "$tmpdir/zap.tar.gz.sha256" "$checksum_url" || checksum_status=$?
+    fi
+    if [ -n "${checksum_status:-}" ]; then
+      echo "error: could not download the SHA-256 of the remote server, $checksum_url (exit $checksum_status); a release made before checksums were published has none, and its tarball is not installed unverified" >&2
+      exit 5
+    fi
+    # The file is sha256sum's output: the SHA-256 in hex, then the file's name.
+    read -r expected_sha256 _ < "$tmpdir/zap.tar.gz.sha256" || true
   fi
-  if [ -n "${checksum_status:-}" ]; then
-    echo "error: could not download the SHA-256 of the remote server, $checksum_url (exit $checksum_status); a release made before checksums were published has none, and its tarball is not installed unverified" >&2
-    exit 5
-  fi
-  # The file is sha256sum's output: the SHA-256 in hex, then the file's name.
-  read -r expected_sha256 _ < "$tmpdir/zap.tar.gz.sha256" || true
   expected_sha256=$(printf '%s' "${expected_sha256:-}" | tr 'A-F' 'a-f')
   case "$expected_sha256" in
     *[!0-9a-f]*|"") expected_sha256= ;;

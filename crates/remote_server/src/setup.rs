@@ -372,13 +372,25 @@ const INSTALL_SCRIPT_TEMPLATE: &str = include_str!("install_remote_server.sh");
 
 /// 返回安装脚本。`staging_tarball_path` 非空时,脚本跳过远端下载,
 /// 改为解压客户端通过 SCP 预上传的 tarball。
-pub fn install_script(staging_tarball_path: Option<&str>) -> String {
-    install_script_for(ChannelState::app_version(), staging_tarball_path)
+///
+/// `expected_sha256` is the SHA-256 the downloaded tarball must have, which the client read from
+/// the release's signed SHA-256 file ([`signed_sha256`]). Without it the script downloads that
+/// file itself, unsigned.
+pub fn install_script(staging_tarball_path: Option<&str>, expected_sha256: Option<&str>) -> String {
+    install_script_for(
+        ChannelState::app_version(),
+        staging_tarball_path,
+        expected_sha256,
+    )
 }
 
 /// The install script of a build made from the release `tag`, or from no release: the script then
 /// looks up the newest release's tag.
-fn install_script_for(tag: Option<&str>, staging_tarball_path: Option<&str>) -> String {
+fn install_script_for(
+    tag: Option<&str>,
+    staging_tarball_path: Option<&str>,
+    expected_sha256: Option<&str>,
+) -> String {
     let version_suffix = version_suffix();
     // The script fills in the release's version and the system it runs on.
     let download_url = release_tarball_url("v$release_version", "$os_name", "$arch_name");
@@ -386,6 +398,7 @@ fn install_script_for(tag: Option<&str>, staging_tarball_path: Option<&str>) -> 
         .replace("{release_tag}", tag.unwrap_or(""))
         .replace("{latest_release_url}", LATEST_RELEASE_URL)
         .replace("{checksum_url}", &checksum_url(&download_url))
+        .replace("{expected_sha256}", expected_sha256.unwrap_or(""))
         .replace("{download_url}", &download_url)
         .replace("{install_dir}", &remote_server_dir())
         .replace("{binary_name}", binary_name())
@@ -414,6 +427,80 @@ pub fn parse_checksum_file(contents: &str) -> Option<String> {
     let sha256 = contents.lines().next()?.split_whitespace().next()?;
     (sha256.len() == 64 && sha256.bytes().all(|byte| byte.is_ascii_hexdigit()))
         .then(|| sha256.to_ascii_lowercase())
+}
+
+/// The URL of the signature that a release publishes beside the SHA-256 file at `checksum_url`:
+/// that file's name with `.sig` appended, as .github/workflows/release.yml writes it.
+pub fn signature_url(checksum_url: &str) -> String {
+    format!("{checksum_url}.sig")
+}
+
+/// The Ed25519 public key, in base64, of the key that releases sign their SHA-256 files with. The
+/// private half is the release workflow's secret REMOTE_SERVER_SIGNING_KEY. A release's own
+/// client is the only one that checks its signature, so the pair can be replaced between two
+/// releases.
+#[cfg(not(target_family = "wasm"))]
+const RELEASE_SIGNING_PUBLIC_KEY: &str = include_str!("release_signing_key.pub");
+
+/// The SHA-256 of the CLI tarball at `tarball_url`, from `checksum_file`, the contents of the
+/// release's SHA-256 file, once `signature_file`, the contents of its signature, shows that the
+/// release workflow wrote that file, and that it wrote it for this tarball.
+///
+/// The SHA-256 file is downloaded from where the tarball is, so by itself it only tells a damaged
+/// download from a whole one. The signature also tells a tarball the release workflow built from
+/// one put in its place.
+#[cfg(not(target_family = "wasm"))]
+pub fn signed_sha256(
+    checksum_file: &str,
+    signature_file: &str,
+    tarball_url: &str,
+) -> Result<String> {
+    sha256_signed_with(
+        RELEASE_SIGNING_PUBLIC_KEY,
+        checksum_file,
+        signature_file,
+        tarball_url,
+    )
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn sha256_signed_with(
+    public_key: &str,
+    checksum_file: &str,
+    signature_file: &str,
+    tarball_url: &str,
+) -> Result<String> {
+    use base64::prelude::{Engine as _, BASE64_STANDARD};
+    use ring::signature::{UnparsedPublicKey, ED25519};
+
+    let public_key = BASE64_STANDARD
+        .decode(public_key.trim())
+        .map_err(|error| anyhow!("the release signing key is not base64: {error}"))?;
+    let signature = BASE64_STANDARD
+        .decode(signature_file.trim())
+        .map_err(|error| anyhow!("the signature of {tarball_url}.sha256 is not base64: {error}"))?;
+    UnparsedPublicKey::new(&ED25519, public_key)
+        .verify(checksum_file.as_bytes(), &signature)
+        .map_err(|_| {
+            anyhow!("the SHA-256 file of {tarball_url} does not carry the release's signature")
+        })?;
+
+    // A signed file of another release or system would pass the check above: sha256sum's line
+    // names the file after the SHA-256, with a `*` before it in binary mode.
+    let tarball_name = tarball_url.rsplit('/').next().unwrap_or(tarball_url);
+    let signed_name = checksum_file
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .map(|name| name.strip_prefix('*').unwrap_or(name));
+    if signed_name != Some(tarball_name) {
+        return Err(anyhow!(
+            "the SHA-256 file of {tarball_url} is signed, but for {}",
+            signed_name.unwrap_or("no file")
+        ));
+    }
+    parse_checksum_file(checksum_file)
+        .ok_or_else(|| anyhow!("the SHA-256 file of {tarball_url} holds no SHA-256"))
 }
 
 /// Checks that the file at `path` has the SHA-256 that `checksum_file`, the contents of the

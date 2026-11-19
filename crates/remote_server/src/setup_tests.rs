@@ -256,6 +256,7 @@ fn install_script_uses_zap_asset_and_staging_placeholder() {
     let script = install_script_for(
         Some(RELEASE_TAG),
         Some("~/.zap/remote-server/zap-upload.tar.gz"),
+        None,
     );
 
     assert!(script
@@ -478,7 +479,7 @@ fn install_dir_leftovers(home: &std::path::Path) -> Vec<String> {
 
 #[test]
 fn install_script_downloads_the_tarball_of_its_release_tag() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     // The newest release is another one, which a build with a tag doesn't ask for.
@@ -508,7 +509,7 @@ fn install_script_downloads_the_tarball_of_its_release_tag() {
 
 #[test]
 fn install_script_without_release_tag_downloads_the_newest_release_with_curl() {
-    let script = install_script_for(None, None);
+    let script = install_script_for(None, None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
@@ -528,7 +529,7 @@ fn install_script_without_release_tag_downloads_the_newest_release_with_curl() {
 
 #[test]
 fn install_script_without_release_tag_downloads_the_newest_release_with_wget() {
-    let script = install_script_for(None, None);
+    let script = install_script_for(None, None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     let host = RemoteHost::new(Downloader::Wget, LATEST_LOCATION)
@@ -549,7 +550,7 @@ fn install_script_without_release_tag_downloads_the_newest_release_with_wget() {
 
 #[test]
 fn install_script_without_release_tag_fails_when_no_release_is_found() {
-    let script = install_script_for(None, None);
+    let script = install_script_for(None, None, None);
     // Where `latest` redirects to in a repository without a release.
     let no_release = "https://github.com/q0wkp/zap/releases";
 
@@ -570,7 +571,7 @@ fn install_script_without_release_tag_fails_when_no_release_is_found() {
 
 #[test]
 fn install_script_installs_a_tarball_whose_sha256_matches() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     let tarball = cli_tarball();
@@ -593,7 +594,7 @@ fn install_script_installs_a_tarball_whose_sha256_matches() {
 
 #[test]
 fn install_script_verifies_with_shasum_without_sha256sum() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     let tarball = cli_tarball();
@@ -627,7 +628,7 @@ fn install_script_verifies_with_shasum_without_sha256sum() {
 
 #[test]
 fn install_script_refuses_a_tarball_whose_sha256_differs() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
     let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
@@ -652,7 +653,7 @@ fn install_script_refuses_a_tarball_whose_sha256_differs() {
 
 #[test]
 fn install_script_refuses_a_release_without_sha256() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
 
@@ -671,7 +672,7 @@ fn install_script_refuses_a_release_without_sha256() {
 
 #[test]
 fn install_script_refuses_a_sha256_file_without_sha256() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let url = release_tarball_url_of_this_system();
     let name = file_name_in_url(&url);
 
@@ -689,7 +690,7 @@ fn install_script_refuses_a_sha256_file_without_sha256() {
 
 #[test]
 fn install_script_without_sha256_program_downloads_nothing() {
-    let script = install_script_for(Some(RELEASE_TAG), None);
+    let script = install_script_for(Some(RELEASE_TAG), None, None);
     let mut host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION);
     host.missing = &["sha256sum", "shasum"];
     let run = run_install_script(&script, host);
@@ -710,7 +711,7 @@ fn install_script_extracts_an_uploaded_tarball_without_sha256_program() {
     let fake_home = tempfile::tempdir().unwrap();
     let uploaded = fake_home.path().join(SCP_UPLOAD_TARBALL_NAME);
     std::fs::write(&uploaded, cli_tarball()).unwrap();
-    let script = install_script_for(Some(RELEASE_TAG), Some(uploaded.to_str().unwrap()));
+    let script = install_script_for(Some(RELEASE_TAG), Some(uploaded.to_str().unwrap()), None);
 
     let output = command::blocking::Command::new("bash")
         .arg("-c")
@@ -733,7 +734,7 @@ fn install_script_extracts_an_uploaded_tarball_without_sha256_program() {
 fn checksum_url_appends_sha256_to_the_tarball() {
     let url = release_tarball_url(RELEASE_TAG, "linux", "x86_64");
     assert_eq!(checksum_url(&url), format!("{url}.sha256"));
-    assert!(install_script_for(Some(RELEASE_TAG), None).contains(
+    assert!(install_script_for(Some(RELEASE_TAG), None, None).contains(
         "checksum_url=\"https://github.com/q0wkp/zap/releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz.sha256\""
     ));
 }
@@ -822,7 +823,10 @@ fn previous_install_check_ignores_what_a_failed_install_leaves() {
     let missing_tarball = fake_home.path().join("missing.tar.gz");
     let install_output = command::blocking::Command::new("bash")
         .arg("-c")
-        .arg(install_script(Some(missing_tarball.to_str().unwrap())))
+        .arg(install_script(
+            Some(missing_tarball.to_str().unwrap()),
+            None,
+        ))
         .env("HOME", fake_home.path())
         .output()
         .expect("failed to run install script");
@@ -852,4 +856,97 @@ fn previous_install_check_finds_an_installed_binary() {
     std::fs::create_dir_all(binary.parent().unwrap()).unwrap();
     std::fs::write(&binary, "#!/bin/sh\n").unwrap();
     assert!(run_previous_install_check(fake_home.path()));
+}
+
+#[test]
+fn install_script_takes_the_sha256_from_the_client_without_downloading_it() {
+    let url = release_tarball_url_of_this_system();
+    let name = file_name_in_url(&url);
+    let tarball = cli_tarball();
+
+    // The release's own SHA-256 file is not served: asking for it would fail the install.
+    let script = install_script_for(Some(RELEASE_TAG), None, Some(&sha256_hex(&tarball)));
+    let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION).serving(name, tarball.clone());
+    let run = run_install_script(&script, host);
+    assert_eq!(run.exit_code, Some(0), "{}", run.stderr);
+    assert!(installed_binary(run.home.path()).is_file());
+    assert!(
+        !run.calls.iter().any(|call| call.contains(".sha256")),
+        "{:?}",
+        run.calls
+    );
+
+    // A tarball with another SHA-256 is refused, also when the release's file agrees with it.
+    let script = install_script_for(
+        Some(RELEASE_TAG),
+        None,
+        Some(&sha256_hex(b"the signed one")),
+    );
+    let host = RemoteHost::new(Downloader::Curl, LATEST_LOCATION)
+        .serving(format!("{name}.sha256"), checksum_file(name, &tarball))
+        .serving(name, tarball);
+    let run = run_install_script(&script, host);
+    assert_eq!(run.exit_code, Some(6), "{}", run.stderr);
+    assert!(!installed_binary(run.home.path()).exists());
+}
+
+/// A key pair made for these tests, and what `openssl pkeyutl -sign -rawin`, the release
+/// workflow's command, signed [`SIGNED_CHECKSUM_FILE`] with.
+const TEST_PUBLIC_KEY: &str = "Rd3unk+4SZ2Sdr7TgWRWd1II7kZrxZgvcJQruCPAFUI=";
+const SIGNED_CHECKSUM_FILE: &str =
+    "db4b4d0d1cb480bf9aeea253771c00febe627f236765fa37d6a5614f079a3aa0  zap-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz\n";
+const TEST_SIGNATURE: &str =
+    "jGW6buVrEiEb9H3TiVIFBlq4aauTKaQLMBarIJhJfOqg3qyQzyMko4abga7Zih8rz7x3JiNI5d2hNZ4V2akpCA==\n";
+
+#[test]
+fn signed_sha256_file_gives_its_sha256() {
+    let url = release_tarball_url(RELEASE_TAG, "linux", "x86_64");
+    assert_eq!(
+        sha256_signed_with(TEST_PUBLIC_KEY, SIGNED_CHECKSUM_FILE, TEST_SIGNATURE, &url).unwrap(),
+        "db4b4d0d1cb480bf9aeea253771c00febe627f236765fa37d6a5614f079a3aa0"
+    );
+}
+
+#[test]
+fn sha256_file_changed_after_signing_is_refused() {
+    let url = release_tarball_url(RELEASE_TAG, "linux", "x86_64");
+    let changed = SIGNED_CHECKSUM_FILE.replacen("db4b", "0000", 1);
+    let error = sha256_signed_with(TEST_PUBLIC_KEY, &changed, TEST_SIGNATURE, &url).unwrap_err();
+    assert!(error.to_string().contains("signature"), "{error}");
+
+    // Signed with another key than the client's.
+    let error = sha256_signed_with(
+        RELEASE_SIGNING_PUBLIC_KEY,
+        SIGNED_CHECKSUM_FILE,
+        TEST_SIGNATURE,
+        &url,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("signature"), "{error}");
+
+    let error =
+        sha256_signed_with(TEST_PUBLIC_KEY, SIGNED_CHECKSUM_FILE, "not base64", &url).unwrap_err();
+    assert!(error.to_string().contains("base64"), "{error}");
+}
+
+#[test]
+fn signed_sha256_file_of_another_tarball_is_refused() {
+    // The same release's file for another system, and another release's for this one.
+    for url in [
+        release_tarball_url(RELEASE_TAG, "macos", "aarch64"),
+        release_tarball_url("v2026.01.01.1", "linux", "x86_64"),
+    ] {
+        let error = sha256_signed_with(TEST_PUBLIC_KEY, SIGNED_CHECKSUM_FILE, TEST_SIGNATURE, &url)
+            .unwrap_err();
+        assert!(error.to_string().contains("signed, but for"), "{error}");
+    }
+}
+
+#[test]
+fn release_signing_key_is_an_ed25519_public_key() {
+    use base64::prelude::{Engine as _, BASE64_STANDARD};
+    let key = BASE64_STANDARD
+        .decode(RELEASE_SIGNING_PUBLIC_KEY.trim())
+        .unwrap();
+    assert_eq!(key.len(), 32);
 }
