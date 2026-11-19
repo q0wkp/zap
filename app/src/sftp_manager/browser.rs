@@ -6,7 +6,7 @@
 //! date: 2026-05-26
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -209,6 +209,11 @@ pub struct SftpBrowserView {
     // ---- 文件行鼠标句柄 ----
     /// 每行文件条目的鼠标状态句柄
     row_mouse_handles: Vec<MouseStateHandle>,
+    /// Mouse state of the breadcrumb's root entry and of each of its segments. They are kept
+    /// here because a state made anew on every render reports a hover change each frame while
+    /// the pointer is over the element, which re-renders without end.
+    breadcrumb_root_state: MouseStateHandle,
+    breadcrumb_segment_states: Vec<MouseStateHandle>,
     // ---- 滚动 ----
     /// 滚动状态句柄
     scroll_state: ClippedScrollStateHandle,
@@ -265,6 +270,8 @@ impl SftpBrowserView {
             new_folder_editor,
             search_editor,
             row_mouse_handles: Vec::new(),
+            breadcrumb_root_state: MouseStateHandle::default(),
+            breadcrumb_segment_states: Vec::new(),
             scroll_state: ClippedScrollStateHandle::default(),
             connect_handle: None,
             refresh_handle: None,
@@ -344,7 +351,7 @@ impl SftpBrowserView {
     ) {
         self.connection = ConnectionState::Connected;
         self.sftp = Some(backend);
-        self.current_path = start_path.clone();
+        self.set_current_path(start_path.clone());
         self.path_history = vec![start_path];
         self.history_index = 0;
         self.refresh_dir_sync(ctx);
@@ -360,7 +367,7 @@ impl SftpBrowserView {
     ) {
         self.connection = ConnectionState::Connected;
         self.sftp = Some(backend);
-        self.current_path = start_path.clone();
+        self.set_current_path(start_path.clone());
         self.path_history = vec![start_path];
         self.history_index = 0;
         self.refresh_dir_sync(ctx);
@@ -484,9 +491,9 @@ impl SftpBrowserView {
                                         let backend = Arc::new(LiveSftpBackend::new(sftp)) as Arc<dyn SftpBackend>;
                                         // 解析用户 home 目录
                                         if let Ok(home) = backend.realpath(std::path::Path::new(".")) {
-                                            me.current_path = normalize_remote_path(&home);
+                                            me.set_current_path(normalize_remote_path(&home));
                                         } else {
-                                            me.current_path = PathBuf::from("/");
+                                            me.set_current_path(PathBuf::from("/"));
                                         }
                                         me.path_history = vec![me.current_path.clone()];
                                         me.history_index = 0;
@@ -614,6 +621,17 @@ impl SftpBrowserView {
         );
     }
 
+    /// Sets the directory shown, keeping one mouse state for each segment of its breadcrumb.
+    fn set_current_path(&mut self, path: PathBuf) {
+        let segments = path
+            .components()
+            .filter(|component| !matches!(component, Component::RootDir))
+            .count();
+        self.breadcrumb_segment_states
+            .resize_with(segments, MouseStateHandle::default);
+        self.current_path = path;
+    }
+
     /// 同步行鼠标句柄数量与条目数量一致
     fn sync_row_mouse_handles(&mut self) {
         while self.row_mouse_handles.len() < self.entries.len() {
@@ -638,7 +656,7 @@ impl SftpBrowserView {
         if path == self.current_path {
             return;
         }
-        self.current_path = path;
+        self.set_current_path(path);
         // 截断前进历史
         self.path_history.truncate(self.history_index + 1);
         self.path_history.push(self.current_path.clone());
@@ -660,7 +678,7 @@ impl SftpBrowserView {
     fn go_back(&mut self, ctx: &mut ViewContext<Self>) {
         if self.history_index > 0 {
             self.history_index -= 1;
-            self.current_path = self.path_history[self.history_index].clone();
+            self.set_current_path(self.path_history[self.history_index].clone());
             self.refresh_dir(ctx);
         }
     }
@@ -669,7 +687,7 @@ impl SftpBrowserView {
     fn go_forward(&mut self, ctx: &mut ViewContext<Self>) {
         if self.history_index < self.path_history.len() - 1 {
             self.history_index += 1;
-            self.current_path = self.path_history[self.history_index].clone();
+            self.set_current_path(self.path_history[self.history_index].clone());
             self.refresh_dir(ctx);
         }
     }
@@ -937,8 +955,11 @@ impl SftpBrowserView {
         let theme = appearance.theme();
         let text_color = theme.sub_text_color(theme.background());
 
-        let parts: Vec<Box<dyn Element>> =
-            super::breadcrumb::render_breadcrumb(&self.current_path, appearance);
+        let parts: Vec<Box<dyn Element>> = super::breadcrumb::render_breadcrumb(
+            &self.current_path,
+            &self.breadcrumb_segment_states,
+            appearance,
+        );
 
         let mut row = Flex::row()
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
@@ -946,7 +967,7 @@ impl SftpBrowserView {
 
         // 添加根目录 "/" 作为可点击入口
         let root_text_color = text_color;
-        let root_hoverable = Hoverable::new(Default::default(), move |_| {
+        let root_hoverable = Hoverable::new(self.breadcrumb_root_state.clone(), move |_| {
             let t = Text::new_inline(
                 "/".to_string(),
                 appearance.ui_font_family(),
@@ -2013,6 +2034,40 @@ fn make_editor(
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    /// The breadcrumb's segments keep their mouse states from one render to the next: a change
+    /// of path only adds or drops the states at the end.
+    #[test]
+    fn test_set_current_path_keeps_a_mouse_state_per_breadcrumb_segment() {
+        warpui::App::test((), |mut app| async move {
+            crate::test_util::settings::initialize_settings_for_tests(&mut app);
+            app.add_singleton_model(|_| Appearance::mock());
+            app.add_singleton_model(|_| {
+                crate::settings_view::keybindings::KeybindingChangedNotifier::mock()
+            });
+            app.add_singleton_model(|_| crate::workspace::ToastStack);
+            let temp_db = std::env::temp_dir().join("warp_sftp_test.sqlite");
+            let _ = warp_ssh_manager::set_database_path(temp_db);
+
+            let (_, view) = app.add_window(warpui::platform::WindowStyle::NotStealFocus, |ctx| {
+                SftpBrowserView::new("test-node".to_string(), ctx)
+            });
+            view.update(&mut app, |view, _| {
+                assert!(view.breadcrumb_segment_states.is_empty());
+
+                view.set_current_path(PathBuf::from("/home/user"));
+                assert_eq!(view.breadcrumb_segment_states.len(), 2);
+                let home = view.breadcrumb_segment_states[0].clone();
+
+                view.set_current_path(PathBuf::from("/home/user/docs"));
+                assert_eq!(view.breadcrumb_segment_states.len(), 3);
+                assert!(Arc::ptr_eq(&home, &view.breadcrumb_segment_states[0]));
+
+                view.set_current_path(PathBuf::from("/"));
+                assert!(view.breadcrumb_segment_states.is_empty());
+            });
+        });
+    }
 
     // ============================================================
     // normalize_remote_path 测试

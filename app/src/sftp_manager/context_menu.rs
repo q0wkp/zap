@@ -8,13 +8,15 @@ use pathfinder_geometry::vector::Vector2F;
 use warp_core::ui::appearance::Appearance;
 use warpui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Flex, Hoverable,
-    MainAxisSize, ParentElement, Radius, SavePosition, Text,
+    MainAxisSize, MouseStateHandle, ParentElement, Radius, SavePosition, Text,
 };
 use warpui::platform::Cursor;
 use warpui::Element;
 
 /// 右键菜单宽度
 const CONTEXT_MENU_WIDTH: f32 = 150.0;
+/// The number of items `build_file_menu_items` returns.
+const CONTEXT_MENU_ITEM_COUNT: usize = 5;
 
 use crate::sftp_manager::browser::SftpBrowserAction;
 
@@ -25,12 +27,22 @@ pub struct ContextMenuState {
     pub entry_index: usize,
     /// 菜单弹出位置
     pub position: Vector2F,
+    /// Mouse state of each menu item. It is kept here, for as long as the menu is open, because
+    /// a state made anew on every render reports a hover change each frame while the pointer is
+    /// over the item, which re-renders without end.
+    item_states: Vec<MouseStateHandle>,
 }
 
 impl ContextMenuState {
     /// 创建新的右键菜单状态
     pub fn new(entry_index: usize, position: Vector2F) -> Self {
-        Self { entry_index, position }
+        Self {
+            entry_index,
+            position,
+            item_states: (0..CONTEXT_MENU_ITEM_COUNT)
+                .map(|_| MouseStateHandle::default())
+                .collect(),
+        }
     }
 }
 
@@ -74,6 +86,7 @@ fn render_menu_item(
     action: SftpBrowserAction,
     appearance: &Appearance,
     position_id: &str,
+    mouse_state: MouseStateHandle,
 ) -> Box<dyn Element> {
     let theme = appearance.theme();
     let text_color = theme.active_ui_text_color();
@@ -83,7 +96,7 @@ fn render_menu_item(
     let ui_font_size = appearance.ui_font_size();
     let label_owned = label.to_string();
 
-    let item_el = Hoverable::new(Default::default(), move |state| {
+    let item_el = Hoverable::new(mouse_state, move |state| {
         let bg = if state.is_hovered() || state.is_clicked() {
             hover_bg
         } else {
@@ -119,7 +132,7 @@ pub fn render_context_menu(state: &ContextMenuState, appearance: &Appearance) ->
         .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_main_axis_size(MainAxisSize::Min);
 
-    for item in &menu_items {
+    for (index, item) in menu_items.iter().enumerate() {
         let position_id = match &item.action {
             SftpBrowserAction::OpenEntry(_) => "sftp_ctx:open",
             SftpBrowserAction::DownloadEntry(_) => "sftp_ctx:download",
@@ -156,7 +169,14 @@ pub fn render_context_menu(state: &ContextMenuState, appearance: &Appearance) ->
             | SftpBrowserAction::ToggleTransferPanel
             | SftpBrowserAction::ConfirmCloseTransferPanel => "sftp_ctx:unknown",
         };
-        let el = render_menu_item(&item.label, item.action.clone(), appearance, position_id);
+        let mouse_state = state.item_states.get(index).cloned().unwrap_or_default();
+        let el = render_menu_item(
+            &item.label,
+            item.action.clone(),
+            appearance,
+            position_id,
+            mouse_state,
+        );
         col.add_child(el);
     }
 
@@ -232,6 +252,13 @@ mod tests {
     fn test_build_file_menu_items_count() {
         let items = build_file_menu_items(0);
         assert_eq!(items.len(), 5, "应有 5 个菜单项");
+    }
+
+    /// An item without a mouse state of its own would get a fresh one on every render.
+    #[test]
+    fn test_context_menu_state_has_a_mouse_state_for_every_item() {
+        let state = ContextMenuState::new(0, Vector2F::new(0.0, 0.0));
+        assert_eq!(state.item_states.len(), build_file_menu_items(0).len());
     }
 
     /// 测试菜单项标签正确

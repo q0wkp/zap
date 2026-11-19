@@ -7,7 +7,9 @@
 use std::path::{Component, PathBuf};
 
 use warp_core::ui::appearance::Appearance;
-use warpui::elements::{ConstrainedBox, Container, Hoverable, SavePosition, Text};
+use warpui::elements::{
+    ConstrainedBox, Container, Hoverable, MouseStateHandle, SavePosition, Text,
+};
 use warpui::platform::Cursor;
 use warpui::Element;
 
@@ -18,7 +20,15 @@ use crate::ui_components::icons::Icon;
 ///
 /// 遍历路径的各个组件，每段可点击触发 NavigateTo 动作。
 /// 段之间用 ChevronRight 图标分隔，空路径显示 "/"。
-pub fn render_breadcrumb(current_path: &PathBuf, appearance: &Appearance) -> Vec<Box<dyn Element>> {
+///
+/// `segment_states` holds the mouse state of each segment, by position. The view keeps them:
+/// a state made anew on every render reports a hover change each frame while the pointer is
+/// over the segment, which re-renders without end.
+pub fn render_breadcrumb(
+    current_path: &PathBuf,
+    segment_states: &[MouseStateHandle],
+    appearance: &Appearance,
+) -> Vec<Box<dyn Element>> {
     let theme = appearance.theme();
     let text_color = theme.active_ui_text_color();
     let sub_color = theme.sub_text_color(theme.background());
@@ -77,7 +87,8 @@ pub fn render_breadcrumb(current_path: &PathBuf, appearance: &Appearance) -> Vec
             let label_for_closure = segment_label.clone();
             let path = accumulated.display();
             let position_id = format!("sftp_breadcrumb:{path}");
-            let hoverable = Hoverable::new(Default::default(), move |_| {
+            let mouse_state = segment_states.get(i).cloned().unwrap_or_default();
+            let hoverable = Hoverable::new(mouse_state, move |_| {
                 let text_el = Text::new_inline(label_for_closure.clone(), ui_font, ui_font_size)
                     .with_color(sub_color.into())
                     .finish();

@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use warpui::elements::MouseStateHandle;
+
 /// 文件条目类型（UI 层）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileEntryType {
@@ -69,6 +71,10 @@ pub struct TransferTask {
     pub state: TransferState,
     /// 取消标志
     pub cancel_flag: Arc<AtomicBool>,
+    /// Mouse state of the task's cancel button in the transfer panel. It is kept with the task
+    /// because a state made anew on every render reports a hover change each frame while the
+    /// pointer is over the button, which re-renders without end.
+    pub cancel_btn_state: MouseStateHandle,
 }
 
 impl TransferTask {
@@ -89,6 +95,7 @@ impl TransferTask {
             transferred: 0,
             state: TransferState::Pending,
             cancel_flag: Arc::new(AtomicBool::new(false)),
+            cancel_btn_state: MouseStateHandle::default(),
         }
     }
 
