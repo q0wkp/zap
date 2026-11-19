@@ -25,6 +25,9 @@ enum InProgressBlock {
 	Text,
 	ToolUse { id: String, name: String, input: String },
 	Thinking,
+	/// A block of a type this streamer does not surface (e.g. `server_tool_use`,
+	/// `redacted_thinking`). Its deltas are skipped.
+	Ignored,
 }
 
 impl AnthropicStreamer {
@@ -70,106 +73,16 @@ impl futures::Stream for AnthropicStreamer {
 							continue;
 						}
 						"content_block_start" => {
-							let mut data: Value =
-								serde_json::from_str(&message.data).map_err(|serde_error| Error::StreamParse {
-									model_iden: self.options.model_iden.clone(),
-									serde_error,
-								})?;
-
-							match data.x_get_str("/content_block/type") {
-								Ok("text") => self.in_progress_block = InProgressBlock::Text,
-								Ok("thinking") => self.in_progress_block = InProgressBlock::Thinking,
-								Ok("tool_use") => {
-									let id: String = data.x_take("/content_block/id")?;
-									let name: String = data.x_take("/content_block/name")?;
-
-									// Emit an initial ToolCallChunk with name and empty args,
-									// matching OpenAI's incremental streaming behaviour.
-									let tc = ToolCall {
-										call_id: id.clone(),
-										fn_name: name.clone(),
-										fn_arguments: Value::String(String::new()),
-										thought_signatures: None,
-									};
-
-									self.in_progress_block = InProgressBlock::ToolUse {
-										id,
-										name,
-										input: String::new(),
-									};
-
-									return Poll::Ready(Some(Ok(InterStreamEvent::ToolCallChunk(tc))));
-								}
-								Ok(txt) => {
-									tracing::warn!("unhandled content type: {txt}");
-								}
-								Err(e) => {
-									tracing::error!("{e:?}");
-								}
+							if let Some(event) = self.on_content_block_start(&message.data)? {
+								return Poll::Ready(Some(Ok(event)));
 							}
-
 							continue;
 						}
 						"content_block_delta" => {
-							let mut data: Value =
-								serde_json::from_str(&message.data).map_err(|serde_error| Error::StreamParse {
-									model_iden: self.options.model_iden.clone(),
-									serde_error,
-								})?;
-
-							match &mut self.in_progress_block {
-								InProgressBlock::Text => {
-									let content: String = data.x_take("/delta/text")?;
-
-									// Add to the captured_content if chat options say so
-									if self.options.capture_content {
-										match self.captured_data.content {
-											Some(ref mut c) => c.push_str(&content),
-											None => self.captured_data.content = Some(content.clone()),
-										}
-									}
-
-									return Poll::Ready(Some(Ok(InterStreamEvent::Chunk(content))));
-								}
-								InProgressBlock::ToolUse { id, name, input } => {
-									let partial = data.x_get_str("/delta/partial_json")?;
-									input.push_str(partial);
-
-									// Emit incremental ToolCallChunk with accumulated args
-									// (as Value::String, same convention as OpenAI adapter).
-									let tc = ToolCall {
-										call_id: id.clone(),
-										fn_name: name.clone(),
-										fn_arguments: Value::String(input.clone()),
-										thought_signatures: None,
-									};
-
-									return Poll::Ready(Some(Ok(InterStreamEvent::ToolCallChunk(tc))));
-								}
-								InProgressBlock::Thinking => {
-									if let Ok(thinking) = data.x_take::<String>("/delta/thinking") {
-										// Add to the captured_thinking if chat options say so
-										if self.options.capture_reasoning_content {
-											match self.captured_data.reasoning_content {
-												Some(ref mut r) => r.push_str(&thinking),
-												None => self.captured_data.reasoning_content = Some(thinking.clone()),
-											}
-										}
-
-										return Poll::Ready(Some(Ok(InterStreamEvent::ReasoningChunk(thinking))));
-									} else if let Ok(signature) = data.x_take::<String>("/delta/signature") {
-										return Poll::Ready(Some(Ok(InterStreamEvent::ThoughtSignatureChunk(
-											signature,
-										))));
-									} else {
-										// If it is thinking but no thinking or signature field, we log and skip.
-										tracing::warn!(
-											"content_block_delta for thinking block but no thinking or signature found: {data:?}"
-										);
-										continue;
-									}
-								}
+							if let Some(event) = self.on_content_block_delta(&message.data)? {
+								return Poll::Ready(Some(Ok(event)));
 							}
+							continue;
 						}
 						"content_block_stop" => {
 							match std::mem::replace(&mut self.in_progress_block, InProgressBlock::Text) {
@@ -259,6 +172,110 @@ impl futures::Stream for AnthropicStreamer {
 
 // Support
 impl AnthropicStreamer {
+	/// Handles a `content_block_start` message, returning the event to emit, if any.
+	fn on_content_block_start(&mut self, message_data: &str) -> Result<Option<InterStreamEvent>> {
+		let mut data = self.parse_message_data(message_data)?;
+
+		match data.x_get_str("/content_block/type") {
+			Ok("text") => self.in_progress_block = InProgressBlock::Text,
+			Ok("thinking") => self.in_progress_block = InProgressBlock::Thinking,
+			Ok("tool_use") => {
+				let id: String = data.x_take("/content_block/id")?;
+				let name: String = data.x_take("/content_block/name")?;
+
+				// Emit an initial ToolCallChunk with name and empty args,
+				// matching OpenAI's incremental streaming behaviour.
+				let tc = ToolCall {
+					call_id: id.clone(),
+					fn_name: name.clone(),
+					fn_arguments: Value::String(String::new()),
+					thought_signatures: None,
+				};
+
+				self.in_progress_block = InProgressBlock::ToolUse {
+					id,
+					name,
+					input: String::new(),
+				};
+
+				return Ok(Some(InterStreamEvent::ToolCallChunk(tc)));
+			}
+			Ok(txt) => {
+				tracing::warn!("unhandled content type: {txt}");
+				// Without this, the deltas of this block would be read as deltas
+				// of the previous block's type and fail the whole stream.
+				self.in_progress_block = InProgressBlock::Ignored;
+			}
+			Err(e) => {
+				tracing::error!("{e:?}");
+				self.in_progress_block = InProgressBlock::Ignored;
+			}
+		}
+
+		Ok(None)
+	}
+
+	/// Handles a `content_block_delta` message, returning the event to emit, if any.
+	fn on_content_block_delta(&mut self, message_data: &str) -> Result<Option<InterStreamEvent>> {
+		let mut data = self.parse_message_data(message_data)?;
+
+		match &mut self.in_progress_block {
+			InProgressBlock::Text => {
+				// A text block also receives deltas that carry no text (`citations_delta`).
+				let Ok(content) = data.x_take::<String>("/delta/text") else {
+					return Ok(None);
+				};
+
+				// Add to the captured_content if chat options say so
+				if self.options.capture_content {
+					match self.captured_data.content {
+						Some(ref mut c) => c.push_str(&content),
+						None => self.captured_data.content = Some(content.clone()),
+					}
+				}
+
+				Ok(Some(InterStreamEvent::Chunk(content)))
+			}
+			InProgressBlock::ToolUse { id, name, input } => {
+				let partial = data.x_get_str("/delta/partial_json")?;
+				input.push_str(partial);
+
+				// Emit incremental ToolCallChunk with accumulated args
+				// (as Value::String, same convention as OpenAI adapter).
+				let tc = ToolCall {
+					call_id: id.clone(),
+					fn_name: name.clone(),
+					fn_arguments: Value::String(input.clone()),
+					thought_signatures: None,
+				};
+
+				Ok(Some(InterStreamEvent::ToolCallChunk(tc)))
+			}
+			InProgressBlock::Thinking => {
+				if let Ok(thinking) = data.x_take::<String>("/delta/thinking") {
+					// Add to the captured_thinking if chat options say so
+					if self.options.capture_reasoning_content {
+						match self.captured_data.reasoning_content {
+							Some(ref mut r) => r.push_str(&thinking),
+							None => self.captured_data.reasoning_content = Some(thinking.clone()),
+						}
+					}
+
+					Ok(Some(InterStreamEvent::ReasoningChunk(thinking)))
+				} else if let Ok(signature) = data.x_take::<String>("/delta/signature") {
+					Ok(Some(InterStreamEvent::ThoughtSignatureChunk(signature)))
+				} else {
+					// If it is thinking but no thinking or signature field, we log and skip.
+					tracing::warn!(
+						"content_block_delta for thinking block but no thinking or signature found: {data:?}"
+					);
+					Ok(None)
+				}
+			}
+			InProgressBlock::Ignored => Ok(None),
+		}
+	}
+
 	fn capture_usage(&mut self, message_type: &str, message_data: &str) -> Result<()> {
 		if self.options.capture_usage {
 			let data = self.parse_message_data(message_data)?;
@@ -344,3 +361,7 @@ impl AnthropicStreamer {
 		})
 	}
 }
+
+#[cfg(test)]
+#[path = "streamer_tests.rs"]
+mod tests;
