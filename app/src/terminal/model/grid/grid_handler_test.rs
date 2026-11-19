@@ -697,12 +697,97 @@ fn test_find_url_with_delimiter() {
 
 #[test]
 fn test_find_url_line_breaks() {
-    let blockgrid = mock_blockgrid("abc https://goog\r\nle.com");
+    // The first line ends before the last column, so it wasn't broken to wrap it.
+    let blockgrid = mock_blockgrid("abc https://goog\r\nle.com and more text");
     assert_eq!(
         blockgrid
             .grid_handler
             .url_at_point(Point { row: 1, col: 0 }),
         None
+    );
+}
+
+#[test]
+fn test_find_url_hard_wrapped_at_last_column() {
+    // The first line fills its row and the URL carries on in the next one.
+    let blockgrid = mock_blockgrid("abc https://goog\r\nle.com");
+    let expected = Some(Link {
+        range: Point { row: 0, col: 4 }..=Point { row: 1, col: 5 },
+        is_empty: false,
+    });
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 1, col: 0 }),
+        expected
+    );
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 0, col: 15 }),
+        expected
+    );
+}
+
+#[test]
+fn test_find_url_hard_wrapped_inside_query() {
+    // Both breaks come right after a `=`, which only a query ends a row with.
+    let blockgrid =
+        mock_blockgrid("see https://a.test/cb?x=\r\nopenid&originator=codex=\r\ntui end");
+    let expected = Some(Link {
+        range: Point { row: 0, col: 4 }..=Point { row: 2, col: 2 },
+        is_empty: false,
+    });
+    for point in [
+        Point { row: 0, col: 10 },
+        Point { row: 1, col: 3 },
+        Point { row: 2, col: 1 },
+    ] {
+        assert_eq!(blockgrid.grid_handler.url_at_point(point), expected);
+    }
+}
+
+#[test]
+fn test_find_url_not_joined_with_word_on_next_line() {
+    // The URL ends at the last column, but the next line starts with a word.
+    let blockgrid = mock_blockgrid("see https://example.com\r\nfor more details");
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 0, col: 10 }),
+        Some(Link {
+            range: Point { row: 0, col: 4 }..=Point { row: 0, col: 22 },
+            is_empty: false
+        })
+    );
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 1, col: 0 }),
+        None
+    );
+}
+
+#[test]
+fn test_find_url_not_joined_with_url_on_next_line() {
+    let blockgrid = mock_blockgrid("https://one.example\r\nhttps://two.example");
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 0, col: 8 }),
+        Some(Link {
+            range: Point { row: 0, col: 0 }..=Point { row: 0, col: 18 },
+            is_empty: false
+        })
+    );
+    assert_eq!(
+        blockgrid
+            .grid_handler
+            .url_at_point(Point { row: 1, col: 8 }),
+        Some(Link {
+            range: Point { row: 1, col: 0 }..=Point { row: 1, col: 18 },
+            is_empty: false
+        })
     );
 }
 
