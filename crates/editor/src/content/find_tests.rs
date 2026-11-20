@@ -20,7 +20,7 @@ fn test_search_cjk_literal() {
     // CJK literal search
     App::test((), |mut app| async move {
         let (buffer, _selection) = Buffer::mock_from_markdown(
-            "Zap 是基于 Zap 的社区分支，保留账户与同步能力。",
+            "ZapNG 是基于 ZapNG 的社区分支，保留账户与同步能力。",
             None,
             Box::new(|_, _| IndentBehavior::Ignore),
             &mut app,
@@ -28,7 +28,7 @@ fn test_search_cjk_literal() {
         buffer.read(&app, |buffer, _| {
             // The buffer always starts with a block marker at char 0, so the text begins at
             // offset 1: `账户` lands at 21..23 (verified against the engine). This expectation
-            // was stale after the ZapNG→Zap rename shortened the fixture string.
+            // was stale after the ZapNG→ZapNG rename shortened the fixture string.
             assert_matches(
                 buffer,
                 &SearchConfig {

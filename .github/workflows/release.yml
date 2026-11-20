@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  # Per project: Zap's own channel, whose config is built in (app/src/bin/oss.rs); the others need
+  # Per project: ZapNG's own channel, whose config is built in (app/src/bin/oss.rs); the others need
   # Warp's private channel config.
   CHANNEL: oss
   CARGO_TERM_COLOR: always
@@ -51,8 +51,8 @@ jobs:
       fail-fast: false
       matrix:
         # Per project: the systems the release ships for, each with the name its files carry:
-        # zap-<version>-<name>.dmg and .tar.gz on macOS, .AppImage and .tar.gz on Linux, the version
-        # being the tag without its v, and github-release adds each .tar.gz's .sha256 and .sha256.asc. Zap's
+        # zap-ng-<version>-<name>.dmg and .tar.gz on macOS, .AppImage and .tar.gz on Linux, the version
+        # being the tag without its v, and github-release adds each .tar.gz's .sha256 and .sha256.asc. ZapNG's
         # auto-update (app/src/autoupdate/github.rs), its remote server
         # (crates/remote_server/src/setup.rs) and q0wkp/pkgs look for these names. The deb,
         # rpm and Arch packages keep the names their package managers give them.
@@ -164,9 +164,9 @@ jobs:
         run: |
           version="${GIT_RELEASE_TAG#v}"
           mkdir -p dist
-          cp "$DMG_PATH" "dist/zap-$version-$NAME.dmg"
-          cp "$BINARY" zap-oss
-          tar czf "dist/zap-$version-$NAME.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
+          cp "$DMG_PATH" "dist/zap-ng-$version-$NAME.dmg"
+          cp "$BINARY" zap-ng
+          tar czf "dist/zap-ng-$version-$NAME.tar.gz" zap-ng -C "$(dirname "$RESOURCES")" resources
 
       - name: Build the AppImage and the deb package (Linux)
         id: app_linux
@@ -213,12 +213,12 @@ jobs:
           mkdir -p dist
           find "$PACKAGES_DIR" -maxdepth 1 -type f -exec cp {} dist/ \;
           # linuxdeploy names the AppImage after the app and the architecture.
-          mv dist/Zap-x86_64.AppImage "dist/zap-$version-$NAME.AppImage"
+          mv dist/ZapNG-x86_64.AppImage "dist/zap-ng-$version-$NAME.AppImage"
           ls -l dist
           # The CLI below is built with another profile, and both don't fit on the disk.
           rm -rf target/release-lto
 
-      # The CLI that Zap's remote server installs on other hosts: linked statically against musl
+      # The CLI that ZapNG's remote server installs on other hosts: linked statically against musl
       # with cargo zigbuild, so it runs on any x86_64 Linux whatever its libc.
       - name: Install zig and cargo-zigbuild (Linux)
         if: runner.os == 'Linux'
@@ -250,8 +250,8 @@ jobs:
           RESOURCES: ${{ steps.cli_linux.outputs.bundled_resources_dir }}
         run: |
           version="${GIT_RELEASE_TAG#v}"
-          cp "$BINARY" zap-oss
-          tar czf "dist/zap-$version-$NAME.tar.gz" zap-oss -C "$(dirname "$RESOURCES")" resources
+          cp "$BINARY" zap-ng
+          tar czf "dist/zap-ng-$version-$NAME.tar.gz" zap-ng -C "$(dirname "$RESOURCES")" resources
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -274,30 +274,30 @@ jobs:
           path: dist/
 
       # The remote server installs a CLI archive on another host only once its SHA-256 matches
-      # the one in zap-<version>-<name>.tar.gz.sha256 (crates/remote_server/src/setup.rs), a line
+      # the one in zap-ng-<version>-<name>.tar.gz.sha256 (crates/remote_server/src/setup.rs), a line
       # of sha256sum's output. Computed here, from the files the release gets.
       - name: Write the SHA-256 of the CLI archives
         working-directory: dist
         run: |
           version="${GITHUB_REF_NAME#v}"
           found=
-          for archive in zap-"$version"-*.tar.gz; do
+          for archive in zap-ng-"$version"-*.tar.gz; do
             [ -f "$archive" ] || continue
             sha256sum "$archive" > "$archive.sha256"
             cat "$archive.sha256"
             found=1
           done
           if [ -z "$found" ]; then
-            echo "::error::no CLI archive zap-$version-*.tar.gz to write the SHA-256 of"
+            echo "::error::no CLI archive zap-ng-$version-*.tar.gz to write the SHA-256 of"
             exit 1
           fi
 
       # A .sha256 comes from where its archive does, so it only tells a damaged download from a
-      # whole one. Zap built from this tag installs the archive only when the .sha256 also has a
-      # signature, <archive>.sha256.asc (OpenPGP, armored), by the key whose public half that Zap was built
+      # whole one. ZapNG built from this tag installs the archive only when the .sha256 also has a
+      # signature, <archive>.sha256.asc (OpenPGP, armored), by the key whose public half that ZapNG was built
       # with, crates/remote_server/src/release_signing_key.pub at this tag. Each signature is
       # checked against that file here, so a secret that doesn't match it fails the release
-      # instead of publishing archives no Zap would install.
+      # instead of publishing archives no ZapNG would install.
       - name: Sign the SHA-256 files
         working-directory: dist
         env:
@@ -327,7 +327,7 @@ jobs:
           fi
 
           version="${GITHUB_REF_NAME#v}"
-          for checksum in zap-"$version"-*.tar.gz.sha256; do
+          for checksum in zap-ng-"$version"-*.tar.gz.sha256; do
             gpg --batch --quiet --armor --detach-sign --output "$checksum.asc" "$checksum"
             gpg --batch --quiet --verify "$checksum.asc" "$checksum"
           done
@@ -360,4 +360,4 @@ jobs:
             echo "::error::PKGS_DISPATCH_TOKEN is not set: q0wkp/pkgs won't package this release until its Sync workflow is run by hand"
             exit 1
           fi
-          gh workflow run sync.yml -R q0wkp/pkgs -f packages="zap"
+          gh workflow run sync.yml -R q0wkp/pkgs -f packages="zap-ng"

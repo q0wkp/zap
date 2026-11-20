@@ -1,5 +1,5 @@
 // We can use `std::process:Command` here because this is invoked within a build script,
-// _not_ within the Zap binary.
+// _not_ within the ZapNG binary.
 #![allow(clippy::disallowed_types)]
 
 use cfg_aliases::cfg_aliases;
@@ -41,8 +41,8 @@ fn main() -> Result<()> {
             .compile("warp_objc");
 
         // Build the dock tile plugin
-        println!("cargo:rerun-if-changed=DockTilePlugin/ZapDockTilePlugin.m");
-        println!("cargo:rerun-if-changed=DockTilePlugin/ZapDockTilePlugin.h");
+        println!("cargo:rerun-if-changed=DockTilePlugin/ZapNGDockTilePlugin.m");
+        println!("cargo:rerun-if-changed=DockTilePlugin/ZapNGDockTilePlugin.h");
         println!("cargo:rerun-if-changed=DockTilePlugin/Info.plist");
         println!("cargo:rerun-if-changed=DockTilePlugin/Makefile");
 
@@ -60,8 +60,8 @@ fn main() -> Result<()> {
         // Copy the dock tile plugin to the output directory
         let profile = get_build_profile_name();
         let target_dir = app_target_dir(&profile).expect("Failed to get app target directory");
-        let plugin_src = Path::new("DockTilePlugin/ZapDockTilePlugin.docktileplugin");
-        let plugin_dst = target_dir.join("ZapDockTilePlugin.docktileplugin");
+        let plugin_src = Path::new("DockTilePlugin/ZapNGDockTilePlugin.docktileplugin");
+        let plugin_dst = target_dir.join("ZapNGDockTilePlugin.docktileplugin");
 
         if !status.success() {
             fs::remove_dir_all(plugin_src).expect("Failed to clean up plugin directory");
@@ -130,7 +130,7 @@ fn generate_channel_config_if_needed(target_family: &str, target_os: &str) {
     let config_bin = "warp-channel-config";
 
     // Check if the config binary is available on PATH. If not, we can't generate embedded
-    // configs. This is expected for external contributors building Zap OSS.
+    // configs. This is expected for external contributors building ZapNG OSS.
     if Command::new(config_bin)
         .arg("--help")
         .stdout(std::process::Stdio::null())

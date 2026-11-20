@@ -68,7 +68,7 @@ impl View for ZapNGDriveSettingsPageView {
 
 impl SettingsPageMeta for ZapNGDriveSettingsPageView {
     fn section() -> SettingsSection {
-        SettingsSection::ZapDrive
+        SettingsSection::ZapNGDrive
     }
 
     fn should_render(&self, _ctx: &AppContext) -> bool {
@@ -90,7 +90,7 @@ impl SettingsPageMeta for ZapNGDriveSettingsPageView {
 
 impl From<ViewHandle<ZapNGDriveSettingsPageView>> for SettingsPageViewHandle {
     fn from(view_handle: ViewHandle<ZapNGDriveSettingsPageView>) -> Self {
-        SettingsPageViewHandle::ZapDrive(view_handle)
+        SettingsPageViewHandle::ZapNGDrive(view_handle)
     }
 }
 
@@ -104,7 +104,7 @@ impl SettingsWidget for ZapNGDriveToggleWidget {
     type View = ZapNGDriveSettingsPageView;
 
     fn search_terms(&self) -> &str {
-        "zap drive tools panel command palette search workflows prompts notebooks environment variables"
+        "zapng drive tools panel command palette search workflows prompts notebooks environment variables"
     }
 
     fn render(
@@ -116,7 +116,7 @@ impl SettingsWidget for ZapNGDriveToggleWidget {
         let settings = ZapNGDriveSettings::as_ref(app);
 
         render_body_item::<ZapNGDriveSettingsPageAction>(
-            "Zap Drive".into(),
+            "ZapNG Drive".into(),
             Some(AdditionalInfo {
                 mouse_state: self.info_icon_mouse_state.clone(),
                 on_click_action: Some(ZapNGDriveSettingsPageAction::OpenUrl(
@@ -137,7 +137,7 @@ impl SettingsWidget for ZapNGDriveToggleWidget {
                     ctx.dispatch_typed_action(ZapNGDriveSettingsPageAction::ToggleShowZapNGDrive);
                 })
                 .finish(),
-            Some("Zap Drive is a local workspace in your terminal where you can save Workflows, Notebooks, Prompts, and Environment Variables on this device.".into()),
+            Some("ZapNG Drive is a local workspace in your terminal where you can save Workflows, Notebooks, Prompts, and Environment Variables on this device.".into()),
         )
     }
 }

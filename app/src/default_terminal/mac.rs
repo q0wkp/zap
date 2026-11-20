@@ -64,7 +64,7 @@ pub fn is_zap_ng_default_terminal() -> bool {
 }
 
 pub fn set_zap_ng_as_default_terminal() -> Result<(), String> {
-    log::debug!("Setting Zap as default terminal");
+    log::debug!("Setting ZapNG as default terminal");
 
     let bundle_id = get_zap_ng_bundle_id().ok_or("No bundle ID".to_string())?;
 
@@ -94,7 +94,7 @@ fn set_default_terminal(bundle_id: &str) -> Result<(), String> {
     }
 }
 
-/// Gets Zap's bundle identifier. This may be `None` if not running as a bundle, i.e. through
+/// Gets ZapNG's bundle identifier. This may be `None` if not running as a bundle, i.e. through
 /// `cargo run` without `cargo bundle`.
 fn get_zap_ng_bundle_id() -> Option<String> {
     unsafe {

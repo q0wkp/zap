@@ -33,10 +33,10 @@ fn renders_with_context_and_builtin_partials() {
     let out = render_in(
         dir.path(),
         "agent.j2",
-        context! { name => "Zap", model_id => "m1" },
+        context! { name => "ZapNG", model_id => "m1" },
     )
     .unwrap();
-    assert_eq!(out, "Hello Zap, model m1");
+    assert_eq!(out, "Hello ZapNG, model m1");
 }
 
 #[test]

@@ -196,13 +196,13 @@ fn parse_preinstall_missing_status_falls_open() {
 }
 
 #[test]
-fn oss_remote_server_dir_uses_zap_namespace() {
-    assert_eq!(remote_server_dir(), "~/.zap/remote-server");
+fn oss_remote_server_dir_uses_zap_ng_namespace() {
+    assert_eq!(remote_server_dir(), "~/.zap-ng/remote-server");
 }
 
 #[test]
-fn oss_binary_name_matches_zap_cli() {
-    assert_eq!(binary_name(), "zap-oss");
+fn oss_binary_name_matches_zap_ng_cli() {
+    assert_eq!(binary_name(), "zap-ng");
 }
 
 /// A release tag, and the version its files carry.
@@ -215,7 +215,7 @@ fn release_tarball_url_names_the_file_by_version() {
 
     assert_eq!(
         url,
-        "https://github.com/q0wkp/zap/releases/download/v2026.07.09.2-mod.1.1/zap-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz"
+        "https://github.com/q0wkp/zap-ng/releases/download/v2026.07.09.2-mod.1.1/zap-ng-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz"
     );
     assert!(!url.contains("app.warp.dev"));
     assert!(!url.contains("/download/cli"));
@@ -237,33 +237,33 @@ fn download_tarball_url_names_the_platform() {
 #[test]
 fn release_tag_in_url_reads_the_release_page() {
     assert_eq!(
-        release_tag_in_url("https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1\n"),
+        release_tag_in_url("https://github.com/q0wkp/zap-ng/releases/tag/v2026.07.09.2-mod.1.1\n"),
         Some(RELEASE_TAG)
     );
     // Where `latest` redirects to in a repository without a release.
     assert_eq!(
-        release_tag_in_url("https://github.com/q0wkp/zap/releases"),
+        release_tag_in_url("https://github.com/q0wkp/zap-ng/releases"),
         None
     );
     assert_eq!(
-        release_tag_in_url("https://github.com/q0wkp/zap/releases/tag/"),
+        release_tag_in_url("https://github.com/q0wkp/zap-ng/releases/tag/"),
         None
     );
 }
 
 #[test]
-fn install_script_uses_zap_asset_and_staging_placeholder() {
+fn install_script_uses_zap_ng_asset_and_staging_placeholder() {
     let script = install_script_for(
         Some(RELEASE_TAG),
-        Some("~/.zap/remote-server/zap-upload.tar.gz"),
+        Some("~/.zap-ng/remote-server/zap-ng-upload.tar.gz"),
         None,
     );
 
     assert!(script
-        .contains("staging_tarball_path=\"~/.zap/remote-server/zap-upload.tar.gz\""));
+        .contains("staging_tarball_path=\"~/.zap-ng/remote-server/zap-ng-upload.tar.gz\""));
     assert!(script.contains(&format!("release_tag=\"{RELEASE_TAG}\"")));
     assert!(script.contains(
-        "url=\"https://github.com/q0wkp/zap/releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz\""
+        "url=\"https://github.com/q0wkp/zap-ng/releases/download/v$release_version/zap-ng-$release_version-$os_name-$arch_name.tar.gz\""
     ));
     assert!(!script.contains("app.warp.dev"));
     assert!(!script.contains("/download/cli"));
@@ -317,7 +317,7 @@ impl<'a> RemoteHost<'a> {
 /// Runs `script` with `bash`, as the SSH transport does on the remote host, in an empty home
 /// directory and with a downloader that records its calls and fetches only what `host` serves:
 /// asked for the newest release, it answers as the real one does when GitHub redirects to
-/// `host.latest_location` (curl's and GNU Wget's output for q0wkp/zap, seen 2026-11-11); any
+/// `host.latest_location` (curl's and GNU Wget's output for q0wkp/zap-ng, seen 2026-11-11); any
 /// other download fails.
 fn run_install_script(script: &str, host: RemoteHost) -> InstallScriptRun {
     let home = tempfile::tempdir().unwrap();
@@ -416,12 +416,12 @@ fn release_tarball_url_of_this_system() -> String {
     };
     let arch = std::env::consts::ARCH;
     let url = release_tarball_url(RELEASE_TAG, os, arch);
-    assert!(url.ends_with(&format!("/zap-{RELEASE_VERSION}-{os}-{arch}.tar.gz")));
+    assert!(url.ends_with(&format!("/zap-ng-{RELEASE_VERSION}-{os}-{arch}.tar.gz")));
     url
 }
 
 /// Where GitHub redirects `latest` to while [`RELEASE_TAG`] is the newest release.
-const LATEST_LOCATION: &str = "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.1.1";
+const LATEST_LOCATION: &str = "https://github.com/q0wkp/zap-ng/releases/tag/v2026.07.09.2-mod.1.1";
 
 /// The last part of `url`, the name of the file it downloads.
 fn file_name_in_url(url: &str) -> &str {
@@ -442,7 +442,7 @@ fn checksum_file(name: &str, contents: &[u8]) -> String {
 /// A CLI tarball as the release workflow packs it, with the binary at its top.
 fn cli_tarball() -> Vec<u8> {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join(binary_name()), "#!/bin/sh\necho zap\n").unwrap();
+    std::fs::write(dir.path().join(binary_name()), "#!/bin/sh\necho zap-ng\n").unwrap();
     std::fs::create_dir(dir.path().join("resources")).unwrap();
     let tarball = dir.path().join("cli.tar.gz");
     let status = command::blocking::Command::new("tar")
@@ -485,7 +485,7 @@ fn install_script_downloads_the_tarball_of_its_release_tag() {
     // The newest release is another one, which a build with a tag doesn't ask for.
     let host = RemoteHost::new(
         Downloader::Curl,
-        "https://github.com/q0wkp/zap/releases/tag/v2026.07.09.2-mod.5",
+        "https://github.com/q0wkp/zap-ng/releases/tag/v2026.07.09.2-mod.5",
     )
     .serving(format!("{name}.sha256"), checksum_file(name, b"tarball"));
     let run = run_install_script(&script, host);
@@ -552,7 +552,7 @@ fn install_script_without_release_tag_downloads_the_newest_release_with_wget() {
 fn install_script_without_release_tag_fails_when_no_release_is_found() {
     let script = install_script_for(None, None, None);
     // Where `latest` redirects to in a repository without a release.
-    let no_release = "https://github.com/q0wkp/zap/releases";
+    let no_release = "https://github.com/q0wkp/zap-ng/releases";
 
     for downloader in [Downloader::Curl, Downloader::Wget] {
         let run = run_install_script(&script, RemoteHost::new(downloader, no_release));
@@ -735,7 +735,7 @@ fn checksum_url_appends_sha256_to_the_tarball() {
     let url = release_tarball_url(RELEASE_TAG, "linux", "x86_64");
     assert_eq!(checksum_url(&url), format!("{url}.sha256"));
     assert!(install_script_for(Some(RELEASE_TAG), None, None).contains(
-        "checksum_url=\"https://github.com/q0wkp/zap/releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz.sha256\""
+        "checksum_url=\"https://github.com/q0wkp/zap-ng/releases/download/v$release_version/zap-ng-$release_version-$os_name-$arch_name.tar.gz.sha256\""
     ));
 }
 
@@ -743,12 +743,12 @@ fn checksum_url_appends_sha256_to_the_tarball() {
 fn parse_checksum_file_reads_sha256sum_output() {
     let sha256 = sha256_hex(b"tarball");
     assert_eq!(
-        parse_checksum_file(&format!("{sha256}  zap.tar.gz\n")),
+        parse_checksum_file(&format!("{sha256}  zap-ng.tar.gz\n")),
         Some(sha256.clone())
     );
     // shasum's binary mode marker, and no name or newline at all.
     assert_eq!(
-        parse_checksum_file(&format!("{sha256} *zap.tar.gz")),
+        parse_checksum_file(&format!("{sha256} *zap-ng.tar.gz")),
         Some(sha256.clone())
     );
     assert_eq!(
@@ -764,27 +764,27 @@ fn parse_checksum_file_reads_sha256sum_output() {
 #[test]
 fn verify_sha256_accepts_only_the_published_sha256() {
     let dir = tempfile::tempdir().unwrap();
-    let tarball = dir.path().join("zap.tar.gz");
+    let tarball = dir.path().join("zap-ng.tar.gz");
     std::fs::write(&tarball, b"tarball").unwrap();
 
     verify_sha256(
         &tarball,
-        &checksum_file("zap.tar.gz", b"tarball"),
-        "zap.tar.gz",
+        &checksum_file("zap-ng.tar.gz", b"tarball"),
+        "zap-ng.tar.gz",
     )
     .unwrap();
 
     let error = verify_sha256(
         &tarball,
-        &checksum_file("zap.tar.gz", b"other"),
-        "zap.tar.gz",
+        &checksum_file("zap-ng.tar.gz", b"other"),
+        "zap-ng.tar.gz",
     )
     .unwrap_err()
     .to_string();
-    assert!(error.contains("SHA-256 mismatch for zap.tar.gz"), "{error}");
+    assert!(error.contains("SHA-256 mismatch for zap-ng.tar.gz"), "{error}");
     assert!(error.contains(&sha256_hex(b"tarball")), "{error}");
 
-    let error = verify_sha256(&tarball, "Not Found", "zap.tar.gz")
+    let error = verify_sha256(&tarball, "Not Found", "zap-ng.tar.gz")
         .unwrap_err()
         .to_string();
     assert!(error.contains("holds no SHA-256"), "{error}");
@@ -892,15 +892,15 @@ fn install_script_takes_the_sha256_from_the_client_without_downloading_it() {
 
 /// An OpenPGP key made for these tests, and what `gpg --armor --detach-sign`, the release
 /// workflow's command, signed [`SIGNED_CHECKSUM_FILE`] with (GnuPG 2.4.4).
-const TEST_PUBLIC_KEY: &str = "/1CxipBN0xWbm8pT/BXouq8zuNKgyJY/dDL1QwIVnXM=";
+const TEST_PUBLIC_KEY: &str = "GKVkn7V0ie380dQ4aG7GuY4/JmgFdM8GTdNV97Ahp1k=";
 const SIGNED_CHECKSUM_FILE: &str =
-    "db4b4d0d1cb480bf9aeea253771c00febe627f236765fa37d6a5614f079a3aa0  zap-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz\n";
+    "db4b4d0d1cb480bf9aeea253771c00febe627f236765fa37d6a5614f079a3aa0  zap-ng-2026.07.09.2-mod.1.1-linux-x86_64.tar.gz\n";
 const TEST_SIGNATURE: &str = "-----BEGIN PGP SIGNATURE-----
 
-iHUEABYKAB0WIQTpdBW/6rmUSJFXeecVwMIr8yphuAUCav9sWwAKCRAVwMIr8yph
-uL6uAQC4KMLlO+B2izseAXQM9PhlNsBN0PuVxBdSVyU+b8ehhgEA0jfaOfzC0Msg
-hDX6QBx/VYO31P5UmU9MtGGVqLkoJw8=
-=s2uT
+iHUEABYKAB0WIQTyAlrrPOkpyR+KM/adV1wUAJJWawUCav/SwgAKCRCdV1wUAJJW
+a5b1AQDHH8f6U/3mpPSf8b42x453YrVJPJnF9TGkE3yBMDrDnQD+JDeZNz0R+0Xw
+PFzqYAnkt1kVDrUqJ4bvr+Up4Z/xQw8=
+=AWSe
 -----END PGP SIGNATURE-----
 ";
 
@@ -931,7 +931,7 @@ fn sha256_file_changed_after_signing_is_refused() {
     assert!(error.to_string().contains("signature"), "{error}");
 
     // Not a signature at all, one cut short, and one with a byte of its hashed fields changed.
-    let truncated = TEST_SIGNATURE.replacen("hDX6QBx/VYO31P5UmU9MtGGVqLkoJw8=\n", "", 1);
+    let truncated = TEST_SIGNATURE.replacen("PFzqYAnkt1kVDrUqJ4bvr+Up4Z/xQw8=\n", "", 1);
     let altered = TEST_SIGNATURE.replacen("iHUEABYKAB0W", "iHUEABYKAB0X", 1);
     for (signature, expected) in [
         ("not a signature", "can't be read"),

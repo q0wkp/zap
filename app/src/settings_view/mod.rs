@@ -81,15 +81,15 @@ pub mod mcp_servers_page;
 mod nav;
 mod network_page;
 pub mod pane_manager;
-// Zap Wave 3-1:`platform` / `platform_page` 随 `OzCloudAPIKeys` settings 入口 +
-// Zap Inc 云端 API key 管理 UI 一同物理删。
-// Zap Wave 6-8:`referrals_page` / `show_blocks_view` 随 `ReferralsClient` /
+// ZapNG Wave 3-1:`platform` / `platform_page` 随 `OzCloudAPIKeys` settings 入口 +
+// ZapNG Inc 云端 API key 管理 UI 一同物理删。
+// ZapNG Wave 6-8:`referrals_page` / `show_blocks_view` 随 `ReferralsClient` /
 // `BlockClient` trait 物理删 —— 两个页面全部 stub Err / 空列表,本地无价值。
 mod settings_file_footer;
 pub(crate) mod settings_page;
-// Zap Wave 7-3:`telemetry` 随唯一 variant `EnvironmentsPageOpened` (ambient-agent UI)
+// ZapNG Wave 7-3:`telemetry` 随唯一 variant `EnvironmentsPageOpened` (ambient-agent UI)
 // 一同物理删。
-// Zap Wave 7-2:`update_environment_form` 随 cloud ambient agent 主体物理删 ——
+// ZapNG Wave 7-2:`update_environment_form` 随 cloud ambient agent 主体物理删 ——
 // `terminal::view::ambient_agent::first_time_setup` 与 `cloud_environments` 一同下线。
 mod zap_ng_drive_page;
 mod zapngify_page;
@@ -145,7 +145,7 @@ pub(super) fn editor_text_colors(appearance: &Appearance) -> TextColors {
 pub enum SettingsViewEvent {
     Pane(PaneEvent),
     StartResize,
-    // Zap 去中心化分支:`CheckForUpdate` / `ZapDrive` 变体随 Account
+    // ZapNG 去中心化分支:`CheckForUpdate` / `ZapNGDrive` 变体随 Account
     // 主设置页唯一发射者(`MainSettingsPageView`)一同物理删。
     ShowToast {
         message: String,
@@ -167,7 +167,7 @@ pub enum SettingsSection {
     Appearance,
     Features,
     Keybindings,
-    ZapDrive,
+    ZapNGDrive,
     ZapNGify,
     /// Internal backing-page identifier for AISettingsPageView. Multiple subpages
     /// (ZapNGAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents) share this single
@@ -175,7 +175,7 @@ pub enum SettingsSection {
     /// External callers should navigate to a specific subpage (e.g. `ZapNGAgent`) instead.
     AI,
     // ── Agents umbrella subpages ──
-    // 去中心化分支:Settings 默认页改为 Zap Agent(本地 AI 设置)。
+    // 去中心化分支:Settings 默认页改为 ZapNG Agent(本地 AI 设置)。
     #[default]
     ZapNGAgent,
     AgentProfiles,
@@ -194,9 +194,9 @@ pub enum SettingsSection {
     EditorAndCodeReview,
     /// 云同步设置页。
     CloudSync,
-    // Zap Wave 3-1:`OzCloudAPIKeys` enum variant 随 Zap Inc API key 管理 UI
+    // ZapNG Wave 3-1:`OzCloudAPIKeys` enum variant 随 ZapNG Inc API key 管理 UI
     // 一同物理删。
-    // Zap Wave 7-3:`CloudEnvironments` 随 ambient-agent UI 子系统物理删。
+    // ZapNG Wave 7-3:`CloudEnvironments` 随 ambient-agent UI 子系统物理删。
 }
 
 use std::fmt::{self, Display};
@@ -209,7 +209,7 @@ impl Display for SettingsSection {
             SettingsSection::Appearance => crate::t!("settings-section-appearance"),
             SettingsSection::Features => crate::t!("settings-section-features"),
             SettingsSection::Keybindings => crate::t!("settings-section-keybindings"),
-            SettingsSection::ZapDrive => crate::t!("settings-section-warp-drive"),
+            SettingsSection::ZapNGDrive => crate::t!("settings-section-warp-drive"),
             SettingsSection::ZapNGify => crate::t!("settings-section-warpify"),
             SettingsSection::AI => crate::t!("settings-section-ai"),
             SettingsSection::ZapNGAgent => crate::t!("settings-section-warp-agent"),
@@ -227,8 +227,8 @@ impl Display for SettingsSection {
             SettingsSection::CloudSync => crate::t!("settings-section-cloud-sync"),
             // 代理设置页面。i18n key `settings-section-network` 已在 en / zh-CN / ja 三种语言中齐全。
             SettingsSection::Network => crate::t!("settings-section-network"),
-            // Zap Wave 3-1:`OzCloudAPIKeys` Display arm 随 variant 一同物理删。
-            // Zap Wave 7-3:`CloudEnvironments` Display arm 随 variant 物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` Display arm 随 variant 一同物理删。
+            // ZapNG Wave 7-3:`CloudEnvironments` Display arm 随 variant 物理删。
         };
         write!(f, "{s}")
     }
@@ -263,8 +263,8 @@ impl SettingsSection {
             s if s.is_ai_subpage() => Self::AI,
             // EditorAndCodeReview is the only label still pointing at the Code page.
             Self::EditorAndCodeReview => Self::Code,
-            // Zap Wave 3-1:`OzCloudAPIKeys` 随 UI 一同物理删。
-            // Zap Wave 7-3:`CloudEnvironments` umbrella 随 ambient-agent UI 一同物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` 随 UI 一同物理删。
+            // ZapNG Wave 7-3:`CloudEnvironments` umbrella 随 ambient-agent UI 一同物理删。
             other => *other,
         }
     }
@@ -295,9 +295,9 @@ impl FromStr for SettingsSection {
             "Features" => Ok(Self::Features),
             "Keyboard shortcuts" => Ok(Self::Keybindings),
             "Warpify" => Ok(Self::ZapNGify),
-            "ZapDrive" | "Zap Drive" => Ok(Self::ZapDrive),
+            "ZapNGDrive" | "ZapNG Drive" => Ok(Self::ZapNGDrive),
             // This page was called "Oz" at one point, keep for backward compatibility.
-            "Oz" | "Zap Agent" => Ok(Self::ZapNGAgent),
+            "Oz" | "ZapNG Agent" => Ok(Self::ZapNGAgent),
             "Profiles" | "AgentProfiles" => Ok(Self::AgentProfiles),
             "MCP servers" | "AgentMCPServers" => Ok(Self::AgentMCPServers),
             "Providers" | "AgentProviders" => Ok(Self::AgentProviders),
@@ -306,8 +306,8 @@ impl FromStr for SettingsSection {
             "Editor and Code Review" | "EditorAndCodeReview" => Ok(Self::EditorAndCodeReview),
             "Network" | "网络" => Ok(Self::Network),
             "CloudSync" | "Cloud Sync" | "云同步" => Ok(Self::CloudSync),
-            // Zap Wave 3-1:`OzCloudAPIKeys` 随 UI 一同物理删。
-            // Zap Wave 7-3:`CloudEnvironments` FromStr arm 随 variant 物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` 随 UI 一同物理删。
+            // ZapNG Wave 7-3:`CloudEnvironments` FromStr arm 随 variant 物理删。
             _ => Err(()),
         }
     }
@@ -776,7 +776,7 @@ pub enum SettingsAction {
     FeaturesPageToggle(FeaturesPageAction),
     AI(AISettingsPageAction),
     Code(CodeSettingsPageAction),
-    ZapDrive(zap_ng_drive_page::ZapNGDriveSettingsPageAction),
+    ZapNGDrive(zap_ng_drive_page::ZapNGDriveSettingsPageAction),
     CloudSync(cloud_sync_page::CloudSyncPageAction),
     ZapNGifyPageToggle(ZapNGifyPageAction),
     Tab,
@@ -925,14 +925,14 @@ macro_rules! update_page {
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::ZapNGify(handle) => $ctx.update_view(handle, $update),
-            // Zap Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
-            // Zap Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
-            // Zap Wave 7-3:`CloudEnvironments` arm 随 ambient-agent UI 一同物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
+            // ZapNG Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
+            // ZapNG Wave 7-3:`CloudEnvironments` arm 随 ambient-agent UI 一同物理删。
             SettingsPageViewHandle::AI(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::About(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Code(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::MCPServers(handle) => $ctx.update_view(handle, $update),
-            SettingsPageViewHandle::ZapDrive(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::ZapNGDrive(handle) => $ctx.update_view(handle, $update),
             // Issue #72: 全局 HTTP 代理设置页。
             SettingsPageViewHandle::Network(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::CloudSync(handle) => $ctx.update_view(handle, $update),
@@ -999,7 +999,7 @@ impl SettingsView {
             me.handle_features_page_event(event, ctx);
         });
 
-        // Zap Wave 6-8:Shared blocks 设置页随 `ShowBlocksView` / `BlockClient`
+        // ZapNG Wave 6-8:Shared blocks 设置页随 `ShowBlocksView` / `BlockClient`
         // 物理删,handle / 事件订阅一同移除。
 
         // About page
@@ -1013,7 +1013,7 @@ impl SettingsView {
         });
 
         // Environments page
-        // Zap Wave 7-3:`environments_page_handle` 随 ambient-agent UI 子系统物理删。
+        // ZapNG Wave 7-3:`environments_page_handle` 随 ambient-agent UI 子系统物理删。
 
         // Keybindings page
         let keybindings_handle = ctx.add_typed_action_view(KeybindingsView::new);
@@ -1030,14 +1030,14 @@ impl SettingsView {
             me.handle_zapngify_page_event(event, ctx);
         });
 
-        // Zap Wave 6-8:Referrals 设置页随 `ReferralsPageView` / `ReferralsClient`
+        // ZapNG Wave 6-8:Referrals 设置页随 `ReferralsPageView` / `ReferralsClient`
         // 物理删,handle / 事件订阅一同移除。
 
-        // Zap Drive page
+        // ZapNG Drive page
         let zap_ng_drive_page_handle =
             ctx.add_typed_action_view(zap_ng_drive_page::ZapNGDriveSettingsPageView::new);
 
-        // Zap Wave 3-1:`platform_page_handle` 随 `platform_page` 一同物理删。
+        // ZapNG Wave 3-1:`platform_page_handle` 随 `platform_page` 一同物理删。
 
         // MCP Servers page
         let mcp_servers_page_handle = ctx.add_typed_action_view(MCPServersSettingsPageView::new);
@@ -1086,7 +1086,7 @@ impl SettingsView {
             SettingsPage::new(appearance_page_handle),
             SettingsPage::new(features_page_handle),
             SettingsPage::new(keybindings_handle),
-            // Zap Wave 3-1:`platform_page_handle` 随 UI 一同物理删。
+            // ZapNG Wave 3-1:`platform_page_handle` 随 UI 一同物理删。
             SettingsPage::new(zapngify_page_handle),
             SettingsPage::new(zap_ng_drive_page_handle),
         ];
@@ -1592,7 +1592,7 @@ impl SettingsView {
         }
     }
 
-    // Zap Wave 7-3:`handle_environments_page_event` 随 ambient-agent UI 子系统物理删。
+    // ZapNG Wave 7-3:`handle_environments_page_event` 随 ambient-agent UI 子系统物理删。
 
     fn handle_features_page_event(
         &mut self,
@@ -1621,7 +1621,7 @@ impl SettingsView {
         }
     }
 
-    // Zap Wave 3-1:`handle_platform_page_event` 随 `platform_page::PlatformPageViewEvent`
+    // ZapNG Wave 3-1:`handle_platform_page_event` 随 `platform_page::PlatformPageViewEvent`
     // 一同物理删。
 
     fn handle_mcp_servers_page_event(
@@ -1743,7 +1743,7 @@ impl SettingsView {
             self.clear_search_query(ctx);
         }
         self.current_settings_page = section;
-        // Zap Wave 7-3:`SettingsTelemetryEvent::EnvironmentsPageOpened` 随 ambient-agent UI
+        // ZapNG Wave 7-3:`SettingsTelemetryEvent::EnvironmentsPageOpened` 随 ambient-agent UI
         // 子系统物理删。
         let _ = previous_section;
 
@@ -1807,13 +1807,13 @@ impl SettingsView {
             SettingsPageViewHandle::Features(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
-            // Zap Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
-            // Zap Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
+            // ZapNG Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
             SettingsPageViewHandle::ZapNGify(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::AI(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Code(v) => v.as_ref(app).should_render(app),
-            SettingsPageViewHandle::ZapDrive(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::ZapNGDrive(v) => v.as_ref(app).should_render(app),
             // Issue #72: 全局 HTTP 代理设置页。
             SettingsPageViewHandle::Network(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::CloudSync(v) => v.as_ref(app).should_render(app),
@@ -2003,7 +2003,7 @@ impl SettingsView {
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
         match page_handle {
-            // Zap Wave 3-1:`OzCloudAPIKeys` modal arm 随 UI 一同物理删。
+            // ZapNG Wave 3-1:`OzCloudAPIKeys` modal arm 随 UI 一同物理删。
             SettingsPageViewHandle::MCPServers(view) => {
                 view.read(app, |view, _| view.get_modal_content(app))
             }
@@ -2306,7 +2306,7 @@ impl View for SettingsView {
             );
         }
 
-        // Zap Wave 7-3:environment setup mode selector / agent-assisted environment
+        // ZapNG Wave 7-3:environment setup mode selector / agent-assisted environment
         // modal 覆盖渲染随 ambient-agent UI 子系统物理删。
 
         SavePosition::new(stack.finish(), POSITION_ID).finish()
@@ -2374,9 +2374,9 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-            SettingsAction::ZapDrive(zap_ng_drive_action) => {
-                if let Some(zap_ng_drive_page) = self.settings_page(SettingsSection::ZapDrive) {
-                    if let SettingsPageViewHandle::ZapDrive(view) = &zap_ng_drive_page.view_handle {
+            SettingsAction::ZapNGDrive(zap_ng_drive_action) => {
+                if let Some(zap_ng_drive_page) = self.settings_page(SettingsSection::ZapNGDrive) {
+                    if let SettingsPageViewHandle::ZapNGDrive(view) = &zap_ng_drive_page.view_handle {
                         view.update(ctx, |view, ctx| {
                             view.handle_action(zap_ng_drive_action, ctx);
                         })

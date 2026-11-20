@@ -24,7 +24,7 @@ tempfile.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["time", "rt-multi-thread"] }
 uuid.workspace = true
-zap_sync = { path = "../zap_sync" }
+zap_ng_sync = { path = "../zap_ng_sync" }
 zeroize = "1.8"
 
 [dev-dependencies]

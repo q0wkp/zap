@@ -31,13 +31,13 @@ const VERTICAL_TEXT_MARGIN: f32 = 16.;
 
 #[derive(Debug, Clone)]
 pub enum ZapNGifySuccessBlockEvent {
-    ZapifySettings,
+    ZapNGifySettings,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ZapNGifySuccessBlockAction {
     ClearAutoZapNGifySnippet,
-    ZapifySettings,
+    ZapNGifySettings,
     OpenUrl(String),
 }
 
@@ -118,7 +118,7 @@ impl ZapNGifySuccessBlock {
                 description: (if !output_grid.is_empty() {
                     "Run the following to automatically Warpify in the future:"
                 } else {
-                    "In remote subshells, Zap runs commands in the background to power completions, syntax highlighting, and other features."
+                    "In remote subshells, ZapNG runs commands in the background to power completions, syntax highlighting, and other features."
                 }).into(),
                 output_grid: output_grid.into(),
                 selection_handle: Default::default(),
@@ -157,7 +157,7 @@ impl ZapNGifySuccessBlock {
     pub fn render_title_ui(&self, theme: &ZapNGTheme, appearance: &Appearance) -> Box<dyn Element> {
         let header_contents = render::build_header_row(
             "Session Warpified",
-            Icon::new(UiIcon::Zap.into(), theme.active_ui_detail()),
+            Icon::new(UiIcon::ZapNG.into(), theme.active_ui_detail()),
             theme,
             appearance,
         )
@@ -346,8 +346,8 @@ impl TypedActionView for ZapNGifySuccessBlock {
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            ZapNGifySuccessBlockAction::ZapifySettings => {
-                ctx.emit(ZapNGifySuccessBlockEvent::ZapifySettings);
+            ZapNGifySuccessBlockAction::ZapNGifySettings => {
+                ctx.emit(ZapNGifySuccessBlockEvent::ZapNGifySettings);
             }
             ZapNGifySuccessBlockAction::OpenUrl(url) => {
                 ctx.open_url(url);

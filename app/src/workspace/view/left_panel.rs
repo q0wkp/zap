@@ -86,7 +86,7 @@ struct MouseStateHandles {
 pub enum LeftPanelAction {
     ProjectExplorer,
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
-    ZapDrive,
+    ZapNGDrive,
     ConversationListView,
     SshManager,
     ServerFileBrowser,
@@ -96,7 +96,7 @@ pub enum LeftPanelAction {
 pub enum LeftPanelEvent {
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     FileTree(pane_group::Event),
-    ZapDrive(DrivePanelEvent),
+    ZapNGDrive(DrivePanelEvent),
     ServerFileBrowser(ServerFileBrowserEvent),
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     OpenFileWithTarget {
@@ -145,7 +145,7 @@ pub enum LeftPanelEvent {
 pub enum ToolPanelView {
     ProjectExplorer,
     GlobalSearch { entry_focus: GlobalSearchEntryFocus },
-    ZapDrive,
+    ZapNGDrive,
     ConversationListView,
     SshManager,
     ServerFileBrowser,
@@ -305,7 +305,7 @@ impl LeftPanelView {
         });
 
         ctx.subscribe_to_view(&zap_ng_drive_view, |_me, _, event, ctx| {
-            ctx.emit(LeftPanelEvent::ZapDrive(event.clone()));
+            ctx.emit(LeftPanelEvent::ZapNGDrive(event.clone()));
         });
         ctx.subscribe_to_view(&server_file_browser_view, |_me, _, event, ctx| {
             ctx.emit(LeftPanelEvent::ServerFileBrowser(event.clone()));
@@ -328,7 +328,7 @@ impl LeftPanelView {
             }
         });
 
-        let active_view = views.first().copied().unwrap_or(ToolPanelView::ZapDrive);
+        let active_view = views.first().copied().unwrap_or(ToolPanelView::ZapNGDrive);
         let toolbelt_buttons = views
             .iter()
             .map(|view| Self::create_toolbelt_button_config(view, ctx))
@@ -509,17 +509,17 @@ impl LeftPanelView {
                     tooltip_keybinding_names,
                 }
             }
-            ToolPanelView::ZapDrive => {
+            ToolPanelView::ZapNGDrive => {
                 let tooltip_keybinding_names = vec![
                     LEFT_PANEL_WARP_DRIVE_BINDING_NAME,
                     TOGGLE_WARP_DRIVE_BINDING_NAME,
                 ];
 
                 ToolbeltButtonConfig {
-                    icon: Icon::ZapDrive,
+                    icon: Icon::ZapNGDrive,
                     active_icon: None,
                     tooltip_text: crate::t!("workspace-left-panel-warp-drive"),
-                    action: LeftPanelAction::ZapDrive,
+                    action: LeftPanelAction::ZapNGDrive,
                     render_with_active_state: false,
                     tooltip_keybinding: toolbelt_tooltip_keybinding(&tooltip_keybinding_names, ctx),
                     tooltip_keybinding_names,
@@ -687,7 +687,7 @@ impl LeftPanelView {
     }
 
     pub fn is_zap_ng_drive_active(&self) -> bool {
-        self.active_view.get() == ToolPanelView::ZapDrive
+        self.active_view.get() == ToolPanelView::ZapNGDrive
     }
 
     pub fn is_file_tree_active(&self) -> bool {
@@ -832,7 +832,7 @@ impl LeftPanelView {
                     ctx,
                 );
             }
-            ToolPanelView::ZapDrive => {
+            ToolPanelView::ZapNGDrive => {
                 ctx.focus(&self.zap_ng_drive_view);
                 self.zap_ng_drive_view.update(ctx, |view, ctx| {
                     view.reset_focused_index_in_zap_ng_drive(true, ctx);
@@ -1019,7 +1019,7 @@ impl LeftPanelView {
                 LeftPanelAction::GlobalSearch { .. } => {
                     matches!(self.active_view.get(), ToolPanelView::GlobalSearch { .. })
                 }
-                LeftPanelAction::ZapDrive => self.active_view.get() == ToolPanelView::ZapDrive,
+                LeftPanelAction::ZapNGDrive => self.active_view.get() == ToolPanelView::ZapNGDrive,
                 LeftPanelAction::ConversationListView => {
                     self.active_view.get() == ToolPanelView::ConversationListView
                 }
@@ -1147,8 +1147,8 @@ impl LeftPanelView {
                     send_telemetry_from_ctx!(TelemetryEvent::GlobalSearchOpened, ctx);
                 }
             }
-            LeftPanelAction::ZapDrive => {
-                active_view_state::set(self, ToolPanelView::ZapDrive, ctx);
+            LeftPanelAction::ZapNGDrive => {
+                active_view_state::set(self, ToolPanelView::ZapNGDrive, ctx);
                 if force_open {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::ZapNGDriveOpened {
@@ -1277,7 +1277,7 @@ impl View for LeftPanelView {
                         ctx.focus(&view);
                     }
                 }
-                ToolPanelView::ZapDrive => ctx.focus(&self.zap_ng_drive_view),
+                ToolPanelView::ZapNGDrive => ctx.focus(&self.zap_ng_drive_view),
                 ToolPanelView::ConversationListView => ctx.focus(&self.conversation_list_view),
                 ToolPanelView::SshManager => ctx.focus(&self.ssh_manager_view),
                 ToolPanelView::ServerFileBrowser => ctx.focus(&self.server_file_browser_view),
@@ -1346,7 +1346,7 @@ impl View for LeftPanelView {
                     Shrinkable::new(1.0, Container::new(Empty::new().finish()).finish()).finish()
                 }
             }
-            ToolPanelView::ZapDrive => Shrinkable::new(
+            ToolPanelView::ZapNGDrive => Shrinkable::new(
                 1.0,
                 Container::new(ChildView::new(&self.zap_ng_drive_view).finish())
                     .with_padding_left(2.)

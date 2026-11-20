@@ -60,7 +60,7 @@ const CUSTOM_PREFIX: &str = "custom:";
 /// Where the prompt of one slot comes from.
 ///
 /// Stored as a string (`builtin:<name>`, `custom:<path>`) so that a value this version doesn't
-/// understand, from a newer Zap or a hand-edited profile, reads as [`PromptChoice::Auto`]
+/// understand, from a newer ZapNG or a hand-edited profile, reads as [`PromptChoice::Auto`]
 /// instead of failing to load the whole profile.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(from = "String", into = "String")]

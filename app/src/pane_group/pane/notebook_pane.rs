@@ -7,7 +7,7 @@ use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandl
 use crate::{
     app_state::{LeafContents, NotebookPaneSnapshot},
     cloud_object::Space,
-    drive::{items::ZapNGDriveItemId, ObjectTypeAndId, ZapDriveObjectSettings},
+    drive::{items::ZapNGDriveItemId, ObjectTypeAndId, ZapNGDriveObjectSettings},
     notebooks::{
         link::{LinkEvent, NotebookLinks},
         manager::{NotebookManager, NotebookSource},
@@ -47,7 +47,7 @@ impl NotebookPane {
     /// Restore a notebook pane given its cloud notebook ID.
     pub fn restore(
         notebook_id: Option<SyncId>,
-        settings: &ZapDriveObjectSettings,
+        settings: &ZapNGDriveObjectSettings,
         ctx: &mut ViewContext<PaneGroup>,
     ) -> anyhow::Result<Self> {
         let window_id = ctx.window_id();
@@ -81,7 +81,7 @@ impl PaneContent for NotebookPane {
         let notebook_id = self.notebook_view(app).as_ref(app).notebook_id(app);
         LeafContents::Notebook(NotebookPaneSnapshot::NotebookObject {
             notebook_id,
-            settings: ZapDriveObjectSettings::default(),
+            settings: ZapNGDriveObjectSettings::default(),
         })
     }
 
@@ -183,9 +183,9 @@ pub(super) fn subscribe_to_link_model(
                 session: session.clone(),
             })
         }
-        LinkEvent::ZapDriveLink {
+        LinkEvent::ZapNGDriveLink {
             open_zap_ng_drive_args,
-        } => ctx.emit(crate::pane_group::Event::ZapDriveLink {
+        } => ctx.emit(crate::pane_group::Event::ZapNGDriveLink {
             open_zap_ng_drive_args: open_zap_ng_drive_args.clone(),
         }),
         LinkEvent::StartLocalSession { path } => {
@@ -205,7 +205,7 @@ pub(super) fn subscribe_to_link_model(
             target,
             line_col,
         } => {
-            // Emit event to workspace to handle opening in Zap
+            // Emit event to workspace to handle opening in ZapNG
             ctx.emit(crate::pane_group::Event::OpenFileWithTarget {
                 path: path.clone(),
                 target: target.clone(),

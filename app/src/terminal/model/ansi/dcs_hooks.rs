@@ -8,22 +8,22 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use zap_ng_core::command::ExitCode;
 
-/// Indicates that the following JSON-encoded message is hex-encoded for Zap's lifecycle hooks.
+/// Indicates that the following JSON-encoded message is hex-encoded for ZapNG's lifecycle hooks.
 /// In DCS, it is used as the final char in the DCS start sequence.
 /// In OSC, it is used as the first parameter.
 pub(super) const HEX_ENCODED_JSON_MARKER: char = 'd';
 
-/// Indicates that the following JSON-encoded message is unencoded for Zap's lifecycle hooks.
+/// Indicates that the following JSON-encoded message is unencoded for ZapNG's lifecycle hooks.
 /// In DCS, it is used as the final char in the DCS start sequence.
 /// In OSC, it is used as the first parameter.
 pub(super) const UNENCODED_JSON_MARKER: char = 'f';
 
-/// Indicates that the following message is a ANSI-C quoted message for receiving Zap's lifecycle
+/// Indicates that the following message is a ANSI-C quoted message for receiving ZapNG's lifecycle
 /// hooks via key-value pairs.
 /// In OSC< it is used as the first parameter.
 pub(super) const UNENCODED_KV_MARKER: char = 'k';
 
-/// Enum representing all possible JSON payloads for Zap's DCS's.
+/// Enum representing all possible JSON payloads for ZapNG's DCS's.
 #[derive(Serialize, Debug, Deserialize)]
 #[allow(clippy::upper_case_acronyms)]
 #[serde(tag = "hook")]
@@ -492,7 +492,7 @@ pub struct PreexecValue {
     pub command: String,
 }
 
-/// Received from the pty after the shell has finished executing Zap's
+/// Received from the pty after the shell has finished executing ZapNG's
 /// bootstrap script.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct BootstrappedValue {
@@ -548,7 +548,7 @@ pub struct BootstrappedValue {
     pub rcfiles_end_time: Option<OrderedFloat<f64>>,
 
     /// Tags for known shell configurations/plugins, especially ones that are
-    /// incompatible with Zap.
+    /// incompatible with ZapNG.
     #[serde(deserialize_with = "parse_shell_options_list_deserializer", default)]
     pub shell_plugins: Option<HashSet<String>>,
 
@@ -591,7 +591,7 @@ fn parse_float_from_string(s: String) -> Option<OrderedFloat<f64>> {
     s.parse::<f64>().map(|f| f.into()).ok()
 }
 
-/// Received from the pty when Zap's SSH wrapper is executed, prior to
+/// Received from the pty when ZapNG's SSH wrapper is executed, prior to
 /// bootstrapping the SSH session.
 #[derive(Debug, Default, PartialEq, Eq, Deserialize, Serialize, Clone)]
 pub struct PreInteractiveSSHSessionValue {}
@@ -637,7 +637,7 @@ pub struct InitSubshellValue {
 }
 
 /// Emitted by a snippet included in the user's RC file, which signals a new session is being
-/// created; if the session is for a subshell, this triggers Zap's bootstrap process.
+/// created; if the session is for a subshell, this triggers ZapNG's bootstrap process.
 /// Otherwise, it's ignored.
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SourcedRcFileForZapNGValue {
@@ -648,8 +648,8 @@ pub struct SourcedRcFileForZapNGValue {
 
 /// Received from the pty via a shell line editor hook, whether readline (bash),
 /// ZLE, or the fish [command line editor](https://fishshell.com/docs/current/interactive.html#command-line-editor).
-/// The binding is triggered when Zap writes the `ESC-i` escape sequence to the pty.
-/// Zap usually does this after a block completes, to collect any typeahead
+/// The binding is triggered when ZapNG writes the `ESC-i` escape sequence to the pty.
+/// ZapNG usually does this after a block completes, to collect any typeahead
 /// that the user entered while the block was running (see
 /// [`TerminalView::request_input_buffer`]).
 #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -670,7 +670,7 @@ pub struct FinishUpdateValue {
 }
 
 /// Received from the pty right before the remote shell exits (via `exit`,
-/// `logout`, Ctrl-D on an empty prompt, etc.). Lets the Zap client drop
+/// `logout`, Ctrl-D on an empty prompt, etc.). Lets the ZapNG client drop
 /// per-session resources — in particular the `ssh … remote-server-proxy`
 /// child process that holds a multiplexed channel on the foreground ssh
 /// ControlMaster — before the user's outer ssh tunnel tries to close, so

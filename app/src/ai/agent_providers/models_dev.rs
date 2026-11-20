@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 
 /// Where the catalog is downloaded from unless `agents.byop.models_dev.url` says otherwise.
 pub const DEFAULT_CATALOG_URL: &str = "https://models.dev/api.json";
-/// The built-in catalog: the fields of [`Catalog`] that Zap reads, as gzipped JSON.
+/// The built-in catalog: the fields of [`Catalog`] that ZapNG reads, as gzipped JSON.
 const BUNDLED_CATALOG_GZ: &[u8] = include_bytes!("../../../resources/models_dev/catalog.json.gz");
 /// `key=value` lines saying where and when the built-in catalog was taken.
 const BUNDLED_CATALOG_INFO: &str = include_str!("../../../resources/models_dev/catalog.txt");

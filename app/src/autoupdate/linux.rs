@@ -32,7 +32,7 @@ pub(super) async fn download_update_and_cleanup(
                 .await
         }
         UpdateMethod::PackageManager(package_manager) => {
-            log::info!("Detected that Zap was installed using {package_manager:?}");
+            log::info!("Detected that ZapNG was installed using {package_manager:?}");
             let manual_upgrade = || DownloadReady::ManualUpgrade {
                 hint: package_manager.upgrade_hint(),
             };
@@ -69,7 +69,7 @@ pub(super) fn apply_update() -> Result<ReadyForRelaunch> {
         UpdateMethod::Unknown => bail!("Cannot apply update for unknown update method!"),
         UpdateMethod::AppImage(_) => Ok(ReadyForRelaunch::Yes),
         UpdateMethod::PackageManager(package_manager) => bail!(
-            "Zap does not support package-manager autoupdate for {package_manager}; install the new release manually"
+            "ZapNG does not support package-manager autoupdate for {package_manager}; install the new release manually"
         ),
     }
 }
@@ -112,13 +112,13 @@ mod appimage {
                         release.tag_name
                     );
                     format!(
-                        "https://github.com/q0wkp/zap/releases/download/v{}/{asset}",
+                        "https://github.com/q0wkp/zap-ng/releases/download/v{}/{asset}",
                         version_info.version
                     )
                 }
             } else {
                 format!(
-                    "https://github.com/q0wkp/zap/releases/download/v{}/{asset}",
+                    "https://github.com/q0wkp/zap-ng/releases/download/v{}/{asset}",
                     version_info.version
                 )
             }
@@ -206,7 +206,7 @@ mod appimage {
             .as_file_mut()
             .set_permissions(appimage_path.metadata()?.permissions())?;
 
-        // Move new AppImage over the one that launched the current Zap instance.
+        // Move new AppImage over the one that launched the current ZapNG instance.
         let new_appimage_path = new_appimage.into_temp_path();
         let mv_status = command::r#async::Command::new("mv")
             .arg(new_appimage_path.as_os_str())
@@ -277,14 +277,14 @@ mod package_manager {
     }
 }
 
-/// Returns which method should be used to update Zap.
+/// Returns which method should be used to update ZapNG.
 #[derive(Debug)]
 pub(crate) enum UpdateMethod {
-    /// We don't know how to update Zap.
+    /// We don't know how to update ZapNG.
     Unknown,
-    /// Zap is running as an AppImage and should be updated in-place.
+    /// ZapNG is running as an AppImage and should be updated in-place.
     AppImage(PathBuf),
-    /// Zap can be updated using the given package manager.
+    /// ZapNG can be updated using the given package manager.
     PackageManager(PackageManager),
 }
 
@@ -304,7 +304,7 @@ impl UpdateMethod {
 }
 
 /// Package managers that we understand and can assist with auto-update for. A pacman package is
-/// `PacmanQ0wkp` when q0wkp/pkgs' repository `[q0wkp]` has it, which Zap upgrades alone with
+/// `PacmanQ0wkp` when q0wkp/pkgs' repository `[q0wkp]` has it, which ZapNG upgrades alone with
 /// `pacman -U`; `PacmanRepo` when another sync repository has it, upgraded with `pacman -Syu`; and
 /// `PacmanAur` when no sync repository has it, as for the AUR or a package built by hand, upgraded
 /// with an AUR helper.
@@ -322,7 +322,7 @@ pub enum PackageManager {
     Zypper {
         package_name: String,
     },
-    /// The deb was installed by Pacstall (from q0wkp/pkgs, as `zap-deb`), which upgrades it.
+    /// The deb was installed by Pacstall (from q0wkp/pkgs, as `zap-ng-deb`), which upgrades it.
     Pacstall {
         /// The Pacstall package, whose pacscript `gives` the dpkg package `package_name`.
         pacstall_name: String,
@@ -344,8 +344,8 @@ pub enum PackageManager {
 
 impl PackageManager {
     /// 当前 channel 下要在系统包管理器里查询的候选包名,按可能性从高到低排序。
-    /// OSS 在 deb/rpm/arch bundle 脚本里包名都是 `zap`(见 script/linux/bundle_*),
-    /// 但 AUR 上常见命名是 `zap-bin` / `zap-git`,所以多试几个。
+    /// OSS 在 deb/rpm/arch bundle 脚本里包名都是 `zap-ng`(见 script/linux/bundle_*),
+    /// 但 AUR 上常见命名是 `zap-ng-bin` / `zap-ng-git`,所以多试几个。
     fn candidate_names(channel: Channel) -> &'static [&'static str] {
         match channel {
             Channel::Stable => &["warp-terminal"],
@@ -353,9 +353,9 @@ impl PackageManager {
             Channel::Dev => &["warp-terminal-dev"],
             Channel::Integration => &["warp-terminal-integration"],
             Channel::Local => &["warp-terminal-local"],
-            // OSS:bundle_deb/rpm/arch 全部用 `zap` 作 package name,但 AUR
-            // 维护者可能选 `zap-bin` / `zap-git`,所以也试一下。
-            Channel::Oss => &["zap", "zap-bin", "zap-git"],
+            // OSS:bundle_deb/rpm/arch 全部用 `zap-ng` 作 package name,但 AUR
+            // 维护者可能选 `zap-ng-bin` / `zap-ng-git`,所以也试一下。
+            Channel::Oss => &["zap-ng", "zap-ng-bin", "zap-ng-git"],
         }
     }
 
@@ -459,7 +459,7 @@ impl PackageManager {
         Ok(Some(pm))
     }
 
-    /// The target that q0wkp/pkgs publishes Zap's releases to for this package manager, when Zap
+    /// The target that q0wkp/pkgs publishes ZapNG's releases to for this package manager, when ZapNG
     /// can run the package manager to upgrade itself.
     pub(super) fn pkgs_target(&self) -> Option<PkgsTarget> {
         match self {
@@ -474,13 +474,13 @@ impl PackageManager {
         }
     }
 
-    /// The command that upgrades Zap alone to the release that q0wkp/pkgs has `published`, which
-    /// Zap runs for the user in a terminal tab. The others need a package downloaded by hand, a
+    /// The command that upgrades ZapNG alone to the release that q0wkp/pkgs has `published`, which
+    /// ZapNG runs for the user in a terminal tab. The others need a package downloaded by hand, a
     /// full upgrade or an AUR helper, see [`Self::upgrade_hint`].
     pub(super) fn upgrade_command(&self, published: &PkgsRelease) -> Option<String> {
         match self {
             // The package file of the release, which pacman checks against its signature next to
-            // it, with the keys trusted for [q0wkp]. Unlike `pacman -Sy zap`, a partial upgrade
+            // it, with the keys trusted for [q0wkp]. Unlike `pacman -Sy zap-ng`, a partial upgrade
             // that Arch doesn't support, it leaves the sync databases alone; the package's
             // `glibc>=` dependency keeps it off a system too old to run it.
             Self::PacmanQ0wkp { .. } => published
@@ -503,7 +503,7 @@ impl PackageManager {
         }
     }
 
-    /// What the user runs to upgrade Zap, shown when Zap can't run it itself.
+    /// What the user runs to upgrade ZapNG, shown when ZapNG can't run it itself.
     pub(crate) fn upgrade_hint(&self) -> String {
         match self {
             Self::PacmanQ0wkp { .. } | Self::PacmanRepo { .. } => "sudo pacman -Syu".to_owned(),
@@ -546,8 +546,8 @@ fn pacstall_package_for(package_name: &str, metadata_dir: &Path) -> Option<Strin
         })
 }
 
-/// Reads a Pacstall metadata file, whose lines are shell assignments such as `_name="zap-deb"` and
-/// `_gives="zap"`, and returns the Pacstall package's name and the dpkg package it installed. Like
+/// Reads a Pacstall metadata file, whose lines are shell assignments such as `_name="zap-ng-deb"` and
+/// `_gives="zap-ng"`, and returns the Pacstall package's name and the dpkg package it installed. Like
 /// Pacstall itself, takes the dpkg package to be `${_gives:-$_name}`; `file_name`, which Pacstall
 /// names after the package, stands in for a missing `_name`.
 fn parse_pacstall_metadata(contents: &str, file_name: String) -> (String, String) {

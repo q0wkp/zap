@@ -638,7 +638,7 @@ fn test_should_update() {
     });
 }
 
-/// An install by a package manager that Zap can run offers to run its upgrade command, and doesn't
+/// An install by a package manager that ZapNG can run offers to run its upgrade command, and doesn't
 /// count as a download, so it's offered again until the command has installed the new version.
 #[test]
 fn test_package_manager_update_runs_a_command() {
@@ -666,7 +666,7 @@ fn test_package_manager_update_runs_a_command() {
                 RequestType::Poll,
                 make_version_info(v2, false),
                 "id_v2".to_string(),
-                Ok(DownloadReady::RunCommand("pacstall -I zap-deb".to_string())),
+                Ok(DownloadReady::RunCommand("pacstall -I zap-ng-deb".to_string())),
                 ctx,
             );
             assert_eq!(
@@ -674,7 +674,7 @@ fn test_package_manager_update_runs_a_command() {
                 AutoupdateStage::UpdateViaCommand {
                     new_version: make_version_info(v2, false),
                     update_id: "id_v2".to_string(),
-                    command: "pacstall -I zap-deb".to_string(),
+                    command: "pacstall -I zap-ng-deb".to_string(),
                 }
             );
             assert!(autoupdate.downloaded_update.is_none());
@@ -701,7 +701,7 @@ fn test_package_manager_update_runs_a_command() {
     });
 }
 
-/// An install that Zap can't upgrade itself keeps the hint of what the user runs.
+/// An install that ZapNG can't upgrade itself keeps the hint of what the user runs.
 #[test]
 fn test_manual_upgrade_keeps_its_hint() {
     App::test((), |mut app| async move {
@@ -717,7 +717,7 @@ fn test_manual_upgrade_keeps_its_hint() {
                 make_version_info(v2, false),
                 "id_v2".to_string(),
                 Ok(DownloadReady::ManualUpgrade {
-                    hint: "sudo apt install ./zap_*.deb".to_string(),
+                    hint: "sudo apt install ./zap-ng_*.deb".to_string(),
                 }),
                 ctx,
             );
@@ -727,7 +727,7 @@ fn test_manual_upgrade_keeps_its_hint() {
             ));
             assert_eq!(
                 autoupdate.manual_upgrade_hint(),
-                Some("sudo apt install ./zap_*.deb")
+                Some("sudo apt install ./zap-ng_*.deb")
             );
 
             autoupdate.on_download_update_complete(

@@ -27,7 +27,7 @@ fn parses_sessions_with_their_previews() {
         "{M}:session\n\
          \u{20}\u{20}name=dev\tpid=10\tclients=1\tcreated=1794486674\tcwd=file://host/home/me/my%20repo\n\
          $ cargo build\n\
-         \u{20}\u{20}\u{20}Compiling zap\n\
+         \u{20}\u{20}\u{20}Compiling zap-ng\n\
          \n\
          {M}:session\n\
          → name=build\tpid=11\tclients=0\tcreated=1794486700\tcwd=file:///srv\tcmd=make -j8 V=1\tfg=cc1\n\
@@ -45,7 +45,7 @@ fn parses_sessions_with_their_previews() {
                 cwd: Some("/home/me/my repo".into()),
                 command: None,
                 foreground: None,
-                preview: Some("$ cargo build\n   Compiling zap".into()),
+                preview: Some("$ cargo build\n   Compiling zap-ng".into()),
             },
             ZmxSession {
                 name: "build".into(),
@@ -153,7 +153,7 @@ fn session_line_reads_the_legacy_start_dir() {
 #[test]
 fn session_line_ignores_labels_and_task_state() {
     let session = parse_session_line(
-        "name=a\tpid=1\tclients=0\tcreated=5\tended=9\texit_code=1\tproject=zap",
+        "name=a\tpid=1\tclients=0\tcreated=5\tended=9\texit_code=1\tproject=zap-ng",
     )
     .unwrap();
     assert_eq!(session.clients, Some(0));

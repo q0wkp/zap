@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# 在远端主机安装 Zap CLI 二进制,用于 remote-server-proxy。
+# 在远端主机安装 ZapNG CLI 二进制,用于 remote-server-proxy。
 #
 # setup.rs 会在运行时替换这些占位符:
 #   {release_tag}           - the release tag the client was built from, such as v1.2; empty for a
 #                             build without one, which installs the newest release's
 #   {latest_release_url}    - the page that redirects to the newest release, .../releases/latest
 #   {download_url}          - the release's tarball for this system, with shell variables:
-#                             .../releases/download/v$release_version/zap-$release_version-$os_name-$arch_name.tar.gz
+#                             .../releases/download/v$release_version/zap-ng-$release_version-$os_name-$arch_name.tar.gz
 #   {checksum_url}          - the tarball's SHA-256 file that the release publishes beside it, {download_url}.sha256
 #   {expected_sha256}       - the tarball's SHA-256, which a client built from a release read from that file
 #                             after checking the release's signature of it; empty for a build without a
 #                             release tag, and the script then downloads {checksum_url} itself
-#   {install_dir}           - 例如 ~/.zap/remote-server
-#   {binary_name}           - 例如 zap-oss
+#   {install_dir}           - 例如 ~/.zap-ng/remote-server
+#   {binary_name}           - 例如 zap-ng
 #   {version_suffix}        - 例如 -v0.2026...,没有 release tag 时为空
 #   {staging_tarball_path}  - SCP fallback 预上传 tarball 路径,常规下载路径为空
 #
@@ -61,7 +61,7 @@ if [ -n "$staging_tarball_path" ]; then
   case "$staging_tarball_path" in
     "~"|"~/"*) staging_tarball_path="${HOME}${staging_tarball_path#\~}" ;;
   esac
-  mv "$staging_tarball_path" "$tmpdir/zap.tar.gz"
+  mv "$staging_tarball_path" "$tmpdir/zap-ng.tar.gz"
 else
   # sha256sum on Linux (also BusyBox's), shasum on macOS.
   if command -v sha256sum >/dev/null 2>&1; then
@@ -69,7 +69,7 @@ else
   elif command -v shasum >/dev/null 2>&1; then
     sha256_tool=shasum
   else
-    echo "error: neither sha256sum nor shasum is available to verify the download of Zap's remote server" >&2
+    echo "error: neither sha256sum nor shasum is available to verify the download of ZapNG's remote server" >&2
     exit 4
   fi
 
@@ -93,7 +93,7 @@ else
     fi
     release_tag=$(printf '%s\n' "$headers" | sed -n 's#^.*[Ll]ocation:.*/releases/tag/\([^[:space:]]*\).*$#\1#p' | head -n 1)
     if [ -z "$release_tag" ]; then
-      echo "error: could not find the newest release of Zap: {latest_release_url} did not redirect to a release" >&2
+      echo "error: could not find the newest release of ZapNG: {latest_release_url} did not redirect to a release" >&2
       exit 1
     fi
   fi
@@ -112,16 +112,16 @@ else
   if [ -z "$expected_sha256" ]; then
     # The SHA-256 first, so that a release without one isn't downloaded for nothing.
     if [ "$downloader" = curl ]; then
-      curl -fsSL --connect-timeout 15 "$checksum_url" -o "$tmpdir/zap.tar.gz.sha256" || checksum_status=$?
+      curl -fsSL --connect-timeout 15 "$checksum_url" -o "$tmpdir/zap-ng.tar.gz.sha256" || checksum_status=$?
     else
-      wget -q -O "$tmpdir/zap.tar.gz.sha256" "$checksum_url" || checksum_status=$?
+      wget -q -O "$tmpdir/zap-ng.tar.gz.sha256" "$checksum_url" || checksum_status=$?
     fi
     if [ -n "${checksum_status:-}" ]; then
       echo "error: could not download the SHA-256 of the remote server, $checksum_url (exit $checksum_status); a release made before checksums were published has none, and its tarball is not installed unverified" >&2
       exit 5
     fi
     # The file is sha256sum's output: the SHA-256 in hex, then the file's name.
-    read -r expected_sha256 _ < "$tmpdir/zap.tar.gz.sha256" || true
+    read -r expected_sha256 _ < "$tmpdir/zap-ng.tar.gz.sha256" || true
   fi
   expected_sha256=$(printf '%s' "${expected_sha256:-}" | tr 'A-F' 'a-f')
   case "$expected_sha256" in
@@ -133,9 +133,9 @@ else
   fi
 
   if [ "$downloader" = curl ]; then
-    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap.tar.gz" || download_status=$?
+    curl -fSL --connect-timeout 15 "$url" -o "$tmpdir/zap-ng.tar.gz" || download_status=$?
   else
-    wget -q -O "$tmpdir/zap.tar.gz" "$url" || download_status=$?
+    wget -q -O "$tmpdir/zap-ng.tar.gz" "$url" || download_status=$?
   fi
   if [ -n "${download_status:-}" ]; then
     echo "error: could not download $url" >&2
@@ -144,9 +144,9 @@ else
 
   # From standard input, as the output then holds no path that the program could escape.
   if [ "$sha256_tool" = sha256sum ]; then
-    actual_sha256=$(sha256sum < "$tmpdir/zap.tar.gz")
+    actual_sha256=$(sha256sum < "$tmpdir/zap-ng.tar.gz")
   else
-    actual_sha256=$(shasum -a 256 < "$tmpdir/zap.tar.gz")
+    actual_sha256=$(shasum -a 256 < "$tmpdir/zap-ng.tar.gz")
   fi
   actual_sha256=$(printf '%s' "${actual_sha256%% *}" | tr 'A-F' 'a-f')
   if [ "$actual_sha256" != "$expected_sha256" ]; then
@@ -155,11 +155,11 @@ else
   fi
 fi
 
-tar -xzf "$tmpdir/zap.tar.gz" -C "$tmpdir"
+tar -xzf "$tmpdir/zap-ng.tar.gz" -C "$tmpdir"
 
 bin="$tmpdir/{binary_name}"
 if [ ! -f "$bin" ]; then
-  bin=$(find "$tmpdir" -type f \( -name 'zap-oss' -o -name 'warp-oss' -o -name 'oz*' \) ! -path "$tmpdir/resources/*" ! -name '*.tar.gz' | head -n1)
+  bin=$(find "$tmpdir" -type f \( -name 'zap-ng' -o -name 'warp-oss' -o -name 'oz*' \) ! -path "$tmpdir/resources/*" ! -name '*.tar.gz' | head -n1)
 fi
 if [ -z "$bin" ]; then echo "no binary found in tarball" >&2; exit 1; fi
 chmod +x "$bin"

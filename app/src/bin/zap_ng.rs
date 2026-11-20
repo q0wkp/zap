@@ -5,13 +5,13 @@ use zap_ng_core::{
     AppId,
 };
 
-// Zap OSS 构建的入口,简单包一层 zap_ng::run()。
+// ZapNG OSS 构建的入口,简单包一层 zap_ng::run()。
 fn main() -> Result<()> {
     let mut state = ChannelState::new(
         Channel::Oss,
         ChannelConfig {
-            app_id: AppId::new("dev", "zap", "Zap"),
-            logfile_name: "zap.log".into(),
+            app_id: AppId::new("dev", "q0wkp", "zapng"),
+            logfile_name: "zap-ng.log".into(),
             autoupdate_config: None,
             mcp_static_config: None,
         },
@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     if cfg!(debug_assertions) {
         state = state.with_additional_features(DEBUG_FLAGS);
     }
-    // 始终启用 IME marked-text 渲染:若不在此处显式开启,Zap 会把 preedit / 输入合成更新
+    // 始终启用 IME marked-text 渲染:若不在此处显式开启,ZapNG 会把 preedit / 输入合成更新
     // 整体丢弃,只剩 OS 的候选窗可见。
     #[cfg(target_os = "macos")]
     {
@@ -41,11 +41,11 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleDisplayName</key>
-    <string>Zap</string>
+    <string>ZapNG</string>
     <key>CFBundleExecutable</key>
-    <string>zap-oss</string>
+    <string>zap-ng</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.zap.Zap</string>
+    <string>dev.q0wkp.zapng</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleLocalizations</key>
@@ -55,7 +55,7 @@ embed_plist::embed_info_plist_bytes!(r#"
     <string>zh-CN</string>
     </array>
     <key>CFBundleName</key>
-    <string>Zap</string>
+    <string>ZapNG</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -67,9 +67,9 @@ embed_plist::embed_info_plist_bytes!(r#"
     <key>UIDesignRequiresCompatibility</key>
     <true/>
     <key>CFBundleURLTypes</key>
-    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>zap</string></array></dict></array>
+    <array><dict><key>CFBundleURLName</key><string>Custom App</string><key>CFBundleURLSchemes</key><array><string>zap-ng</string></array></dict></array>
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026, Zap</string>
+    <string>© 2026, ZapNG</string>
     </dict>
     </plist>
 "#.as_bytes());

@@ -1,5 +1,5 @@
 //! This module defines CellGlyphCache, a struct which manages the caching of glyph values for cells
-//! when rendering Grids within Zap.
+//! when rendering Grids within ZapNG.
 use zap_ng_ui::elements::DEFAULT_LINE_HEIGHT_RATIO;
 
 use zap_ng_ui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Properties};

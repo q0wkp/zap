@@ -124,8 +124,8 @@ impl ZapNGDriveItemStyles {
     }
 }
 
-/// A UI wrapper around a row in zap drive that holds important UI state for the row and implements
-/// a unified look for all rows in zap drive, like padding and hover states.
+/// A UI wrapper around a row in zap-ng drive that holds important UI state for the row and implements
+/// a unified look for all rows in zap-ng drive, like padding and hover states.
 ///
 /// The item-specific information like icon, name, click_action, and preview modal are abstracted as much as
 /// possible into the ZapNGDriveType enum.
@@ -715,7 +715,7 @@ impl<'a> ZapNGDriveRow<'a> {
     }
 }
 
-/// Generate a callback for calculating the Drag bounds within Zap Drive
+/// Generate a callback for calculating the Drag bounds within ZapNG Drive
 fn drag_bounds_callback() -> impl Fn(&PositionCache, Vector2F) -> Option<RectF> {
     move |position_cache, window: Vector2F| {
         let drive_index = position_cache.get_position(WARP_DRIVE_POSITION_ID)?;

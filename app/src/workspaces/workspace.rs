@@ -552,9 +552,9 @@ impl BillingMetadata {
             || self.delinquency_status == DelinquencyStatus::Unpaid
     }
 
-    // Whether the enterprise customer is our Stable Zap Enterprise team (internal team of ZapNGers).
+    // Whether the enterprise customer is our Stable ZapNG Enterprise team (internal team of ZapNGers).
     pub fn is_zap_ng_plan(&self) -> bool {
-        self.tier.name == "Zap Plan"
+        self.tier.name == "ZapNG Plan"
     }
 
     pub fn has_active_subscription(&self) -> bool {

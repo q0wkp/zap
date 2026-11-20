@@ -1,4 +1,4 @@
-//! Node.js and npm runtime management for Zap.
+//! Node.js and npm runtime management for ZapNG.
 //!
 //! This module provides functionality to install and manage Node.js/npm,
 //! supporting multiple platforms (macOS, Linux) and architectures
@@ -147,7 +147,7 @@ pub fn npm_binary_path() -> Result<PathBuf> {
 /// This function will:
 /// 1. Check if a valid Node.js installation already exists
 /// 2. Download the appropriate Node.js distribution for the current platform
-/// 3. Extract it to the Zap data directory
+/// 3. Extract it to the ZapNG data directory
 ///
 /// # Returns
 /// Returns the path to the Node.js installation directory on success.
@@ -302,7 +302,7 @@ pub async fn extract_gz(data: &[u8], dest_path: &Path) -> Result<()> {
 /// Finds a working Node.js binary, preferring our custom installation over system node.
 ///
 /// This function checks:
-/// 1. First, our custom Node.js installation in the Zap data directory
+/// 1. First, our custom Node.js installation in the ZapNG data directory
 /// 2. Falls back to system Node.js if custom isn't available
 ///
 /// # Arguments

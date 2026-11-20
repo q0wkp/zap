@@ -876,7 +876,7 @@ pub enum EditorViewAction {
     OpenEmbeddedObjectSearch,
     RemoveEmbeddingAt(CharOffset),
     MiddleClickPaste,
-    /// Open a file. If open_in_zap_ng is true, open in Zap's code editor; otherwise use external editor.
+    /// Open a file. If open_in_zap_ng is true, open in ZapNG's code editor; otherwise use external editor.
     OpenFile {
         path: PathBuf,
         line_and_column_num: Option<LineAndColumnArg>,
@@ -3334,7 +3334,7 @@ impl RichTextAction<RichTextEditorView> for EditorViewAction {
         );
         let multiselect = modifiers.alt && FeatureFlag::RichTextMultiselect.is_enabled();
 
-        // The first mouse down to bring focus to a Zap window will not have a corresponding mouse up.
+        // The first mouse down to bring focus to a ZapNG window will not have a corresponding mouse up.
         // We ignore it, and they can click again.
         if is_first_mouse {
             return None;

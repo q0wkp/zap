@@ -15,7 +15,7 @@ fn test_skill_path_from_file_path_skill_md() {
 #[test]
 fn test_skill_path_from_file_path_zap_ng_home_skill() {
     let Some(zap_ng_home_skills_dir) = zap_ng_core::paths::zap_ng_home_skills_dir() else {
-        eprintln!("Skipping test: Zap home skills directory not available");
+        eprintln!("Skipping test: ZapNG home skills directory not available");
         return;
     };
     let zap_ng_home_skill = zap_ng_home_skills_dir

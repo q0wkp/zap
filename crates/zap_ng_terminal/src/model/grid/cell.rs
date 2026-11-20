@@ -272,7 +272,7 @@ impl Cell {
         if content.len() == base_char_len {
             extra.cell_with_zero_width = None;
         }
-        // NOTE: Zap's `CellExtra` has no `hyperlink_id` field (the upstream OSC 8
+        // NOTE: ZapNG's `CellExtra` has no `hyperlink_id` field (the upstream OSC 8
         // hyperlink support is not present here), so the emptiness check only
         // covers the fields that exist in this fork.
         let extra_is_empty = extra.cell_with_zero_width.is_none() && extra.end_of_prompt.is_none();

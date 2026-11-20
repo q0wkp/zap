@@ -7,7 +7,7 @@ use zap_ng_ui::elements::{CornerRadius, MouseState, Radius};
 use zap_ng_ui::Element;
 
 /// Shared item highlight state for left-panel style lists (file tree, global search results,
-/// zap drive rows, etc.).
+/// zap-ng drive rows, etc.).
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum ItemHighlightState {
     None,

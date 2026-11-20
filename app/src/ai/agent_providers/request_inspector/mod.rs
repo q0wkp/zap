@@ -1,4 +1,4 @@
-//! Live capture of the traffic between zap and BYOP providers, shown by the request inspector
+//! Live capture of the traffic between zap-ng and BYOP providers, shown by the request inspector
 //! pane ([`view::RequestInspectorView`]).
 //!
 //! Nothing is captured unless an inspector is listening: every capture point starts with

@@ -2,14 +2,14 @@ use std::fs;
 
 use super::*;
 
-/// The metadata Pacstall 6.3.8 wrote for q0wkp/pkgs' `zmx-bin`, with its names changed to Zap's.
-const ZAP_DEB_METADATA: &str = r#"_name="zap-deb"
+/// The metadata Pacstall 6.3.8 wrote for q0wkp/pkgs' `zmx-bin`, with its names changed to ZapNG's.
+const ZAP_DEB_METADATA: &str = r#"_name="zap-ng-deb"
 _version="2026.07.09.2.mod.2-pacstall1"
 _install_size="180 MB"
 _date="Sat Nov  7 07:32:44 PM EST 2026"
 declare -a _maintainer=([0]="q0wkp <q0wkp@users.noreply.github.com>")
-_homepage="https://github.com/q0wkp/zap"
-_gives="zap"
+_homepage="https://github.com/q0wkp/zap-ng"
+_gives="zap-ng"
 _remoterepo="https://github.com/q0wkp/pkgs"
 _remotebranch="main"
 "#;
@@ -17,8 +17,8 @@ _remotebranch="main"
 #[test]
 fn test_parse_pacstall_metadata() {
     assert_eq!(
-        parse_pacstall_metadata(ZAP_DEB_METADATA, "zap-deb".to_owned()),
-        ("zap-deb".to_owned(), "zap".to_owned())
+        parse_pacstall_metadata(ZAP_DEB_METADATA, "zap-ng-deb".to_owned()),
+        ("zap-ng-deb".to_owned(), "zap-ng".to_owned())
     );
     // Without `_gives`, the dpkg package has the Pacstall package's name.
     assert_eq!(
@@ -42,24 +42,24 @@ fn test_pacstall_package_for() {
         "_name=\"lazygit\"\n_gives=\"lazygit\"\n",
     )
     .unwrap();
-    assert_eq!(pacstall_package_for("zap", dir.path()), None);
+    assert_eq!(pacstall_package_for("zap-ng", dir.path()), None);
 
-    fs::write(dir.path().join("zap-deb"), ZAP_DEB_METADATA).unwrap();
+    fs::write(dir.path().join("zap-ng-deb"), ZAP_DEB_METADATA).unwrap();
     assert_eq!(
-        pacstall_package_for("zap", dir.path()),
-        Some("zap-deb".to_owned())
+        pacstall_package_for("zap-ng", dir.path()),
+        Some("zap-ng-deb".to_owned())
     );
-    assert_eq!(pacstall_package_for("zap-deb", dir.path()), None);
+    assert_eq!(pacstall_package_for("zap-ng-deb", dir.path()), None);
     assert_eq!(
-        pacstall_package_for("zap", &dir.path().join("missing")),
+        pacstall_package_for("zap-ng", &dir.path().join("missing")),
         None
     );
 }
 
 #[test]
 fn test_upgrade_commands() {
-    let package_name = "zap".to_owned();
-    let url = "https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst";
+    let package_name = "zap-ng".to_owned();
+    let url = "https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst";
     let pacman_release = PkgsRelease {
         pacman_package_url: Some(url.to_owned()),
     };
@@ -77,17 +77,17 @@ fn test_upgrade_commands() {
         Some(format!("sudo pacman -U '{url}'"))
     );
 
-    // Pacstall: only Zap's own package.
+    // Pacstall: only ZapNG's own package.
     let pacstall = PackageManager::Pacstall {
-        pacstall_name: "zap-deb".to_owned(),
+        pacstall_name: "zap-ng-deb".to_owned(),
         package_name: package_name.clone(),
     };
     assert_eq!(pacstall.pkgs_target(), Some(PkgsTarget::Pacstall));
     assert_eq!(
         pacstall.upgrade_command(&pacstall_release).as_deref(),
-        Some("pacstall -I zap-deb")
+        Some("pacstall -I zap-ng-deb")
     );
-    assert_eq!(pacstall.upgrade_hint(), "pacstall -I zap-deb");
+    assert_eq!(pacstall.upgrade_hint(), "pacstall -I zap-ng-deb");
 
     // Another sync repository, packages installed by hand or from the AUR only get a hint.
     let repo = PackageManager::PacmanRepo {
@@ -101,15 +101,15 @@ fn test_upgrade_commands() {
     };
     assert_eq!(apt.pkgs_target(), None);
     assert_eq!(apt.upgrade_command(&pacstall_release), None);
-    assert_eq!(apt.upgrade_hint(), "sudo apt install ./zap_*.deb");
+    assert_eq!(apt.upgrade_hint(), "sudo apt install ./zap-ng_*.deb");
     let dnf = PackageManager::Dnf {
         package_name: package_name.clone(),
     };
     assert_eq!(dnf.pkgs_target(), None);
-    assert_eq!(dnf.upgrade_hint(), "sudo dnf install ./zap-*.rpm");
+    assert_eq!(dnf.upgrade_hint(), "sudo dnf install ./zap-ng-*.rpm");
     let aur = PackageManager::PacmanAur {
-        package_name: "zap-bin".to_owned(),
+        package_name: "zap-ng-bin".to_owned(),
     };
     assert_eq!(aur.pkgs_target(), None);
-    assert_eq!(aur.upgrade_hint(), "paru -Syu zap-bin / yay -Syu zap-bin");
+    assert_eq!(aur.upgrade_hint(), "paru -Syu zap-ng-bin / yay -Syu zap-ng-bin");
 }

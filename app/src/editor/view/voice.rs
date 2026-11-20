@@ -246,14 +246,14 @@ impl EditorView {
                 // If the keypress is not valid in the current state, we ignore it.
                 match &self.voice_input_state {
                     // For example, the user could press Fn in a different app, then switch focus
-                    // to Zap and let it go - we should NOT activate voice input in this case.
+                    // to ZapNG and let it go - we should NOT activate voice input in this case.
                     VoiceInputState::Stopped => {
                         if matches!(state, zap_ng_ui::event::KeyState::Released) {
                             return false;
                         }
                     }
                     // Note that in reality, this case is unreachable because we stop voice input
-                    // if the user is not focused on Zap (since we lose the ability to listen to modifier
+                    // if the user is not focused on ZapNG (since we lose the ability to listen to modifier
                     // key events). Thus, the user cannot enter a state where we're listening for voice input
                     // but the key is not held already.
                     VoiceInputState::Listening { .. } => {

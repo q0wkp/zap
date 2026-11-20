@@ -492,7 +492,7 @@ impl ConvertAPIMessageToClientOutputMessage for api::Message {
                         .with_citations(citations),
                 ))
             }
-            // A tool call's result is attached to the action that requested it. Zap BYOP: a call
+            // A tool call's result is attached to the action that requested it. ZapNG BYOP: a call
             // whose arguments could not be parsed has no action and only a marker for a result,
             // so it is shown on its own, as a failed call.
             api::message::Message::ToolCallResult(api::message::ToolCallResult {
@@ -559,7 +559,7 @@ impl ConvertAPIToolCallToAIAgentAction for api::message::ToolCall {
         params: ConversionParams,
     ) -> Result<MaybeAIAgentAction, ToolToAIAgentActionError> {
         let Some(tool) = self.tool else {
-            // Zap BYOP:`make_tool_call_carrier_message` 在 from_args 解析失败时
+            // ZapNG BYOP:`make_tool_call_carrier_message` 在 from_args 解析失败时
             // 故意 emit `tool: None` 的 ToolCall,仅作为下一轮 build_chat_request 还原
             // 原 fn_name + args_str 给上游模型的载体(server_message_data 携带原始内容),
             // 紧随其后的 synthetic error ToolCallResult 才是要展示给用户看的内容。

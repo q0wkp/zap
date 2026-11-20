@@ -89,7 +89,7 @@ pub enum Event {
     OpenNotebook {
         id: SyncId,
     },
-    /// View the relevant object in the Zap Drive sidebar.
+    /// View the relevant object in the ZapNG Drive sidebar.
     ViewInWarpDrive {
         id: ObjectTypeAndId,
     },

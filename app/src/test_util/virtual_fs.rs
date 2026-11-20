@@ -4,15 +4,15 @@ pub use virtual_fs::{Dirs, Stub, VirtualFS};
 pub trait ZapNGDirs {
     #[allow(dead_code)]
     fn git_repository_fixture(&self) -> PathBuf {
-        Zap::fixtures().join("git_repository")
+        ZapNG::fixtures().join("git_repository")
     }
 }
 
 impl ZapNGDirs for Dirs {}
 
-pub struct Zap;
+pub struct ZapNG;
 
-impl Zap {
+impl ZapNG {
     #[allow(dead_code)]
     pub fn executable() -> PathBuf {
         let mut path = {

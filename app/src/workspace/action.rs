@@ -255,15 +255,15 @@ pub enum WorkspaceAction {
         tab_position: RectF,
     },
     DropTab,
-    /// Toggles the left panel. In Code Mode V1 this toggles Zap Drive.
+    /// Toggles the left panel. In Code Mode V1 this toggles ZapNG Drive.
     /// In Code Mode V2 this toggles the left panel which contains both the project explorer and
-    /// Zap Drive. This happens as explicit action from the user.
+    /// ZapNG Drive. This happens as explicit action from the user.
     ToggleLeftPanel,
-    /// Toggles directly to the Zap Drive tab of the left panel in Code Mode V2
+    /// Toggles directly to the ZapNG Drive tab of the left panel in Code Mode V2
     ToggleWarpDrive,
-    /// Unconditionally opens Zap Drive. This is used in the case of user lifecycle
+    /// Unconditionally opens ZapNG Drive. This is used in the case of user lifecycle
     /// events like new user onboarding or when the user joins a team.
-    ZapDrive,
+    ZapNGDrive,
     /// Toggles the right panel. This happens as an explicit action from the user.
     ToggleRightPanel,
     /// Opens the code review panel (right panel) without toggling. If already open,
@@ -322,7 +322,7 @@ pub enum WorkspaceAction {
     },
     // 去中心化分支:`Reauth` / `SignupAnonymousUser` / `SignInAnonymousWebUser` 已删除。
     OpenLink(String),
-    /// On WASM, opens a given URL in the desktop Zap app (if installed) or redirects to download page.
+    /// On WASM, opens a given URL in the desktop ZapNG app (if installed) or redirects to download page.
     #[cfg(target_family = "wasm")]
     OpenLinkOnDesktop(url::Url),
     ReopenClosedSession,
@@ -347,7 +347,7 @@ pub enum WorkspaceAction {
     },
     TerminateApp,
     CloseWindow,
-    /// Help the user call the Zap executable with the [`crate::args::DEBUG_DUMP_FLAG`].
+    /// Help the user call the ZapNG executable with the [`crate::args::DEBUG_DUMP_FLAG`].
     DumpDebugInfo,
     /// Log review comment send eligibility for panes in the active tab.
     LogReviewCommentSendStatusForActiveTab,
@@ -389,7 +389,7 @@ pub enum WorkspaceAction {
     },
     OpenAIFactCollection,
     OpenMCPServerCollection,
-    // Zap Wave 7-3:`OpenEnvironmentManagementPane` WorkspaceAction 随 ambient-agent UI
+    // ZapNG Wave 7-3:`OpenEnvironmentManagementPane` WorkspaceAction 随 ambient-agent UI
     // 子系统物理删。
     ToggleAIDocumentPane {
         document_id: AIDocumentId,
@@ -478,10 +478,10 @@ pub enum WorkspaceAction {
     QueuePromptForConversation {
         prompt: String,
     },
-    /// Install the Zap CLI command to /usr/local/bin
+    /// Install the ZapNG CLI command to /usr/local/bin
     #[cfg(target_os = "macos")]
     InstallCLI,
-    /// Uninstall the Zap CLI command from /usr/local/bin
+    /// Uninstall the ZapNG CLI command from /usr/local/bin
     #[cfg(target_os = "macos")]
     UninstallCLI,
     UndoRevertInCodeReviewPane {
@@ -524,12 +524,12 @@ pub enum WorkspaceAction {
     /// Reset the AWS Bedrock login banner dismissed state (for debugging).
     #[cfg(debug_assertions)]
     DebugResetAwsBedrockLoginBannerDismissed,
-    /// Open the Zap Launch Modal (for debugging)
+    /// Open the ZapNG Launch Modal (for debugging)
     #[cfg(debug_assertions)]
-    OpenZapLaunchModal,
-    /// Reset the Zap launch modal dismissed state (for debugging)
+    OpenZapNGLaunchModal,
+    /// Reset the ZapNG launch modal dismissed state (for debugging)
     #[cfg(debug_assertions)]
-    ResetZapLaunchModalState,
+    ResetZapNGLaunchModalState,
     /// Install the opencode-warp plugin from GitHub into the global opencode config.
     #[cfg(debug_assertions)]
     InstallOpenCodeZapNGPlugin,
@@ -770,7 +770,7 @@ impl WorkspaceAction {
             | StartTabDrag
             | ToggleLeftPanel
             | ToggleWarpDrive
-            | ZapDrive
+            | ZapNGDrive
             | ClosePanel
             | ToggleRightPanel
             | OpenCodeReviewPanel(..)
@@ -872,8 +872,8 @@ impl WorkspaceAction {
             ToggleConversationTranscriptDetailsPanel => false,
             #[cfg(debug_assertions)]
             DebugResetAwsBedrockLoginBannerDismissed
-            | OpenZapLaunchModal
-            | ResetZapLaunchModalState
+            | OpenZapNGLaunchModal
+            | ResetZapNGLaunchModalState
             | InstallOpenCodeZapNGPlugin
             | UseLocalOpenCodeZapNGPlugin => false,
             #[cfg(not(target_family = "wasm"))]
@@ -890,7 +890,7 @@ impl WorkspaceAction {
             FileRenamed { .. } => false, // File rename doesn't change workspace state
             #[cfg(feature = "local_fs")]
             FileDeleted { .. } => false, // File deletion doesn't change workspace state
-            // Zap Wave 7-3:`OpenEnvironmentManagementPane` WorkspaceAction 随 ambient-agent UI
+            // ZapNG Wave 7-3:`OpenEnvironmentManagementPane` WorkspaceAction 随 ambient-agent UI
             // 子系统物理删。
             #[cfg(target_os = "linux")]
             DismissWaylandCrashRecoveryBannerAndOpenLink => false,

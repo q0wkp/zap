@@ -35,7 +35,7 @@ pub type Model = Box<dyn SecureStorage>;
 ///
 /// The service name is used as a namespace for the application's secrets.  It
 /// is recommended that this be a unique identifier for the application; one
-/// common scheme is reverse-DNS notation (e.g.: "dev.warp.Zap").
+/// common scheme is reverse-DNS notation (e.g.: "dev.warp.ZapNG").
 pub fn register(service_name: &str, ctx: &mut zap_ng_ui::AppContext) {
     ctx.add_singleton_model(|_| -> Model { Box::new(imp::SecureStorage::new(service_name)) });
 }

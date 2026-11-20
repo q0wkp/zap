@@ -49,7 +49,7 @@ impl CommandRegistry {
         registry
     }
 
-    /// Register signatures for Zap CLI commands.
+    /// Register signatures for ZapNG CLI commands.
     ///
     /// Ideally this would be done outside of the `zap_ng_completer` crate, but it's not currently
     /// possible to configure the shared [`Self::global_instance`].

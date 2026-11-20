@@ -1,4 +1,4 @@
-//! Shimmering Zap loading text - renders Zap logo with shimmering text for loading states.
+//! Shimmering ZapNG loading text - renders ZapNG logo with shimmering text for loading states.
 
 use zap_ng_core::ui::appearance::Appearance;
 use zap_ng_ui::elements::shimmering_text::{
@@ -7,10 +7,10 @@ use zap_ng_ui::elements::shimmering_text::{
 use zap_ng_ui::elements::Element;
 use zap_ng_ui::{AppContext, SingletonEntity};
 
-/// Zap icon glyph character
+/// ZapNG icon glyph character
 const WARP_GLYPH: &str = "\u{E500}";
 
-/// Creates a shimmering text element with the Zap glyph.
+/// Creates a shimmering text element with the ZapNG glyph.
 pub fn shimmering_zap_ng_loading_text(
     text: impl Into<String>,
     font_size: f32,

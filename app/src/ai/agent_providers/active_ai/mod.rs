@@ -12,7 +12,7 @@
 //! 3. UI 回调里直接消费返回的 response,与原 `ServerApi` 路径完全等价
 //!
 //! 没有 BYOP 配置(`active_ai_model` 解码失败)→ `dispatch::*` 返回 `None`,
-//! 调用方静默 no-op(Zap 已剥云,不再 fallback ServerApi)。
+//! 调用方静默 no-op(ZapNG 已剥云,不再 fallback ServerApi)。
 
 use minijinja::context;
 use serde::Serialize;
@@ -91,7 +91,7 @@ pub struct LastBlockSnippet {
     pub pwd: String,
 }
 
-/// The English name of the language Zap's UI is shown in, for asking a model to reply in it.
+/// The English name of the language ZapNG's UI is shown in, for asking a model to reply in it.
 pub(crate) fn ui_language_name(app: &AppContext) -> &'static str {
     match *LanguageSettings::as_ref(app).language {
         Language::English => "English",

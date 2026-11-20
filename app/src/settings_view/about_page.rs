@@ -140,7 +140,7 @@ impl SettingsWidget for AboutPageWidget {
     ) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
 
-        // 始终用纯图标 logo,品牌名以独立文本 "Zap" 呈现,不再依赖带 "warp" 字样的 svg
+        // 始终用纯图标 logo,品牌名以独立文本 "ZapNG" 呈现,不再依赖带 "warp" 字样的 svg
         let image_path = "bundled/svg/warp-logo-light.svg";
 
         // GIT_RELEASE_TAG 注入 → 显示 tag;否则进入 Dev 开发模式
@@ -188,7 +188,7 @@ impl SettingsWidget for AboutPageWidget {
             )
             .with_child(
                 ui_builder
-                    .span("Zap")
+                    .span("ZapNG")
                     .build()
                     .with_margin_top(12.)
                     .finish(),
@@ -364,7 +364,7 @@ impl AboutPageWidget {
                 let url = github::cached_release()
                     .map(|r| r.html_url)
                     .unwrap_or_else(|| {
-                        "https://github.com/q0wkp/zap/releases/latest".to_owned()
+                        "https://github.com/q0wkp/zap-ng/releases/latest".to_owned()
                     });
                 (text, UpdateAction::OpenReleasePage(url))
             }
@@ -454,7 +454,7 @@ impl AboutPageWidget {
 
         // 安装提示:在可以安装/重启时显示,让用户在点击前预知接下来会看到什么
         // (打开 dmg / 重启 AppImage / 在新标签页里运行包管理器的升级命令);
-        // 包管理器不能由 Zap 运行时,显示用户要自己运行的命令。
+        // 包管理器不能由 ZapNG 运行时,显示用户要自己运行的命令。
         let hint = match &stage {
             AutoupdateStage::UpdateReady { .. } => {
                 // t! 是宏,必须传 literal,不能用变量。按 cfg 分支挑选具体 key。

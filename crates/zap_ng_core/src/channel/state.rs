@@ -37,7 +37,7 @@ pub struct ChannelState {
 impl ChannelState {
     pub fn init() -> Self {
         let channel = Channel::Oss;
-        let app_id = AppId::new("dev", "zap", "Zap");
+        let app_id = AppId::new("dev", "q0wkp", "zapng");
         Self {
             channel,
             additional_features: Default::default(),
@@ -89,7 +89,7 @@ impl ChannelState {
     /// Returns a profile name for isolating user data. This should be used to
     /// sandbox how user data is stored.
     ///
-    /// This is a debugging tool for isolating development instances of Zap, and is not
+    /// This is a debugging tool for isolating development instances of ZapNG, and is not
     /// supported in release builds.
     pub fn data_profile() -> Option<String> {
         if cfg!(debug_assertions) {
@@ -237,6 +237,19 @@ impl ChannelState {
             .cloned()
     }
 
+    /// The product's name as shown to the user. The OSS app ID ends in a lowercase name, which
+    /// is not fit for display.
+    pub fn product_name() -> String {
+        match Self::channel() {
+            Channel::Oss => "ZapNG".to_owned(),
+            Channel::Stable
+            | Channel::Preview
+            | Channel::Dev
+            | Channel::Integration
+            | Channel::Local => Self::app_id().application_name().to_owned(),
+        }
+    }
+
     pub fn url_scheme() -> &'static str {
         match Self::channel() {
             Channel::Stable => "warp",
@@ -245,12 +258,12 @@ impl ChannelState {
             // Dummy value--integration tests shouldn't support URL schemes.
             Channel::Integration => "warpintegration",
             Channel::Local => "warplocal",
-            Channel::Oss => "zap",
+            Channel::Oss => "zap-ng",
         }
     }
 }
 
-/// Zap Wave 5-5：`derive_http_origin_from_ws_url` 随 `rtc_http_url()` 一同物理删。
+/// ZapNG Wave 5-5：`derive_http_origin_from_ws_url` 随 `rtc_http_url()` 一同物理删。
 
 #[cfg(all(test, not(feature = "test-util")))]
 #[path = "state_tests.rs"]

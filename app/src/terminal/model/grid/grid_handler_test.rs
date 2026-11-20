@@ -82,9 +82,9 @@ fn regex_right() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
         testing66\r\n\
-        Zap\n\
+        ZapNG\n\
         123\r\n\
-        Zap\r\n\
+        ZapNG\r\n\
         123\
     ");
 
@@ -107,9 +107,9 @@ fn regex_left() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
         testing66\r\n\
-        Zap\n\
+        ZapNG\n\
         123\r\n\
-        Zap\r\n\
+        ZapNG\r\n\
         123\
     ");
 
@@ -131,7 +131,7 @@ fn regex_left() {
 fn nested_regex() {
     #[rustfmt::skip]
     let blockgrid = mock_blockgrid("\
-        Wa -> Zap -> rp\r\n\
+        Wa -> ZapNG -> rp\r\n\
         rp\
     ");
 
@@ -845,7 +845,7 @@ fn test_find_url_omits_trailing_periods() {
     );
 
     // Test that it handles a period in the middle of the URL path somewhere.
-    let blockgrid = mock_blockgrid("Visit https://github.com/warp.dev/Zap/issues.");
+    let blockgrid = mock_blockgrid("Visit https://github.com/warp.dev/ZapNG/issues.");
     assert_eq!(
         blockgrid
             .grid_handler
@@ -1645,7 +1645,7 @@ fn emoji_variation_selector_does_not_advance_already_wide_grapheme() {
 
 // NOTE: Upstream also adds `wide_character_spacers_inherit_the_base_cell_hyperlink`
 // and `leading_wide_character_spacer_is_not_hyperlinked`. They are dropped in this
-// fork because Zap's grid cells have no OSC 8 hyperlink support (`CellExtra` lacks
+// fork because ZapNG's grid cells have no OSC 8 hyperlink support (`CellExtra` lacks
 // a `hyperlink_id` field and there is no `input_hyperlinked` test helper), so the
 // behavior those tests cover does not exist here.
 
@@ -2474,7 +2474,7 @@ fn content_len_equals_len_when_no_trailing_blanks() {
 //
 // NOTE(warpdotdev/warp#12726 port): Upstream drives this regression through
 // `FullGridClearBehavior::Clear` (warpdotdev/warp#9877), which does not exist
-// in Zap. The only no-reflow (`reflow = false`) resize path Zap has is the alt
+// in ZapNG. The only no-reflow (`reflow = false`) resize path ZapNG has is the alt
 // screen, so this test uses `new_for_alt_screen_test` to reach the same
 // `GridStorage::shrink_cols` code that the fix repairs.
 //

@@ -7518,7 +7518,7 @@ impl BackingView for CodeReviewView {
                 not(target_family = "wasm"),
                 any(target_os = "linux", target_os = "freebsd")
             )) {
-                // Find the workspace to show the Zap-native modal
+                // Find the workspace to show the ZapNG-native modal
                 if let Some(workspace) = ctx
                     .views_of_type::<Workspace>(ctx.window_id())
                     .and_then(|workspaces| workspaces.first().cloned())

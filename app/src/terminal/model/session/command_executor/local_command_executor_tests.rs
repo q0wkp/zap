@@ -94,7 +94,7 @@ mod unix {
     async fn wait_for_descendant_pid(path: &Path) -> Pid {
         let deadline = Instant::now() + TIMEOUT;
         loop {
-            // Zap 仍使用 edition 2021，因此这里把上游的 let 链改写为嵌套 `if let`，
+            // ZapNG 仍使用 edition 2021，因此这里把上游的 let 链改写为嵌套 `if let`，
             // 以保持与上游完全相同的语义（读到 PID 就返回，否则继续轮询直到超时）。
             if let Ok(contents) = fs::read_to_string(path) {
                 if let Ok(pid) = contents.parse() {

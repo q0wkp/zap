@@ -2,7 +2,7 @@
 //! Repository metadata model singleton.
 //!
 //! This module provides a singleton model that manages repository metadata across
-//! all repositories tracked by Zap.
+//! all repositories tracked by ZapNG.
 
 use std::{
     collections::HashMap,
@@ -1096,7 +1096,7 @@ mod is_unsafe_watch_root_tests {
             return;
         };
 
-        let repo_inside_home = home.join("__zap_test_repo_path__");
+        let repo_inside_home = home.join("__zap_ng_test_repo_path__");
         assert!(
             !is_unsafe_watch_root(&repo_inside_home),
             "{} (a directory inside home) must NOT be rejected",
@@ -1110,7 +1110,7 @@ mod is_unsafe_watch_root_tests {
             return;
         };
 
-        let tmp_path = std::env::temp_dir().join("__zap_test_unsafe_watch_root__");
+        let tmp_path = std::env::temp_dir().join("__zap_ng_test_unsafe_watch_root__");
         // Skip the case where tmp_path happens to be an ancestor of home
         // (vanishingly unlikely, but keeps the assertion meaningful).
         if !home.starts_with(&tmp_path) {

@@ -1,12 +1,12 @@
 use crate::cloud_object::extract_server_id_and_object_type_from_zap_ng_drive_link;
-use crate::drive::ZapDriveObjectArgs;
+use crate::drive::ZapNGDriveObjectArgs;
 use crate::ChannelState;
 use url::Url;
 
 #[derive(PartialEq, Debug)]
 pub enum ZapNGWebLink {
     Session,
-    DriveObject(Box<ZapDriveObjectArgs>),
+    DriveObject(Box<ZapNGDriveObjectArgs>),
 }
 
 pub fn get_item_data_from_zap_ng_link(url: &Url) -> Option<ZapNGWebLink> {

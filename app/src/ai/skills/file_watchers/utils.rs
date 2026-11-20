@@ -127,7 +127,7 @@ pub fn is_home_skill_directory(path: &Path) -> bool {
 /// E.g. ~/.agents/skills
 pub fn is_home_provider_path(path: &Path) -> bool {
     SKILL_PROVIDER_DEFINITIONS.iter().any(|provider| {
-        if provider.provider == SkillProvider::Zap {
+        if provider.provider == SkillProvider::ZapNG {
             return zap_ng_managed_skill_dirs().iter().any(|dir| path == dir);
         }
         home_skills_path(provider.provider)

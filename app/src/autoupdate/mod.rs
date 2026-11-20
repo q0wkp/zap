@@ -109,7 +109,7 @@ pub enum AutoupdateStage {
     DownloadingUpdate,
     /// An update exists but the user does not have authorization to install it.
     UnableToUpdateToNewVersion { new_version: VersionInfo },
-    /// An update exists, and the package manager that installed Zap installs it when it runs
+    /// An update exists, and the package manager that installed ZapNG installs it when it runs
     /// `command`, which applying the update does in a new terminal tab.
     UpdateViaCommand {
         new_version: VersionInfo,
@@ -128,7 +128,7 @@ pub enum AutoupdateStage {
     },
     /// A relaunch was initiated to use the new version, but failed.
     UnableToLaunchNewVersion { new_version: VersionInfo },
-    /// A new version was installed, but Zap hasn't restarted yet.
+    /// A new version was installed, but ZapNG hasn't restarted yet.
     ///
     /// This state is used on macOS, where the update isn't fully applied until right before
     /// restarting, and once a package manager has installed the new version.
@@ -186,8 +186,8 @@ pub struct AutoupdateState {
     /// but to queue them instead.
     request_queue: VecDeque<RequestType>,
     http_client: Arc<http_client::Client>,
-    /// What the user runs to install the update, when Zap was installed by a package manager that
-    /// Zap can't run itself (stage [`AutoupdateStage::UnableToUpdateToNewVersion`]).
+    /// What the user runs to install the update, when ZapNG was installed by a package manager that
+    /// ZapNG can't run itself (stage [`AutoupdateStage::UnableToUpdateToNewVersion`]).
     manual_upgrade_hint: Option<String>,
     /// The update id and version of the last tab opened to run an update command, which reports
     /// back with that id when the command succeeds.
@@ -208,7 +208,7 @@ impl AutoupdateState {
         }
     }
 
-    /// What the user runs to install the update, when Zap can't install it itself.
+    /// What the user runs to install the update, when ZapNG can't install it itself.
     pub fn manual_upgrade_hint(&self) -> Option<&str> {
         self.manual_upgrade_hint.as_deref()
     }
@@ -408,7 +408,7 @@ impl AutoupdateState {
         // 在 OSS 分支由 `github::GithubRelease::version()` 提供,已经 `trim_start_matches('v')`
         // 去掉了 `v`(如 `2026.05.10.preview`)。直接做字符串相等比较会永远 false,导致
         // "已是最新"被错判为"发现新版本"。这里做幂等的前缀归一化:
-        // - 官方 Zap:tag 一律带 `v`,两边 trim 后仍相等,行为不变。
+        // - 官方 ZapNG:tag 一律带 `v`,两边 trim 后仍相等,行为不变。
         // - ZapNG:trim 后才相等,正确识别同版本。
         if version.version.trim_start_matches('v') == current_version.trim_start_matches('v') {
             log::info!("Already up to date with {}", version.version);
@@ -671,7 +671,7 @@ impl AutoupdateState {
                 self.stage = if running_executable_replaced() {
                     // The package manager has already installed a new version, e.g. from a
                     // terminal of the user's own, so all that's left is to restart.
-                    log::info!("Zap's executable was replaced; restarting runs the new version");
+                    log::info!("ZapNG's executable was replaced; restarting runs the new version");
                     AutoupdateStage::UpdatedPendingRestart {
                         new_version: new_version.clone(),
                     }
@@ -809,7 +809,7 @@ impl AutoupdateState {
         } else {
             // E.g. the package repository doesn't have the new version yet. The update stays
             // available, to try again later.
-            log::warn!("The update command succeeded, but Zap's executable wasn't replaced");
+            log::warn!("The update command succeeded, but ZapNG's executable wasn't replaced");
         }
         true
     }
@@ -877,9 +877,9 @@ pub enum DownloadReady {
     NeedsAuthorization,
     /// A newer version could not be downloaded.
     No,
-    /// Zap was installed by a package manager that installs the update when this command runs.
+    /// ZapNG was installed by a package manager that installs the update when this command runs.
     RunCommand(String),
-    /// Zap was installed by a package manager that Zap can't run to install the update, so the user
+    /// ZapNG was installed by a package manager that ZapNG can't run to install the update, so the user
     /// has to, as `hint` says.
     ManualUpgrade { hint: String },
 }
@@ -925,7 +925,7 @@ pub fn accessibility_content(
         // Found autoupdate
         (RequestType::ManualCheck, Ok(UpdateReady::Yes { .. })) => Some(AccessibilityContent::new(
             "Update available.",
-            "Use the command palette to install and relaunch Zap",
+            "Use the command palette to install and relaunch ZapNG",
             ZapNGA11yRole::HelpRole,
         )),
         // Any non-successful autoupdate check
@@ -963,7 +963,7 @@ async fn fetch_version(
     update_id: &str,
     http_client: Arc<http_client::Client>,
 ) -> Result<VersionInfo> {
-    // ZapNG 走 GitHub Releases(q0wkp/zap),完全旁路 Zap 官方
+    // ZapNG 走 GitHub Releases(q0wkp/zap-ng),完全旁路 ZapNG 官方
     // channel_versions / GCS。提前返回避免后续 fetch_channel_versions 必然失败。
     if matches!(channel, Channel::Oss) {
         let release = github::fetch_latest_release(http_client.as_ref()).await?;
@@ -1074,7 +1074,7 @@ pub fn apply_update(
     }
 }
 
-/// Relaunch Zap to apply an update.
+/// Relaunch ZapNG to apply an update.
 ///
 /// This will:
 /// 1. Perform any last update steps.

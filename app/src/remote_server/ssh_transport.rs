@@ -158,7 +158,7 @@ fn should_skip_scp_fallback(error: &InstallError) -> bool {
 }
 
 // ===========================================================================
-// Zap fork:开发模式 remote-server 安装路径
+// ZapNG fork:开发模式 remote-server 安装路径
 //
 // 上游 / release 构建会让远端安装脚本从 GitHub releases 下载预编译的
 // remote-server 二进制。但在本地源码构建(`cargo run`)时,这会下载到
@@ -310,11 +310,11 @@ async fn cross_compile_remote_server(backend: &DevBuildBackend) -> Result<PathBu
         remote_server::setup::DEV_REMOTE_PROFILE,
     );
     // 首次会编译整个 warp,耗时通常数分钟。stdout/stderr 直接 inherit 到运行
-    // Zap 的终端,这样开发者能看到 cargo 的实时编译进度(否则全程静默,
+    // ZapNG 的终端,这样开发者能看到 cargo 的实时编译进度(否则全程静默,
     // 容易误以为卡死)。
     log::info!(
         "dev remote-server: 正在交叉编译,首次通常需数分钟 —— cargo 进度会打印到\
-         运行 Zap 的终端"
+         运行 ZapNG 的终端"
     );
 
     let status = async {
@@ -372,7 +372,7 @@ async fn cross_compile_remote_server(backend: &DevBuildBackend) -> Result<PathBu
     if !status.success() {
         let code = status.code().unwrap_or(-1);
         return Err(anyhow!(
-            "cargo cross-compilation failed (exit {code}); see the cargo output in the terminal running Zap"
+            "cargo cross-compilation failed (exit {code}); see the cargo output in the terminal running ZapNG"
         ));
     }
 
@@ -501,7 +501,7 @@ async fn download_release_file(download_url: &str, path: &Path) -> Result<()> {
     ))
 }
 
-/// The tag of Zap's newest release, which a build made without a release tag installs the remote
+/// The tag of ZapNG's newest release, which a build made without a release tag installs the remote
 /// server of: the tag in the URL that the releases' `latest` page redirects to.
 async fn latest_release_tag() -> Result<String> {
     let output = async {
@@ -550,7 +550,7 @@ async fn release_sha256(download_url: &str, dir: &Path) -> Result<String> {
     // A release made before checksums were published has none, and its tarball isn't installed
     // unverified.
     let checksum_url = remote_server::setup::checksum_url(download_url);
-    let checksum_path = dir.join("zap.tar.gz.sha256");
+    let checksum_path = dir.join("zap-ng.tar.gz.sha256");
     download_release_file(&checksum_url, &checksum_path)
         .await
         .map_err(|error| {
@@ -562,7 +562,7 @@ async fn release_sha256(download_url: &str, dir: &Path) -> Result<String> {
             .ok_or_else(|| anyhow!("the SHA-256 file of {download_url} holds no SHA-256"));
     }
 
-    let signature_path = dir.join("zap.tar.gz.sha256.asc");
+    let signature_path = dir.join("zap-ng.tar.gz.sha256.asc");
     download_release_file(
         &remote_server::setup::signature_url(&checksum_url),
         &signature_path,
@@ -611,7 +611,7 @@ async fn scp_install_fallback(socket_path: &Path) -> Result<()> {
     let tempdir = tempfile::tempdir()?;
     // The SHA-256 first, so that a release without one isn't downloaded for nothing.
     let sha256 = release_sha256(&download_url, tempdir.path()).await?;
-    let tarball_path = tempdir.path().join("zap.tar.gz");
+    let tarball_path = tempdir.path().join("zap-ng.tar.gz");
     download_release_file(&download_url, &tarball_path).await?;
     // Uploaded, the tarball is extracted without another check: the remote host may have no
     // program to compute a SHA-256 with.
@@ -712,7 +712,7 @@ impl RemoteTransport for SshTransport {
     fn check_has_old_binary(&self) -> Pin<Box<dyn Future<Output = anyhow::Result<bool>> + Send>> {
         let socket_path = self.socket_path.clone();
         Box::pin(async move {
-            // Treat what an earlier install left in `~/.zap/remote-server`
+            // Treat what an earlier install left in `~/.zap-ng/remote-server`
             // as evidence of a prior install, so that any mismatch with the
             // client's expected binary path is auto-updated rather than
             // surfaced as a first-time install prompt. The directory alone is
@@ -750,7 +750,7 @@ impl RemoteTransport for SshTransport {
                 remote_server::setup::remote_server_binary()
             );
 
-            // Zap fork:DEBUG 源码构建(无 release tag)走开发模式,
+            // ZapNG fork:DEBUG 源码构建(无 release tag)走开发模式,
             // 交叉编译本地 `warp` 并上传,而不是下载陈旧的 GitHub release。
             // 失败时(交叉编译前置条件缺失等)打印告警并回退到下载安装,
             // 保证 dev 体验不被破坏。release 构建跳过整段逻辑,行为不变。

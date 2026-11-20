@@ -568,7 +568,7 @@ pub fn init(app: &mut AppContext) {
         .with_context_predicate(
             id!("Terminal") & id!("TerminalView_NonEmptyBlockList") & !id!("AltScreen"),
         ),
-        // Zap:删除 terminal:open_share_block_modal keybinding(云端 share block)
+        // ZapNG:删除 terminal:open_share_block_modal keybinding(云端 share block)
         EditableBinding::new(
             "terminal:bookmark_selected_block",
             crate::t!("keybinding-desc-terminal-bookmark-selected-block"),
@@ -948,7 +948,7 @@ pub fn init(app: &mut AppContext) {
     )
     .with_context_predicate(id!("Terminal") & id!(flags::HAS_SETTINGS_TO_IMPORT_FLAG))]);
 
-    // Zap:删除 terminal:share_current_session / terminal:stop_sharing_current_session keybindings(云端 shared session)
+    // ZapNG:删除 terminal:share_current_session / terminal:stop_sharing_current_session keybindings(云端 shared session)
 
     app.register_editable_bindings([EditableBinding::new(
         TOGGLE_BLOCK_FILTER_KEYBINDING,
@@ -1040,7 +1040,7 @@ fn register_input_mode_bindings(app: &mut AppContext) {
 
     // A context predicate that matches when the input mode bindings are
     // available for use. Disabled when a CLI agent session is active — the
-    // Zap agent should not be tagged into a CLI agent's command, and the
+    // ZapNG agent should not be tagged into a CLI agent's command, and the
     // `!` prefix is the only way to toggle shell mode in the rich input.
     let base_context = id!(flags::IS_ANY_AI_ENABLED)
         & (id!("Input") | id!("Terminal"))

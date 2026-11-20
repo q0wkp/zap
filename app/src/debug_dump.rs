@@ -1,14 +1,14 @@
 //! This module contains the code path for the [`zap_ng_cli::Command::DumpDebugInfo`] subcommand.
 //!
 //! This is intended to never be used by a vast majority of users. This is only intended for users
-//! who are unable to run Zap and want to provide us, the dev team, with useful debugging
+//! who are unable to run ZapNG and want to provide us, the dev team, with useful debugging
 //! information.
 use command::blocking::Command;
 use zap_ng_core::channel::ChannelState;
 use zap_ng_ui::windowing;
 
 pub(crate) fn run() -> anyhow::Result<()> {
-    println!("Zap version: {:?}", ChannelState::app_version());
+    println!("ZapNG version: {:?}", ChannelState::app_version());
 
     {
         let uname = collect_output_or_suggest_install("uname -a");

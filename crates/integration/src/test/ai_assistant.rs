@@ -11,7 +11,7 @@ use zap_ng_ui::async_assert;
 
 use super::new_builder;
 
-/// Checks if the Ask Zap AI keybinding works correctly when a block is selected.
+/// Checks if the Ask ZapNG AI keybinding works correctly when a block is selected.
 /// This is a regression test: https://linear.app/warpdotdev/issue/WAR-6758/warp-ai-ask-from-block-keybinding-doesnt-work-as-expected.
 pub fn test_ask_zap_ng_ai_keybinding_for_selected_block() -> Builder {
     new_builder()

@@ -35,7 +35,7 @@ pub fn assert_zap_ng_drive_is_open() -> AssertionCallback {
         workspace.read(app, |workspace, _| {
             async_assert!(
                 workspace.is_zap_ng_drive_open(),
-                "Expected Zap Drive to be open, but it was closed"
+                "Expected ZapNG Drive to be open, but it was closed"
             )
         })
     })
@@ -48,7 +48,7 @@ pub fn assert_zap_ng_drive_is_closed() -> AssertionCallback {
         workspace.read(app, |workspace, _| {
             async_assert!(
                 !workspace.is_zap_ng_drive_open(),
-                "Expected Zap Drive to be closed, but it was open"
+                "Expected ZapNG Drive to be closed, but it was open"
             )
         })
     })

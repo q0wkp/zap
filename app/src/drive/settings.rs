@@ -14,7 +14,7 @@ define_settings_group!(ZapNGDriveSettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         private: false,
         toml_path: "warp_drive.sorting_choice",
-        description: "The sort order for items in Zap Drive.",
+        description: "The sort order for items in ZapNG Drive.",
     },
     sharing_onboarding_block_shown: WarpDriveSharingOnboardingBlockShown {
         type: bool,
@@ -23,7 +23,7 @@ define_settings_group!(ZapNGDriveSettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         private: true,
     },
-    // Controls whether Zap Drive appears in the tools panel, command palette, and command search.
+    // Controls whether ZapNG Drive appears in the tools panel, command palette, and command search.
     enable_zap_ng_drive: EnableWarpDrive {
         type: bool,
         default: true,
@@ -31,12 +31,12 @@ define_settings_group!(ZapNGDriveSettings, settings: [
         sync_to_cloud: SyncToCloud::Globally(RespectUserSyncSetting::Yes),
         private: false,
         toml_path: "warp_drive.enabled",
-        description: "Whether Zap Drive is enabled.",
+        description: "Whether ZapNG Drive is enabled.",
     },
 ]);
 
 impl ZapNGDriveSettings {
-    /// Returns whether Zap Drive should be considered enabled.
+    /// Returns whether ZapNG Drive should be considered enabled.
     /// Returns `false` when the user is anonymous or fully logged out,
     /// regardless of the user setting.
     pub fn is_zap_ng_drive_enabled(app: &zap_ng_ui::AppContext) -> bool {

@@ -8,9 +8,9 @@ fn test_data_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(data_dir(), home_dir.join(".zap"));
+            assert_eq!(data_dir(), home_dir.join(".zap-ng"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(data_dir(), home_dir.join(".local/share/zap"));
+            assert_eq!(data_dir(), home_dir.join(".local/share/zap-ng"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -23,9 +23,9 @@ fn test_config_local_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(config_local_dir(), home_dir.join(".zap"));
+            assert_eq!(config_local_dir(), home_dir.join(".zap-ng"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(config_local_dir(), home_dir.join(".config/zap"));
+            assert_eq!(config_local_dir(), home_dir.join(".config/zap-ng"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -36,8 +36,8 @@ fn test_config_local_dir_path() {
 fn test_zap_ng_home_config_dir_path() {
     let home_dir = home_dir().expect("Should be able to compute home directory");
     let expected_dir_name = match ChannelState::data_profile() {
-        Some(data_profile) => format!(".zap-{data_profile}"),
-        None => ".zap".to_string(),
+        Some(data_profile) => format!(".zap-ng-{data_profile}"),
+        None => ".zap-ng".to_string(),
     };
 
     assert_eq!(
@@ -49,7 +49,7 @@ fn test_zap_ng_home_config_dir_path() {
 #[test]
 fn test_zap_ng_home_skills_and_mcp_paths() {
     let Some(config_dir) = zap_ng_home_config_dir() else {
-        panic!("Should be able to compute Zap home config directory");
+        panic!("Should be able to compute ZapNG home config directory");
     };
 
     assert_eq!(zap_ng_home_skills_dir(), Some(config_dir.join("skills")));
@@ -64,9 +64,9 @@ fn test_cache_dir_path() {
     // ChannelState, by default, is configured for Channel::Oss.
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/dev.zap.Zap"));
+            assert_eq!(cache_dir(), home_dir.join("Library/Application Support/dev.q0wkp.zapng"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(cache_dir(), home_dir.join(".cache/zap"));
+            assert_eq!(cache_dir(), home_dir.join(".cache/zap-ng"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -79,9 +79,9 @@ fn test_state_dir_path() {
     cfg_if::cfg_if! {
         // ChannelState, by default, is configured for Channel::Oss.
         if #[cfg(target_os = "macos")] {
-            assert_eq!(state_dir(), home_dir.join("Library/Application Support/dev.zap.Zap"));
+            assert_eq!(state_dir(), home_dir.join("Library/Application Support/dev.q0wkp.zapng"));
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(state_dir(), home_dir.join(".local/state/zap"));
+            assert_eq!(state_dir(), home_dir.join(".local/state/zap-ng"));
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -90,23 +90,23 @@ fn test_state_dir_path() {
 
 #[test]
 fn test_oss_secure_state_dir_is_disabled() {
-    // ChannelState 默认是 Channel::Oss。Zap 不应该探测 Zap 官方 App Group,
+    // ChannelState 默认是 Channel::Oss。ZapNG 不应该探测 ZapNG 官方 App Group,
     // 否则 macOS 会把它识别成访问其他 App 数据并在每次启动时弹权限窗。
     assert_eq!(secure_state_dir(), None);
 }
 
 #[test]
-fn test_project_path_for_zap_dev_app_id() {
-    // Covers the `starts_with("Zap")` branch in `project_dirs_for_app_id` on Linux,
-    // which maps suffixed application names like `ZapDev` to a dashed lowercase
-    // directory matching the Linux package name (e.g. `zap-dev`).
-    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "zap", "ZapDev"), None)
+fn test_project_path_for_zap_ng_dev_app_id() {
+    // Covers the `starts_with("zapng")` branch in `project_dirs_for_app_id` on Linux,
+    // which maps suffixed application names like `zapng-dev` to the
+    // directory matching the Linux package name (e.g. `zap-ng-dev`).
+    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "q0wkp", "zapng-dev"), None)
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "dev.zap.ZapDev");
+            assert_eq!(project_dirs.project_path(), "dev.q0wkp.zapng-dev");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(project_dirs.project_path(), "zap-dev");
+            assert_eq!(project_dirs.project_path(), "zap-ng-dev");
         } else {
             unimplemented!("Need to update tests for current platform!");
         }
@@ -115,13 +115,13 @@ fn test_project_path_for_zap_dev_app_id() {
 
 #[test]
 fn test_project_path_for_oss_app_id() {
-    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "zap", "Zap"), None)
+    let project_dirs = project_dirs_for_app_id(AppId::new("dev", "q0wkp", "zapng"), None)
         .expect("should be able to compute project dirs");
     cfg_if::cfg_if! {
         if #[cfg(target_os = "macos")] {
-            assert_eq!(project_dirs.project_path(), "dev.zap.Zap");
+            assert_eq!(project_dirs.project_path(), "dev.q0wkp.zapng");
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            assert_eq!(project_dirs.project_path(), "zap");
+            assert_eq!(project_dirs.project_path(), "zap-ng");
         } else {
             unimplemented!("Need to update tests for current platform!");
         }

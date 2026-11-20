@@ -80,7 +80,7 @@ zap_ng_ripgrep = { path = "crates/zap_ng_ripgrep" }
 zap_ng_ssh_manager = { path = "crates/zap_ng_ssh_manager" }
 zap_ng_terminal = { path = "crates/zap_ng_terminal" }
 zap_ng_util = { path = "crates/zap_ng_util" }
-zap_sync = { path = "crates/zap_sync" }
+zap_ng_sync = { path = "crates/zap_ng_sync" }
 zap_ng_web_event_bus = { path = "crates/zap_ng_web_event_bus" }
 zap_ng_ui = { path = "crates/zap_ng_ui" }
 zap_ng_ui_core = { path = "crates/zap_ng_ui_core" }
@@ -148,7 +148,7 @@ hex = "0.4.3"
 # This matches the version of hyper used by reqwest.
 hyper = "1.6.0"
 html5ever = "0.35.0"
-# Zap BYOP webfetch:HTML→Markdown(纯 Rust 端口的 Turndown 实现,
+# ZapNG BYOP webfetch:HTML→Markdown(纯 Rust 端口的 Turndown 实现,
 # 对应 opencode webfetch.ts 用的 turndown JS 库)。
 htmd = "0.2"
 http = "1.1.0"
@@ -516,7 +516,7 @@ tink-hybrid = { git = "https://github.com/warpdotdev/tink-rust", branch = "warpd
 tikv-jemallocator = { git = "https://github.com/warpdotdev/jemallocator.git", rev = "2ee30bfdf7059223b54810e4ea6c666f0a379e0b" }
 tikv-jemalloc-sys = { git = "https://github.com/warpdotdev/jemallocator.git", rev = "2ee30bfdf7059223b54810e4ea6c666f0a379e0b" }
 
-# Zap 本地 fork — 解锁 DeepSeek thinking_mode `reasoning_effort` 顶层注入。
+# ZapNG 本地 fork — 解锁 DeepSeek thinking_mode `reasoning_effort` 顶层注入。
 # 上游 genai 0.6.0-beta.18 在 adapter_shared.rs:85 把 reasoning_effort 注入条件
 # 硬编码为 `adapter_kind == OpenAI`,DeepSeek 走 else 分支被吞,即便 client 端把
 # ChatOptions::reasoning_effort 设为 high/medium/low,HTTP body 顶层也不会出现该字段。
@@ -525,6 +525,6 @@ tikv-jemalloc-sys = { git = "https://github.com/warpdotdev/jemallocator.git", re
 genai = { path = "lib/rust-genai" }
 
 [patch."https://github.com/warpdotdev/warp-proto-apis.git"]
-# Zap 已切到 zerx-lab fork(见上方 dependency 改动),保留这条 patch 以
+# ZapNG 已切到 zerx-lab fork(见上方 dependency 改动),保留这条 patch 以
 # 便其它 transitive deps 若意外引用上游 url 时也走 fork。
 warp_multi_agent_api = { git = "https://github.com/zerx-lab/warp-proto-apis.git", rev = "14ab9a71ea3e9521b2ffab2f97a64e7c21050669" }

@@ -20,7 +20,7 @@ mod non_mac {
         false
     }
 
-    /// Sets Zap as the default terminal
+    /// Sets ZapNG as the default terminal
     pub fn set_zap_ng_as_default_terminal() -> Result<(), String> {
         Err("Not implemented".to_string())
     }
@@ -31,7 +31,7 @@ mod non_mac {
 use non_mac::*;
 
 pub struct DefaultTerminal {
-    /// Whether the OS will treat Zap as the default app for scripts/executables.
+    /// Whether the OS will treat ZapNG as the default app for scripts/executables.
     is_zap_ng_default: bool,
 }
 
@@ -53,9 +53,9 @@ impl DefaultTerminal {
         Self { is_zap_ng_default }
     }
 
-    /// This is an OS-level setting. Unlike most other settings, where Zap is the source-of-truth
-    /// for the value of the setting, it can be changed outside of Zap. We monitor if it gets
-    /// changed externally by checking when Zap is focused.
+    /// This is an OS-level setting. Unlike most other settings, where ZapNG is the source-of-truth
+    /// for the value of the setting, it can be changed outside of ZapNG. We monitor if it gets
+    /// changed externally by checking when ZapNG is focused.
     fn handle_window_manager_event(&mut self, event: &StateEvent, ctx: &mut ModelContext<Self>) {
         match event {
             StateEvent::ValueChanged { current, previous } => {
@@ -90,11 +90,11 @@ impl DefaultTerminal {
         self.is_zap_ng_default
     }
 
-    /// This is a one-way operation. Once we set the default terminal to Zap, we can't really
+    /// This is a one-way operation. Once we set the default terminal to ZapNG, we can't really
     /// "unset" it unless we pick a new default terminal. Picking a new default is complicated.
     pub fn make_zap_ng_default(&mut self, ctx: &mut ModelContext<Self>) {
         if let Err(e) = set_zap_ng_as_default_terminal() {
-            log::error!("Error setting Zap as default terminal: {e:#}");
+            log::error!("Error setting ZapNG as default terminal: {e:#}");
         } else {
             self.set_is_zap_ng_default(true, ctx);
         }

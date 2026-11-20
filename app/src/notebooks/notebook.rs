@@ -53,7 +53,7 @@ use crate::{
     drive::{
         drive_helpers::has_feature_gated_anonymous_user_reached_notebook_limit,
         export::ExportManager, items::ZapNGDriveItemId, ObjectTypeAndId,
-        ZapDriveObjectSettings,
+        ZapNGDriveObjectSettings,
     },
     editor::{
         EditOrigin, EditorView, Event as EditorEvent, InteractionState,
@@ -224,7 +224,7 @@ enum NotebookSyncError {
     FeatureNotAvailable,
 }
 
-/// A view that allows viewing/execution and editing of a Zap notebook.
+/// A view that allows viewing/execution and editing of a ZapNG notebook.
 /// We don't currently persist any data.
 pub struct NotebookView {
     /// This is a stateful component that shows information about the notebook like its location
@@ -600,7 +600,7 @@ impl NotebookView {
                     .id()
                     .and_then(SyncId::into_server)
                 {
-                    // TODO(zap-cloud-removal Phase 5): 同上,sharing UI 已退役,
+                    // TODO(zap-ng-cloud-removal Phase 5): 同上,sharing UI 已退役,
                     // notebook 的 ShareableObject 注入移除;cloud_object 退役时清理 id 流程。
                     let _ = id;
                 }
@@ -1515,7 +1515,7 @@ impl NotebookView {
     pub fn wait_for_initial_load_then_load(
         &mut self,
         notebook_id: SyncId,
-        settings: &ZapDriveObjectSettings,
+        settings: &ZapNGDriveObjectSettings,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -1562,7 +1562,7 @@ impl NotebookView {
     fn fetch_and_load_notebook(
         &mut self,
         notebook_id: ServerId,
-        settings: &ZapDriveObjectSettings,
+        settings: &ZapNGDriveObjectSettings,
         window_id: WindowId,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -1606,13 +1606,13 @@ impl NotebookView {
     pub fn load(
         &mut self,
         notebook: NotebookObject,
-        settings: &ZapDriveObjectSettings,
+        settings: &ZapNGDriveObjectSettings,
         ctx: &mut ViewContext<Self>,
     ) -> SpawnedFutureHandle {
         self.set_title(&notebook.model().title, ctx);
         self.set_content(&notebook, ctx);
 
-        // TODO(zap-cloud-removal Phase 5): sharing UI 已退役,notebook
+        // TODO(zap-ng-cloud-removal Phase 5): sharing UI 已退役,notebook
         // ShareableObject 注入移除;cloud_object server_id 路径保留待 Phase 5。
         let _ = notebook.id;
 
@@ -1679,7 +1679,7 @@ impl NotebookView {
             }
         });
         self.update_breadcrumbs(ctx);
-        // Zap Phase 2a: invitee-driven sharing dialog removed.
+        // ZapNG Phase 2a: invitee-driven sharing dialog removed.
         if let Some(focused_folder_id) = settings.focused_folder_id.map(SyncId::ServerId) {
             self.view_in_zap_ng_drive(
                 ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(focused_folder_id)),
@@ -1855,7 +1855,7 @@ impl NotebookView {
         if let Some(notebook) = ObjectStoreModel::as_ref(ctx).get_notebook(&id) {
             self.load(
                 notebook.clone(),
-                &ZapDriveObjectSettings::default(),
+                &ZapNGDriveObjectSettings::default(),
                 ctx,
             );
         }

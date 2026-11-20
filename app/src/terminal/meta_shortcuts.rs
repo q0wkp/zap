@@ -1,6 +1,6 @@
 use zap_ng_ui::keymap::Keystroke;
 
-/// Whether this keystroke should dispatch an action in Zap despite the
+/// Whether this keystroke should dispatch an action in ZapNG despite the
 /// [`zap_ng_ui::event::Event::KeyDown::is_composing`] being true.
 ///
 /// Generally, we ignore all `KeyDown` events if the `is_composing` field is true. However it's

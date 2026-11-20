@@ -351,7 +351,7 @@ fn extract_skill_parent_directory_returns_home_dir_for_zap_ng_home_skill() {
         return;
     };
     let Some(zap_ng_home_skills_dir) = zap_ng_core::paths::zap_ng_home_skills_dir() else {
-        eprintln!("Skipping test: Zap home skills directory not available");
+        eprintln!("Skipping test: ZapNG home skills directory not available");
         return;
     };
 

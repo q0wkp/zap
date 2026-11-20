@@ -702,7 +702,7 @@ impl AvailableShells {
     /// already discovered. Because that discovery supplements the process
     /// `PATH` with well-known install locations (such as `/opt/homebrew/bin`
     /// on macOS), this lookup can find shells that a plain `PATH` search via
-    /// [`AvailableShell::try_from`] would miss when Zap is launched outside
+    /// [`AvailableShell::try_from`] would miss when ZapNG is launched outside
     /// an interactive shell.
     ///
     /// Comparison is case-sensitive.

@@ -66,7 +66,7 @@ impl Entity for SshZapNGifyBlock {
 
 impl SshZapNGifyBlock {
     fn render_title_ui(&self, theme: &ZapNGTheme, appearance: &Appearance) -> Box<dyn Element> {
-        let icon = Icon::new(UiIcon::Zap.into(), theme.active_ui_detail());
+        let icon = Icon::new(UiIcon::ZapNG.into(), theme.active_ui_detail());
         zapngify::render::header_row("Warpifying SSH Session...", icon, theme, appearance)
     }
 }
@@ -80,7 +80,7 @@ pub fn zapngify_description(
 
     let description = FormattedText::new(vec![FormattedTextLine::Line(vec![
         FormattedTextFragment::plain_text(
-            "Bring Zap's features to your remote session. Blocks, full text editing, auto-complete, Oz, and more. "
+            "Bring ZapNG's features to your remote session. Blocks, full text editing, auto-complete, Oz, and more. "
         ),
         FormattedTextFragment::hyperlink(crate::t!("common-learn-more"), SSH_DOCS_URL),
     ])]);

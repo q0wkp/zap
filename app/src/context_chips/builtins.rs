@@ -1,4 +1,4 @@
-//! Context chips built into Zap
+//! Context chips built into ZapNG
 
 use chrono::Local;
 use zap_ng_util::path::user_friendly_path;

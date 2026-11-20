@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="./assets/zap-logo.svg" alt="Zap logo" width="96">
+  <img src="./assets/zap-ng-logo.svg" alt="ZapNG logo" width="96">
 </p>
 
-# Zap
+# ZapNG
 
 [![License](https://img.shields.io/badge/License-AGPL--3.0--only%20AND%20MIT-blue.svg)](#license)
-[![Release](https://img.shields.io/github/v/release/q0wkp/zap)](https://github.com/q0wkp/zap/releases/latest)
+[![Release](https://img.shields.io/github/v/release/q0wkp/zap-ng)](https://github.com/q0wkp/zap-ng/releases/latest)
 
 A terminal forked from [Warp](https://github.com/warpdotdev/warp). It began as my own build of
 [zerx-lab/zap](https://github.com/zerx-lab/zap), the original Zap. Its author archived that repository on 2026-11-17,

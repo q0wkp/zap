@@ -1,9 +1,9 @@
 pkgname=@@PACKAGE_NAME@@
 pkgver=@@PKGVER@@
 pkgrel=@@RELEASE@@
-pkgdesc="Zap, a community fork of the Rust-based Warp terminal"
+pkgdesc="ZapNG, a community fork of the Rust-based Warp terminal"
 arch=('@@ARCH@@')
-url="https://github.com/zerx-lab/warp"
+url="https://github.com/q0wkp/zap-ng"
 license=('custom')
 depends=(
 	'alsa-lib'

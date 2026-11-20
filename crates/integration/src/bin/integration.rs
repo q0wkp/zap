@@ -8,7 +8,7 @@ use zap_ng_cli::WorkerCommand;
 use zap_ng_core::channel::{Channel, ChannelConfig, ChannelState};
 use zap_ng_core::AppId;
 
-/// The Zap integration test runner.
+/// The ZapNG integration test runner.
 #[derive(Debug, Default, Parser, Clone)]
 #[command(name = "warp-integration-test")]
 #[clap(args_conflicts_with_subcommands = true)]
@@ -30,7 +30,7 @@ pub fn main() -> Result<()> {
                 "dev",
                 "warp",
                 if cfg!(target_os = "macos") {
-                    "Zap-Integration"
+                    "ZapNG-Integration"
                 } else {
                     "WarpIntegration"
                 },
@@ -310,7 +310,7 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_history_command_is_linked_to_local_workflow);
     register_test!(test_up_arrow_history_enters_shift_tab_for_workflow);
 
-    // Zap(本地化,Phase 5):websocket 集成测试随 Listener 物理删除。
+    // ZapNG(本地化,Phase 5):websocket 集成测试随 Listener 物理删除。
 
     register_test!(test_secret_is_obfuscated_on_copy);
     register_test!(test_secret_tooltip_shows_on_click);

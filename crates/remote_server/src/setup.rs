@@ -261,14 +261,14 @@ pub fn parse_uname_output(output: &str) -> Result<RemotePlatform> {
 /// - dev:         `~/.warp-dev/remote-server`
 /// - local:       `~/.warp-local/remote-server`
 /// - integration: `~/.warp-dev/remote-server`
-/// - warp-oss:    `~/.zap/remote-server`
+/// - warp-oss:    `~/.zap-ng/remote-server`
 pub fn remote_server_dir() -> String {
     let zap_ng_dir = match ChannelState::channel() {
         Channel::Stable => ".warp",
         Channel::Preview => ".warp-preview",
         Channel::Dev | Channel::Integration => ".warp-dev",
         Channel::Local => ".warp-local",
-        Channel::Oss => ".zap",
+        Channel::Oss => ".zap-ng",
     };
     format!("~/{zap_ng_dir}/remote-server")
 }
@@ -311,7 +311,7 @@ pub fn binary_name() -> &'static str {
 /// 返回当前 channel 和客户端版本对应的远端二进制完整路径。
 ///
 /// Local 构建保留无版本后缀路径,以便 `script/deploy_remote_server`
-/// 覆盖同一个开发 slot。Zap release 构建带 `GIT_RELEASE_TAG`
+/// 覆盖同一个开发 slot。ZapNG release 构建带 `GIT_RELEASE_TAG`
 /// 时使用版本后缀,这样新版本会自然触发重新安装;源码本地构建没有
 /// release tag,仍使用无后缀路径。
 pub fn remote_server_binary() -> String {
@@ -337,7 +337,7 @@ pub fn binary_check_command() -> String {
 
 /// Name of the tarball the SCP fallback uploads into [`remote_server_dir`]
 /// for the install script to extract.
-pub const SCP_UPLOAD_TARBALL_NAME: &str = "zap-upload.tar.gz";
+pub const SCP_UPLOAD_TARBALL_NAME: &str = "zap-ng-upload.tar.gz";
 
 /// Returns the shell command that checks whether an earlier install set up
 /// the remote, so that a missing binary is installed as an update instead of
@@ -407,11 +407,11 @@ fn install_script_for(
 }
 
 /// The URL of the CLI tarball that the release `tag` has for `os` and `arch`, named
-/// `zap-<version>-<os>-<arch>.tar.gz` by .github/workflows/release.yml, the version being the tag
+/// `zap-ng-<version>-<os>-<arch>.tar.gz` by .github/workflows/release.yml, the version being the tag
 /// without its `v`.
 fn release_tarball_url(tag: &str, os: &str, arch: &str) -> String {
     let version = tag.strip_prefix('v').unwrap_or(tag);
-    format!("https://github.com/q0wkp/zap/releases/download/{tag}/zap-{version}-{os}-{arch}.tar.gz")
+    format!("https://github.com/q0wkp/zap-ng/releases/download/{tag}/zap-ng-{version}-{os}-{arch}.tar.gz")
 }
 
 /// The URL of the SHA-256 file that a release publishes beside the CLI tarball at `tarball_url`:
@@ -659,7 +659,7 @@ pub fn verify_sha256(path: &std::path::Path, checksum_file: &str, name: &str) ->
 }
 
 /// The page that redirects to the newest release's page, `.../releases/tag/<tag>`.
-pub const LATEST_RELEASE_URL: &str = "https://github.com/q0wkp/zap/releases/latest";
+pub const LATEST_RELEASE_URL: &str = "https://github.com/q0wkp/zap-ng/releases/latest";
 
 /// The tag of the release whose page `url` is, `.../releases/tag/<tag>`.
 pub fn release_tag_in_url(url: &str) -> Option<&str> {
@@ -688,7 +688,7 @@ pub fn download_tarball_url(tag: &str, platform: &RemotePlatform) -> String {
     release_tarball_url(tag, platform.os.as_str(), platform.arch.as_str())
 }
 
-/// Zap fork:开发模式(DEBUG 源码构建,无 release tag)下,
+/// ZapNG fork:开发模式(DEBUG 源码构建,无 release tag)下,
 /// SSH transport 不再从 GitHub 下载陈旧的发行版,而是本地交叉编译
 /// 当前 `warp` 二进制并上传。下面这些常量集中描述该交叉编译产物,
 /// 与 `script/deploy_remote_server` 保持一致(同 profile / 同 features /

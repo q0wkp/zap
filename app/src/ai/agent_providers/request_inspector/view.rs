@@ -1,4 +1,4 @@
-//! The request inspector pane: a live list of the calls zap makes to BYOP providers, with the
+//! The request inspector pane: a live list of the calls zap-ng makes to BYOP providers, with the
 //! request and the response of the selected one.
 //!
 //! The view listens for captured calls from the moment it is created until it is dropped or

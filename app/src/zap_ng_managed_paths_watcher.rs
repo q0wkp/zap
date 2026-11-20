@@ -14,7 +14,7 @@ use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 #[cfg(not(target_family = "wasm"))]
 use watcher::{BulkFilesystemWatcher, BulkFilesystemWatcherEvent};
 
-/// Duration between filesystem watch events for the Zap managed paths watcher, in milliseconds.
+/// Duration between filesystem watch events for the ZapNG managed paths watcher, in milliseconds.
 #[cfg(not(target_family = "wasm"))]
 const WARP_MANAGED_PATHS_WATCHER_DEBOUNCE_MILLI_SECS: u64 = 500;
 
@@ -30,7 +30,7 @@ pub(crate) fn ensure_zap_ng_watch_roots_exist() {
     let data_dir = zap_ng_data_dir();
     if let Err(err) = fs::create_dir_all(&data_dir) {
         log::warn!(
-            "Failed to create Zap data directory {}: {err}",
+            "Failed to create ZapNG data directory {}: {err}",
             data_dir.display()
         );
     }
@@ -39,7 +39,7 @@ pub(crate) fn ensure_zap_ng_watch_roots_exist() {
     if config_local_dir != data_dir {
         if let Err(err) = fs::create_dir_all(&config_local_dir) {
             log::warn!(
-                "Failed to create Zap config directory {}: {err}",
+                "Failed to create ZapNG config directory {}: {err}",
                 config_local_dir.display()
             );
         }
@@ -250,7 +250,7 @@ impl ZapNGManagedPathsWatcher {
                 data_dir.clone(),
                 WatchFilter::with_filter(Arc::new(move |path| !path.starts_with(&worktrees_dir))),
                 RecursiveMode::Recursive,
-                "Zap data directory",
+                "ZapNG data directory",
             );
             if should_register_config_local_dir {
                 Self::register_path(
@@ -259,7 +259,7 @@ impl ZapNGManagedPathsWatcher {
                     config_local_dir.clone(),
                     WatchFilter::accept_all(),
                     RecursiveMode::Recursive,
-                    "Zap config directory",
+                    "ZapNG config directory",
                 );
             }
             if let Some(zap_ng_home_skills_dir) = zap_ng_home_skills_dir() {
@@ -274,7 +274,7 @@ impl ZapNGManagedPathsWatcher {
                         zap_ng_home_skills_dir,
                         WatchFilter::accept_all(),
                         RecursiveMode::Recursive,
-                        "Zap home skills directory",
+                        "ZapNG home skills directory",
                     );
                 }
             }
@@ -294,7 +294,7 @@ impl ZapNGManagedPathsWatcher {
                             path == zap_ng_home_mcp_config_path
                         })),
                         RecursiveMode::NonRecursive,
-                        "Zap home MCP config directory",
+                        "ZapNG home MCP config directory",
                     );
                 }
             }
@@ -390,7 +390,7 @@ mod tests {
                 assert_eq!(path.config_path, zap_ng_home_mcp_config_path);
             }
             (_, _, None) => {}
-            _ => panic!("Expected Zap MCP path when home directory is available"),
+            _ => panic!("Expected ZapNG MCP path when home directory is available"),
         }
     }
 

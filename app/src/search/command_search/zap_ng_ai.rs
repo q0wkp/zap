@@ -21,8 +21,8 @@ use zap_ng_ui::{
     AppContext, Element, SingletonEntity,
 };
 
-const OPEN_WARP_AI_ITEM_BODY_TEXT: &str = "Ask Zap AI for command suggestions";
-const TRANSLATE_WITH_WARP_AI_ITEM_BODY_TEXT: &str = "Translate into shell command using Zap AI";
+const OPEN_WARP_AI_ITEM_BODY_TEXT: &str = "Ask ZapNG AI for command suggestions";
+const TRANSLATE_WITH_WARP_AI_ITEM_BODY_TEXT: &str = "Translate into shell command using ZapNG AI";
 
 #[derive(Clone, Debug)]
 pub enum ZapNGAISearchItem {
@@ -50,7 +50,7 @@ impl SearchItem for ZapNGAISearchItem {
         highlight_state: ItemHighlightState,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
-        // Since the Zap AI logo color is hardcoded, let's find the best
+        // Since the ZapNG AI logo color is hardcoded, let's find the best
         // contrasting color depending on the user's theme and the item's selected state.
         let command_search_background = appearance.theme().surface_1();
         let item_background_color = match highlight_state.container_background_fill(appearance) {
@@ -113,23 +113,23 @@ impl SearchItem for ZapNGAISearchItem {
     fn accept_result(&self) -> CommandSearchItemAction {
         match self {
             ZapNGAISearchItem::Translate => CommandSearchItemAction::TranslateUsingWarpAI,
-            ZapNGAISearchItem::Open => CommandSearchItemAction::ZapAI,
+            ZapNGAISearchItem::Open => CommandSearchItemAction::ZapNGAI,
         }
     }
 
     fn execute_result(&self) -> CommandSearchItemAction {
         match self {
             ZapNGAISearchItem::Translate => CommandSearchItemAction::TranslateUsingWarpAI,
-            ZapNGAISearchItem::Open => CommandSearchItemAction::ZapAI,
+            ZapNGAISearchItem::Open => CommandSearchItemAction::ZapNGAI,
         }
     }
 
     fn accessibility_label(&self) -> String {
-        format!("Zap AI: {}", self.item_body_text())
+        format!("ZapNG AI: {}", self.item_body_text())
     }
 }
 
-/// Zap 只保留同步入口:打开 BYOP Agent 或把自然语言写回输入框。
+/// ZapNG 只保留同步入口:打开 BYOP Agent 或把自然语言写回输入框。
 /// 云端“自然语言生成命令”异步源已删除。
 pub struct ZapNGAIDataSource;
 

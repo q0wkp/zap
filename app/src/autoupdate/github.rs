@@ -1,4 +1,4 @@
-// ZapNG(Channel::Oss)autoupdate 走 GitHub Releases API,而非 Zap 官方
+// ZapNG(Channel::Oss)autoupdate 走 GitHub Releases API,而非 ZapNG 官方
 // channel_versions / GCS。本模块只负责"取最新 release 元数据" + "按文件名挑资产";
 // 实际的下载落盘 + 打开目录由 mac.rs / linux.rs 完成。
 
@@ -10,10 +10,10 @@ use lazy_static::lazy_static;
 use serde::Deserialize;
 
 const REPO_OWNER: &str = "q0wkp";
-const REPO_NAME: &str = "zap";
+const REPO_NAME: &str = "zap-ng";
 
 // GitHub 强制要求 User-Agent;同时显式声明 API 版本避免未来 default 漂移。
-pub(super) const USER_AGENT: &str = "Zap-Autoupdate";
+pub(super) const USER_AGENT: &str = "ZapNG-Autoupdate";
 const ACCEPT: &str = "application/vnd.github+json";
 const API_VERSION: &str = "2022-11-28";
 
@@ -90,9 +90,9 @@ pub(crate) fn release_tag(version: &str) -> String {
 }
 
 /// The name of the file the release of `version` (a version without its `v`) has for `system`:
-/// `zap-<version>-<system>.<extension>`, as .github/workflows/release.yml names it.
+/// `zap-ng-<version>-<system>.<extension>`, as .github/workflows/release.yml names it.
 fn release_file_name(version: &str, system: &str, extension: &str) -> String {
-    format!("zap-{version}-{system}.{extension}")
+    format!("zap-ng-{version}-{system}.{extension}")
 }
 
 /// The DMG of the release of `version`, for Apple silicon (`arm64`) or for Intel.

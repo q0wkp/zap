@@ -671,8 +671,8 @@ pub fn render_citation(
             )
         }
         AIAgentCitation::ZapNGDocumentation { .. } => {
-            let icon = Icon::Zap.to_zap_ng_ui_icon(theme.foreground()).finish();
-            let name = String::from("Zap Docs");
+            let icon = Icon::ZapNG.to_zap_ng_ui_icon(theme.foreground()).finish();
+            let name = String::from("ZapNG Docs");
             (Some(icon), name)
         }
         AIAgentCitation::WebPage { url } => {

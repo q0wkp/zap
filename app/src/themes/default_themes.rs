@@ -310,7 +310,7 @@ pub(super) fn vscode_2026_dark_colors() -> TerminalColors {
 }
 
 /// VS Code 2026 Dark 内置主题；配色源: vscode/extensions/theme-defaults/themes/2026-dark.json。
-/// 包含完整 UiColors 覆盖，将 VS Code 的 editor/panel 颜色映射到 Zap UI 组件。
+/// 包含完整 UiColors 覆盖，将 VS Code 的 editor/panel 颜色映射到 ZapNG UI 组件。
 pub(super) fn vscode_2026_dark() -> ZapNGTheme {
     ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x191A1BFF)),
@@ -738,7 +738,7 @@ pub(super) fn sent_referral_reward() -> ZapNGTheme {
             source: bundled_or_fetched_asset!("jpg/sent_referral_reward_bg.jpg"),
             opacity: 100,
         }),
-        Some("Zap Referral".to_string()),
+        Some("ZapNG Referral".to_string()),
         None,
     )
 }

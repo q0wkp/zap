@@ -1,4 +1,4 @@
-//! Prompt templates the user keeps in Zap's config directory.
+//! Prompt templates the user keeps in ZapNG's config directory.
 //!
 //! A profile can point a prompt slot at a file in [`custom_prompts_dir`] (`prompts/` in the
 //! home config directory, next to `skills/`). The file is a minijinja template rendered in a

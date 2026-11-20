@@ -746,7 +746,7 @@ pub enum FeaturesPageAction {
     ToggleShowAutosuggestionIgnoreButton,
     ToggleAtContextMenuInTerminalMode,
     ToggleSlashCommandsInTerminalMode,
-    // Zap:`ToggleOutlineCodebaseSymbolsForAtContextMenu` 随 outline / RAG 下线删除。
+    // ZapNG:`ToggleOutlineCodebaseSymbolsForAtContextMenu` 随 outline / RAG 下线删除。
     ToggleAutoOpenCodeReviewPane,
     ToggleShowTerminalInputMessageLine,
     ToggleAgentInAppNotifications,
@@ -1236,7 +1236,7 @@ impl FeaturesPageAction {
                         .value(),
                 ),
             },
-            // Zap:ToggleOutlineCodebaseSymbolsForAtContextMenu 已下线,
+            // ZapNG:ToggleOutlineCodebaseSymbolsForAtContextMenu 已下线,
             // telemetry 分支一并删除。
             Self::MakeZapNGDefaultTerminal => TelemetryEvent::FeaturesPageAction {
                 action: "MakeWarpDefaultTerminal".to_string(),
@@ -1989,7 +1989,7 @@ impl TypedActionView for FeaturesPageView {
                         .toggle_and_save_value(ctx));
                 });
             }
-            // Zap:`ToggleOutlineCodebaseSymbolsForAtContextMenu` action 随 outline
+            // ZapNG:`ToggleOutlineCodebaseSymbolsForAtContextMenu` action 随 outline
             // 下线推退删除。
             ToggleAutoOpenCodeReviewPane => {
                 GeneralSettings::handle(ctx).update(ctx, |settings, ctx| {

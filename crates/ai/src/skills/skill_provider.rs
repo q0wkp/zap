@@ -1,6 +1,6 @@
 //! Skill provider definitions and utilities.
 //!
-//! This module defines the supported skill providers (i.e. Agents, Claude, Codex, Zap) and their
+//! This module defines the supported skill providers (i.e. Agents, Claude, Codex, ZapNG) and their
 //! associated skills directory paths. It provides utilities for looking up providers
 //! from paths and vice versa.
 use dirs::home_dir;
@@ -14,7 +14,7 @@ use zap_ng_core::ui::color::CLAUDE_ORANGE;
 use zap_ng_core::ui::icons::Icon;
 use zap_ng_core::ui::theme::Fill;
 
-/// Represents a skill provider/origin (Agents, Claude, Codex, or Zap).
+/// Represents a skill provider/origin (Agents, Claude, Codex, or ZapNG).
 #[derive(
     Debug,
     Clone,
@@ -29,7 +29,7 @@ use zap_ng_core::ui::theme::Fill;
     VariantNames,
 )]
 pub enum SkillProvider {
-    Zap,
+    ZapNG,
     Agents,
     Claude,
     Codex,
@@ -60,7 +60,7 @@ pub enum SkillScope {
     /// Skills from a project directory (e.g., `./repo/.agents/skills`).
     #[default]
     Project,
-    /// Bundled skills distributed with Zap.
+    /// Bundled skills distributed with ZapNG.
     Bundled,
 }
 
@@ -80,7 +80,7 @@ impl SkillProvider {
             SkillProvider::Gemini => Icon::GeminiLogo,
             SkillProvider::Droid => Icon::DroidLogo,
             SkillProvider::OpenCode => Icon::OpenCodeLogo,
-            SkillProvider::Zap
+            SkillProvider::ZapNG
             | SkillProvider::Agents
             | SkillProvider::Cursor
             | SkillProvider::Copilot
@@ -107,7 +107,7 @@ pub static SKILL_PROVIDER_DEFINITIONS: LazyLock<Vec<SkillProviderDefinition>> =
                 skills_path: PathBuf::from(".agents").join("skills"),
             },
             SkillProviderDefinition {
-                provider: SkillProvider::Zap,
+                provider: SkillProvider::ZapNG,
                 skills_path: PathBuf::from(".warp").join("skills"),
             },
             SkillProviderDefinition {
@@ -156,7 +156,7 @@ pub fn provider_rank(provider: SkillProvider) -> usize {
 }
 
 pub fn home_skills_path(provider: SkillProvider) -> Option<PathBuf> {
-    if provider == SkillProvider::Zap {
+    if provider == SkillProvider::ZapNG {
         return zap_ng_core::paths::zap_ng_home_skills_dir();
     }
     let definition = SKILL_PROVIDER_DEFINITIONS
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn zap_ng_home_skills_path_uses_zap_ng_home_path() {
         assert_eq!(
-            home_skills_path(SkillProvider::Zap),
+            home_skills_path(SkillProvider::ZapNG),
             zap_ng_core::paths::zap_ng_home_skills_dir()
         );
     }
@@ -213,6 +213,6 @@ mod tests {
         };
         let path = zap_ng_home_skills_dir.join("my-skill").join("SKILL.md");
 
-        assert_eq!(get_provider_for_path(&path), Some(SkillProvider::Zap));
+        assert_eq!(get_provider_for_path(&path), Some(SkillProvider::ZapNG));
     }
 }

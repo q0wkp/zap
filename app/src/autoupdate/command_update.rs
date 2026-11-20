@@ -1,4 +1,4 @@
-//! Updates installed by running the package manager that installed Zap (pacman, Pacstall, Homebrew)
+//! Updates installed by running the package manager that installed ZapNG (pacman, Pacstall, Homebrew)
 //! in a terminal tab: checking that q0wkp/pkgs has published the update for that package manager,
 //! building the tab's command line, and noticing that the package manager has replaced the running
 //! executable with a new version.
@@ -14,7 +14,7 @@ use super::github;
 use crate::terminal::shell::ShellType;
 
 /// The command line the update tab runs: the upgrade, then, only if it succeeded, the shell
-/// integration's `warp_finish_update`, which tells Zap through a hook that the upgrade is done.
+/// integration's `warp_finish_update`, which tells ZapNG through a hook that the upgrade is done.
 pub(super) fn tab_command(command: &str, shell_type: ShellType, update_id: &str) -> String {
     let and = shell_type.and_combiner();
     format!("{command}{and}warp_finish_update {update_id}")
@@ -60,29 +60,29 @@ pub(super) fn record_running_executable() {
 }
 
 /// Returns `true` if the file this process was started from has since been replaced, i.e. a package
-/// manager has installed another version of Zap that a restart would run.
+/// manager has installed another version of ZapNG that a restart would run.
 pub(super) fn running_executable_replaced() -> bool {
     RUNNING_EXECUTABLE.as_ref().is_some_and(|(path, identity)| {
         FileIdentity::of(path).is_ok_and(|current| current != *identity)
     })
 }
 
-/// The cask that q0wkp/homebrew-tap publishes Zap as.
+/// The cask that q0wkp/homebrew-tap publishes ZapNG as.
 #[cfg(any(target_os = "macos", test))]
-const HOMEBREW_CASK: &str = "zap-terminal";
+const HOMEBREW_CASK: &str = "zap-ng";
 
 /// Homebrew's default prefixes, on Apple silicon and on Intel. `brew` isn't looked up on `PATH`,
-/// since Zap started from Finder or the Dock doesn't have Homebrew's directories there.
+/// since ZapNG started from Finder or the Dock doesn't have Homebrew's directories there.
 #[cfg(target_os = "macos")]
 const HOMEBREW_PREFIXES: [&str; 2] = ["/opt/homebrew", "/usr/local"];
 
-/// Returns the command that upgrades Zap if it was installed as a Homebrew cask.
+/// Returns the command that upgrades ZapNG if it was installed as a Homebrew cask.
 #[cfg(target_os = "macos")]
 pub(super) fn homebrew_upgrade_command() -> Option<String> {
     homebrew_upgrade_command_in(HOMEBREW_PREFIXES.iter().map(Path::new))
 }
 
-/// Returns the command that upgrades Zap's cask with the `brew` of the first of `prefixes` that has
+/// Returns the command that upgrades ZapNG's cask with the `brew` of the first of `prefixes` that has
 /// it installed. Homebrew records an installed cask as the directory `<prefix>/Caskroom/<token>`.
 #[cfg(any(target_os = "macos", test))]
 fn homebrew_upgrade_command_in<'a>(prefixes: impl IntoIterator<Item = &'a Path>) -> Option<String> {
@@ -94,13 +94,13 @@ fn homebrew_upgrade_command_in<'a>(prefixes: impl IntoIterator<Item = &'a Path>)
         })
         .map(|(_, brew)| {
             let brew = shell_escape::escape(brew.to_string_lossy());
-            // `--greedy` includes casks that declare `auto_updates true`, as Zap's does. Homebrew
+            // `--greedy` includes casks that declare `auto_updates true`, as ZapNG's does. Homebrew
             // already upgrades a cask named on the command line that way; the flag says so.
             format!("{brew} upgrade --cask --greedy {HOMEBREW_CASK}")
         })
 }
 
-/// The repository that publishes Zap's releases for pacman, Pacstall and Homebrew.
+/// The repository that publishes ZapNG's releases for pacman, Pacstall and Homebrew.
 const PKGS_REPO: &str = "q0wkp/pkgs";
 
 /// Where q0wkp/pkgs' files are read from: GitHub, or in tests a server standing in for it.
@@ -117,15 +117,15 @@ const GITHUB: PkgsSource<'static> = PkgsSource {
     api: "https://api.github.com",
 };
 
-/// Zap's pacman package in q0wkp/pkgs.
+/// ZapNG's pacman package in q0wkp/pkgs.
 #[cfg(any(target_os = "linux", test))]
-const PKGS_PACMAN_PACKAGE: &str = "zap";
+const PKGS_PACMAN_PACKAGE: &str = "zap-ng";
 
 /// The release of q0wkp/pkgs whose assets are its pacman repository, packages and signatures.
 #[cfg(any(target_os = "linux", test))]
 const PKGS_PACMAN_RELEASE: &str = "x86_64";
 
-/// The package managers that q0wkp/pkgs publishes Zap for.
+/// The package managers that q0wkp/pkgs publishes ZapNG for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) enum PkgsTarget {
     #[cfg(target_os = "linux")]
@@ -137,7 +137,7 @@ pub(super) enum PkgsTarget {
 }
 
 impl PkgsTarget {
-    /// The target's name in q0wkp/pkgs, whose `versions/zap/<name>` holds the tag of the release it
+    /// The target's name in q0wkp/pkgs, whose `versions/zap-ng/<name>` holds the tag of the release it
     /// last published for the target.
     fn name(self) -> &'static str {
         match self {
@@ -167,7 +167,7 @@ lazy_static::lazy_static! {
         Mutex::new(HashMap::new());
 }
 
-/// Returns what q0wkp/pkgs has published of Zap's release `tag` for `target`, or `None` while it
+/// Returns what q0wkp/pkgs has published of ZapNG's release `tag` for `target`, or `None` while it
 /// hasn't yet. q0wkp/pkgs publishes a release minutes to a day after it is out, and until then the
 /// package manager would install the version that is already running.
 pub(super) async fn pkgs_published(
@@ -237,7 +237,7 @@ async fn pkgs_published_tag(
     target: PkgsTarget,
 ) -> Result<Option<String>> {
     let url = format!(
-        "{}/{PKGS_REPO}/main/versions/zap/{}",
+        "{}/{PKGS_REPO}/main/versions/zap-ng/{}",
         source.raw,
         target.name()
     );

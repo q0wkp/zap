@@ -28,7 +28,7 @@ fn test_resolve_command() {
         &resolve_executable("env").unwrap(),
         Path::new("/usr/bin/env")
     );
-    // This path exists in the Zap repo, so it should resolve. The `../`
+    // This path exists in the ZapNG repo, so it should resolve. The `../`
     // is because Rust unit tests run from the root of the crate (`app` in
     // this case).
     assert_eq!(

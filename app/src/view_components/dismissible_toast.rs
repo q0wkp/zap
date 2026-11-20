@@ -491,8 +491,8 @@ impl<A: Action + Clone> DismissibleToast<A> {
             left_aligned.add_child(icon);
         }
 
-        // Zap 的 toast 文案字号沿用 `ui_font_subheading()`(上游此处为 `ui_font_size() * 1.2`,
-        // 语义等价于 Zap 字体阶梯中的 subheading),折叠高度上限按本文件实际字号计算。
+        // ZapNG 的 toast 文案字号沿用 `ui_font_subheading()`(上游此处为 `ui_font_size() * 1.2`,
+        // 语义等价于 ZapNG 字体阶梯中的 subheading),折叠高度上限按本文件实际字号计算。
         let font_size = appearance.ui_font_subheading();
         let message = if message_expanded {
             self.main_text.clone()

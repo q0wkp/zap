@@ -144,7 +144,7 @@ impl Shell {
     /// If the particular version of this shell supports input reporting, return the byte sequence
     /// to trigger input reporting.
     ///
-    /// These sequences are bound to Zap shell functions during session bootstrap that print the
+    /// These sequences are bound to ZapNG shell functions during session bootstrap that print the
     /// shell's input buffer, wrapped within the 'InputBuffer' DCS hook when triggered. PowerShell
     /// cannot use a binding that contains the letter "i"  because it does virtual key code
     /// translation based on the current layout, and not all layouts have the letter "i".
@@ -557,7 +557,7 @@ impl ShellType {
         }
     }
 
-    /// If true, Zap will bootstrap the shell if it's the login shell on the remote host.
+    /// If true, ZapNG will bootstrap the shell if it's the login shell on the remote host.
     pub fn is_fully_supported_remotely(&self) -> bool {
         match self {
             ShellType::Zsh | ShellType::Bash => true,
@@ -707,7 +707,7 @@ impl ShellLaunchData {
     fn to_native_path_encoding(&self, path_str: &str) -> Option<PathBuf> {
         match self {
             ShellLaunchData::Executable { .. } => Some(PathBuf::from(path_str)),
-            // The container is Unix; Zap runs on the host, so paths are
+            // The container is Unix; ZapNG runs on the host, so paths are
             // already in the host's native encoding. Pass through unchanged.
             ShellLaunchData::DockerSandbox { .. } => Some(PathBuf::from(path_str)),
         }

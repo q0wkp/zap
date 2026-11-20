@@ -23,7 +23,7 @@ use crate::view_components::action_button::{ActionButton, ActionButtonTheme, But
 
 const MODAL_WIDTH: f32 = 420.;
 const HERO_HEIGHT: f32 = 92.;
-const HERO_IMAGE_PATH: &str = "async/png/onboarding/zap_launch_banner.png";
+const HERO_IMAGE_PATH: &str = "async/png/onboarding/zap_ng_launch_banner.png";
 const REPO_URL: &str = "https://github.com/warpdotdev/warp";
 const CONTRIBUTING_URL: &str = "https://github.com/warpdotdev/warp/blob/master/CONTRIBUTING.md";
 
@@ -44,23 +44,23 @@ fn feature_items() -> [FeatureItem; 3] {
     [
         FeatureItem {
             icon: Icon::HeartHand,
-            title: crate::t!("zap-launch-contribute-title"),
-            description: crate::t!("zap-launch-contribute-description"),
+            title: crate::t!("zap-ng-launch-contribute-title"),
+            description: crate::t!("zap-ng-launch-contribute-description"),
             inline_link: Some(InlineLink {
-                text: crate::t!("zap-launch-contribute-link-text"),
+                text: crate::t!("zap-ng-launch-contribute-link-text"),
                 url: CONTRIBUTING_URL,
             }),
         },
         FeatureItem {
             icon: Icon::Oz,
-            title: crate::t!("zap-launch-oad-title"),
-            description: crate::t!("zap-launch-oad-description"),
+            title: crate::t!("zap-ng-launch-oad-title"),
+            description: crate::t!("zap-ng-launch-oad-description"),
             inline_link: None,
         },
         FeatureItem {
             icon: Icon::MessageChatSquare,
-            title: crate::t!("zap-launch-auto-model-title"),
-            description: crate::t!("zap-launch-auto-model-description"),
+            title: crate::t!("zap-ng-launch-auto-model-title"),
+            description: crate::t!("zap-ng-launch-auto-model-description"),
             inline_link: None,
         },
     ]
@@ -71,19 +71,19 @@ pub fn init(app: &mut AppContext) {
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
-        ZapLaunchModalAction::Close,
+        ZapNGLaunchModalAction::Close,
         id!(ZapLaunchModal::ui_name()),
     )]);
 }
 
 #[derive(Clone, Debug)]
-pub enum ZapLaunchModalAction {
+pub enum ZapNGLaunchModalAction {
     Close,
     VisitRepo,
 }
 
 #[derive(Clone, Debug)]
-pub enum ZapLaunchModalEvent {
+pub enum ZapNGLaunchModalEvent {
     Close,
 }
 
@@ -136,13 +136,13 @@ impl ZapLaunchModal {
             ActionButton::new("", CloseButtonTheme)
                 .with_icon(Icon::X)
                 .with_size(ButtonSize::Small)
-                .on_click(|ctx| ctx.dispatch_typed_action(ZapLaunchModalAction::Close))
+                .on_click(|ctx| ctx.dispatch_typed_action(ZapNGLaunchModalAction::Close))
         });
 
         let cta_button = ctx.add_view(|_ctx| {
-            ActionButton::new(crate::t!("zap-launch-visit-repo"), CtaButtonTheme)
+            ActionButton::new(crate::t!("zap-ng-launch-visit-repo"), CtaButtonTheme)
                 .with_full_width(true)
-                .on_click(|ctx| ctx.dispatch_typed_action(ZapLaunchModalAction::VisitRepo))
+                .on_click(|ctx| ctx.dispatch_typed_action(ZapNGLaunchModalAction::VisitRepo))
         });
 
         Self {
@@ -202,7 +202,7 @@ impl ZapLaunchModal {
 
     fn render_title(appearance: &Appearance) -> Box<dyn Element> {
         Text::new(
-            crate::t!("zap-launch-title"),
+            crate::t!("zap-ng-launch-title"),
             appearance.ui_font_family(),
             20.,
         )
@@ -213,7 +213,7 @@ impl ZapLaunchModal {
 
     fn render_description(appearance: &Appearance) -> Box<dyn Element> {
         Text::new(
-            crate::t!("zap-launch-description"),
+            crate::t!("zap-ng-launch-description"),
             appearance.ui_font_family(),
             14.,
         )
@@ -365,7 +365,7 @@ impl ZapLaunchModal {
 }
 
 impl Entity for ZapLaunchModal {
-    type Event = ZapLaunchModalEvent;
+    type Event = ZapNGLaunchModalEvent;
 }
 
 impl View for ZapLaunchModal {
@@ -403,16 +403,16 @@ impl View for ZapLaunchModal {
 }
 
 impl TypedActionView for ZapLaunchModal {
-    type Action = ZapLaunchModalAction;
+    type Action = ZapNGLaunchModalAction;
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            ZapLaunchModalAction::Close => {
-                ctx.emit(ZapLaunchModalEvent::Close);
+            ZapNGLaunchModalAction::Close => {
+                ctx.emit(ZapNGLaunchModalEvent::Close);
             }
-            ZapLaunchModalAction::VisitRepo => {
+            ZapNGLaunchModalAction::VisitRepo => {
                 ctx.open_url(REPO_URL);
-                ctx.emit(ZapLaunchModalEvent::Close);
+                ctx.emit(ZapNGLaunchModalEvent::Close);
             }
         }
     }

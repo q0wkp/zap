@@ -160,7 +160,7 @@ pub fn assert_open_in_zap_ng_banner_open(tab_index: usize, pane_index: usize) ->
         terminal.read(app, |view, _ctx| {
             async_assert!(
                 view.is_open_in_zap_ng_banner_open(),
-                "Expected the 'Open in Zap' banner to be open"
+                "Expected the 'Open in ZapNG' banner to be open"
             )
         })
     })

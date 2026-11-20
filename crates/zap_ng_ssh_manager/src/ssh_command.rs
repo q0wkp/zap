@@ -308,7 +308,7 @@ impl AskpassHelper {
             .filter(|dir| dir.is_dir())
             .unwrap_or_else(std::env::temp_dir);
         let dir = tempfile::Builder::new()
-            .prefix("zap-ssh-askpass-")
+            .prefix("zap-ng-ssh-askpass-")
             .permissions(std::fs::Permissions::from_mode(0o700))
             .tempdir_in(base)?;
         let path = dir.path().join("askpass");
@@ -379,7 +379,7 @@ async fn run_ssh(
         .map_err(|e| SshRunError::Failed(format!("Failed to prepare the askpass helper: {e}")))?;
 
     // A session of its own leaves ssh without a controlling terminal, so it can never prompt
-    // on the terminal Zap was started from.
+    // on the terminal ZapNG was started from.
     let mut command = command::r#async::Command::new_with_session("ssh");
     command
         .args(cmd_args)

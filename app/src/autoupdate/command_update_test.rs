@@ -3,15 +3,15 @@ use std::fs;
 use super::*;
 
 #[test]
-fn test_tab_command_reports_success_to_zap() {
-    let pacman = "sudo pacman -U https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-1_mod.1-1-x86_64.pkg.tar.zst";
+fn test_tab_command_reports_success_to_zap_ng() {
+    let pacman = "sudo pacman -U https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-ng-1_mod.1-1-x86_64.pkg.tar.zst";
     assert_eq!(
         tab_command(pacman, ShellType::Bash, "abc1234"),
         format!("{pacman} && warp_finish_update abc1234")
     );
     assert_eq!(
-        tab_command("pacstall -I zap-deb", ShellType::Zsh, "abc1234"),
-        "pacstall -I zap-deb && warp_finish_update abc1234"
+        tab_command("pacstall -I zap-ng-deb", ShellType::Zsh, "abc1234"),
+        "pacstall -I zap-ng-deb && warp_finish_update abc1234"
     );
     assert_eq!(
         tab_command(pacman, ShellType::Fish, "abc1234"),
@@ -22,13 +22,13 @@ fn test_tab_command_reports_success_to_zap() {
 #[test]
 fn test_file_identity_changes_when_the_file_is_replaced() {
     let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("zap");
+    let path = dir.path().join("zap-ng");
     fs::write(&path, "old version").unwrap();
     let before = FileIdentity::of(&path).unwrap();
     assert_eq!(FileIdentity::of(&path).unwrap(), before);
 
     // Package managers unpack the new file next to the old one and rename it into place.
-    let new_path = dir.path().join("zap.new");
+    let new_path = dir.path().join("zap-ng.new");
     fs::write(&new_path, "new version").unwrap();
     fs::rename(&new_path, &path).unwrap();
     assert_ne!(FileIdentity::of(&path).unwrap(), before);
@@ -46,14 +46,14 @@ fn test_homebrew_upgrade_command_needs_the_cask_installed() {
     }
     let prefixes = || [apple_silicon.as_path(), intel.as_path()];
 
-    // Homebrew is installed, but Zap's cask isn't.
+    // Homebrew is installed, but ZapNG's cask isn't.
     assert_eq!(homebrew_upgrade_command_in(prefixes()), None);
 
-    fs::create_dir_all(intel.join("Caskroom/zap-terminal/2026.07.09.2-mod.2")).unwrap();
+    fs::create_dir_all(intel.join("Caskroom/zap-ng/2026.07.09.2-mod.2")).unwrap();
     assert_eq!(
         homebrew_upgrade_command_in(prefixes()),
         Some(format!(
-            "{} upgrade --cask --greedy zap-terminal",
+            "{} upgrade --cask --greedy zap-ng",
             intel.join("bin/brew").display()
         ))
     );
@@ -68,14 +68,14 @@ fn test_arch_pkgver_matches_bundle_arch() {
     assert_eq!(arch_pkgver("vv1"), "v1");
 }
 
-/// The assets of q0wkp/pkgs' release `x86_64` once it has published Zap's v2026.07.09.2-mod.3.
+/// The assets of q0wkp/pkgs' release `x86_64` once it has published ZapNG's v2026.07.09.2-mod.3.
 const PKGS_ASSETS: [&str; 8] = [
     "q0wkp.db",
     "q0wkp.db.sig",
     "q0wkp.files",
     "q0wkp.files.sig",
-    "zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
-    "zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
+    "zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
+    "zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
     "zmx-bin-0.8.2.mod.2-1-x86_64.pkg.tar.zst",
     "zmx-bin-0.8.2.mod.2-1-x86_64.pkg.tar.zst.sig",
 ];
@@ -84,59 +84,59 @@ const PKGS_ASSETS: [&str; 8] = [
 fn test_find_pacman_package() {
     let tag = "v2026.07.09.2-mod.3";
     assert_eq!(
-        find_pacman_package(PKGS_ASSETS, "zap", tag),
-        Some("zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst")
+        find_pacman_package(PKGS_ASSETS, "zap-ng", tag),
+        Some("zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst")
     );
     // Not another version, package or architecture.
     assert_eq!(
-        find_pacman_package(PKGS_ASSETS, "zap", "v2026.07.09.2-mod.2"),
+        find_pacman_package(PKGS_ASSETS, "zap-ng", "v2026.07.09.2-mod.2"),
         None
     );
     assert_eq!(find_pacman_package(PKGS_ASSETS, "zmx", "v0.8.2"), None);
     assert_eq!(
         find_pacman_package(
             [
-                "zap-bin-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
-                "zap-bin-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
-                "zap-2026.07.09.2_mod.3-1-aarch64.pkg.tar.zst",
-                "zap-2026.07.09.2_mod.3-1-aarch64.pkg.tar.zst.sig",
-                "zap-2026.07.09.2_mod.3-x-x86_64.pkg.tar.zst",
-                "zap-2026.07.09.2_mod.3-x-x86_64.pkg.tar.zst.sig",
+                "zap-ng-bin-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
+                "zap-ng-bin-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
+                "zap-ng-2026.07.09.2_mod.3-1-aarch64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-1-aarch64.pkg.tar.zst.sig",
+                "zap-ng-2026.07.09.2_mod.3-x-x86_64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-x-x86_64.pkg.tar.zst.sig",
             ],
-            "zap",
+            "zap-ng",
             tag
         ),
         None
     );
     // Not without its signature.
     assert_eq!(
-        find_pacman_package(["zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"], "zap", tag),
+        find_pacman_package(["zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"], "zap-ng", tag),
         None
     );
     // The highest pkgrel that has its signature.
     assert_eq!(
         find_pacman_package(
             [
-                "zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
-                "zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
-                "zap-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst",
-                "zap-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst.sig",
-                "zap-2026.07.09.2_mod.3-2.1-x86_64.pkg.tar.zst",
-                "zap-2026.07.09.2_mod.3-2.1-x86_64.pkg.tar.zst.sig",
-                "zap-2026.07.09.2_mod.3-11-x86_64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst.sig",
+                "zap-ng-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst.sig",
+                "zap-ng-2026.07.09.2_mod.3-2.1-x86_64.pkg.tar.zst",
+                "zap-ng-2026.07.09.2_mod.3-2.1-x86_64.pkg.tar.zst.sig",
+                "zap-ng-2026.07.09.2_mod.3-11-x86_64.pkg.tar.zst",
             ],
-            "zap",
+            "zap-ng",
             tag
         ),
-        Some("zap-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst")
+        Some("zap-ng-2026.07.09.2_mod.3-10-x86_64.pkg.tar.zst")
     );
 }
 
 #[test]
 fn test_pacman_package_url() {
     assert_eq!(
-        pacman_package_url("zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"),
-        "https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"
+        pacman_package_url("zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"),
+        "https://github.com/q0wkp/pkgs/releases/download/x86_64/zap-ng-2026.07.09.2_mod.3-1-x86_64.pkg.tar.zst"
     );
 }
 
@@ -166,7 +166,7 @@ mod pkgs_published {
         server
             .mock(
                 "GET",
-                format!("/q0wkp/pkgs/main/versions/zap/{target}").as_str(),
+                format!("/q0wkp/pkgs/main/versions/zap-ng/{target}").as_str(),
             )
             .with_body(format!("{tag}\n"))
             .create_async()
@@ -203,7 +203,7 @@ mod pkgs_published {
         // q0wkp/pkgs has never published for the target.
         let mut server = Server::new_async().await;
         server
-            .mock("GET", "/q0wkp/pkgs/main/versions/zap/pacstall")
+            .mock("GET", "/q0wkp/pkgs/main/versions/zap-ng/pacstall")
             .with_status(404)
             .create_async()
             .await;
@@ -245,7 +245,7 @@ mod pkgs_published {
     #[tokio::test]
     async fn test_pacman_needs_the_signed_package() {
         let tag = "v1.0.2-mod.1";
-        let package = "zap-1.0.2_mod.1-1-x86_64.pkg.tar.zst";
+        let package = "zap-ng-1.0.2_mod.1-1-x86_64.pkg.tar.zst";
         let signature = format!("{package}.sig");
 
         // The version file names the release, but its package isn't signed yet.

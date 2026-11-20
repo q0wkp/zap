@@ -638,7 +638,7 @@ fn test_layout_text_last_line_clipped_ligatures() -> Result<()> {
     // The text should only fit one line.
     assert_eq!(frame.lines().len(), 1);
 
-    // The text is one line long and should be clipped like so: "m𐍈re, Zapfin𐍈!l...".
+    // The text is one line long and should be clipped like so: "m𐍈re, ZapNGfin𐍈!l...".
     // Note that the contents are not clipped, but the width being greater than the max width
     // indicates that when we paint, this is clipped.
     assert_eq!(

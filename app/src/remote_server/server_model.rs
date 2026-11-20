@@ -167,7 +167,7 @@ pub struct ServerModel {
     /// Per-connection outbound channels, keyed by `ConnectionId`.
     ///
     /// The daemon can serve multiple proxy connections simultaneously — one
-    /// per SSH session / Zap tab connecting to this host.  Each entry maps
+    /// per SSH session / ZapNG tab connecting to this host.  Each entry maps
     /// a connection's `Uuid` to the channel the connection task drains to
     /// write `ServerMessage`s back to its proxy.
     connection_senders: HashMap<ConnectionId, async_channel::Sender<ServerMessage>>,
@@ -648,7 +648,7 @@ impl ServerModel {
             Some(client_message::Message::ResolveConflict(msg)) => {
                 self.handle_resolve_conflict(msg, &request_id, conn_id, ctx)
             }
-            // Zap:远端终端文件链接的目录列举(校验路径形态用)。
+            // ZapNG:远端终端文件链接的目录列举(校验路径形态用)。
             #[cfg(feature = "local_fs")]
             Some(client_message::Message::ListDirectory(msg)) => self.handle_list_directory(msg),
             #[cfg(feature = "local_fs")]
@@ -1496,7 +1496,7 @@ impl ServerModel {
         }
     }
 
-    /// Zap:处理 `ListDirectory` —— 同步列举一个目录下的直接子项。
+    /// ZapNG:处理 `ListDirectory` —— 同步列举一个目录下的直接子项。
     ///
     /// 给远端终端文件链接检测做精确校验用:客户端缓存某个 cwd 下的
     /// 真实目录项,链接检测器据此从 `ls -l` 整行里切出正确的文件名。

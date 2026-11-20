@@ -1,5 +1,5 @@
 // We can use `std::process:Command` here because this is invoked within a build script,
-// _not_ within the Zap binary.
+// _not_ within the ZapNG binary.
 #![allow(clippy::disallowed_types)]
 
 use std::{env, path::PathBuf, process::Command};

@@ -457,8 +457,8 @@ fn test_resolve_asset_source_leaves_non_local_markdown_images_unchanged() {
     let document_path = Path::new("/tmp/document.md");
     let base_directory = document_path.parent();
 
-    // 上游用 data URI 作为第二个非本地来源；Zap 没有 `data_uri_source`（属 warpdotdev/warp#13620），
-    // 在 Zap 中 data: 会被解析成 LocalFile，故改用 bundled 来源覆盖同等的「非本地来源不变」语义。
+    // 上游用 data URI 作为第二个非本地来源；ZapNG 没有 `data_uri_source`（属 warpdotdev/warp#13620），
+    // 在 ZapNG 中 data: 会被解析成 LocalFile，故改用 bundled 来源覆盖同等的「非本地来源不变」语义。
     for source in ["https://example.com/image.png", "asset:///bundled/icon.svg"] {
         assert_eq!(
             resolve_asset_source(source, Some(document_path)),

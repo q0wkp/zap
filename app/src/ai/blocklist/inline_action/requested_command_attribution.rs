@@ -1,5 +1,5 @@
 //! Module to attribute AI-generated requested commands
-//! to known documents (e.g. Zap Drive objects).
+//! to known documents (e.g. ZapNG Drive objects).
 
 use zap_ng_ui::AppContext;
 use zap_ng_ui::SingletonEntity;
@@ -32,7 +32,7 @@ pub(crate) fn is_command_copied_from_document(
 }
 
 /// Returns true iff the `command` is directly copied from the
-/// Zap Drive object identified by `object_uid`.
+/// ZapNG Drive object identified by `object_uid`.
 fn is_command_copied_from_zap_ng_drive_object(
     command: &str,
     object_uid: &str,

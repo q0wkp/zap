@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh the models.dev catalog built into Zap.
+"""Refresh the models.dev catalog built into ZapNG.
 
 Usage: script/update_models_dev_catalog [--source <URL or file>]
 
@@ -106,7 +106,7 @@ def trim(catalog):
 
 def read_source(source):
     if source.startswith(("http://", "https://")):
-        request = urllib.request.Request(source, headers={"User-Agent": "zap-catalog-update"})
+        request = urllib.request.Request(source, headers={"User-Agent": "zap-ng-catalog-update"})
         with urllib.request.urlopen(request, timeout=60) as response:
             return response.read()
     return pathlib.Path(source).read_bytes()

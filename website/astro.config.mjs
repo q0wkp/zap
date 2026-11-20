@@ -3,7 +3,7 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://zap.dev',
+  site: 'https://zap-ng.dev',
   integrations: [mdx(), sitemap()],
   trailingSlash: 'ignore',
   redirects: {
