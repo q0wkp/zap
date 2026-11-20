@@ -70,3 +70,5 @@ Project: renamed to ZapNG,"The project is ZapNG: the application ID is dev.q0wkp
 Themes: Adeberry by default,The theme is Adeberry until the user picks another; it was Dark.,623d5cacb,,,,
 Completions v2: removed,"The unfinished JavaScript-plugin completions, their plugin host and the QuickJS bindings are removed, as Warp removed them. No build had them enabled.",61880c2dc,#30,David Stern,Warp (warpdotdev/warp) PR 15965,AGPL-3.0-only
 Settings: zap-ng.toml,"The settings Warp doesn't have are kept in zap-ng.toml, under paths of their own; settings.toml holds only what Warp's settings file holds.",563915c1f,,,,
+Plugins: WebAssembly plugins,"ZapNG loads plugins, WebAssembly components with a manifest, from its bundled resources and from ~/.zap-ng/plugins, and runs them in a sandbox: a plugin sees its own working directory and what its manifest was granted. A plugin can provide what others require, such as a language runtime.",9cfa8f5fa 3b961e930,,,,
+Import from Zap,"On the first start ZapNG offers to import a Zap install: its settings, files, data and saved secrets. The import is a bundled plugin.",27ee4da46 3b961e930,,,,
