@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
 // SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
 // SPDX-License-Identifier: MIT AND AGPL-3.0-only
-// Modified by Tianyu (Sky) Lu in 2026: removed the Windows font loader and the Windows CJK font warm-up; renamed the Warp and Zap names to ZapNG.
+// Modified by Tianyu (Sky) Lu in 2026: removed the Windows font loader, the Windows CJK font warm-up and a Windows-only guard; renamed the Warp and Zap names to ZapNG.
 
 mod font_handle;
 mod str_index_map;
@@ -896,12 +896,9 @@ impl TextLayoutSystem {
 
                 if let Some(font_id) = font_id {
                     self.font_selections.retain(|_, v| *v != font_id);
-                    #[cfg(not(target_os = "windows"))]
-                    {
-                        self.fallback_fonts.remove(&font_id);
-                        for mut entry in self.fallback_fonts.iter_mut() {
-                            entry.value_mut().retain(|id| *id != font_id);
-                        }
+                    self.fallback_fonts.remove(&font_id);
+                    for mut entry in self.fallback_fonts.iter_mut() {
+                        entry.value_mut().retain(|id| *id != font_id);
                     }
                     self.loaded_fonts.retain(|_, v| *v != font_id);
                     let mut families = self.families.write();

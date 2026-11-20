@@ -1,25 +1,12 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only test.
+
 use super::*;
 
 #[test]
-#[cfg(windows)]
-fn bracketed_paste_command_execution_normalizes_crlf_to_lf_for_posix_shells_on_windows() {
-    let command = "curl 'https://google.com' \\\r\n  -H 'accept: application/json'";
-
-    let bytes = bytes_to_execute_command(command, ShellType::Bash, true);
-
-    let mut expected = ShellType::Bash.kill_buffer_bytes().to_vec();
-    expected.extend_from_slice(escape_sequences::BRACKETED_PASTE_START);
-    expected.extend_from_slice(b"curl 'https://google.com' \\\n  -H 'accept: application/json'");
-    expected.extend_from_slice(escape_sequences::BRACKETED_PASTE_END);
-    expected.extend_from_slice(ShellType::Bash.execute_command_bytes());
-
-    assert_eq!(bytes, expected);
-    assert!(!bytes.contains(&b'\r'));
-}
-
-#[test]
-#[cfg(not(windows))]
-fn bracketed_paste_command_execution_preserves_crlf_for_posix_shells_off_windows() {
+fn bracketed_paste_command_execution_preserves_crlf_for_posix_shells() {
     let command = "curl 'https://google.com' \\\r\n  -H 'accept: application/json'";
 
     let bytes = bytes_to_execute_command(command, ShellType::Bash, true);

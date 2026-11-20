@@ -830,7 +830,6 @@ fn bytes_to_execute_command(
 ) -> Vec<u8> {
     let mut command_bytes = shell_type.kill_buffer_bytes().to_vec();
     let command = match ShellFamily::from(shell_type) {
-        ShellFamily::Posix if cfg!(windows) => LINEFEED_REGEX.replace_all(command, "\n"),
         ShellFamily::PowerShell => LINEFEED_REGEX.replace_all(command, "\r"),
         _ => Cow::Borrowed(command),
     };

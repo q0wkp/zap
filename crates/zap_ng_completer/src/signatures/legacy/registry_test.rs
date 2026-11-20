@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
 // SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
 // SPDX-License-Identifier: AGPL-3.0-only
-// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+// Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only test of the .exe suffix; renamed the Warp and Zap names to ZapNG.
 
 use warp_command_signatures::{Priority, Signature};
 use zap_ng_core::channel::Channel;
@@ -377,19 +377,6 @@ fn test_registered_signature_longer_than_the_cap_is_unresolvable() {
     let registry = create_test_command_registry([signature_with_name(&long_name)]);
 
     assert_eq!(registry.signature(&long_name), None);
-}
-
-#[cfg(windows)]
-#[test]
-fn test_exe_suffix_is_trimmed_before_the_length_check() {
-    let max_length_name = "a".repeat(MAX_CACHEABLE_COMMAND_LEN);
-    let registry = create_test_command_registry([signature_with_name(&max_length_name)]);
-
-    let token = format!("{max_length_name}.exe");
-    assert_eq!(
-        registry.signature(&token).map(|s| s.name.as_str()),
-        Some(max_length_name.as_str())
-    );
 }
 
 #[test]
