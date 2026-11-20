@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Print, or append to WINDOWS_REMOVAL.csv, the rows for one commit that removed Windows code.
+
+The file grows one commit at a time: run this for each new commit that removes Windows code, never for
+the whole history. A commit already listed with the same kind is refused.
+
+One row per file, with the hunks of the commit's diff in the form of its hunk headers
+(`-<line>,<count> +<line>,<count>`, as `git show <commit> -- <file>` prints them).
+
+    script/windows_removal_rows <COMMIT> [--pr '#<N>'] [--windows-hunks-only] [--append] [-- <PATHSPEC>...]
+    script/windows_removal_rows <MERGE> --against <MERGE>^2 --kind 'removed in merge' ...
+    script/windows_removal_rows <PORT> --left-out-of <SOURCE> --pr '#<N>' ...
+    script/windows_removal_rows <FOREIGN> --kind 'not taken' --note '...' ...
+
+--against diffs <REV> to COMMIT instead of COMMIT's own diff. --left-out-of lists the Windows lines that
+SOURCE adds and the port COMMIT does not, by their line numbers in SOURCE. A PATHSPEC limits the files.
+"""
+import argparse
+import csv
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CSV = ROOT / "WINDOWS_REMOVAL.csv"
+HEADER = ["Commit", "Pull request", "Date", "Subject", "Kind", "File", "Hunks", "Note"]
+WINDOWS = re.compile(r"windows|wsl|msys|conpty|con_pty|win32|winapi|\.exe\b|powershell|pwsh", re.I)
+
+
+def git(*args):
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL).stdout
+
+
+def hunks(diff):
+    """Yield [path, header, removed lines, added lines, first new line] for each hunk of a -U0 diff."""
+    path = old_path = None
+    hunk = None
+    for line in diff.splitlines():
+        if line.startswith("diff --git "):
+            if hunk:
+                yield hunk
+            hunk = None
+            m = re.match(r"diff --git a/(.*) b/(.*)", line)
+            old_path, path = m.group(1), m.group(2)
+        elif line.startswith("Binary files "):
+            if hunk:
+                yield hunk
+            hunk = [path, "binary file", [], [], 0]
+        elif line.startswith("+++ "):
+            if line[4:] == "/dev/null":
+                path = old_path
+        elif line.startswith("@@ "):
+            if hunk:
+                yield hunk
+            m = re.match(r"@@ -(\d+)(,\d+)? \+(\d+)(,\d+)? @@", line)
+            header = f"-{m.group(1)}{m.group(2) or ''} +{m.group(3)}{m.group(4) or ''}"
+            hunk = [path, header, [], [], int(m.group(3))]
+        elif hunk is not None and line[:1] in "+-" and not line.startswith(("+++ ", "--- ")):
+            (hunk[3] if line[0] == "+" else hunk[2]).append(line[1:])
+    if hunk:
+        yield hunk
+
+
+def diff_of(commit, against, pathspec):
+    if against:
+        return git("diff", "-U0", "--no-renames", against, commit, "--", *pathspec)
+    return git("show", "--format=", "-U0", "--no-renames", commit, "--", *pathspec)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("commit")
+    p.add_argument("--pr", default="", help="the pull request, as '#<N>'")
+    p.add_argument("--kind", default=None, help="default: 'removed', or 'left out of port' with --left-out-of")
+    p.add_argument("--note", default="")
+    p.add_argument("--against", help="diff this revision to COMMIT instead of COMMIT's own diff")
+    p.add_argument("--left-out-of", metavar="SOURCE", help="the commit the port COMMIT was taken from")
+    p.add_argument("--windows-hunks-only", action="store_true", help="keep only hunks that mention Windows")
+    p.add_argument("--append", action="store_true", help=f"append to {CSV.name} instead of printing")
+    argv = sys.argv[1:]
+    pathspec = argv[argv.index("--") + 1:] if "--" in argv else []
+    a = p.parse_args(argv[:argv.index("--")] if "--" in argv else argv)
+    a.pathspec = pathspec
+
+    commit = git("rev-parse", "--short=9", a.commit).strip()
+    date, subject = git("log", "-1", "--format=%ad%x09%s", "--date=short", a.commit).strip().split("\t", 1)
+    files = {}
+    if a.left_out_of:
+        source = git("rev-parse", "--short=9", a.left_out_of).strip()
+        ours = {line for h in hunks(diff_of(a.commit, None, a.pathspec)) for line in h[3]}
+        for path, _, _, added, start in hunks(diff_of(a.left_out_of, None, a.pathspec)):
+            lines = [f"+{start + i}" for i, line in enumerate(added) if WINDOWS.search(line) and line not in ours]
+            if lines:
+                files.setdefault(path, []).extend(lines)
+        kind = a.kind or "left out of port"
+        note = a.note or f"Line numbers are in {source}, the commit it was taken from (git show {source})."
+    else:
+        for path, header, removed, added, _ in hunks(diff_of(a.commit, a.against, a.pathspec)):
+            if a.windows_hunks_only and not any(WINDOWS.search(line) for line in removed + added):
+                continue
+            files.setdefault(path, []).append(header)
+        kind = a.kind or "removed"
+        note = a.note
+    if not files:
+        sys.exit(f"{commit}: no changes found")
+
+    rows = [[commit, a.pr, date, subject, kind, path, "; ".join(files[path]), note] for path in sorted(files)]
+    if a.append:
+        new = not CSV.exists()
+        if not new:
+            with CSV.open(newline="") as f:
+                listed = {(r["Commit"], r["Kind"]) for r in csv.DictReader(f)}
+            if (commit, kind) in listed:
+                sys.exit(f"{commit} ({kind}) is already in {CSV.name}")
+        with CSV.open("a", newline="") as f:
+            w = csv.writer(f, lineterminator="\n")
+            if new:
+                w.writerow(HEADER)
+            w.writerows(rows)
+        print(f"{len(rows)} rows appended to {CSV.name}")
+    else:
+        csv.writer(sys.stdout, lineterminator="\n").writerows(rows)
+
+
+if __name__ == "__main__":
+    main()

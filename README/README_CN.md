@@ -98,7 +98,9 @@ enabled = false
 - Linux：x86_64
 - macOS：aarch64 和 x86_64
 
-不支持 Windows。
+有意不支持 Windows，因为我不在 Windows 上使用 ZapNG。如果你想恢复 Windows 支持，欢迎另开一个 fork 来做：
+[WINDOWS_REMOVAL.csv](../WINDOWS_REMOVAL.csv) 列出了移除 Windows 代码的提交和 pull request，以及每个文件在该提交里改动的位置，也许能帮上忙。
+位置是该提交 diff 中的 hunk（`-<行号>,<行数> +<行号>,<行数>`，与 `git show <commit> -- <file>` 的输出一致）；如果位置指的是另一个提交，Note 一列会注明。
 
 ## 相对原版 Zap 的改动
 

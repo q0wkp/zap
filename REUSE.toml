@@ -512,6 +512,7 @@ path = [
     "crates/zap_ng_plugin/wit/plugin.wit",
     "crates/zap_ng_ssh_manager/src/askpass.sh",
     "plugins/import-zap/plugin.toml",
+    "WINDOWS_REMOVAL.csv",
 ]
 SPDX-FileCopyrightText = ["2026 Tianyu (Sky) Lu"]
 SPDX-License-Identifier = "AGPL-3.0-only"
