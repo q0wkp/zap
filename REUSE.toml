@@ -28,13 +28,6 @@ path = [
     "app/assets/bundled/svg/goose.svg",
     "app/assets/bundled/svg/omp.svg",
     "app/assets/bundled/svg/server-01.svg",
-    "app/channels/oss/icon/padded/128x128.png",
-    "app/channels/oss/icon/padded/16x16.png",
-    "app/channels/oss/icon/padded/256x256.png",
-    "app/channels/oss/icon/padded/32x32.png",
-    "app/channels/oss/icon/padded/48x48.png",
-    "app/channels/oss/icon/padded/512x512.png",
-    "app/channels/oss/icon/padded/64x64.png",
     "app/i18n.toml",
     "app/i18n/MACOS.md",
     "app/src/ai/agent_providers/active_ai/parsing.rs",
@@ -200,7 +193,6 @@ SPDX-License-Identifier = "OFL-1.1"
 [[annotations]]
 path = [
     "app/channels/oss/dev.q0wkp.zapng.desktop",
-    "app/channels/oss/icon/AppIcon.icon/Assets/logo.svg",
     "app/i18n/PROGRESS.md",
     "app/src/ai/agent_providers/prompts/commands/init_project.j2",
     "app/src/ai/agent_providers/prompts/partials/plan_mode.j2",
@@ -214,12 +206,10 @@ path = [
     "app/src/ai/agent_providers/prompts/system/kimi.j2",
     "app/src/ai/agent_providers/prompts/system/local.j2",
     "app/src/ai/agent_providers/prompts/system/trinity.j2",
-    "assets/zap-ng-logo.svg",
     "crates/persistence/migrations/2026-05-11-000000_drop_lsp_workspace_tables/down.sql",
     "docs/roadmap.ja.md",
     "docs/roadmap.md",
     "docs/roadmap.zh-CN.md",
-    "logo.svg",
     "website/CHANGELOG.md",
     "website/README.md",
     "website/astro.config.mjs",
@@ -229,7 +219,6 @@ path = [
     "website/design/ZapNG.html",
     "website/package-lock.json",
     "website/package.json",
-    "website/public/logo.svg",
     "website/src/components/DocsNav.astro",
     "website/src/components/I18nScript.astro",
     "website/src/components/LandingFooter.astro",
@@ -321,7 +310,6 @@ path = [
     "app/DockTilePlugin/ZapNGDockTilePlugin.h",
     "app/DockTilePlugin/ZapNGDockTilePlugin.m",
     "app/assets/bundled/svg/warp-2.svg",
-    "app/assets/bundled/svg/warp-3.svg",
     "app/assets/bundled/svg/warp-drive.svg",
     "app/assets/bundled/svg/warp-logo-dark.svg",
     "app/assets/bundled/svg/warp-logo-light.svg",
@@ -526,4 +514,35 @@ path = [
     "plugins/import-zap/plugin.toml",
 ]
 SPDX-FileCopyrightText = ["2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours and drew its bars as Liquid Glass layers.
+[[annotations]]
+path = ["app/channels/oss/icon/AppIcon.icon/**"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours.
+[[annotations]]
+path = [
+    "app/DockTilePlugin/Resources/warp_2.png",
+    "app/channels/oss/icon/padded/*.png",
+]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [
+    "assets/zap-ng-logo.svg",
+    "logo.svg",
+    "website/public/logo.svg",
+]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["app/assets/bundled/svg/warp-3.svg"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
 SPDX-License-Identifier = "AGPL-3.0-only"

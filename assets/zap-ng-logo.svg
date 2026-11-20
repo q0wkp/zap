@@ -14,11 +14,11 @@
        y2="0">
       <stop
          offset="0%"
-         stop-color="#184f83"
+         stop-color="#7a2fa8"
          id="stop1" />
       <stop
          offset="100%"
-         stop-color="#0175c2"
+         stop-color="#a23bb5"
          id="stop2" />
     </linearGradient>
     <linearGradient
@@ -29,11 +29,11 @@
        y2="0">
       <stop
          offset="0%"
-         stop-color="#0175c2"
+         stop-color="#a23bb5"
          id="stop3" />
       <stop
          offset="100%"
-         stop-color="#01a9fc"
+         stop-color="#d04d9c"
          id="stop4" />
     </linearGradient>
     <linearGradient
@@ -44,11 +44,11 @@
        y2="0">
       <stop
          offset="0%"
-         stop-color="#01a9fc"
+         stop-color="#d04d9c"
          id="stop5" />
       <stop
          offset="100%"
-         stop-color="#00ced1"
+         stop-color="#f26f7c"
          id="stop6" />
     </linearGradient>
     <linearGradient
@@ -59,11 +59,11 @@
        y2="0">
       <stop
          offset="0%"
-         stop-color="#00ced1"
+         stop-color="#f26f7c"
          id="stop7" />
       <stop
          offset="100%"
-         stop-color="#66ffcc"
+         stop-color="#ffab8c"
          id="stop8" />
     </linearGradient>
   </defs>

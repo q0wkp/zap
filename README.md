@@ -113,6 +113,8 @@ This project is not affiliated with, endorsed by, or sponsored by Denver Technol
 
 This project is not affiliated with, endorsed by, or sponsored by Zap or its maintainers. "Zap" refers to the software developed by zerx-lab (https://github.com/zerx-lab/zap) and is referenced here solely for descriptive purposes.
 
+The ZapNG logo is a modified version of the Zap logo, which the authors of Zap (https://github.com/zerx-lab/zap) distributed under the GNU Affero General Public License, version 3 (AGPL-3.0-only); its colours were changed.
+
 ## License
 
 Copyright 2026 Tianyu (Sky) Lu
