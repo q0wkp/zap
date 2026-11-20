@@ -1,0 +1,34 @@
+package zap-ng:plugin@0.1.0;
+
+/// What ZapNG offers a plugin. Files are reached through WASI instead: a plugin sees its own
+/// working directory at `/work`, and the directories its manifest was granted under `/home`.
+interface host {
+    enum log-level {
+        debug,
+        info,
+        warn,
+        error,
+    }
+
+    /// Writes a line to ZapNG's log, under the plugin's name.
+    log: func(level: log-level, message: string);
+
+    /// The plugin's own table of `zap-ng.toml`, `[plugins.<id>.config]`, as TOML text. Empty
+    /// when the user set nothing.
+    plugin-config: func() -> string;
+
+    /// Reads a secret another application stored in the system keychain, under that
+    /// application's service name. Needs the `secrets` capability.
+    read-secret: func(service: string, key: string) -> result<option<string>, string>;
+
+    /// Stores a secret in ZapNG's own keychain entry. Needs the `secrets` capability.
+    write-secret: func(key: string, value: string) -> result<_, string>;
+}
+
+world plugin {
+    import host;
+
+    /// Called for each hook the manifest subscribes to. `payload` and the returned text are
+    /// JSON whose shape the hook defines.
+    export handle: func(hook: string, payload: string) -> result<string, string>;
+}

@@ -1,0 +1,14 @@
+# A plugin for the host's tests. It is built on its own for wasm32-wasip2, outside the workspace.
+[package]
+name = "probe"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = "0.61"
+
+[workspace]
