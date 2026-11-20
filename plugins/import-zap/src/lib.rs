@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Imports a Zap install into ZapNG: its directories are copied to ZapNG's, the settings ZapNG
 //! keeps in `zap-ng.toml` are moved there, and the secrets saved in the keychain are copied to
 //! ZapNG's entry.

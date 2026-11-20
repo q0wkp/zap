@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use super::{attach_command, list_sessions_command, parse_session_names, switch_session_command};
 
 #[test]

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Secret redaction for everything BYOP sends to a provider.
 //!
 //! With secret redaction on (Settings → Privacy), no detected secret may leave in a request to

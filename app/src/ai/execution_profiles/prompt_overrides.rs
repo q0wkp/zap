@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Per-profile choices of where each prompt comes from.
 //!
 //! Every prompt a profile sends to a BYOP model has a slot here. A slot left on

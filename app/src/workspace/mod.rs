@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: registered the multi-line command confirmation dialog and added the action and keybinding that open the BYOP request inspector; renamed the Warp and Zap names to ZapNG.
+
 mod action;
 mod active_session;
 pub mod bonus_grant_notification_model;

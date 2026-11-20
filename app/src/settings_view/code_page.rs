@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! Code 设置页:ZapNG 在 LSP 全栈 + 持久化 workspace 历史下线后,
 //! 这个页面只剩「编辑器与代码评审」相关的几个本地开关。
 //!

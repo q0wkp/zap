@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! BYOP `webfetch` 与 `websearch` 工具的本地执行逻辑。
 //!
 //! 这两个 BYOP 工具不走 protobuf executor(`warp_multi_agent_api` 没有对应 variant),

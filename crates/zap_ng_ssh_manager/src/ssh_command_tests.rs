@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests for the askpass password helper, host-key handling, endpoint validation and zmx sessions, and dropped the Windows askpass tests; renamed the Warp and Zap names to ZapNG.
+
 //! `ssh_command` 单元测试。
 //!
 //! 按 `AGENTS.md §5.6` 拆出到独立文件,由 `ssh_command.rs` 末尾的 `#[path]` 引入。

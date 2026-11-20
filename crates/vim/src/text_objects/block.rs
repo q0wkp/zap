@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: kept the inner block range ordered when a block holds only padding, such as an empty pair of braces; renamed the Warp and Zap names to ZapNG.
+
 //! This module is for "block objects" i.e. text objects delimited by brackets/parentheses.
 
 use std::ops::Range;

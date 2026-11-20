@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: kept the breadcrumb's mouse states between renders so hovering no longer re-renders without end; renamed the Warp and Zap names to ZapNG.
+
 //! SFTP 浏览器主视图
 //!
 //! 实现 BackingView trait，作为 pane 的核心视图组件。

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The request inspector pane: a live list of the calls zap-ng makes to BYOP providers, with the
 //! request and the response of the selected one.
 //!

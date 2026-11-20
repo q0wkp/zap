@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Updates installed by running the package manager that installed ZapNG (pacman, Pacstall, Homebrew)
 //! in a terminal tab: checking that q0wkp/pkgs has published the update for that package manager,
 //! building the tab's command line, and noticing that the package manager has replaced the running

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! SFTP 集成测试辅助函数
 //!
 //! 提供 SFTP 浏览器视图获取、mock 后端创建、面板打开与注入等辅助功能。

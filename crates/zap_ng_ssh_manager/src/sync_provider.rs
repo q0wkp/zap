@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added the zmx session to the synced SSH server data; renamed the Warp and Zap names to ZapNG.
+
 //! SSH 数据同步提供者，实现 SyncDataProvider trait
 //!
 // author: logic

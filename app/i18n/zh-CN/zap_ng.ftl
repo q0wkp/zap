@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: added Chinese strings for the plugins and Zap import, SSH manager prompts and zmx sessions, BYOP inspector and prompts, command explanation and package-manager updates, and removed the Windows ones; renamed the Warp and Zap names to ZapNG.
+
 # ZapNG 桌面端 — 简体中文
 # 缺失的 key 会自动 fallback 到 en/warp.ftl，所以可以分批补译。
 # 术语统一：Agent → 智能体 / Block → 命令块 / Drive → 云盘 / Workflow → 工作流 / Profile → 配置

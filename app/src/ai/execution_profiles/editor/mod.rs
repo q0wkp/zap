@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added per-profile prompt overrides to the editor, with built-in or custom templates, and dropped the Windows-only path handling; renamed the Warp and Zap names to ZapNG.
+
 use crate::ai::agent_providers::custom_prompts;
 use crate::ai::agent_providers::prompt_renderer::BUILTIN_SYSTEM_TEMPLATES;
 use crate::ai::blocklist::BlocklistAIPermissions;

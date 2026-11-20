@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: exported the new host-key, endpoint validation, zmx session listing, startup command and keychain-aware delete and clone items; renamed the Warp and Zap names to ZapNG.
+
 //! SSH 管理器数据层 — 持久化的服务器 / 文件夹树 + OS keychain 凭据存储 +
 //! 命令拼装。UI 与 PTY 注入逻辑放在 `app/src/ssh_manager/` 与 `secret_injector`
 //! 模块,这里保持纯 Rust、无 zap_ng_ui 依赖、可单独 `cargo test` 跑。

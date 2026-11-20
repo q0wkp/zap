@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added kitty unicode-placeholder images with virtual placements and the delete specifiers, and made graphics replies use the protocol's error codes and id rules; renamed the Warp and Zap names to ZapNG.
+
 use anyhow::Result;
 use base64::Engine;
 use flate2::read::ZlibDecoder;

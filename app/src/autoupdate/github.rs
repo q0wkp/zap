@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added versioned release file names, release-page lookup for package-manager updates and this fork's release source, and dropped Windows code; renamed the Warp and Zap names to ZapNG.
+
 // ZapNG(Channel::Oss)autoupdate 走 GitHub Releases API,而非 ZapNG 官方
 // channel_versions / GCS。本模块只负责"取最新 release 元数据" + "按文件名挑资产";
 // 实际的下载落盘 + 打开目录由 mac.rs / linux.rs 完成。

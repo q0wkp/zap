@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! Voltron (https://en.wikipedia.org/wiki/Voltron) in ZapNG is a code name for the UI element used
 //! for workflows, ai commands and history search. As @charlespierce pointed out: it's 3 mini lions
 //! (features) coming together to form one super bot (this view). Hence the name. Don't ask me, I

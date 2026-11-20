@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 # 注册 openWarp 自定义合并驱动 + 启用 rerere。
 # 第一次 clone 后跑一次,后续合并上游(merge / cherry-pick / rebase)就会:
 # 1. .gitattributes 中标了 merge=zap-ng-ours 的路径自动保留本地版本

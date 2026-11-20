@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! `ProxyCredentials`:把代理 Basic Auth 的密码保存到 OS 密钥库(见 Issue #72)。
 //!
 //! 仅存密码;用户名、URL 等非敏感字段仍在 `NetworkSettings` 的 settings.toml 里。

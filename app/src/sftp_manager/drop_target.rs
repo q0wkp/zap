@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! SFTP 浏览器拖拽目标 Element，拦截 OS 级文件拖拽事件。
 //!
 //! 仿照 `terminal_size_element.rs` 实现，在 `dispatch_event` 中

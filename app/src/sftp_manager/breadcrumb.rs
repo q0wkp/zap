@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: kept the hover state of each breadcrumb segment in the view so it no longer re-renders endlessly; renamed the Warp and Zap names to ZapNG.
+
 //! 面包屑导航渲染组件
 //!
 //! 根据当前路径渲染可点击的面包屑导航，支持逐段导航到上级路径。

@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only build steps and DLL assets, and stripped the -mod suffix when reading the version; renamed the Warp and Zap names to ZapNG.
+
 // We can use `std::process:Command` here because this is invoked within a build script,
 // _not_ within the ZapNG binary.
 #![allow(clippy::disallowed_types)]

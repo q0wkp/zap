@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: MIT AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! Hidden input element for triggering the soft keyboard on mobile browsers.
 //!
 //! On mobile browsers, the soft keyboard only appears when a native HTML input element

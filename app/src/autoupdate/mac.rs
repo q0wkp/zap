@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: named DMGs after the release version, updated Homebrew installs through brew, and downloaded updates from this fork's releases; renamed the Warp and Zap names to ZapNG.
+
 #![allow(deprecated)]
 
 use command::{blocking, r#async::Command};

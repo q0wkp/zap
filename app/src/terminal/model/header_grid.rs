@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! This module defines HeaderGrid, a struct which manages the prompt and command grid's within
 //! ZapNG. This struct is abstracted away from Block, for the purposes of enabling same-line prompt,
 //! utilizing a combined prompt/command grid, with helper methods to expose the prompt and command.

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: MIT AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: made a view stop being tracked when its render unwinds, using a drop guard; renamed the Warp and Zap names to ZapNG.
+
 //! Automatic change tracking (autotracking) system to reduce the need to call `ctx.notify()`
 //!
 //! This module provides a wrapper type `Tracked`, which automatically tracks changes to the

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Unicode placeholders of the Kitty graphics protocol.
 //!
 //! A program that can't address the terminal's screen directly (one running inside tmux, say)

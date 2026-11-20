@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Support for sessions run under [zmx](https://github.com/neurosnap/zmx).
 //!
 //! `zmx attach` looks like any other long-running command, so nothing in the block says what is

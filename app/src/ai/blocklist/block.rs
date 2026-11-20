@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added a cap on long answers with a show-full button, a collapsed compaction-summary marker and a Stop button for running commands, and dropped Windows code; renamed the Warp and Zap names to ZapNG.
+
 //! Implementation of "AI blocks" used to render AI queries and outputs in the blocklist.
 pub mod cli;
 pub mod cli_controller;

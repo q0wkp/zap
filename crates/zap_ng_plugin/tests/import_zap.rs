@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Runs the plugin in `plugins/import-zap`, as built for wasm32-wasip2, through the host. Where
 //! that target isn't installed the test says so and passes.
 

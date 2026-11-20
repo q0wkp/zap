@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! `read_skill`:读取 ZapNG 的 Skill markdown 模板。
 //!
 //! Skill 是用户/项目预定义的可复用工作流(`SKILL.md` 文件 + 可选元数据)。

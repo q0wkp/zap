@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! 云同步 Token 安全存储 — 使用 OS 密钥库（Windows Credential Manager / macOS Keychain / Linux Secret Service）。
 //!
 //! 数据形态: `HashMap<platform_key, token>`, 通过 `serde_json` 序列化后写入

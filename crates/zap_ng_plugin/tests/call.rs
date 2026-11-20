@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Runs the test plugin in `tests/fixtures/probe` through the host. The plugin is built for
 //! wasm32-wasip2 first; where that target isn't installed the tests say so and pass.
 

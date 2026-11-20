@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Jeremy Chone
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: (MIT OR Apache-2.0) AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added a type holding a chat request's URL and JSON body.
+
 use crate::webc::WebClient;
 use crate::{ClientBuilder, ClientConfig};
 use std::sync::Arc;

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests for the SetUserVar escape sequence and removed the Windows-only field from the test fixtures; renamed the Warp and Zap names to ZapNG.
+
 use hex;
 use zap_ng_core::command::ExitCode;
 use zap_ng_ui::color::ColorU;

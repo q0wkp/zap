@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests for the unknown host key prompt, SSH endpoint validation, and the zmx session list in the server editor; renamed the Warp and Zap names to ZapNG.
+
 /// resolve_test_password 单元测试
 /// author: logic
 /// date: 2026/06/01

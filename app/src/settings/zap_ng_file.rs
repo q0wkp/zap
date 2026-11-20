@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The settings ZapNG has and Warp doesn't are kept in a file of their own, `zap-ng.toml`, next
 //! to `settings.toml`, which so holds only what Warp's own settings file holds.
 //!

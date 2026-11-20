@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: kept the cancel button's hover state across renders; renamed the Warp and Zap names to ZapNG.
+
 //! 传输面板渲染组件
 //!
 //! 提供文件传输进度面板的渲染功能，包括传输方向图标、状态标签、进度条和传输列表。

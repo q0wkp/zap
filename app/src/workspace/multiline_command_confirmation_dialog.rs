@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Asks the user before a long multi-line command is sent to a shell without bracketed paste,
 //! which runs each of its lines as a separate command.
 

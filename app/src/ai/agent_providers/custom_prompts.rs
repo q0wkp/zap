@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Prompt templates the user keeps in ZapNG's config directory.
 //!
 //! A profile can point a prompt slot at a file in [`custom_prompts_dir`] (`prompts/` in the

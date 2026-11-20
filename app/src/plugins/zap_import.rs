@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Offering, on the first start, to import a Zap install through the plugin `import-zap`.
 //!
 //! The import replaces the files ZapNG works with, so it doesn't run while they are open: on

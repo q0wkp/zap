@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Operations that change a node in the database together with its secrets in the keychain.
 //!
 //! The two stores can't share a transaction, so each operation here does the database part

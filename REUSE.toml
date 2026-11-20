@@ -1,0 +1,529 @@
+version = 1
+
+# Files are marked in their own headers where they can carry one. The tables below cover the
+# rest; of several tables naming a file, the last one counts.
+
+# Warp, as forked, where no header and no later table says otherwise.
+[[annotations]]
+path = ["**"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc."]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Warp's UI framework.
+[[annotations]]
+path = [
+    "crates/zap_ng_ui/**",
+    "crates/zap_ng_ui_core/**",
+]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc."]
+SPDX-License-Identifier = "MIT"
+
+# Files the original Zap added, unchanged since.
+[[annotations]]
+path = [
+    ".zed/settings.json",
+    "CHANGELOG.md",
+    "app/assets/bundled/svg/antigravity.svg",
+    "app/assets/bundled/svg/deepseek.svg",
+    "app/assets/bundled/svg/goose.svg",
+    "app/assets/bundled/svg/omp.svg",
+    "app/assets/bundled/svg/server-01.svg",
+    "app/channels/oss/icon/padded/128x128.png",
+    "app/channels/oss/icon/padded/16x16.png",
+    "app/channels/oss/icon/padded/256x256.png",
+    "app/channels/oss/icon/padded/32x32.png",
+    "app/channels/oss/icon/padded/48x48.png",
+    "app/channels/oss/icon/padded/512x512.png",
+    "app/channels/oss/icon/padded/64x64.png",
+    "app/i18n.toml",
+    "app/i18n/MACOS.md",
+    "app/src/ai/agent_providers/active_ai/parsing.rs",
+    "app/src/ai/agent_providers/attachment_caps.rs",
+    "app/src/ai/agent_providers/llm_id.rs",
+    "app/src/ai/agent_providers/openai_compatible.rs",
+    "app/src/ai/agent_providers/prompts/active_ai/next_command_system.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/next_command_user.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/nld_predict_system.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/nld_predict_user.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/prompt_suggestions_system.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/prompt_suggestions_user.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/relevant_files_system.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/relevant_files_user.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/workflow_metadata_system.j2",
+    "app/src/ai/agent_providers/prompts/active_ai/workflow_metadata_user.j2",
+    "app/src/ai/agent_providers/prompts/partials/env.j2",
+    "app/src/ai/agent_providers/prompts/partials/footer.j2",
+    "app/src/ai/agent_providers/prompts/partials/project_rules.j2",
+    "app/src/ai/agent_providers/prompts/partials/skills.j2",
+    "app/src/ai/agent_providers/prompts/partials/thinking_language.j2",
+    "app/src/ai/agent_providers/prompts/partials/tool_aliases.j2",
+    "app/src/ai/agent_providers/prompts/tasks/compaction_system.j2",
+    "app/src/ai/agent_providers/prompts/tasks/compaction_user.j2",
+    "app/src/ai/agent_providers/prompts/tasks/title_system.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/apply_file_diffs.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/ask_user_question.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/file_glob.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/grep.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/read_files.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/read_shell_command_output.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/read_skill.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/run_shell_command.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/todowrite.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/webfetch.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/websearch.md",
+    "app/src/ai/agent_providers/prompts/tool_descriptions/write_to_long_running_shell_command.md",
+    "app/src/ai/agent_providers/tools/ask.rs",
+    "app/src/ai/agent_providers/tools/coerce.rs",
+    "app/src/ai/agent_providers/tools/exa.rs",
+    "app/src/ai/agent_providers/tools/exa_tests.rs",
+    "app/src/ai/agent_providers/tools/files.rs",
+    "app/src/ai/agent_providers/tools/long_shell.rs",
+    "app/src/ai/agent_providers/tools/markers.rs",
+    "app/src/ai/agent_providers/tools/mcp.rs",
+    "app/src/ai/agent_providers/tools/mcp_tests.rs",
+    "app/src/ai/agent_providers/tools/search.rs",
+    "app/src/ai/agent_providers/tools/shell.rs",
+    "app/src/ai/agent_providers/tools/suggest.rs",
+    "app/src/ai/agent_providers/tools/webfetch.rs",
+    "app/src/ai/agent_providers/tools/webfetch_tests.rs",
+    "app/src/ai/agent_providers/tools/websearch.rs",
+    "app/src/ai/agent_providers/tools/websearch_tests.rs",
+    "app/src/ai/agent_providers/user_context.rs",
+    "app/src/ai/agent_providers/user_context_tests.rs",
+    "app/src/ai/byop_compaction/algorithm.rs",
+    "app/src/ai/byop_compaction/overflow.rs",
+    "app/src/ai/byop_compaction/prompt.rs",
+    "app/src/ai/byop_compaction/tests.rs",
+    "app/src/ai/byop_compaction/token.rs",
+    "app/src/ai/byop_readiness/mod_test.rs",
+    "app/src/ai/execution_profiles/editor/mod_test.rs",
+    "app/src/integration_testing/ssh_manager/mod.rs",
+    "app/src/notifications/telemetry.rs",
+    "app/src/remote_server/auth_provider.rs",
+    "app/src/remote_server/server_model_tests.rs",
+    "app/src/settings/network.rs",
+    "app/src/settings_view/appearance_page_tests.rs",
+    "app/src/sftp_manager/mod.rs",
+    "app/src/skill_manager/mod.rs",
+    "app/src/ssh_manager/password_prompt.rs",
+    "app/src/ssh_manager/password_prompt_tests.rs",
+    "app/src/ssh_manager/shell_prompt.rs",
+    "app/src/ssh_manager/shell_prompt_tests.rs",
+    "app/src/ssh_manager/su_password_injector_tests.rs",
+    "app/src/terminal/cli_agent_sessions/plugin_manager/deepseek.rs",
+    "app/src/terminal/shared_session/protocol.rs",
+    "assets/DeepSeek-TUI.png",
+    "crates/http_client/src/proxy_tests.rs",
+    "crates/languages/grammars/clojure/config.yaml",
+    "crates/languages/grammars/cmake/config.yaml",
+    "crates/languages/grammars/dart/config.yaml",
+    "crates/languages/grammars/elm/config.yaml",
+    "crates/languages/grammars/erlang/config.yaml",
+    "crates/languages/grammars/graphql/config.yaml",
+    "crates/languages/grammars/groovy/config.yaml",
+    "crates/languages/grammars/julia/config.yaml",
+    "crates/languages/grammars/nix/config.yaml",
+    "crates/languages/grammars/ocaml/config.yaml",
+    "crates/languages/grammars/proto/config.yaml",
+    "crates/languages/grammars/r/config.yaml",
+    "crates/languages/grammars/scss/config.yaml",
+    "crates/languages/grammars/solidity/config.yaml",
+    "crates/languages/grammars/zig/config.yaml",
+    "crates/onboarding/src/localization.rs",
+    "crates/persistence/migrations/2026-05-04-120000_add_ssh_manager_tables/down.sql",
+    "crates/persistence/migrations/2026-05-04-120000_add_ssh_manager_tables/up.sql",
+    "crates/persistence/migrations/2026-05-04-130000_add_ssh_nodes_is_collapsed/down.sql",
+    "crates/persistence/migrations/2026-05-04-130000_add_ssh_nodes_is_collapsed/up.sql",
+    "crates/persistence/migrations/2026-05-11-000000_drop_lsp_workspace_tables/up.sql",
+    "crates/persistence/migrations/2026-05-23-140000_add_startup_command_and_notes/down.sql",
+    "crates/persistence/migrations/2026-05-23-140000_add_startup_command_and_notes/up.sql",
+    "crates/persistence/migrations/2026-05-24-150000_add_sync_meta/down.sql",
+    "crates/persistence/migrations/2026-05-24-150000_add_sync_meta/up.sql",
+    "crates/persistence/migrations/2026-06-08-120000_add_ssh_onekey_credentials/down.sql",
+    "crates/persistence/migrations/2026-06-08-120000_add_ssh_onekey_credentials/up.sql",
+    "crates/persistence/migrations/2026-06-09-160000_add_ssh_onekey_key_type/down.sql",
+    "crates/persistence/migrations/2026-06-09-160000_add_ssh_onekey_key_type/up.sql",
+    "crates/persistence/migrations/2026-06-24-000000_add_window_theme_override/down.sql",
+    "crates/persistence/migrations/2026-06-24-000000_add_window_theme_override/up.sql",
+    "crates/persistence/migrations/2026-07-20-000000_add_cli_subagent_window_sizes/down.sql",
+    "crates/persistence/migrations/2026-07-20-000000_add_cli_subagent_window_sizes/up.sql",
+    "crates/remote_server/src/setup/glibc.rs",
+    "i18n.toml",
+    "script/test-fixtures/sample-byop-cache.log",
+    "website/.gitignore",
+    "website/nixpacks.toml",
+    "website/src/components/Analytics.astro",
+    "website/src/components/Banner.astro",
+    "website/src/components/DocsSidebar.astro",
+    "website/src/components/GhIcon.astro",
+    "website/src/components/LanguageSelect.astro",
+    "website/src/components/ThemeToggle.astro",
+    "website/src/components/docs/CodeCard.astro",
+    "website/src/components/docs/TabsCard.astro",
+    "website/src/content.config.ts",
+    "website/src/pages/docs/[...slug].astro",
+    "website/tsconfig.json",
+]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Code and data of other projects kept in this repository.
+[[annotations]]
+path = ["lib/rust-genai/**"]
+SPDX-FileCopyrightText = ["Copyright (c) 2025 Jeremy Chone"]
+SPDX-License-Identifier = "MIT OR Apache-2.0"
+
+[[annotations]]
+path = ["app/resources/models_dev/**"]
+SPDX-FileCopyrightText = ["Copyright (c) 2025 models.dev"]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "resources/bundled/skills/claude-api/**",
+    "resources/bundled/skills/create-skill/**",
+]
+SPDX-FileCopyrightText = ["Copyright 2026 Anthropic, PBC."]
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["app/assets/bundled/fonts/hack/**"]
+SPDX-FileCopyrightText = ["Copyright (c) 2018 Source Foundry Authors", "Copyright (c) 2003 Bitstream Inc."]
+SPDX-License-Identifier = "MIT AND Bitstream-Vera"
+
+[[annotations]]
+path = ["app/assets/bundled/fonts/roboto/**"]
+SPDX-FileCopyrightText = ["Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)"]
+SPDX-License-Identifier = "OFL-1.1"
+
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [
+    "app/channels/oss/dev.q0wkp.zapng.desktop",
+    "app/channels/oss/icon/AppIcon.icon/Assets/logo.svg",
+    "app/i18n/PROGRESS.md",
+    "app/src/ai/agent_providers/prompts/commands/init_project.j2",
+    "app/src/ai/agent_providers/prompts/partials/plan_mode.j2",
+    "app/src/ai/agent_providers/prompts/partials/user_rules.j2",
+    "app/src/ai/agent_providers/prompts/system/anthropic.j2",
+    "app/src/ai/agent_providers/prompts/system/beast.j2",
+    "app/src/ai/agent_providers/prompts/system/codex.j2",
+    "app/src/ai/agent_providers/prompts/system/default.j2",
+    "app/src/ai/agent_providers/prompts/system/gemini.j2",
+    "app/src/ai/agent_providers/prompts/system/gpt.j2",
+    "app/src/ai/agent_providers/prompts/system/kimi.j2",
+    "app/src/ai/agent_providers/prompts/system/local.j2",
+    "app/src/ai/agent_providers/prompts/system/trinity.j2",
+    "assets/zap-ng-logo.svg",
+    "crates/persistence/migrations/2026-05-11-000000_drop_lsp_workspace_tables/down.sql",
+    "docs/roadmap.ja.md",
+    "docs/roadmap.md",
+    "docs/roadmap.zh-CN.md",
+    "logo.svg",
+    "website/CHANGELOG.md",
+    "website/README.md",
+    "website/astro.config.mjs",
+    "website/bun.lock",
+    "website/deploy/deploy.sh",
+    "website/design/ZapNG Docs.html",
+    "website/design/ZapNG.html",
+    "website/package-lock.json",
+    "website/package.json",
+    "website/public/logo.svg",
+    "website/src/components/DocsNav.astro",
+    "website/src/components/I18nScript.astro",
+    "website/src/components/LandingFooter.astro",
+    "website/src/components/LandingNav.astro",
+    "website/src/layouts/DocsLayout.astro",
+    "website/src/layouts/LandingLayout.astro",
+    "website/src/pages/404.astro",
+    "website/src/pages/changelog.astro",
+    "website/src/styles/docs.css",
+    "website/src/styles/landing.css",
+]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: updated a comment to the renamed release workflow; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["crates/remote_server/src/preinstall_check.sh"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows-specific storage notes; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["docs/migrate-from-warp.ja.md"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows-specific parts of the guide; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["docs/migrate-from-warp.md"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows columns, paths and notes from the migration guide; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["docs/migrate-from-warp.zh-CN.md"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: replaced the Windows install instructions in the header with macOS and Linux ones; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["themes/one_dark.yaml"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: replaced the Windows install instructions in the header with macOS and Linux paths; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["themes/tokyo_night.yaml"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the install instructions to the macOS and Linux theme directories; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["themes/vscode_2026_dark.yaml"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows build instructions; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["website/src/content/docs/quickstart.mdx"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows install tab and build instructions; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["website/src/pages/index.astro"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the CRLF rules for Windows batch files and the PDB file filter; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [".gitattributes"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the ignore rule for the Windows installer output; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [".gitignore"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [
+    ".vscode/launch.json",
+    "SECURITY.md",
+    "about.hbs",
+    "app/DockTilePlugin/Info.plist",
+    "app/DockTilePlugin/Makefile",
+    "app/DockTilePlugin/ZapNGDockTilePlugin.h",
+    "app/DockTilePlugin/ZapNGDockTilePlugin.m",
+    "app/assets/bundled/svg/warp-2.svg",
+    "app/assets/bundled/svg/warp-3.svg",
+    "app/assets/bundled/svg/warp-drive.svg",
+    "app/assets/bundled/svg/warp-logo-dark.svg",
+    "app/assets/bundled/svg/warp-logo-light.svg",
+    "app/assets/bundled/svg/warp-logo-neutral.svg",
+    "app/assets/bundled/svg/warp-logo-with-dark-title.svg",
+    "app/assets/bundled/svg/warp-logo-with-light-title.svg",
+    "app/assets/resources/mac/CLI-Info.plist",
+    "app/resources/tab_configs/new_tab_config_template.toml",
+    "app/src/env_vars/README.md",
+    "crates/integration/tests/data/cloud_objects.sqlite",
+    "crates/integration/tests/data/file_notebook.sqlite",
+    "crates/integration/tests/data/history_with_metadata.sqlite",
+    "crates/integration/tests/data/restored_code.sqlite",
+    "crates/integration/tests/data/restored_notebooks.sqlite",
+    "crates/integration/tests/data/restored_settings.sqlite",
+    "crates/integration/tests/data/restored_workflows.sqlite",
+    "crates/integration/tests/data/test_duplicate_shareable_ids.sqlite",
+    "crates/integration/tests/data/test_json_object.sqlite",
+    "resources/linux/debian/common/postinst.repo.template",
+    "resources/linux/rpm/app/warp.spec.template",
+    "resources/linux/rpm/cli/warp.spec.template",
+]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: rewrote it to describe ZapNG, its configuration, plugins and licensing, moved the list of changes to CHANGES.csv, and dropped Windows and the -mod release tags; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["README.md"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: added keepalives to SSH wrapper connections that set none, and removed the Windows-only code paths.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/bash_body.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: added SSH keepalive options to wrapper connections that set none, and removed the Windows ConPTY output handling.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/fish.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: added keepalives to SSH wrapper connections that set none, and dropped the Windows ConPTY/WSL init path.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/zsh_body.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: added the zmx_session column to the SSH servers table.
+[[annotations]]
+path = ["crates/persistence/src/schema.rs"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: added messages to read a downscaled image thumbnail from the remote server; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["crates/remote_server/proto/remote_server.proto"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: made the install script pick the release by tag, verify the tarball's SHA-256 (signed by the release) and use q0wkp's release URLs; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["crates/remote_server/src/install_remote_server.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: declared the minimum glibc version and the alsa-lib, wayland and xz dependencies the Arch package needs; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["resources/linux/arch/app/PKGBUILD.template"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: declared the minimum glibc version the Arch package needs; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["resources/linux/arch/cli/PKGBUILD.template"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: declared the deb package's missing dependencies and made its minimum glibc version a build-time placeholder; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["resources/linux/debian/app/control.template"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: declared the minimum glibc version as a build-time placeholder in the package dependencies; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["resources/linux/debian/cli/control.template"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only test settings.
+[[annotations]]
+path = [".config/nextest.toml"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the ignore entries for the Windows installer output and assets; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [".dockerignore"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only (MSYS2, ConPTY) branches of the bash start-up script.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/bash_init_shell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only code paths.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/bash_init_subshell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows ConPTY and MSYS2 branches so the init hook is always sent as a DCS.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/fish_init_shell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows ConPTY and MSYS2 branches of the InitShell hook.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/fish_init_subshell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows ConPTY branch, so InitShell is always sent via DCS.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/zsh_init_shell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows ConPTY branch of the init message.
+[[annotations]]
+path = ["app/assets/bundled/bootstrap/zsh_init_subshell.sh"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [
+    "app/src/terminal/ref_tests/mod.rs",
+    "crates/zap_ng_completer/src/parsers/README.md",
+    "crates/zap_ng_files/test_data/test_file.rs",
+    "crates/zap_ng_terminal/src/model/ESCAPE_SEQUENCES.md",
+]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows log paths.
+[[annotations]]
+path = ["resources/bundled/skills/feedback/references/logs.md"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = ["crates/zap_ng_ui_core/README.md"]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "MIT AND AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+[[annotations]]
+path = [
+    "crates/zap_ng_ui/examples/assets/README.md",
+    "crates/zap_ng_ui/examples/assets/bundled/svg/block-bulletedlist.svg",
+    "crates/zap_ng_ui/examples/assets/bundled/svg/gear.svg",
+    "crates/zap_ng_ui/examples/assets/bundled/svg/search.svg",
+    "crates/zap_ng_ui/examples/assets/bundled/svg/user.svg",
+    "crates/zap_ng_ui/examples/assets/numbers-1000ms.gif",
+    "crates/zap_ng_ui/examples/assets/numbers-750ms.gif",
+    "crates/zap_ng_ui/examples/assets/rustyrain.gif",
+    "crates/zap_ng_ui/examples/image/loading.svg",
+    "crates/zap_ng_ui/examples/table-sample/.gitignore",
+    "crates/zap_ng_ui/examples/table-sample/WARP.md",
+    "crates/zap_ng_ui/src/platform/mac/objc/.clang-format",
+    "crates/zap_ng_ui/src/platform/mac/objc/notifications/README.md",
+    "crates/zap_ng_ui/src/platform/mac/rendering/metal/shaders/shaders.metal",
+    "crates/zap_ng_ui/src/rendering/wgpu/shaders/glyph_shader.wgsl",
+    "crates/zap_ng_ui/src/rendering/wgpu/shaders/image_shader.wgsl",
+    "crates/zap_ng_ui/src/rendering/wgpu/shaders/rect_shader.wgsl",
+    "crates/zap_ng_ui_core/src/elements/flex/WARP.md",
+    "crates/zap_ng_ui_core/test_data/animated.webp",
+    "crates/zap_ng_ui_core/test_data/local.png",
+]
+SPDX-FileCopyrightText = ["Copyright (C) 2020-2026 Denver Technologies, Inc.", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "MIT AND AGPL-3.0-only"
+
+[[annotations]]
+path = [
+    "README/README_CN.md",
+    "CHANGES.csv",
+    "app/src/ai/agent_providers/prompts/tasks/explain_command_system.md",
+    "crates/persistence/migrations/2026-11-01-000000_add_ssh_zmx_session/down.sql",
+    "crates/persistence/migrations/2026-11-01-000000_add_ssh_zmx_session/up.sql",
+    "crates/remote_server/src/release_signing_key.pub",
+    "crates/zap_ng_plugin/tests/fixtures/probe/Cargo.toml",
+    "crates/zap_ng_plugin/tests/fixtures/probe/src/lib.rs",
+    "crates/zap_ng_plugin/wit/plugin.wit",
+    "crates/zap_ng_ssh_manager/src/askpass.sh",
+    "plugins/import-zap/plugin.toml",
+]
+SPDX-FileCopyrightText = ["2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"

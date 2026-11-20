@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: made the Ollama URL normalizer reusable, added per-profile prompt overrides for titles, a request inspector hook, and secret redaction of outbound requests; renamed the Warp and Zap names to ZapNG.
+
 //! BYOP 模式下 chat completion + tool calling 适配层(基于 genai 0.5.3)。
 //!
 //! 把 `RequestParams` 翻译为 genai `ChatRequest`,通过 `Client::exec_chat_stream`

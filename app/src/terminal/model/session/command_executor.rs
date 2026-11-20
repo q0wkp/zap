@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the WSL and MSYS2 command executors and the Windows run-in-same-shell option; renamed the Warp and Zap names to ZapNG.
+
 mod in_band_command_executor;
 #[cfg(feature = "local_tty")]
 mod local_command_executor;

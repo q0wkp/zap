@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 use async_broadcast::{InactiveReceiver, Sender as BroadcastSender};
 use futures::channel::mpsc::{self, Receiver as MpscReceiver, Sender as MpscSender};
 use futures::channel::oneshot::{self, Receiver, Sender};

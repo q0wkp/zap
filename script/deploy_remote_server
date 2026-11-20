@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 #
 # Cross-compiles the Oz CLI for Linux x86_64 (musl) on macOS and uploads it
 # to a remote host via rsync for local remote-server development.

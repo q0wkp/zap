@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Image previews of link tooltips for files on a remote host.
 //!
 //! The remote server sends a thumbnail instead of the file, and each terminal view keeps the

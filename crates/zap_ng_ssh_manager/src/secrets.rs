@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added a count of the secrets stored in the in-memory store, for tests, and updated the platform comment after dropping Windows; renamed the Warp and Zap names to ZapNG.
+
 //! OS keychain 封装 — 用 `keyring` crate 跨平台。
 //! macOS = Keychain / Linux = Secret Service。
 //!

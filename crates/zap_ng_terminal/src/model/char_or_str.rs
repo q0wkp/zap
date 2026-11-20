@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! This module defines CharOrStr, a wrapper struct to deal with cases where we can have either a
 //! char or a string. For example, this is used for Cells in Grids where we can have either just a char
 //! (normal case) or a String (when we have zerowidth characters in a Cell). This structure helps abstract

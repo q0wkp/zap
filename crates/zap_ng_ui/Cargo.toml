@@ -1,10 +1,16 @@
+# SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: MIT AND AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: removed the Windows target dependencies and feature comments; renamed the Warp and Zap names to ZapNG.
+
 [package]
 name = "zap_ng_ui"
 version = "0.0.0"
 edition = "2021"
 authors.workspace = true
 publish.workspace = true
-license = "MIT"
+license = "MIT AND BSD-2-Clause AND AGPL-3.0-only"
 
 [features]
 # Enabling this feature works around a bug in Metal frame capture by loading

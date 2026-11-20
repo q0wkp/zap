@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: declared the module that shows a compaction summary as a collapsed marker.
+
 //! BYOP 本地会话压缩 — 1:1 复刻 opencode `packages/opencode/src/session/{compaction,overflow,summary}.ts`。
 //!
 //! 入口 API:

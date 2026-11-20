@@ -2,6 +2,12 @@
 //!
 //! Some of the code in this module is adapted from GitHub Desktop, which is licensed under the MIT license,
 //! Copyright (c) GitHub, Inc.  See GITHUB-DESKTOP-LICENSE in this directory.
+//
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};

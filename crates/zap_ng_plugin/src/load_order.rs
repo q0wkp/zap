@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Deciding which of the plugins found are loaded, and in which order.
 
 use std::collections::{HashMap, HashSet};

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Jeremy Chone
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: (MIT OR Apache-2.0) AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: named Gemini function responses after their function and gave tool calls ids that are unique across stream chunks and turns.
+
 use crate::adapter::adapters::support::get_api_key;
 use crate::adapter::gemini::GeminiStreamer;
 use crate::adapter::{Adapter, AdapterKind, ServiceType, WebRequestData};

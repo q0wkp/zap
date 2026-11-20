@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+
 """Refresh the models.dev catalog built into ZapNG.
 
 Usage: script/update_models_dev_catalog [--source <URL or file>]

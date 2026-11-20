@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! A settings store kept in two TOML files: the main settings file, and a second file for the
 //! settings named in a routing table, which live there under paths of their own.
 

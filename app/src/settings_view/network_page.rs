@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! "Network" 设置页:全局 HTTP 代理配置(见 Issue #72)。
 //!
 //! 设计原则:每个输入框始终显示当前已保存值,可直接编辑(包括清空),用旁边的

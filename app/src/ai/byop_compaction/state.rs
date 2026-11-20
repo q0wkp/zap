@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added a lookup of how a compaction's summary message was triggered, with a test.
+
 //! 压缩 sidecar 状态 — 挂在 `AIConversation` 上,与 warp `api::Message` 协议解耦。
 //!
 //! 因为 warp 的 `api::Message` 来自外部 protobuf 依赖 (`warp_multi_agent_api`),

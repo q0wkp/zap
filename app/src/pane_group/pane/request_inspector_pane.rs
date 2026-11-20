@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The pane holding the BYOP request inspector. Not persisted: the calls it shows are those it
 //! captured while open.
 

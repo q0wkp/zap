@@ -1,7 +1,13 @@
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: dropped the Windows-only OpenSSL feature of the ssh2 dependency; renamed the Warp and Zap names to ZapNG.
+
 [package]
 name = "zap_ng_sftp"
 version = "0.1.0"
 edition = "2021"
+license.workspace = true
 
 [dependencies]
 ssh2 = "0.9"

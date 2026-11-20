@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the integration test that opened a specific shell from the new session menu; renamed the Warp and Zap names to ZapNG.
+
 //! Tests that cover application UI interactions and not external integrations.
 //!
 //! If any of the following are true, a test DOES NOT belong here:

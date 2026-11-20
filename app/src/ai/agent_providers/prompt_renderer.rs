@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added per-profile prompt overrides rendered from built-in or custom templates; renamed the Warp and Zap names to ZapNG.
+
 //! BYOP system prompt 模板渲染。
 //!
 //! 把 warp 客户端已经收集好的 `AIAgentContext`(env / git / skills / project_rules / current_time)

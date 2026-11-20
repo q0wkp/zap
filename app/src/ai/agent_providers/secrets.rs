@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! `AgentProviderSecrets`:把每个自定义 Provider 的 API key 保存到 OS 密钥库。
 //!
 //! 数据形态: `HashMap<provider_id, api_key>`,通过 `serde_json` 序列化后写入

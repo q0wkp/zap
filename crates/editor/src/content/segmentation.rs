@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! Text segmentation (splitting on words and grapheme clusters) for rich-text buffers.
 //! Mostly, this relies on the [`crate::text::word_boundaries`] module by implementing the
 //! [`TextBuffer`] API.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Connecting a terminal to a server saved in the SSH manager: typing its `ssh` command line
 //! into the terminal's local shell, and answering the password prompts that follow with the
 //! credentials saved in the keychain.

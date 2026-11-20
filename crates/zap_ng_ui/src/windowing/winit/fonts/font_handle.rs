@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: MIT AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: dropped Windows from a platform attribute; renamed the Warp and Zap names to ZapNG.
+
 // Neither macOS nor wasm make use of the "load font from path" functionality,
 // and so there's a lot of unused code in here.  Instead of marking each of the
 // relevant functions with allow(dead_code), we'll do it at the module level

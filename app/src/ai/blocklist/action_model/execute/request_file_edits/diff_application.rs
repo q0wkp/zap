@@ -1,4 +1,10 @@
-﻿//! Module containing helper code to apply suggested diffs from an LLM
+﻿// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added notes to the model when an edit matched only loosely, refused ambiguous search blocks, and dropped the Windows-only shell handling; renamed the Warp and Zap names to ZapNG.
+
+//! Module containing helper code to apply suggested diffs from an LLM
 //! to a set of files on the user's filesystem.
 
 use std::{

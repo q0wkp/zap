@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Plugins: WebAssembly components that ZapNG loads at run time and calls at fixed points
 //! (hooks).
 //!

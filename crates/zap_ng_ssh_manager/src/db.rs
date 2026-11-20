@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! 全进程共享一个 `Mutex<SqliteConnection>` 给 SSH 管理器用。
 //!
 //! 现状: ZapNG 的主写入连接在专门的写线程里(see `app/src/persistence/sqlite.rs`)

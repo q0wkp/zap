@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! Command palette 数据源:SSH 服务器(ZapNG 独有)。
 //!
 //! 用户在 Ctrl+Shift+P 中按服务器名 / host 模糊匹配,选中 → emit

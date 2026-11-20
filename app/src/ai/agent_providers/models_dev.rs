@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: built a copy of the models.dev catalog into the binary with a configurable URL and download switch, and made catalog models enabled by default; renamed the Warp and Zap names to ZapNG.
+
 //! models.dev 数据源接入。
 //!
 //! 在用户打开 Providers 设置页时,后台异步拉取 `https://models.dev/api.json`,

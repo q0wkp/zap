@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! 列出服务器上的 [zmx](https://github.com/neurosnap/zmx) session,并取每个
 //! session 输出的末尾若干行作预览。
 //!

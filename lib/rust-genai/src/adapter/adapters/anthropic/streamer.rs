@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Jeremy Chone
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: (MIT OR Apache-2.0) AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: fixed double counting of streamed usage and made the streamer skip deltas of content blocks it does not handle.
+
 use crate::adapter::adapters::support::{StreamerCapturedData, StreamerOptions};
 use crate::adapter::anthropic::parse_cache_creation_details;
 use crate::adapter::inter_stream::{InterStreamEnd, InterStreamEvent};

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: initialised the new zmx session field in the test step; renamed the Warp and Zap names to ZapNG.
+
 //! SSH 管理器集成测试步骤辅助函数。
 //!
 //! 所有步骤使用 `TestStep::new` 创建，不附加终端相关的默认断言，

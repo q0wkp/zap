@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added actions for the multi-line command confirmation dialog and the request inspector, and passed the default CLI agent to new sessions; renamed the Warp and Zap names to ZapNG.
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

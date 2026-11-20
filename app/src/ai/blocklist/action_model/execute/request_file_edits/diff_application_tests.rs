@@ -1,4 +1,10 @@
-﻿use std::io::Write as _;
+﻿// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests for edits that match only loosely and for refusing a search block that matches more than one place; renamed the Warp and Zap names to ZapNG.
+
+use std::io::Write as _;
 use std::sync::Arc;
 
 use ai::diff_validation::{DiffDelta, ParsedDiff, V4AHunk};

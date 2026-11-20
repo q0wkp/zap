@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! UI 颜色覆盖映射结构体。
 //! 从独立的 UI 主题文件加载，提供可选的 UI 颜色覆盖。
 //! 所有字段为 Option，未设置时回退到 ZapNGTheme 的程序化派生值。

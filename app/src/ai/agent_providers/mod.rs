@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: declared the new explain-command, Ollama, custom-prompt, request-inspector and secret-redaction modules, and made disabled providers and models offer nothing; renamed the Warp and Zap names to ZapNG.
+
 //! 自定义 Agent 提供商支持。
 //!
 //! 这个模块负责:

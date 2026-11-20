@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: added Russian strings for the new plugin import, SSH manager prompts, agent answer cap, BYOP, zmx and update features, and dropped Windows-only strings; renamed the Warp and Zap names to ZapNG.
+
 # ZapNG Desktop — Русский
 # Этот файл содержит русскую локализацию UI ZapNG. Отсутствующие ключи fallback-ятся на en/warp.ftl.
 # Секции и ключи синхронизированы с исходной локалью.

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The calls an inspector holds: a buffer bounded in both entries and bytes, the filter the
 //! inspector shows it through, and the plain-text form an entry is copied in.
 

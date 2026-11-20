@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: stored a saved SSH server's zmx session in the repository; renamed the Warp and Zap names to ZapNG.
+
 //! Diesel CRUD over `ssh_nodes` + `ssh_servers`。返回的全部是 `crate::types`
 //! 里的 plain 数据结构,把 ORM 细节挡在 crate 边界内。
 //!

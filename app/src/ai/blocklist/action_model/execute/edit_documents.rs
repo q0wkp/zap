@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added an error message for a search block that matches more than one place; renamed the Warp and Zap names to ZapNG.
+
 use ai::diff_validation::DiffDelta;
 use futures::{future::BoxFuture, FutureExt};
 use std::collections::HashMap;

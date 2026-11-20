@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Draws the images that Kitty unicode placeholder cells stand for.
 
 use std::collections::HashMap;

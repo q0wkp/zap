@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! 支持 RRGGBBAA 格式 (8 位 hex) 的 serde 序列化模块。
 //! 同时兼容 RRGGBB (6 位) 格式，此时 alpha 默认为 255 (不透明)。
 

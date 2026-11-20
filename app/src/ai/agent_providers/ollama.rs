@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! "Fetch from API" for Ollama providers, through Ollama's native API.
 //!
 //! The OpenAI-compatible `/models` list carries model ids only, and Ollama serves it under

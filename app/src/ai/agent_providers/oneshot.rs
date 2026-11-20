@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: redacted secrets in requests sent to the provider and recorded one-shot calls in the request inspector; renamed the Warp and Zap names to ZapNG.
+
 //! BYOP one-shot 非流式补全适配层。
 //!
 //! 用于"主动式 AI"子链路(prompt suggestions / NLD predict / relevant files /

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: declared the new SSH connection module; renamed the Warp and Zap names to ZapNG.
+
 //! SSH 管理器 UI(左侧 Tool Panel)。当前为骨架,内容待 Commit 2b 实现:
 //! 树状文件夹/服务器列表 + 右侧详情表单。
 //!

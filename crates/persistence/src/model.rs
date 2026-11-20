@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added the zmx session name to the persisted terminal pane data; renamed the Warp and Zap names to ZapNG.
+
 //! These types are named after the database tables, and are used to represent specific queries.
 
 use std::collections::{HashMap, HashSet};

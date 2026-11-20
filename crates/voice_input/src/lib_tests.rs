@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use zap_ng_ui::App;
 
 use super::{StartListeningError, VoiceInput, VoiceInputState, VoiceInputToggledFrom};

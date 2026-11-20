@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed a mention of USERPROFILE from a test comment, as Windows is no longer supported; renamed the Warp and Zap names to ZapNG.
+
 //! `~/.ssh/config` → `SshConfigCandidate` 解析器与一次性加载器。
 //!
 //! 设计与边界见 `specs/gh-110-ssh-config-import/{PRODUCT,TECH}.md`(对应 GitHub

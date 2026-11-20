@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! SFTP 文件浏览器 pane(中央 pane,通过 SSH 管理器树打开)。
 //!
 //! 仿 `ssh_server_pane.rs` 的极简结构。pane 不持久化(

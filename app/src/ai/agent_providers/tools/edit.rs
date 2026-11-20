@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added the notes on loose search-block matches to the JSON result of a successful edit.
+
 //! `apply_file_diffs`:写文件 / 改文件 / 删文件 三合一。
 //!
 //! warp protobuf 中的 `ApplyFileDiffs` 包含 4 个并列 vec:

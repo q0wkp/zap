@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests for the delete confirmation of saved hosts and folders, and followed the tree's hover state moving into the view; renamed the Warp and Zap names to ZapNG.
+
 //! panel.rs 的单元测试 — 覆盖树构建、父级解析和显示排序等纯逻辑。
 //!
 //! 作者：logic

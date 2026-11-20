@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added host-key confirmation, an askpass helper for secrets, host/user/port validation and zmx session attach, and dropped Windows code; renamed the Warp and Zap names to ZapNG.
+
 //! 把 `SshServerInfo` 拼成 `ssh ...` 命令,并派生测试连接的子进程。
 //!
 //! 写入 PTY 时调 `build_ssh_command_line`,会用 shell-escape 引用每个 arg,

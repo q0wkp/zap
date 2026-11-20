@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Explaining a shell command the agent asks to run, so that the user can decide whether to
 //! approve it.
 //!

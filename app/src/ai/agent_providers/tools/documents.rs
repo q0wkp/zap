@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! ZapNG Drive 本地文档系统的 read / edit / create 三件套。
 //!
 //! 与 `read_files` / `apply_file_diffs` 区别:这些操作的目标是 **AIDocumentModel

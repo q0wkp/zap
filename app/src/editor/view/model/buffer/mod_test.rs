@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 // Allow the `single_range_in_vec_init` clippy rule. The buffer#edit API takes in a `Vec` of ranges,
 // which is at odds with this clippy rule.
 #![allow(clippy::single_range_in_vec_init)]

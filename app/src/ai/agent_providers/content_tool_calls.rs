@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: made text-written tool calls run only when the whole reply is a call, in a few strictly parsed forms.
+
 //! Fallback: read tool calls that a model wrote as text in its assistant `content`.
 //!
 //! Local models (Ollama native) sometimes write a tool call as text instead of

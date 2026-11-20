@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The application's side of plugins (`crates/zap_ng_plugin`): where they are found, what
 //! `zap-ng.toml` says about them, and the services the host can't provide by itself.
 //!

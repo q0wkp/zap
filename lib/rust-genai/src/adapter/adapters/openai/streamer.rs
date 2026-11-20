@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025 Jeremy Chone
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: (MIT OR Apache-2.0) AND AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: fixed OpenAI streaming tool calls: emitted every call of a message, kept ids when later fragments omit them, looked calls up by index.
+
 use crate::adapter::AdapterKind;
 use crate::adapter::adapters::support::{StreamerCapturedData, StreamerOptions};
 use crate::adapter::inter_stream::{InterStreamEnd, InterStreamEvent};

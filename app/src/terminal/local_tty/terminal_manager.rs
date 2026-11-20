@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: passed the SSH keepalive default to the SSH wrapper and removed the Windows, WSL and MSYS2 code paths; renamed the Warp and Zap names to ZapNG.
+
 use crate::ai::aws_credentials::AwsCredentialRefresher as _;
 use crate::auth::AuthState;
 use crate::auth::AuthStateProvider;

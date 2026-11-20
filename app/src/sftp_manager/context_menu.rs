@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: kept each context menu item's mouse state in the menu so hover no longer re-renders endlessly, with a test; renamed the Warp and Zap names to ZapNG.
+
 //! 右键上下文菜单渲染组件
 //!
 //! 提供文件条目的右键菜单渲染，包括打开、下载、重命名、删除、详情等操作。

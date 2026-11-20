@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use anyhow::{anyhow, Result};
 use std::borrow::Cow;
 pub mod root_view;

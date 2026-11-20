@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: moved the pager-off wrapper into its own function and put its closing token on a line of its own where a comment or here-document needs it; renamed the Warp and Zap names to ZapNG.
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;

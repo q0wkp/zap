@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: capped the rendered length of long agent answers behind a show-full-output button, and removed Windows-only (WSL) path handling; renamed the Warp and Zap names to ZapNG.
+
 //! Contains UI rendering logic shared between AIBlock and other views that render AIAgentExchanges.
 
 // Renders persistent input-compatible loading animation and text indicator the appropriate message

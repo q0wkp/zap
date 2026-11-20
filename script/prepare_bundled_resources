@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: added the bundled plugins build and the models.dev catalog license to the bundled resources, and dropped Windows handling; renamed the Warp and Zap names to ZapNG.
+
 #
 # Prepares bundled resources for distribution.
 #
@@ -106,6 +112,12 @@ fi
 # When adding a new third-party component to the bundle, add its license file
 # to the repo alongside the component and add an entry here.
 ADDITIONAL_LICENSES=(
+    "Warp|AGPL-3.0-only|LICENSES/Warp-AGPL-3.0-only.txt"
+    "Warp UI framework|MIT|LICENSES/Warp-MIT.txt"
+    "Reachability|BSD-2-Clause|LICENSES/Reachability-BSD-2-Clause.txt"
+    "tree-sitter-ruby|MIT|LICENSES/tree-sitter-ruby-MIT.txt"
+    "Windows Terminal|MIT|LICENSES/WindowsTerminal-MIT.txt"
+    "skill-creator Skill|Apache-2.0|resources/bundled/skills/create-skill/LICENSE.txt"
     "Hack Font|MIT|app/assets/bundled/fonts/hack/LICENSE.md"
     "Roboto Font|SIL Open Font License|app/assets/bundled/fonts/roboto/LICENSE.txt"
     "bash-preexec|MIT|app/assets/bundled/bootstrap/bash-preexec-LICENSE.md"

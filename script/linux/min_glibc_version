@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+
 #
 # Prints the oldest glibc that can run the ELF files in the given files and directories (searched
 # recursively), e.g. "2.35": the highest GLIBC_x.y among the versions their version-needs sections

@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: detected a URL that a program wrapped at the last column, and dropped the Windows path checks; renamed the Warp and Zap names to ZapNG.
+
 #[path = "ansi_handler.rs"]
 mod ansi_handler;
 #[path = "filtering.rs"]

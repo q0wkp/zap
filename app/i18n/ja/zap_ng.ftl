@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: added Japanese strings for plugins, SSH manager safeguards, BYOP prompt overrides and request inspector, command explanations, zmx sessions and package-manager updates; renamed the Warp and Zap names to ZapNG.
+
 # ZapNG Desktop — English (source-of-truth locale)
 # 本文件由多 agent 并行编辑,各自维护自己的 SECTION,key 以 surface 前缀隔离避免冲突。
 # 加 key 时 ctrl-F 找到对应 SECTION 头追加;新 surface 在文件末尾加新 SECTION。

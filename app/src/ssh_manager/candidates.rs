@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! "Candidates" 区域的视图模型 —— 把 `zap_ng_ssh_manager::load_candidates()`
 //! 的结果(及已导入别名集合、折叠状态)摊平成 UI 友好的 [`CandidateRow`]
 //! 列表。

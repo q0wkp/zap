@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the Windows-only module; renamed the Warp and Zap names to ZapNG.
+
 //! This crate contains generic utilities and helpers available for use across all internal zap-ng
 //! crates.
 //!

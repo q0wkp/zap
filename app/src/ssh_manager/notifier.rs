@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! 全局 SSH 树变更广播 — 任何 view 改了树结构(增/删/改名/改 server 字段)
 //! 后调一次 `notify`,SshManagerPanel 等订阅者据此 refresh。
 //!

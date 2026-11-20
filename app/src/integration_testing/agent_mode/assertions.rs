@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 // `panic!` causes the app to crash before debug info can be exported. Use `AssertionOutcome::immediate_failure` instead.
 #![deny(clippy::panic)]
 // `assert!` causes the app to crash before debug info can be exported. Use `integration_assert!` instead.

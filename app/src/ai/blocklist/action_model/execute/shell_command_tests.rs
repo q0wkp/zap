@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added tests that the pager wrapper's closing token sits on its own line for each shell; renamed the Warp and Zap names to ZapNG.
+
 use std::time::Duration;
 
 use super::*;

@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! su 密码确认提示。持续监听 PTY 输出,当检测到用户输入 `su root` / `su - root`
 //! 等切换到 root 的命令后出现密码提示时,弹出确认菜单,用户确认后注入 root 密码
 //! 或共享 OneKey 密码。

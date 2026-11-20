@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added a host-key confirmation, host/user/port validation and a zmx session list with each session's process to the SSH server editor; renamed the Warp and Zap names to ZapNG.
+
 //! SSH 服务器编辑器中央 pane 的 BackingView 实现。
 //!
 //! Phase 2:可编辑表单(name / host / port / user / auth / password / key_path)+

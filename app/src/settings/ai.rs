@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added settings for downloading the models.dev catalog, a default CLI agent, and enabling or disabling a provider or a model; renamed the Warp and Zap names to ZapNG.
+
 //! Settings for Blocklist AI.
 //!
 //! These settings are currently used to configure the underlying model/API used to power the AI

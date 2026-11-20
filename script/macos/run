@@ -1,4 +1,10 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 #
 # macOS-specific implementation of `./script/run`. Runs a local version of
 # ZapNG as a real 'app' instead of a bare executable, so macOS can treat it

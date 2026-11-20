@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: added notes for edits that matched only loosely and recognition of tool calls with invalid arguments.
+
 //! BYOP 模式下 OpenAI tool calling 的双向翻译注册表。
 //!
 //! 每个 warp 内置 tool(`api::message::tool_call::Tool` 的 variant)对应一个

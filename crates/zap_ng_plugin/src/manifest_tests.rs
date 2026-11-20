@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 use super::*;
 
 const MINIMAL: &str = "id = \"demo\"\nname = \"Demo\"\nversion = \"1.0.0\"\napi = \"0.1\"\n";

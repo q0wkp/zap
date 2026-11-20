@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 //! OneKey 凭据加载:从 SSH Manager 持久化层 + Keychain/DPAPI/Linux Keyring
 //! 读出所有已保存的 server 凭据,供 `TerminalView` 在检测到 PTY 密码提示时
 //! 弹出选择菜单。

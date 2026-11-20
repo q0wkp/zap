@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: renamed the Warp and Zap names to ZapNG.
+
 // ZapNG(本地化,Phase 2d-1):本文件原先承担 "offline banner / 同步状态谓词" 的角色,
 // 在云端腿(SyncQueue / NetworkStatus 在线门控)被完全下线后这些代码全部失去意义,
 // 整体移除并精简 imports。Pane 容器视图本身保留,负责在 Rules / RuleEditor 两页之间切换。

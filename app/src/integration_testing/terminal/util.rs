@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: Copyright (C) 2020-2026 Denver Technologies, Inc.
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+// Modified by Tianyu (Sky) Lu in 2026: removed the WSL and MSYS2 shell starters from the integration test helper; renamed the Warp and Zap names to ZapNG.
+
 use command::blocking::Command;
 use std::borrow::Cow;
 use std::iter;

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! The marker the agent transcript shows in place of a compaction summary.
 //!
 //! The summary comes back from the model as an ordinary text message, so shown as it is it

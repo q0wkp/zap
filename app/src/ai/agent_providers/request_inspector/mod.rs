@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 //! Live capture of the traffic between zap-ng and BYOP providers, shown by the request inspector
 //! pane ([`view::RequestInspectorView`]).
 //!

@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 The Zap Authors (https://github.com/zerx-lab/zap)
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+# Modified by Tianyu (Sky) Lu in 2026: rewrote the release workflow to build the macOS and Linux files of this project, name them by version, sign their SHA-256 files and notify q0wkp/pkgs, and dropped Windows; renamed the Warp and Zap names to ZapNG.
+
 # The release of prebuilt archives: pushing a version tag runs ci.yml, then builds the archives on
 # each system, and creates the GitHub release with them. This file holds all of the project's
 # releasing; what is marked Per project is this project's own. By hand: the same build commands,
