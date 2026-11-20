@@ -98,7 +98,11 @@ Releases are built for:
 - Linux: x86_64
 - macOS: aarch64 and x86_64
 
-Windows is not supported.
+Windows is intentionally not supported, since I don't use ZapNG on Windows. If you want Windows support back, you
+are welcome to do it in a fork of your own: [WINDOWS_REMOVAL.csv](WINDOWS_REMOVAL.csv) lists the commits and pull
+requests that removed the Windows code and, for each file, where the commit changed it, which you may find helpful.
+The places are the hunks of the commit's diff (`-<line>,<count> +<line>,<count>`, as `git show <commit> -- <file>`
+prints them); the Note column says when they refer to another commit.
 
 ## Changes from the Original Zap
 

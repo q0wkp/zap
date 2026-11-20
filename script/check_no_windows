@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Tianyu (Sky) Lu
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Fails when Rust code or a Cargo manifest refers to Windows. ZapNG supports
+# only Linux and macOS, so a change ported from Warp or elsewhere must leave
+# out what is only for Windows: cfg(windows) code and tests, Windows-only
+# dependencies, and the cfg(not(windows)) guards around what is kept.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+pattern='cfg!?\((not\()?(windows|target_os *= *"windows"|target_family *= *"windows")|\b(winapi|windows-sys|windows-core|conpty)\b|^windows(-[a-z]+)? *='
+
+if git grep -n -I -E "$pattern" -- '*.rs' '*Cargo.toml'; then
+    echo >&2
+    echo "Windows-only code found above. Remove it: ZapNG builds only for Linux and macOS." >&2
+    exit 1
+fi
+echo "No Windows-only code found."
