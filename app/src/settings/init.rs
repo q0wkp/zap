@@ -370,8 +370,10 @@ pub fn init_public_user_preferences() -> (user_preferences::Model, Option<user_p
         } else {
             if zap_ng_core::features::FeatureFlag::SettingsFile.is_enabled() {
                 let (prefs, parse_error) =
-                    user_preferences::toml_backed::TomlBackedUserPreferences::new(
+                    user_preferences::split_toml::SplitTomlUserPreferences::new(
                         super::user_preferences_toml_file_path(),
+                        super::zap_ng_file::zap_ng_settings_file_path(),
+                        super::zap_ng_file::ZAP_NG_SETTINGS,
                     );
                 if let Some(err) = &parse_error {
                     log::warn!("Settings file has syntax errors and could not be parsed: {err}");

@@ -10,6 +10,8 @@ pub mod in_memory;
 #[cfg(target_family = "wasm")]
 pub mod local_storage;
 #[cfg(feature = "user_preferences-toml")]
+pub mod split_toml;
+#[cfg(feature = "user_preferences-toml")]
 pub mod toml_backed;
 #[cfg(target_os = "macos")]
 pub mod user_defaults;

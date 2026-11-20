@@ -36,6 +36,7 @@ mod select;
 mod ssh;
 mod theme;
 mod vim_banner;
+pub mod zap_ng_file;
 
 #[cfg(test)]
 #[path = "schema_validation_tests.rs"]

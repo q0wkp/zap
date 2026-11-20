@@ -129,7 +129,11 @@ impl super::ZapNGConfig {
         }
 
         if FeatureFlag::SettingsFile.is_enabled()
-            && update_touches_path(update, &crate::settings::user_preferences_toml_file_path())
+            && (update_touches_path(update, &crate::settings::user_preferences_toml_file_path())
+                || update_touches_path(
+                    update,
+                    &crate::settings::zap_ng_file::zap_ng_settings_file_path(),
+                ))
         {
             ctx.emit(ZapNGConfigUpdateEvent::Settings);
         }
