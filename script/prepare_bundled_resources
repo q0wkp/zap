@@ -73,6 +73,7 @@ if [ -d "$RESOURCES_SRC/bundled" ]; then
   echo "Copying bundled resources to $DEST_DIR/bundled"
   rm -rf "$DEST_DIR/bundled"
   cp -R "$RESOURCES_SRC/bundled" "$DEST_DIR/bundled"
+  "$SCRIPT_DIR/build_plugins" "$DEST_DIR/bundled/plugins"
 else
   echo "Warning: No bundled directory found at $RESOURCES_SRC/bundled" >&2
 fi

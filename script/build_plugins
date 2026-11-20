@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# Builds the plugins under plugins/ as WebAssembly components and puts each, with its manifest,
+# into <DEST>/<id>/, the layout ZapNG loads plugins from.
+#
+# Usage: script/build_plugins <DEST>
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: script/build_plugins <DEST>" >&2
+  exit 2
+fi
+DEST="$1"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET="wasm32-wasip2"
+TARGET_DIR="$REPO_ROOT/target/plugins"
+
+if command -v rustup >/dev/null; then
+  rustup target add "$TARGET"
+fi
+
+for manifest in "$REPO_ROOT"/plugins/*/plugin.toml; do
+  plugin_dir="$(dirname "$manifest")"
+  id="$(sed -n 's/^id = "\(.*\)"$/\1/p' "$manifest")"
+  wasm="$(sed -n 's/^wasm = "\(.*\)"$/\1/p' "$manifest")"
+  if [[ -z "$id" ]]; then
+    echo "$manifest has no id" >&2
+    exit 1
+  fi
+  mkdir -p "$DEST/$id"
+  cp "$manifest" "$DEST/$id/"
+  if [[ -n "$wasm" ]]; then
+    echo "Building the plugin $id..."
+    (cd "$plugin_dir" && cargo build --release --target "$TARGET" --target-dir "$TARGET_DIR")
+    cp "$TARGET_DIR/$TARGET/release/$wasm" "$DEST/$id/"
+  fi
+done

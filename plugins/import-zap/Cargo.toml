@@ -1,0 +1,24 @@
+# The plugin that imports a Zap install into ZapNG. It is built on its own for wasm32-wasip2,
+# outside the workspace (script/build_plugins); its logic is also tested natively.
+[package]
+name = "import_zap"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "AGPL-3.0-only"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml_edit = "0.25.5"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wit-bindgen = "0.61"
+
+[dev-dependencies]
+tempfile = "3.8.0"
+
+[workspace]

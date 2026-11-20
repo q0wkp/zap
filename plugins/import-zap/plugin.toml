@@ -1,0 +1,26 @@
+id = "import-zap"
+name = "Import from Zap"
+version = "0.1.0"
+description = "Copies the settings, files, data and saved secrets of a Zap install into ZapNG."
+api = "0.1"
+wasm = "import_zap.wasm"
+hooks = ["detect", "import"]
+
+[capabilities]
+# Where Zap kept its files, on Linux and on macOS.
+read = [
+    ".zap",
+    ".config/zap",
+    ".local/share/zap",
+    ".local/state/zap",
+    "Library/Application Support/dev.zap.Zap",
+]
+# Where ZapNG keeps the same.
+write = [
+    ".zap-ng",
+    ".config/zap-ng",
+    ".local/share/zap-ng",
+    ".local/state/zap-ng",
+    "Library/Application Support/dev.q0wkp.zapng",
+]
+secrets = true
