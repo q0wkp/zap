@@ -3740,3 +3740,9 @@ workflow-enum-variants = Варианты
 quit-warning-dont-save = Не сохранять
 quit-warning-show-running-processes = Показать запущенные процессы
 quit-warning-save-changes-title = Сохранить изменения?
+
+# Offering to import a Zap install on the first start
+zap-import-offer-title = Импортировать из Zap?
+zap-import-offer-body = На этом компьютере найдена установка Zap. ZapNG может скопировать её настройки, файлы, историю и сохранённые ключи. Сам Zap не изменяется. Для этого ZapNG закроется; откройте его снова, чтобы завершить импорт. Настройки и данные, которые уже есть в ZapNG, будут заменены.
+zap-import-offer-accept = Импортировать и выйти
+zap-import-offer-decline = Не сейчас

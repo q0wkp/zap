@@ -52,6 +52,8 @@ mod notifications;
 mod palette;
 mod persistence;
 mod platform;
+#[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+mod plugins;
 mod prefix;
 #[cfg(target_os = "macos")]
 mod preview_config_migration;
@@ -735,6 +737,11 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
     // 仅 LaunchMode::App 需要(CLI / Worker / Test 走另外路径,这些不调用
     // initialize_app 里的 persistence::initialize)。
     if matches!(launch_mode, LaunchMode::App { .. }) {
+        // Before anything opens the settings or the database: a plugin call left for this
+        // start, such as an import, replaces those files.
+        #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+        plugins::run_deferred_calls();
+
         log::info!("Triggering SQLite prewarm in background...");
         crate::persistence::prewarm_db_in_background();
     }

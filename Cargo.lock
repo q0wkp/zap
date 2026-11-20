@@ -17151,6 +17151,7 @@ dependencies = [
  "zap_ng_isolation_platform",
  "zap_ng_logging",
  "zap_ng_managed_secrets",
+ "zap_ng_plugin",
  "zap_ng_ripgrep",
  "zap_ng_sftp",
  "zap_ng_ssh_manager",

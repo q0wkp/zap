@@ -3706,3 +3706,9 @@ cloud-sync-gist-error-request = ネットワークリクエストに失敗しま
 cloud-sync-gist-error-not-found = Gist が見つかりません
 cloud-sync-gist-error-no-token = トークンが設定されていません
 cloud-sync-gist-error-api = API エラー: { $status } { $body }
+
+# Offering to import a Zap install on the first start
+zap-import-offer-title = Zap からインポートしますか？
+zap-import-offer-body = このコンピューターに Zap のインストールが見つかりました。ZapNG はその設定、ファイル、履歴、保存済みのキーをコピーできます。Zap 自体は変更されません。インポートのために ZapNG を終了します。もう一度開くと完了します。ZapNG に既にある設定とデータは置き換えられます。
+zap-import-offer-accept = インポートして終了
+zap-import-offer-decline = 今はしない

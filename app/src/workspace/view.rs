@@ -2451,6 +2451,9 @@ impl Workspace {
             settings_file_error,
         } = global_resource_handles.clone();
 
+        #[cfg(all(feature = "local_fs", not(target_family = "wasm")))]
+        crate::plugins::offer_zap_import(ctx);
+
         // Inserting a (window, ModalSizes) pair to the ResizableData singleton. A restored window
         // reads the sizes from the window snapshot. A new window initializes with all default sizes.
         let resizable_data = ResizableData::handle(ctx);

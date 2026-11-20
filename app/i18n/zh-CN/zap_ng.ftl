@@ -3786,3 +3786,9 @@ cloud-sync-gist-error-request = 网络请求失败: { $detail }
 cloud-sync-gist-error-not-found = Gist 未找到
 cloud-sync-gist-error-no-token = Token 未配置
 cloud-sync-gist-error-api = API 错误: { $status } { $body }
+
+# Offering to import a Zap install on the first start
+zap-import-offer-title = 从 Zap 导入？
+zap-import-offer-body = 在这台电脑上发现了 Zap 的安装。ZapNG 可以把它的设置、文件、历史记录和已保存的密钥复制过来，Zap 本身不会被改动。导入需要先退出 ZapNG，再次打开后完成。ZapNG 已有的设置和数据会被替换。
+zap-import-offer-accept = 导入并退出
+zap-import-offer-decline = 暂不导入

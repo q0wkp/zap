@@ -251,6 +251,7 @@ winit = { workspace = true }
 wgpu.workspace = true
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
+zap_ng_plugin = { path = "../crates/zap_ng_plugin" }
 app-installation-detection.workspace = true
 async-io.workspace = true
 axum.workspace = true

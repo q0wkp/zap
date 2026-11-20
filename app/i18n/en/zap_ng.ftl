@@ -3875,3 +3875,9 @@ cloud-sync-gist-error-request = Network request failed: { $detail }
 cloud-sync-gist-error-not-found = Gist not found
 cloud-sync-gist-error-no-token = Token is not configured
 cloud-sync-gist-error-api = API error: { $status } { $body }
+
+# Offering to import a Zap install on the first start
+zap-import-offer-title = Import from Zap?
+zap-import-offer-body = A Zap install was found on this computer. ZapNG can copy its settings, files, history and saved keys. Zap itself is not changed. ZapNG will quit to do this; open it again to finish. Settings and data ZapNG already has are replaced.
+zap-import-offer-accept = Import and Quit
+zap-import-offer-decline = Not Now

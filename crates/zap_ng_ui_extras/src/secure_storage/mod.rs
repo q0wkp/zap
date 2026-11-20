@@ -59,6 +59,25 @@ pub fn register_with_fallback(
     });
 }
 
+/// Opens the secure storage of `service_name` on its own, without registering it with an
+/// application: before the application is set up, or for another application's secrets.
+///
+/// On Linux, `fallback_dir` is where secrets are kept when there is no secret service, as
+/// [`register_with_fallback`] takes it.
+#[cfg(not(target_family = "wasm"))]
+pub fn open(service_name: &str, fallback_dir: Option<std::path::PathBuf>) -> Model {
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    if let Some(fallback_dir) = fallback_dir {
+        return Box::new(imp::SecureStorage::new_with_fallback(
+            service_name,
+            fallback_dir,
+        ));
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
+    let _ = fallback_dir;
+    Box::new(imp::SecureStorage::new(service_name))
+}
+
 /// A trait representing a secure store for key-value pairs.
 ///
 /// This is typically backed by an OS-provided secure storage system.
