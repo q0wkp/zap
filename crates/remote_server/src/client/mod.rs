@@ -10,12 +10,12 @@ use futures::io::{AsyncRead, AsyncWrite};
 use warpui::r#async::{executor, FutureExt as _};
 
 use crate::proto::{
-    client_message, server_message, Abort, Authenticate, BufferEdit, ClientMessage, CloseBuffer,
-    CreateDirectory, CreateDirectoryResponse, DeleteFile, ErrorCode, Initialize,
-    InitializeResponse, ListDirectory, ListDirectoryResponse, LoadRepoMetadataDirectoryResponse,
-    NavigatedToDirectoryResponse, OpenBuffer, OpenBufferResponse, ReadFileChunk,
-    read_file_chunk_response, ReadFileChunkResponse, ReadFileContextRequest,
-    ReadFileContextResponse, ResolveConflict,
+    client_message, read_file_chunk_response, server_message, Abort, Authenticate, BufferEdit,
+    ClientMessage, CloseBuffer, CreateDirectory, CreateDirectoryResponse, DeleteFile, ErrorCode,
+    ImageFileVersion, Initialize, InitializeResponse, ListDirectory, ListDirectoryResponse,
+    LoadRepoMetadataDirectoryResponse, NavigatedToDirectoryResponse, OpenBuffer,
+    OpenBufferResponse, ReadFileChunk, ReadFileChunkResponse, ReadFileContextRequest,
+    ReadFileContextResponse, ReadImageThumbnail, ReadImageThumbnailResponse, ResolveConflict,
     ResolveConflictResponse, ResolvePath, ResolvePathResponse, RunCommandRequest,
     RunCommandResponse, SaveBuffer, SaveBufferResponse, ServerMessage, SessionBootstrapped,
     TextEdit, WriteFile, WriteFileChunk, WriteFileChunkResponse,
@@ -457,6 +457,38 @@ impl RemoteServerClient {
             Some(server_message::Message::ReadFileChunkResponse(resp)) => Ok(resp),
             other => {
                 log::error!("Unexpected response variant for ReadFileChunk: {other:?}");
+                Err(ClientError::UnexpectedResponse)
+            }
+        }
+    }
+
+    /// Reads a remote image scaled down by the server to fit within `max_width` x
+    /// `max_height` pixels. With `known_version`, the response carries no image when the
+    /// file is still at that version.
+    pub async fn read_image_thumbnail(
+        &self,
+        path: String,
+        max_width: u32,
+        max_height: u32,
+        known_version: Option<ImageFileVersion>,
+    ) -> Result<ReadImageThumbnailResponse, ClientError> {
+        let request_id = RequestId::new();
+        let msg = ClientMessage {
+            request_id: request_id.to_string(),
+            message: Some(client_message::Message::ReadImageThumbnail(
+                ReadImageThumbnail {
+                    path,
+                    max_width,
+                    max_height,
+                    known_version,
+                },
+            )),
+        };
+        let response = self.send_request(request_id, msg).await?;
+        match response.message {
+            Some(server_message::Message::ReadImageThumbnailResponse(resp)) => Ok(resp),
+            other => {
+                log::error!("Unexpected response variant for ReadImageThumbnail: {other:?}");
                 Err(ClientError::UnexpectedResponse)
             }
         }

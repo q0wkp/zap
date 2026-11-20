@@ -505,6 +505,18 @@ impl AssetCache {
         }
     }
 
+    /// Drops a raw asset inserted with [`Self::insert_raw_asset_bytes`], together with the
+    /// images decoded from it.
+    pub fn remove_raw_asset<T: Asset>(&self, id: &str, ctx: &mut ModelContext<Self>) {
+        let source = AssetSource::Raw { id: id.to_owned() };
+        let key = AssetHandle {
+            source: source.clone(),
+            asset_type: TypeId::of::<T>(),
+        };
+        self.inner.borrow_mut().remove(&key);
+        ImageCache::as_ref(ctx).evict_image(&source);
+    }
+
     // Creates a future that resolves when an asset is loaded into moemory.
     fn create_future_for_loading_asset(
         &self,

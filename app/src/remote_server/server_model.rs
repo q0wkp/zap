@@ -31,14 +31,15 @@ use super::proto::{
 #[cfg(feature = "local_fs")]
 use super::proto::{
     create_directory_response, list_directory_response, read_file_chunk_response,
-    resolve_conflict_response, resolve_path_response, save_buffer_response,
-    write_file_chunk_response, BufferEdit, BufferUpdatedPush, CloseBuffer, CreateDirectory,
-    CreateDirectoryResponse, CreateDirectorySuccess, DirEntry, FileSystemEntryKind, ListDirectory,
-    ListDirectoryResponse, ListDirectorySuccess, OpenBuffer, OpenBufferResponse, ReadFileChunk,
-    ReadFileChunkResponse, ReadFileChunkSuccess, ResolveConflict, ResolveConflictResponse,
-    ResolveConflictSuccess, ResolvePath, ResolvePathResponse, ResolvePathSuccess, SaveBuffer,
-    SaveBufferResponse, SaveBufferSuccess, TextEdit, WriteFileChunk, WriteFileChunkResponse,
-    WriteFileChunkSuccess,
+    read_image_thumbnail_response, resolve_conflict_response, resolve_path_response,
+    save_buffer_response, write_file_chunk_response, BufferEdit, BufferUpdatedPush, CloseBuffer,
+    CreateDirectory, CreateDirectoryResponse, CreateDirectorySuccess, DirEntry,
+    FileSystemEntryKind, ImageFileVersion, ListDirectory, ListDirectoryResponse,
+    ListDirectorySuccess, OpenBuffer, OpenBufferResponse, ReadFileChunk, ReadFileChunkResponse,
+    ReadFileChunkSuccess, ReadImageThumbnail, ReadImageThumbnailResponse,
+    ReadImageThumbnailSuccess, ResolveConflict, ResolveConflictResponse, ResolveConflictSuccess,
+    ResolvePath, ResolvePathResponse, ResolvePathSuccess, SaveBuffer, SaveBufferResponse,
+    SaveBufferSuccess, TextEdit, WriteFileChunk, WriteFileChunkResponse, WriteFileChunkSuccess,
 };
 #[cfg(feature = "local_fs")]
 use super::server_buffer_tracker::{PendingBufferRequestKind, ServerBufferTracker};
@@ -658,6 +659,10 @@ impl ServerModel {
             Some(client_message::Message::ReadFileChunk(msg)) => self.handle_read_file_chunk(msg),
             #[cfg(feature = "local_fs")]
             Some(client_message::Message::WriteFileChunk(msg)) => self.handle_write_file_chunk(msg),
+            #[cfg(feature = "local_fs")]
+            Some(client_message::Message::ReadImageThumbnail(msg)) => {
+                self.handle_read_image_thumbnail(msg, &request_id, conn_id, ctx)
+            }
             #[cfg(not(feature = "local_fs"))]
             Some(
                 client_message::Message::OpenBuffer(_)
@@ -669,7 +674,8 @@ impl ServerModel {
                 | client_message::Message::ResolvePath(_)
                 | client_message::Message::CreateDirectory(_)
                 | client_message::Message::ReadFileChunk(_)
-                | client_message::Message::WriteFileChunk(_),
+                | client_message::Message::WriteFileChunk(_)
+                | client_message::Message::ReadImageThumbnail(_),
             ) => HandlerOutcome::Sync(server_message::Message::Error(ErrorResponse {
                 code: ErrorCode::InvalidRequest.into(),
                 message: "Buffer syncing requires the local_fs feature".to_string(),
@@ -1642,6 +1648,44 @@ impl ServerModel {
         ))
     }
 
+    /// Handles `ReadImageThumbnail`: the image is decoded, shrunk and encoded off the main
+    /// thread, and the response sent when that is done.
+    #[cfg(feature = "local_fs")]
+    fn handle_read_image_thumbnail(
+        &mut self,
+        msg: ReadImageThumbnail,
+        request_id: &RequestId,
+        conn_id: ConnectionId,
+        ctx: &mut ModelContext<Self>,
+    ) -> HandlerOutcome {
+        let request_id_for_response = request_id.clone();
+        let handle = self.spawn_request_handler(
+            request_id.clone(),
+            async move {
+                read_image_thumbnail(&msg).map_err(|err| FileOperationError {
+                    message: format!("Failed to read image thumbnail {}: {err:#}", msg.path),
+                })
+            },
+            move |me, result: Result<ReadImageThumbnailSuccess, FileOperationError>, _ctx| {
+                let result = match result {
+                    Ok(success) => read_image_thumbnail_response::Result::Success(success),
+                    Err(error) => read_image_thumbnail_response::Result::Error(error),
+                };
+                me.send_server_message(
+                    Some(conn_id),
+                    Some(&request_id_for_response),
+                    server_message::Message::ReadImageThumbnailResponse(
+                        ReadImageThumbnailResponse {
+                            result: Some(result),
+                        },
+                    ),
+                );
+            },
+            ctx,
+        );
+        HandlerOutcome::Async(Some(handle))
+    }
+
     #[cfg(feature = "local_fs")]
     fn handle_write_file_chunk(&self, msg: WriteFileChunk) -> HandlerOutcome {
         use std::io::{Seek, SeekFrom, Write};
@@ -1704,6 +1748,96 @@ impl ServerModel {
 }
 
 #[cfg(feature = "local_fs")]
+/// The largest image file sent as it is instead of as a thumbnail: one already within the
+/// requested bounds, or one that can't be scaled here (an SVG).
+#[cfg(feature = "local_fs")]
+const THUMBNAIL_PASSTHROUGH_MAX_BYTES: u64 = 1024 * 1024;
+
+/// The JPEG quality of a thumbnail without transparency.
+#[cfg(feature = "local_fs")]
+const THUMBNAIL_JPEG_QUALITY: u8 = 85;
+
+/// Answers a `ReadImageThumbnail`: no image when the file is still at the version the client
+/// holds, otherwise its thumbnail.
+#[cfg(feature = "local_fs")]
+fn read_image_thumbnail(msg: &ReadImageThumbnail) -> anyhow::Result<ReadImageThumbnailSuccess> {
+    let path = expand_user_path(&msg.path);
+    let metadata = std::fs::metadata(&path)?;
+    let version = ImageFileVersion {
+        size: metadata.len(),
+        modified_millis: metadata
+            .modified()
+            .ok()
+            .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|since_epoch| since_epoch.as_millis() as u64),
+    };
+    let image = if msg.known_version.as_ref() == Some(&version) {
+        None
+    } else {
+        Some(encode_image_thumbnail(
+            &path,
+            metadata.len(),
+            msg.max_width.max(1),
+            msg.max_height.max(1),
+        )?)
+    };
+    Ok(ReadImageThumbnailSuccess {
+        version: Some(version),
+        image,
+    })
+}
+
+/// Encodes the image at `path` to fit within `max_width` x `max_height` pixels: as a PNG when
+/// it has transparency, as a JPEG otherwise. A small file already within the bounds, and an
+/// SVG, are returned as they are.
+#[cfg(feature = "local_fs")]
+fn encode_image_thumbnail(
+    path: &std::path::Path,
+    file_size: u64,
+    max_width: u32,
+    max_height: u32,
+) -> anyhow::Result<Vec<u8>> {
+    let passthrough = || -> anyhow::Result<Vec<u8>> {
+        anyhow::ensure!(
+            file_size <= THUMBNAIL_PASSTHROUGH_MAX_BYTES,
+            "the file is too large to preview as it is ({file_size} bytes)"
+        );
+        Ok(std::fs::read(path)?)
+    };
+
+    let reader = image::ImageReader::open(path)?.with_guessed_format()?;
+    if reader.format().is_none() {
+        return passthrough();
+    }
+    let (width, height) = reader.into_dimensions()?;
+    let fits = width <= max_width && height <= max_height;
+    if fits && file_size <= THUMBNAIL_PASSTHROUGH_MAX_BYTES {
+        return passthrough();
+    }
+
+    let image = image::ImageReader::open(path)?
+        .with_guessed_format()?
+        .decode()?;
+    // `thumbnail` would scale an image that fits up to the bounds.
+    let image = if fits {
+        image
+    } else {
+        image.thumbnail(max_width, max_height)
+    };
+
+    let mut encoded = Vec::new();
+    if image.color().has_alpha() {
+        image.write_to(
+            &mut std::io::Cursor::new(&mut encoded),
+            image::ImageFormat::Png,
+        )?;
+    } else {
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded, THUMBNAIL_JPEG_QUALITY)
+            .encode_image(&image.to_rgb8())?;
+    }
+    Ok(encoded)
+}
+
 fn expand_user_path(path: &str) -> PathBuf {
     if path == "~" {
         if let Some(home) = dirs::home_dir() {

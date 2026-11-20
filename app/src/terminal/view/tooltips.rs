@@ -1,13 +1,18 @@
 //! Grid tooltips for the terminal view
 
+use std::path::PathBuf;
+
 use pathfinder_geometry::vector::vec2f;
 
 use warpui::{
+    assets::asset_cache::{AssetCache, AssetSource, LocalFileContentVersion},
     elements::{
-        ChildAnchor, Dismiss, MouseStateHandle, OffsetPositioning, PositionedElementAnchor,
-        PositionedElementOffsetBounds, Stack,
+        Border, CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius, Dismiss, Flex,
+        Image, MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
+        PositionedElementOffsetBounds, Radius, Stack,
     },
-    AppContext, Element, EventContext,
+    image_cache::ImageType,
+    AppContext, Element, EventContext, SingletonEntity, ViewContext,
 };
 
 use super::{TerminalAction, TerminalView};
@@ -16,7 +21,7 @@ use crate::{
     appearance::Appearance,
     terminal::{
         links::directly_open_link_keybinding_string,
-        model::{ObfuscateSecrets, Secret},
+        model::{session::SessionId, ObfuscateSecrets, Secret},
         safe_mode_settings::get_secret_obfuscation_mode,
         view::SecretTooltip,
         TerminalModel,
@@ -25,8 +30,41 @@ use crate::{
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
-        use crate::terminal::view::RichContentLink;
+        use crate::terminal::view::{RichContentLink, RichContentLinkTooltipInfo};
+        use crate::util::openable_file_type::is_supported_image_file;
         use super::GridHighlightedLink;
+    }
+}
+
+/// The largest size a link's image preview is drawn at.
+pub(super) const IMAGE_PREVIEW_MAX_WIDTH: f32 = 320.;
+pub(super) const IMAGE_PREVIEW_MAX_HEIGHT: f32 = 240.;
+/// The preview's size when the image's own can't be read from its header (an SVG has none).
+const IMAGE_PREVIEW_FALLBACK_WIDTH: f32 = 240.;
+const IMAGE_PREVIEW_FALLBACK_HEIGHT: f32 = 160.;
+
+/// A thumbnail shown above the links of a link's tooltip, when the link leads to an image file.
+#[derive(Debug, Clone)]
+pub(super) struct LinkImagePreview {
+    /// The file the open tooltip's link leads to.
+    pub(super) path: PathBuf,
+    /// The image and the width and height to draw it at. `None` while the bytes of a file on
+    /// a remote host are being fetched.
+    pub(super) image: Option<(AssetSource, f32, f32)>,
+}
+
+/// The size to draw an image of the given dimensions at: its own, scaled down to fit the
+/// preview's bounds.
+pub(super) fn image_preview_size(dimensions: Option<(u32, u32)>) -> (f32, f32) {
+    match dimensions {
+        Some((width, height)) if width > 0 && height > 0 => {
+            let (width, height) = (width as f32, height as f32);
+            let scale = (IMAGE_PREVIEW_MAX_WIDTH / width)
+                .min(IMAGE_PREVIEW_MAX_HEIGHT / height)
+                .min(1.);
+            ((width * scale).max(1.), (height * scale).max(1.))
+        }
+        Some(_) | None => (IMAGE_PREVIEW_FALLBACK_WIDTH, IMAGE_PREVIEW_FALLBACK_HEIGHT),
     }
 }
 
@@ -314,7 +352,13 @@ impl TerminalView {
             (_, _, _) => TooltipRedaction::NoRedaction,
         };
         stack.add_positioned_overlay_child(
-            render_tooltip(links, redaction, appearance, app),
+            render_tooltip(
+                links,
+                self.link_image_preview.as_ref(),
+                redaction,
+                appearance,
+                app,
+            ),
             OffsetPositioning::offset_from_save_position_element(
                 element_id,
                 // Add a small buffer between the tooltip and the top of the cell.
@@ -327,8 +371,107 @@ impl TerminalView {
     }
 }
 
+impl TerminalView {
+    /// The file the open link tooltip leads to and the session its path belongs to, when it
+    /// is an image.
+    fn link_tooltip_image_path(&self) -> Option<(PathBuf, Option<SessionId>)> {
+        #[cfg(feature = "local_fs")]
+        {
+            let (path, session_id) =
+                if let Some(GridHighlightedLink::File(file_link)) = &self.open_grid_link_tool_tip {
+                    (
+                        file_link.get_inner().absolute_path()?,
+                        self.session_id_for_grid_link(file_link),
+                    )
+                } else if let Some(RichContentLinkTooltipInfo {
+                    link: RichContentLink::FilePath { absolute_path, .. },
+                    ..
+                }) = &self.open_rich_content_link_tool_tip
+                {
+                    // Rich content has no block of its own: its paths belong to the active session.
+                    (absolute_path.clone(), self.active_block_session_id())
+                } else {
+                    return None;
+                };
+            if is_supported_image_file(&path) {
+                return Some((path, session_id));
+            }
+        }
+        None
+    }
+
+    /// Brings the image preview in line with the link tooltip that is open. Call it whenever
+    /// a link tooltip opens or closes: it reads the file's metadata and header, which
+    /// rendering must not do.
+    pub(super) fn refresh_link_image_preview(&mut self, ctx: &mut ViewContext<Self>) {
+        let Some((path, session_id)) = self.link_tooltip_image_path() else {
+            self.set_link_image_preview(None, ctx);
+            return;
+        };
+        if self
+            .link_image_preview
+            .as_ref()
+            .is_some_and(|preview| preview.path == path)
+        {
+            return;
+        }
+
+        // A path printed in a remote session names a file on that host.
+        #[cfg(all(
+            feature = "local_tty",
+            feature = "local_fs",
+            not(target_family = "wasm")
+        ))]
+        if let Some(host_id) = self.remote_host_id_for_session(session_id, ctx) {
+            self.show_remote_link_image_preview(host_id, path, ctx);
+            return;
+        }
+        #[cfg(not(all(
+            feature = "local_tty",
+            feature = "local_fs",
+            not(target_family = "wasm")
+        )))]
+        let _ = session_id;
+
+        // The version makes a screenshot rewritten at the same path load anew; a file that
+        // is gone has none, and gets no preview.
+        let preview = LocalFileContentVersion::for_path(&path).map(|version| {
+            let (width, height) = image_preview_size(image::image_dimensions(&path).ok());
+            let source = AssetSource::LocalFile {
+                path: path.to_string_lossy().into_owned(),
+                content_version: Some(version),
+            };
+            LinkImagePreview {
+                path,
+                image: Some((source, width, height)),
+            }
+        });
+        self.set_link_image_preview(preview, ctx);
+    }
+
+    /// Replaces the image preview, dropping the image of the one it replaces when that was
+    /// put into the asset cache for it.
+    pub(super) fn set_link_image_preview(
+        &mut self,
+        preview: Option<LinkImagePreview>,
+        ctx: &mut ViewContext<Self>,
+    ) {
+        let previous = std::mem::replace(&mut self.link_image_preview, preview);
+        if let Some(LinkImagePreview {
+            image: Some((AssetSource::Raw { id }, _, _)),
+            ..
+        }) = previous
+        {
+            AssetCache::handle(ctx).update(ctx, |cache, ctx| {
+                cache.remove_raw_asset::<ImageType>(&id, ctx);
+            });
+        }
+    }
+}
+
 fn render_tooltip(
     tooltip_links: impl IntoIterator<Item = GridTooltipLink>,
+    image_preview: Option<&LinkImagePreview>,
     redaction: TooltipRedaction,
     appearance: &Appearance,
     app: &AppContext,
@@ -348,6 +491,32 @@ fn render_tooltip(
 
     let tooltip_content =
         crate::util::tooltips::render_tooltip(shared_links, redaction, appearance, app);
+
+    let tooltip_content = match image_preview.and_then(|preview| preview.image.as_ref()) {
+        Some((source, width, height)) => {
+            let image = ConstrainedBox::new(
+                Image::new(source.clone(), CacheOption::BySize)
+                    .contain()
+                    .finish(),
+            )
+            .with_width(*width)
+            .with_height(*height)
+            .finish();
+            Flex::column()
+                .with_child(
+                    Container::new(image)
+                        .with_uniform_padding(4.)
+                        .with_margin_bottom(2.)
+                        .with_background(appearance.theme().tooltip_background())
+                        .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)))
+                        .with_border(Border::all(1.).with_border_fill(appearance.theme().outline()))
+                        .finish(),
+                )
+                .with_child(tooltip_content)
+                .finish()
+        }
+        None => tooltip_content,
+    };
 
     Dismiss::new(tooltip_content)
         .on_dismiss(|ctx, _app| {

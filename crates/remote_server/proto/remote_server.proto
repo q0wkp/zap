@@ -33,6 +33,7 @@ message ClientMessage {
     CreateDirectory create_directory = 20;
     ReadFileChunk read_file_chunk = 21;
     WriteFileChunk write_file_chunk = 22;
+    ReadImageThumbnail read_image_thumbnail = 23;
   }
 }
 // Top-level envelope for all server → client messages.
@@ -60,6 +61,7 @@ message ServerMessage {
     CreateDirectoryResponse create_directory_response = 20;
     ReadFileChunkResponse read_file_chunk_response = 21;
     WriteFileChunkResponse write_file_chunk_response = 22;
+    ReadImageThumbnailResponse read_image_thumbnail_response = 23;
   }
 }
 
@@ -518,6 +520,37 @@ message ReadFileChunkSuccess {
 message ReadFileChunkResponse {
   oneof result {
     ReadFileChunkSuccess success = 1;
+    FileOperationError error = 2;
+  }
+}
+
+// Reads an image scaled down to fit within max_width x max_height pixels, for a
+// preview: the server shrinks and re-encodes it, so that a large image is never
+// sent whole.
+message ReadImageThumbnail {
+  string path = 1;
+  uint32 max_width = 2;
+  uint32 max_height = 3;
+  // The version of the file the client already holds a thumbnail of. When the
+  // file is still at it, the response carries no image.
+  optional ImageFileVersion known_version = 4;
+}
+
+// What tells one state of an image file from the next.
+message ImageFileVersion {
+  uint64 size = 1;
+  optional uint64 modified_millis = 2;
+}
+
+message ReadImageThumbnailSuccess {
+  ImageFileVersion version = 1;
+  // The encoded thumbnail. Absent when the file is still at known_version.
+  optional bytes image = 2;
+}
+
+message ReadImageThumbnailResponse {
+  oneof result {
+    ReadImageThumbnailSuccess success = 1;
     FileOperationError error = 2;
   }
 }

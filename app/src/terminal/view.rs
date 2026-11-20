@@ -34,6 +34,12 @@ pub(crate) mod ssh_remote_server_failed_banner;
 mod tab_metadata;
 #[cfg(any(test, feature = "integration_tests"))]
 mod testing;
+#[cfg(all(
+    feature = "local_tty",
+    feature = "local_fs",
+    not(target_family = "wasm")
+))]
+mod remote_image_preview;
 mod tooltips;
 pub mod use_agent_footer;
 mod zero_state_block;
@@ -2423,6 +2429,16 @@ pub struct TerminalView {
     open_grid_link_tool_tip: Option<GridHighlightedLink>,
 
     open_rich_content_link_tool_tip: Option<RichContentLinkTooltipInfo>,
+    /// The image preview of the link one of the two tooltips above is open for, kept in
+    /// line with them by `refresh_link_image_preview`.
+    link_image_preview: Option<tooltips::LinkImagePreview>,
+    /// The thumbnails of images on remote hosts fetched for those previews.
+    #[cfg(all(
+        feature = "local_tty",
+        feature = "local_fs",
+        not(target_family = "wasm")
+    ))]
+    remote_image_previews: remote_image_preview::RemoteImagePreviewCache,
 
     last_hover_fragment_boundary: Option<WithinModel<FragmentBoundary>>,
 
@@ -3961,6 +3977,13 @@ impl TerminalView {
             mouse_down_block_index: None,
             mouse_states: Default::default(),
             open_grid_link_tool_tip: None,
+            link_image_preview: None,
+            #[cfg(all(
+                feature = "local_tty",
+                feature = "local_fs",
+                not(target_family = "wasm")
+            ))]
+            remote_image_previews: Default::default(),
             open_rich_content_link_tool_tip: None,
             auth_state: AuthStateProvider::as_ref(ctx).get().clone(),
             find_bar,
@@ -7657,6 +7680,7 @@ impl TerminalView {
         self.open_grid_link_tool_tip = None;
         self.open_secret_tool_tip = None;
         self.open_rich_content_link_tool_tip = None;
+        self.set_link_image_preview(None, ctx);
         for rich_content in self.rich_content_views.iter() {
             if let Some(ai_metadata) = rich_content.ai_block_metadata() {
                 ai_metadata.ai_block_handle.update(ctx, |ai_block, ctx| {
@@ -16520,6 +16544,7 @@ impl TerminalView {
         } else {
             self.open_grid_link_tool_tip = None;
         }
+        self.refresh_link_image_preview(ctx);
 
         if should_directly_open_link {
             self.maybe_open_link(LinkOpenMethod::CmdClick, position, ctx);
@@ -18508,9 +18533,11 @@ impl TerminalView {
             }
             AIBlockEvent::ShowLinkTooltip(tooltip_info) => {
                 self.open_rich_content_link_tool_tip = Some(tooltip_info.clone());
+                self.refresh_link_image_preview(ctx);
             }
             AIBlockEvent::DismissLinkTooltip => {
                 self.open_rich_content_link_tool_tip = None;
+                self.refresh_link_image_preview(ctx);
             }
             AIBlockEvent::ShowSecretTooltip(tooltip_info) => {
                 self.open_secret_tool_tip = Some(SecretTooltip::RichContent {
@@ -25387,6 +25414,7 @@ impl View for TerminalView {
         if blur_ctx.is_self_blurred() {
             // Make sure to close link tooltips when terminal view is not in focus.
             self.open_grid_link_tool_tip.take();
+            self.refresh_link_image_preview(ctx);
 
             self.maybe_report_focus_out(ctx);
             ctx.notify();
