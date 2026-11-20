@@ -1,106 +1,41 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   viewBox="0 0 512 512"
-   version="1.0"
-   id="zap-ng"
-   xmlns="http://www.w3.org/2000/svg">
-  <defs
-     id="defs8">
-    <linearGradient
-       id="g1"
-       x1="0"
-       y1="1"
-       x2="0"
-       y2="0">
-      <stop
-         offset="0%"
-         stop-color="#7a2fa8"
-         id="stop1" />
-      <stop
-         offset="100%"
-         stop-color="#a23bb5"
-         id="stop2" />
-    </linearGradient>
-    <linearGradient
-       id="g2"
-       x1="0"
-       y1="1"
-       x2="0"
-       y2="0">
-      <stop
-         offset="0%"
-         stop-color="#a23bb5"
-         id="stop3" />
-      <stop
-         offset="100%"
-         stop-color="#d04d9c"
-         id="stop4" />
-    </linearGradient>
-    <linearGradient
-       id="g3"
-       x1="0"
-       y1="1"
-       x2="0"
-       y2="0">
-      <stop
-         offset="0%"
-         stop-color="#d04d9c"
-         id="stop5" />
-      <stop
-         offset="100%"
-         stop-color="#f26f7c"
-         id="stop6" />
-    </linearGradient>
-    <linearGradient
-       id="g4"
-       x1="0"
-       y1="1"
-       x2="0"
-       y2="0">
-      <stop
-         offset="0%"
-         stop-color="#f26f7c"
-         id="stop7" />
-      <stop
-         offset="100%"
-         stop-color="#ffab8c"
-         id="stop8" />
-    </linearGradient>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="640" height="640" viewBox="0 0 640 640"
+     role="img" aria-label="ZapNG logo">
+  <defs>
+    <filter id="skui-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="skui-inside"><path d="M64 229.254C64 149.739 70.859 119.171 103.015 87.015C135.171 54.859 165.739 48 245.254 48L394.746 48C474.261 48 504.829 54.859 536.985 87.015C569.141 119.171 576 149.739 576 229.254L576 378.746C576 458.261 569.141 488.829 536.985 520.985C504.829 553.141 474.261 560 394.746 560L245.254 560C165.739 560 135.171 553.141 103.015 520.985C70.859 488.829 64 458.261 64 378.746Z"/></clipPath>
   </defs>
-  <g
-     transform="skewX(-8)"
-     id="g11">
-    <rect
-       x="70"
-       y="332"
-       width="80"
-       height="140"
-       rx="18"
-       fill="url(#g1)"
-       id="rect1" />
-    <rect
-       x="166"
-       y="252"
-       width="90"
-       height="200"
-       rx="20"
-       fill="url(#g2)"
-       id="rect2" />
-    <rect
-       x="272"
-       y="162"
-       width="110"
-       height="260"
-       rx="25"
-       fill="url(#g3)"
-       id="rect3" />
-    <rect
-       x="400"
-       y="72"
-       width="120"
-       height="320"
-       rx="30"
-       fill="url(#g4)"
-       id="rect4" />
+
+  <path id="background" d="M64 229.254C64 149.739 70.859 119.171 103.015 87.015C135.171 54.859 165.739 48 245.254 48L394.746 48C474.261 48 504.829 54.859 536.985 87.015C569.141 119.171 576 149.739 576 229.254L576 378.746C576 458.261 569.141 488.829 536.985 520.985C504.829 553.141 474.261 560 394.746 560L245.254 560C165.739 560 135.171 553.141 103.015 520.985C70.859 488.829 64 458.261 64 378.746Z" fill="#1C2028" filter="url(#skui-shadow)"/>
+  <path id="edge" d="M64 229.254C64 149.739 70.859 119.171 103.015 87.015C135.171 54.859 165.739 48 245.254 48L394.746 48C474.261 48 504.829 54.859 536.985 87.015C569.141 119.171 576 149.739 576 229.254L576 378.746C576 458.261 569.141 488.829 536.985 520.985C504.829 553.141 474.261 560 394.746 560L245.254 560C165.739 560 135.171 553.141 103.015 520.985C70.859 488.829 64 458.261 64 378.746Z" fill="none" stroke="#FFFFFF" stroke-opacity="0.14"
+        stroke-width="16" clip-path="url(#skui-inside)"/>
+
+  <g transform="translate(138.2052 111.426) scale(0.708)">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#7a2fa8"/>
+        <stop offset="100%" stop-color="#a23bb5"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#a23bb5"/>
+        <stop offset="100%" stop-color="#d04d9c"/>
+      </linearGradient>
+      <linearGradient id="g3" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#d04d9c"/>
+        <stop offset="100%" stop-color="#f26f7c"/>
+      </linearGradient>
+      <linearGradient id="g4" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#f26f7c"/>
+        <stop offset="100%" stop-color="#ffab8c"/>
+      </linearGradient>
+    </defs>
+      <g transform="skewX(-8)">
+        <rect x="70" y="332" width="80" height="140" rx="18" fill="url(#g1)"/>
+        <rect x="166" y="252" width="90" height="200" rx="20" fill="url(#g2)"/>
+        <rect x="272" y="162" width="110" height="260" rx="25" fill="url(#g3)"/>
+        <rect x="400" y="72" width="120" height="320" rx="30" fill="url(#g4)"/>
+      </g>
   </g>
 </svg>

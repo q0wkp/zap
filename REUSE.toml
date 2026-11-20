@@ -523,7 +523,7 @@ path = ["app/channels/oss/icon/AppIcon.icon/**"]
 SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
 SPDX-License-Identifier = "AGPL-3.0-only"
 
-# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours.
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours and set it on a dark tile with an edge.
 [[annotations]]
 path = [
     "app/DockTilePlugin/Resources/warp_2.png",
@@ -534,10 +534,16 @@ SPDX-License-Identifier = "AGPL-3.0-only"
 
 # Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours; renamed the Warp and Zap names to ZapNG.
 [[annotations]]
+path = ["website/public/logo.svg"]
+SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Modified by Tianyu (Sky) Lu in 2026: changed the logo's colours and set it on a dark tile with an edge, so that it
+# shows on light and dark backgrounds; renamed the Warp and Zap names to ZapNG.
+[[annotations]]
 path = [
     "assets/zap-ng-logo.svg",
     "logo.svg",
-    "website/public/logo.svg",
 ]
 SPDX-FileCopyrightText = ["2026 The Zap Authors (https://github.com/zerx-lab/zap)", "2026 Tianyu (Sky) Lu"]
 SPDX-License-Identifier = "AGPL-3.0-only"
