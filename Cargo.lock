@@ -3020,15 +3020,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "command-signatures-v2"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "command",
- "rust-embed 8.11.0",
-]
-
-[[package]]
 name = "compact_str"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11293,33 +11284,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rquickjs"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db7788c2818f4546daabe9ae2d1ee2f4db61ab1998d4b483494c4193cc38dab"
-dependencies = [
- "rquickjs-core",
-]
-
-[[package]]
-name = "rquickjs-core"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b12cf8646fe0af5bcff2822ccd162990f0679a1f9287c7257f4f4193a9d31ea9"
-dependencies = [
- "rquickjs-sys",
-]
-
-[[package]]
-name = "rquickjs-sys"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b747058afd4d988d056e4972ec8516a5a86fdfc103c1c1485bfee8966a0743ae"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "rsqlite-vfs"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -16203,7 +16167,6 @@ dependencies = [
  "comfy-table",
  "command",
  "command-corrections",
- "command-signatures-v2",
  "computer_use",
  "concat-idents",
  "console_error_panic_hook",
@@ -16327,7 +16290,6 @@ dependencies = [
  "reqwest 0.12.28",
  "reqwest-eventsource",
  "rmcp",
- "rquickjs",
  "rust-embed 8.11.0",
  "rustls 0.23.40",
  "schemars 1.2.1",
@@ -16411,7 +16373,6 @@ dependencies = [
  "zap_ng_editor",
  "zap_ng_files",
  "zap_ng_isolation_platform",
- "zap_ng_js",
  "zap_ng_logging",
  "zap_ng_managed_secrets",
  "zap_ng_ripgrep",
@@ -16454,8 +16415,6 @@ dependencies = [
  "anyhow",
  "async-recursion",
  "async-trait",
- "bincode",
- "cfg-if",
  "clap",
  "command",
  "derive-new",
@@ -16469,7 +16428,6 @@ dependencies = [
  "log",
  "memo-map",
  "regex",
- "rquickjs",
  "serde",
  "shellexpand",
  "smol_str",
@@ -16480,7 +16438,6 @@ dependencies = [
  "zap_ng_cli",
  "zap_ng_completer",
  "zap_ng_core",
- "zap_ng_js",
  "zap_ng_ui",
  "zap_ng_util",
 ]
@@ -16628,18 +16585,6 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "zap_ng_core",
-]
-
-[[package]]
-name = "zap_ng_js"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "cfg-if",
- "rquickjs",
- "serde",
- "thiserror 2.0.18",
- "uuid",
 ]
 
 [[package]]

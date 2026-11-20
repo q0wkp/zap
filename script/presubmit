@@ -19,13 +19,8 @@ fi
 echo "Cargo fmt succeeded..."
 
 echo "Running clippy..."
-# Exclude zap_ng_completer because we run clippy on it with default features (rather than all features) below.
-#
 # TODO(vorporeal): Re-enable the `all-features` flag once we've fixed things.
-cargo clippy --workspace --exclude zap_ng_completer --all-targets --tests -- -D warnings
-# Run clippy on zap_ng_completer with default, rather than all features enabled, because there is
-# feature-gated logic for the WIP completions-on-js implementation.
-cargo clippy -p zap_ng_completer --all-targets --tests -- -D warnings
+cargo clippy --workspace --all-targets --tests -- -D warnings
 echo "clippy succeeded..."
 
 echo "Running clang-format..."
@@ -53,10 +48,7 @@ else
 fi
 
 echo "Running tests via nextest..."
-cargo nextest run --no-fail-fast --workspace --exclude command-signatures-v2
-# Run zap_ng_completer tests with the "v2" (completions-on-js) flag enabled. We do this to ensure that
-# the v2 completions implementation doesn't regress/rot while it's development is paused.
-cargo nextest run -p zap_ng_completer --features v2
+cargo nextest run --no-fail-fast --workspace
 echo "Running doc tests..."
 cargo test --doc
 echo "Tests succeeded..."
