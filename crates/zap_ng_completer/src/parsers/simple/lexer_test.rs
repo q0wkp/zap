@@ -165,7 +165,7 @@ fn test_multiple_whitespace() {
 
 #[test]
 fn test_backtick_escape_char() {
-    let source = r#"& "$HOME\Downloads\ZapNG` Setup.exe" /SP- /SILENT `t`"#;
+    let source = r#"& "$HOME\Downloads\Zap` Setup.exe" /SP- /SILENT `t`"#;
     let tokens: Vec<_> = Lexer::new(source, EscapeChar::Backtick, false)
         .map(|t| (t.item, t.span))
         .collect();
@@ -177,7 +177,7 @@ fn test_backtick_escape_char() {
             (Token::Whitespace(" "), Span::new(1, 2)),
             (Token::DoubleQuote, Span::new(2, 3)),
             (Token::Dollar, Span::new(3, 4)),
-            (Token::Literal(r"HOME\Downloads\ZapNG"), Span::new(4, 22)),
+            (Token::Literal(r"HOME\Downloads\Zap"), Span::new(4, 22)),
             (Token::EscapeChar("`"), Span::new(22, 23)),
             (Token::Whitespace(" "), Span::new(23, 24)),
             (Token::Literal("Setup.exe"), Span::new(24, 33)),
