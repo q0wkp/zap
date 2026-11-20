@@ -8,8 +8,8 @@ use fold_map::FoldMap;
 use std::cmp;
 use std::ops::Range;
 use string_offset::CharOffset;
-use warpui::text::point::Point;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle};
+use zap_ng_ui::text::point::Point;
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle};
 
 #[derive(Copy, Clone)]
 pub enum Bias {

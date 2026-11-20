@@ -44,21 +44,21 @@ use itertools::Itertools;
 use regex::Regex;
 use settings::{Setting, ToggleableSetting};
 use strum::IntoEnumIterator;
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::{
     Border, ChildView, ConstrainedBox, CornerRadius, CrossAxisAlignment, Dismiss, Empty, Expanded,
     Fill, Hoverable, HyperlinkLens, MainAxisAlignment, MainAxisSize, MouseStateHandle, Radius, Shrinkable,
     Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::text_layout::TextAlignment;
-use warpui::id;
-use warpui::keymap::ContextPredicate;
-use warpui::ui_components::slider::SliderStateHandle;
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text_layout::TextAlignment;
+use zap_ng_ui::id;
+use zap_ng_ui::keymap::ContextPredicate;
+use zap_ng_ui::ui_components::slider::SliderStateHandle;
+use zap_ng_ui::{
     elements::{
         Container, Flex, FormattedTextElement, HighlightedHyperlink, HyperlinkUrl, ParentElement,
     },
@@ -90,8 +90,8 @@ use super::{
 /// When `None`, the page shows all widgets (legacy/full view).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AISubpage {
-    /// The main "WarpAgent" page: global AI toggle + Active AI + Input + Other sections.
-    WarpAgent,
+    /// The main "ZapNGAgent" page: global AI toggle + Active AI + Input + Other sections.
+    ZapNGAgent,
     /// Agent profiles and permissions.
     Profiles,
     /// 自定义 AI 提供商(BYOP) 配置子页。
@@ -105,7 +105,7 @@ pub enum AISubpage {
 impl AISubpage {
     pub fn from_section(section: SettingsSection) -> Option<Self> {
         match section {
-            SettingsSection::WarpAgent => Some(Self::WarpAgent),
+            SettingsSection::ZapNGAgent => Some(Self::ZapNGAgent),
             SettingsSection::AgentProfiles => Some(Self::Profiles),
             SettingsSection::AgentProviders => Some(Self::Providers),
             SettingsSection::Knowledge => Some(Self::Knowledge),
@@ -250,7 +250,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     );
     {
         use crate::settings::ThinkingDisplayMode;
-        use warpui::keymap::FixedBinding;
+        use zap_ng_ui::keymap::FixedBinding;
 
         let ai_context = context.clone() & id!(flags::IS_ANY_AI_ENABLED);
         let mode_bindings: Vec<FixedBinding> = ThinkingDisplayMode::iter()
@@ -1427,7 +1427,7 @@ impl AISettingsPageView {
         match subpage {
             None => {
                 // Full page: all widgets (legacy behavior)
-                widgets.push(Box::new(WarpAgentHeaderWidget));
+                widgets.push(Box::new(ZapNGAgentHeaderWidget));
                 if should_show_usage_widget {
                     widgets.push(Box::new(UsageWidget::default()));
                 }
@@ -1468,9 +1468,9 @@ impl AISettingsPageView {
                 widgets.push(Box::new(AgentProvidersWidget::new(ctx)));
                 widgets.push(Box::new(OtherAIWidget::default()));
             }
-            Some(AISubpage::WarpAgent) => {
+            Some(AISubpage::ZapNGAgent) => {
                 // Oz page: header + Active AI + Input + Other
-                widgets.push(Box::new(WarpAgentHeaderWidget));
+                widgets.push(Box::new(ZapNGAgentHeaderWidget));
                 if ai_settings
                     .intelligent_autosuggestions_enabled_internal
                     .is_supported_on_current_platform()
@@ -2166,7 +2166,7 @@ impl View for AISettingsPageView {
         "AISettingsPage"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         self.page.render(self, app)
     }
 }
@@ -2207,7 +2207,7 @@ pub enum AISettingsPageAction {
     ToggleCLIAgentPerAgent(CLIAgent, PerAgentDimension),
     ToggleUseAgentToolbar,
     ToggleVoiceInput,
-    ToggleCanUseWarpCreditsWithByok,
+    ToggleCanUseZapNGCreditsWithByok,
     HyperlinkClick(HyperlinkUrl),
     ToggleShowInputHintText,
     ToggleShowAgentTips,
@@ -2233,7 +2233,7 @@ pub enum AISettingsPageAction {
     RemoveDirectoryFromCodeReadAllowlist(PathBuf),
     ToggleRules,
     ToggleRuleSuggestions,
-    ToggleWarpDriveContext,
+    ToggleZapNGDriveContext,
     SetApplyCodeDiffs(ActionPermission),
     SetReadFiles(ActionPermission),
     SetExecuteCommands(ActionPermission),
@@ -2717,10 +2717,10 @@ impl TypedActionView for AISettingsPageView {
                 }
                 ctx.notify();
             }
-            AISettingsPageAction::ToggleCanUseWarpCreditsWithByok => {
+            AISettingsPageAction::ToggleCanUseZapNGCreditsWithByok => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings
-                        .can_use_warp_credits_with_byok
+                        .can_use_zap_ng_credits_with_byok
                         .toggle_and_save_value(ctx));
                 });
                 ctx.notify();
@@ -2947,10 +2947,10 @@ impl TypedActionView for AISettingsPageView {
                 });
                 ctx.notify();
             }
-            AISettingsPageAction::ToggleWarpDriveContext => {
+            AISettingsPageAction::ToggleZapNGDriveContext => {
                 AISettings::handle(ctx).update(ctx, |settings, ctx| {
                     let _ = settings
-                        .warp_drive_context_enabled
+                        .zap_ng_drive_context_enabled
                         .toggle_and_save_value(ctx);
                 });
                 ctx.notify();
@@ -3963,9 +3963,9 @@ fn render_ai_list(
         .finish()
 }
 
-struct WarpAgentHeaderWidget;
+struct ZapNGAgentHeaderWidget;
 
-impl SettingsWidget for WarpAgentHeaderWidget {
+impl SettingsWidget for ZapNGAgentHeaderWidget {
     type View = AISettingsPageView;
 
     fn search_terms(&self) -> &str {
@@ -4013,13 +4013,13 @@ impl UsageWidget {
         is_unlimited: bool,
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
-    ) -> Box<dyn warpui::Element> {
+    ) -> Box<dyn zap_ng_ui::Element> {
         let mut row = Flex::row();
         if used >= limit || workspace_is_delinquent_due_to_payment_issue {
             row.add_child(
                 ConstrainedBox::new(
                     Icon::AlertTriangle
-                        .to_warpui_icon(appearance.theme().ui_error_color().into())
+                        .to_zap_ng_ui_icon(appearance.theme().ui_error_color().into())
                         .finish(),
                 )
                 .with_height(16.)
@@ -4078,7 +4078,7 @@ impl UsageWidget {
         is_unlimited: bool,
         workspace_is_delinquent_due_to_payment_issue: bool,
         appearance: &Appearance,
-    ) -> Box<dyn warpui::Element> {
+    ) -> Box<dyn zap_ng_ui::Element> {
         let request_usage_details = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::End)
             .with_child(self.render_request_usage_count(
@@ -4278,8 +4278,8 @@ impl ActiveAIWidget {
     fn render_next_command_section(
         &self,
         view: &AISettingsPageView,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
 
@@ -4306,8 +4306,8 @@ impl ActiveAIWidget {
     fn render_prompt_suggestions_section(
         &self,
         view: &AISettingsPageView,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -4333,8 +4333,8 @@ impl ActiveAIWidget {
     fn render_suggested_code_banners_section(
         &self,
         view: &AISettingsPageView,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -4360,8 +4360,8 @@ impl ActiveAIWidget {
     fn render_natural_language_autosuggestions_section(
         &self,
         view: &AISettingsPageView,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -4387,8 +4387,8 @@ impl ActiveAIWidget {
     fn render_git_operations_autogen_section(
         &self,
         view: &AISettingsPageView,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_active_ai_enabled(app);
         Flex::column()
@@ -4930,7 +4930,7 @@ impl AgentsWidget {
         dropdown_menu: &ViewHandle<Dropdown<AISettingsPageAction>>,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &warpui::AppContext,
+        app: &zap_ng_ui::AppContext,
     ) -> Box<dyn Element> {
         let header = Container::new(render_body_item_label_with_icon::<AISettingsPageAction>(
             header_text.into(),
@@ -4950,7 +4950,7 @@ impl AgentsWidget {
         let alert_icon = Container::new(
             ConstrainedBox::new(
                 Icon::AlertCircle
-                    .to_warpui_icon(
+                    .to_zap_ng_ui_icon(
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_2()),
@@ -5478,8 +5478,8 @@ impl AIInputWidget {
         view: &AISettingsPageView,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let is_toggleable = ai_settings.is_any_ai_enabled(app);
         let is_nld_enabled = *ai_settings.ai_autodetection_enabled_internal.value();
 
@@ -5792,7 +5792,7 @@ impl AIFactWidget {
         view: &AISettingsPageView,
         ai_settings: &AISettings,
         appearance: &Appearance,
-        app: &warpui::AppContext,
+        app: &zap_ng_ui::AppContext,
     ) -> Box<dyn Element> {
         let toggle = render_ai_setting_toggle::<MemoryEnabled>(
             crate::t!("settings-ai-rules-label"),
@@ -5842,7 +5842,7 @@ impl AIFactWidget {
         &self,
         view: &AISettingsPageView,
         ai_settings: &AISettings,
-        app: &warpui::AppContext,
+        app: &zap_ng_ui::AppContext,
     ) -> Box<dyn Element> {
         let toggle = render_ai_setting_toggle::<RuleSuggestionsEnabled>(
             crate::t!("settings-ai-suggested-rules-label"),
@@ -5929,8 +5929,8 @@ impl VoiceWidget {
         &self,
         view: &AISettingsPageView,
         appearance: &Appearance,
-        app: &warpui::AppContext,
-    ) -> Box<dyn warpui::Element> {
+        app: &zap_ng_ui::AppContext,
+    ) -> Box<dyn zap_ng_ui::Element> {
         let ai_settings = AISettings::as_ref(app);
         let is_toggleable = ai_settings.is_any_ai_enabled(app);
         let mut column = Flex::column().with_child(render_ai_setting_toggle::<VoiceInputEnabled>(
@@ -6582,7 +6582,7 @@ impl CLIAgentWidget {
                     .with_main_axis_size(MainAxisSize::Max)
                     .with_children([
                         Container::new(
-                            ConstrainedBox::new(icon.to_warpui_icon(theme.foreground()).finish())
+                            ConstrainedBox::new(icon.to_zap_ng_ui_icon(theme.foreground()).finish())
                                 .with_width(AGENT_ICON_SIZE)
                                 .with_height(AGENT_ICON_SIZE)
                                 .finish(),
@@ -6632,7 +6632,7 @@ impl CLIAgentWidget {
         } else {
             internal_colors::text_sub(theme, theme.background().into_solid())
         };
-        let icon_color = warp_core::ui::theme::Fill::Solid(text_color);
+        let icon_color = zap_ng_core::ui::theme::Fill::Solid(text_color);
         let ui_font_family = appearance.ui_font_family();
         let mouse = self
             .per_agent_chip_states
@@ -6647,7 +6647,7 @@ impl CLIAgentWidget {
                 .with_main_axis_alignment(MainAxisAlignment::Center);
             if is_enabled {
                 content.add_child(
-                    ConstrainedBox::new(Icon::Check.to_warpui_icon(icon_color).finish())
+                    ConstrainedBox::new(Icon::Check.to_zap_ng_ui_icon(icon_color).finish())
                         .with_width(CHIP_CHECK_ICON_SIZE)
                         .with_height(CHIP_CHECK_ICON_SIZE)
                         .finish(),
@@ -6989,7 +6989,7 @@ impl AwsBedrockWidget {
                 .user_facing_components();
 
             let icon = Container::new(
-                ConstrainedBox::new(icon.to_warpui_icon(title_color).finish())
+                ConstrainedBox::new(icon.to_zap_ng_ui_icon(title_color).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish(),
@@ -7143,8 +7143,8 @@ impl SettingsWidget for AwsBedrockWidget {
 }
 
 mod styles {
-    use warp_core::ui::{appearance::Appearance, theme::Fill};
-    use warpui::{AppContext, SingletonEntity};
+    use zap_ng_core::ui::{appearance::Appearance, theme::Fill};
+    use zap_ng_ui::{AppContext, SingletonEntity};
 
     // Apply a negative margin to the description text so it appears closer to the main
     // settings option text.

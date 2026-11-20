@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use pathfinder_color::ColorU;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ChildView, ConstrainedBox, Container, Element, Icon,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement,

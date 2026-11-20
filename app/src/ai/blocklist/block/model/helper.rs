@@ -1,4 +1,4 @@
-use warpui::{AppContext, EntityId, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, EntityId, ModelHandle, SingletonEntity};
 
 use crate::{
     ai::{

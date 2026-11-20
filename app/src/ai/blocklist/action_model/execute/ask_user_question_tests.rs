@@ -16,7 +16,7 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 use crate::LaunchMode;
 use ai::agent::action::AskUserQuestionItem;
 use ai::agent::action_result::{AskUserQuestionAnswerItem, AskUserQuestionResult};
-use warpui::{App, EntityId, ModelHandle};
+use zap_ng_ui::{App, EntityId, ModelHandle};
 
 fn build_action(action_id: &str) -> AIAgentAction {
     AIAgentAction {
@@ -118,7 +118,7 @@ fn should_autoexecute_returns_false_when_questions_are_allowed() {
     });
 }
 
-// openWarp: auto-approve(ctrl+shift+i)只对 shell/编辑工具自动通过,
+// ZapNG: auto-approve(ctrl+shift+i)只对 shell/编辑工具自动通过,
 // ask_user_question 即使在 autoapprove 模式下也必须弹给用户。
 #[test]
 fn should_autoexecute_returns_false_when_autoapprove_is_enabled_with_default_profile() {

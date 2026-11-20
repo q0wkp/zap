@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use warpui::ViewContext;
+use zap_ng_ui::ViewContext;
 
 use crate::{
     ai::agent_providers::active_ai::workflow_metadata,

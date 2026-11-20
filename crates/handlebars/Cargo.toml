@@ -6,4 +6,4 @@ publish.workspace = true
 license.workspace = true
 
 [dependencies]
-warpui.workspace = true
+zap_ng_ui.workspace = true

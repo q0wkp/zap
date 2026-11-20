@@ -2,7 +2,7 @@
 mod tests {
     use chrono::{Duration, Utc};
     use settings::manager::SettingsManager;
-    use warpui::{App, SingletonEntity};
+    use zap_ng_ui::{App, SingletonEntity};
 
     use crate::auth::AuthStateProvider;
     use crate::cloud_object::model::persistence::ObjectStoreModel;

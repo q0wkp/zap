@@ -11,18 +11,18 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::{cmp, mem};
-use warp_core::platform::SessionPlatform;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::theme::Fill;
-use warp_editor::content::anchor::Anchor;
-use warp_editor::content::edit::EditDelta;
-use warp_editor::content::find::{SearchConfig, SearchResults};
-use warp_editor::content::selection_model::BufferSelectionModel;
-use warp_editor::content::version::BufferVersion;
-use warp_editor::multiline::{AnyMultilineString, MultilineString, LF};
-use warp_editor::render::model::{AutoScrollMode, LineCount, StyleUpdateAction};
-use warp_editor::selection::TextDirection;
-use warpui::units::{IntoPixels, Pixels};
+use zap_ng_core::platform::SessionPlatform;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_editor::content::anchor::Anchor;
+use zap_ng_editor::content::edit::EditDelta;
+use zap_ng_editor::content::find::{SearchConfig, SearchResults};
+use zap_ng_editor::content::selection_model::BufferSelectionModel;
+use zap_ng_editor::content::version::BufferVersion;
+use zap_ng_editor::multiline::{AnyMultilineString, MultilineString, LF};
+use zap_ng_editor::render::model::{AutoScrollMode, LineCount, StyleUpdateAction};
+use zap_ng_editor::selection::TextDirection;
+use zap_ng_ui::units::{IntoPixels, Pixels};
 
 use crate::util::link_detection::get_word_range_at_offset;
 use crate::{
@@ -47,9 +47,9 @@ use vim::{
     vim_a_quote, vim_a_word, vim_find_char_on_line, vim_find_matching_bracket, vim_inner_block,
     vim_inner_paragraph, vim_inner_quote, vim_inner_word, vim_word_iterator_from_offset,
 };
-use warp_core::semantic_selection::SemanticSelection;
-use warp_editor::content::buffer::{ShouldAutoscroll, VimInsertPoint};
-use warp_editor::{
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_editor::content::buffer::{ShouldAutoscroll, VimInsertPoint};
+use zap_ng_editor::{
     content::{
         buffer::{
             AutoScrollBehavior, Buffer, BufferEditAction, BufferEvent, BufferSelectAction,
@@ -67,12 +67,12 @@ use warp_editor::{
     },
     selection::{SelectionMode, SelectionModel, TextUnit},
 };
-use warpui::elements::{
+use zap_ng_ui::elements::{
     AnchorPair, OffsetPositioning, OffsetType, PositionedElementOffsetBounds, PositioningAxis,
     XAxisAnchor, YAxisAnchor,
 };
-use warpui::text::{point::Point, TextBuffer};
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::text::{point::Point, TextBuffer};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use super::super::DiffResult;
 use super::comments::{EditorCommentsModel, PendingComment, PendingCommentEvent};
@@ -565,7 +565,7 @@ impl CodeEditorModel {
     // Set the following line ranges to be hidden in the editor.
     pub fn set_hidden_lines(
         &mut self,
-        ranges: RangeSet<warp_editor::content::text::LineCount>,
+        ranges: RangeSet<zap_ng_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         self.hidden_lines.update(ctx, |model, ctx| {
@@ -580,7 +580,7 @@ impl CodeEditorModel {
     // Set the following hidden line ranges to be visible. This is no-op if the lines are already visible.
     pub fn set_visible_line_range(
         &mut self,
-        range: Range<warp_editor::content::text::LineCount>,
+        range: Range<zap_ng_editor::content::text::LineCount>,
         ctx: &mut ModelContext<Self>,
     ) {
         let version = self.content().as_ref(ctx).buffer_version();
@@ -1300,7 +1300,7 @@ impl CodeEditorModel {
             let line_count = self.line_count(ctx);
 
             // Calculate the visible line ranges (with context)
-            let mut visible_ranges: RangeSet<warp_editor::content::text::LineCount> =
+            let mut visible_ranges: RangeSet<zap_ng_editor::content::text::LineCount> =
                 RangeSet::new();
 
             // Add ranges for diffs
@@ -1318,14 +1318,14 @@ impl CodeEditorModel {
             }
 
             // Calculate hidden ranges as the complement of visible ranges
-            let all_lines: Range<warp_editor::content::text::LineCount> =
-                warp_editor::content::text::LineCount::from(0)
-                    ..warp_editor::content::text::LineCount::from(line_count);
+            let all_lines: Range<zap_ng_editor::content::text::LineCount> =
+                zap_ng_editor::content::text::LineCount::from(0)
+                    ..zap_ng_editor::content::text::LineCount::from(line_count);
 
             // Find gaps in the visible ranges
             let hidden_ranges = visible_ranges
                 .gaps(&all_lines)
-                .collect::<RangeSet<warp_editor::content::text::LineCount>>();
+                .collect::<RangeSet<zap_ng_editor::content::text::LineCount>>();
 
             self.set_hidden_lines(hidden_ranges, ctx);
         }
@@ -2227,10 +2227,10 @@ impl CodeEditorModel {
                 self.update_content(
                     |mut content, ctx| {
                         content.apply_edit(
-                        warp_editor::content::buffer::BufferEditAction::InsertForEachSelection {
+                        zap_ng_editor::content::buffer::BufferEditAction::InsertForEachSelection {
                             texts: &texts,
                         },
-                        warp_editor::content::buffer::EditOrigin::UserTyped,
+                        zap_ng_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -2261,10 +2261,10 @@ impl CodeEditorModel {
             self.update_content(
                 |mut content, ctx| {
                     content.apply_edit(
-                        warp_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
+                        zap_ng_editor::content::buffer::BufferEditAction::InsertAtCharOffsetRanges {
                             edits: &edits,
                         },
-                        warp_editor::content::buffer::EditOrigin::UserTyped,
+                        zap_ng_editor::content::buffer::EditOrigin::UserTyped,
                         selection_model,
                         ctx,
                     );
@@ -3863,10 +3863,10 @@ impl CoreEditorModel for CodeEditorModel {
     }
 
     // TODO(kevin): Add validation to the content model.
-    fn validate(&self, _ctx: &impl warpui::ModelAsRef) {}
+    fn validate(&self, _ctx: &impl zap_ng_ui::ModelAsRef) {}
 
     // Since this is a plain text editor, there is no text styles.
-    fn active_text_style(&self) -> warp_editor::content::text::TextStyles {
+    fn active_text_style(&self) -> zap_ng_editor::content::text::TextStyles {
         Default::default()
     }
 

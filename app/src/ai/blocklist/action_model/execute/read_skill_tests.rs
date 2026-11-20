@@ -6,7 +6,7 @@ use crate::ai::agent::ReadSkillResult;
 use crate::ai::agent::{AIAgentAction, AIAgentActionId, AIAgentActionType};
 use crate::ai::blocklist::action_model::AIConversationId;
 use crate::ai::skills::SkillManager;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::zap_ng_managed_paths_watcher::ZapNGManagedPathsWatcher;
 use ai::agent::action_result::AnyFileContent;
 use ai::skills::{parse_skill, SkillReference};
 use repo_metadata::{
@@ -15,7 +15,7 @@ use repo_metadata::{
 use std::fs;
 use std::io::Write;
 use tempfile::TempDir;
-use warpui::App;
+use zap_ng_ui::App;
 use watcher::HomeDirectoryWatcher;
 
 fn initialize_app(app: &mut App) {
@@ -23,7 +23,7 @@ fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 }
 

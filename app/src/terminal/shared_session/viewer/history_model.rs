@@ -1,5 +1,5 @@
 use crate::terminal::HistoryEntry;
-use warpui::Entity;
+use zap_ng_ui::Entity;
 
 /// Responsible for managing the history of a shared session for a viewer.
 #[derive(Default)]

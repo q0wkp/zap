@@ -2,7 +2,7 @@ use js_sys::ReferenceError;
 use thiserror::Error;
 use wasm_bindgen::{JsCast, JsValue};
 
-pub use warp_web_event_bus::{emit_event, WarpEvent};
+pub use zap_ng_web_event_bus::{emit_event, ZapNGEvent};
 
 /// This function should be called early in application initialization to ensure that
 /// static variables are initialized.

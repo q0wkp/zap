@@ -1,5 +1,5 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::{platform::WindowStyle, App, View};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{platform::WindowStyle, App, View};
 
 use crate::{menu::MenuVariant, ui_components::icons::Icon};
 

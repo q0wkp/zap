@@ -1,7 +1,7 @@
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
 use pathfinder_geometry::vector::vec2f;
-use warpui::{
+use zap_ng_ui::{
     elements::{Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle},
     ui_components::{
         button::{ButtonVariant, TextAndIcon, TextAndIconAlignment},
@@ -79,7 +79,7 @@ impl SettingsUmbrella {
             .with_text_and_icon_label(TextAndIcon::new(
                 TextAndIconAlignment::TextFirst,
                 self.label.to_string(),
-                chevron_icon.to_warpui_icon(text_color),
+                chevron_icon.to_zap_ng_ui_icon(text_color),
                 MainAxisSize::Max,
                 MainAxisAlignment::SpaceBetween,
                 vec2f(16., 16.),

@@ -10,18 +10,18 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::{cmp, ops::Range, vec};
 use warp_command_signatures::IconType;
-use warp_completer::completer::{
+use zap_ng_completer::completer::{
     MatchType, PathSeparators, Suggestion, SuggestionResults, SuggestionType,
 };
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warpui::elements::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::theme::AnsiColorIdentifier;
+use zap_ng_ui::elements::{
     ChildAnchor, DispatchEventResult, Expanded, Hoverable, MouseStateHandle, ParentAnchor,
     ParentOffsetBounds, ScrollbarWidth,
 };
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{
         Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         DropShadow, Element, Empty, EventHandler, Flex, Highlight, Icon, OffsetPositioning,
@@ -591,13 +591,13 @@ impl InputSuggestions {
                 ctx.emit_a11y_content(AccessibilityContent::new(
                     format!("Suggestion: {text}.\n"),
                     desc,
-                    WarpA11yRole::MenuItemRole,
+                    ZapNGA11yRole::MenuItemRole,
                 ));
             }
             (Some(text), None) => {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Suggestion: {text}.\n"),
-                    WarpA11yRole::MenuItemRole,
+                    ZapNGA11yRole::MenuItemRole,
                 ));
             }
             _ => {}
@@ -621,7 +621,7 @@ impl InputSuggestions {
         if let Some(text) = self.get_selected_item_text() {
             ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                 format!("Selected: {text}"),
-                WarpA11yRole::MenuItemRole,
+                ZapNGA11yRole::MenuItemRole,
             ));
         }
     }
@@ -646,7 +646,7 @@ impl InputSuggestions {
     ) {
         ctx.emit_a11y_content(AccessibilityContent::new_without_help(
             "Closed suggestions.",
-            WarpA11yRole::UserAction,
+            ZapNGA11yRole::UserAction,
         ));
         ctx.emit(Event::CloseSuggestion {
             should_restore_buffer_before_history_up,
@@ -810,7 +810,7 @@ impl InputSuggestions {
                                     Properties::default()
                                         .weight(appearance.monospace_font_weight()),
                                 )
-                                .autosize_text(warp_core::ui::builder::MIN_FONT_SIZE)
+                                .autosize_text(zap_ng_core::ui::builder::MIN_FONT_SIZE)
                                 .with_color(main_text);
 
                                 let matches = item.matches.clone();
@@ -1091,7 +1091,7 @@ impl View for InputSuggestions {
             // TODO use bindings from user settings
             "Navigate with tab and shift-tab, and confirm with enter. Execute selected command \
                 with command + enter. Esc leaves the suggestions menu.",
-            WarpA11yRole::MenuRole,
+            ZapNGA11yRole::MenuRole,
         ))
     }
 }

@@ -16,7 +16,7 @@ pub(super) mod proxy;
 use super::server_model::{ConnectionId, ServerModel};
 use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
-use warpui::r#async::executor;
+use zap_ng_ui::r#async::executor;
 
 /// Run the `remote-server-daemon` subcommand.
 ///
@@ -116,7 +116,7 @@ pub fn run_daemon(identity_key: String) -> anyhow::Result<()> {
 pub(super) async fn handle_daemon_connection(
     conn_id: ConnectionId,
     stream: async_io::Async<std::os::unix::net::UnixStream>,
-    spawner: warpui::ModelSpawner<ServerModel>,
+    spawner: zap_ng_ui::ModelSpawner<ServerModel>,
     exec: std::sync::Arc<executor::Background>,
 ) {
     use futures::io::{AsyncWriteExt, BufReader, BufWriter};

@@ -7,8 +7,8 @@ use crate::workspace::tab_settings::VerticalTabsDisplayGranularity;
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
 use std::path::PathBuf;
-use warpui::elements::PositionedElementOffsetBounds;
-use warpui::EntityId;
+use zap_ng_ui::elements::PositionedElementOffsetBounds;
+use zap_ng_ui::EntityId;
 
 use super::{
     branch_label_display, coalesce_summary_branch_entries, code_detail_kind_label,
@@ -300,7 +300,7 @@ fn collect_normalized_unique_summary_texts(
 }
 
 #[test]
-fn detail_sidecar_supports_terminal_code_and_warp_drive_object_panes() {
+fn detail_sidecar_supports_terminal_code_and_zap_ng_drive_object_panes() {
     assert!(pane_type_supports_vertical_tabs_detail_sidecar(
         IPaneType::Terminal
     ));

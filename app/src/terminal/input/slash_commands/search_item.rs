@@ -1,10 +1,10 @@
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
-use warpui::fonts::{Properties, Weight};
-use warpui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{Expanded, Highlight, Icon, ParentElement, Shrinkable};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::prelude::{ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Text};
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
 use crate::ai::blocklist::agent_view::shortcuts::render_keystroke_with_color_overrides;
 use crate::search::slash_command_menu::static_commands::commands::COMMAND_REGISTRY;

@@ -1,5 +1,5 @@
 use ordered_float::OrderedFloat;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Clipped, ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, MainAxisAlignment,
         MainAxisSize, ParentElement, Shrinkable, Text,
@@ -13,7 +13,7 @@ use crate::search::result_renderer::ItemHighlightState;
 use crate::{
     appearance::Appearance,
     cloud_object::StoredObject,
-    drive::{cloud_object_styling::warp_drive_icon_color, DriveObjectType},
+    drive::{cloud_object_styling::zap_ng_drive_icon_color, DriveObjectType},
     search::{
         item::IconLocation,
         notebook_embedding::{
@@ -52,17 +52,17 @@ impl SearchItem for WorkflowSearchItem {
         let (icon, icon_color) = if self.workflow.model().data.is_agent_mode_workflow() {
             (
                 Icon::Prompt,
-                warp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
+                zap_ng_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
             )
         } else {
             (
                 Icon::Workflow,
-                warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+                zap_ng_drive_icon_color(appearance, DriveObjectType::Workflow),
             )
         };
 
         Container::new(
-            ConstrainedBox::new(icon.to_warpui_icon(icon_color.into()).finish())
+            ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color.into()).finish())
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish(),
@@ -118,7 +118,7 @@ impl SearchItem for WorkflowSearchItem {
                 .finish();
             let warning_icon = ConstrainedBox::new(
                 Icon::Warning
-                    .to_warpui_icon(appearance.theme().ui_warning_color().into())
+                    .to_zap_ng_ui_icon(appearance.theme().ui_warning_color().into())
                     .finish(),
             )
             .with_width(warning_font_size)

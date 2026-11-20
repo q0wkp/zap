@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Local, TimeZone, Utc};
 use itertools::Itertools;
-use warpui::{App, EntityId};
+use zap_ng_ui::{App, EntityId};
 
 use crate::{
     ai::{

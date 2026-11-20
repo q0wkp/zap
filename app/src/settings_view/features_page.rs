@@ -5,13 +5,13 @@ use crate::terminal::input::OPEN_COMPLETIONS_KEYBINDING_NAME;
 use crate::terminal::session_settings::WorkingDirectoryConfig;
 
 use lazy_static::lazy_static;
-use warpui::platform::GraphicsBackend;
-use warpui::rendering::GPUPowerPreference;
-use warpui::{elements::DispatchEventResult, platform::Cursor};
+use zap_ng_ui::platform::GraphicsBackend;
+use zap_ng_ui::rendering::GPUPowerPreference;
+use zap_ng_ui::{elements::DispatchEventResult, platform::Cursor};
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 use {
     crate::settings::ForceX11, crate::settings::LinuxAppConfiguration,
-    warpui::platform::linux::windowing_system_is_customizable,
+    zap_ng_ui::platform::linux::windowing_system_is_customizable,
 };
 
 use super::keybindings::KeyBindingModifyingState;
@@ -77,7 +77,7 @@ use crate::terminal::settings::{
 };
 use crate::terminal::{BlockListSettings, SnackbarEnabled};
 use crate::undo_close::UndoCloseSettings;
-use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
+use crate::user_config::{ZapNGConfig, ZapNGConfigUpdateEvent};
 use crate::util::bindings::{
     keybinding_name_to_display_string, reset_keybinding_to_default, set_custom_keybinding,
 };
@@ -95,20 +95,20 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use strum::IntoEnumIterator;
-use warp_core::channel::ChannelState;
-use warp_core::semantic_selection::{
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::semantic_selection::{
     SemanticSelection, SemanticSelectionChangedEvent, SmartSelectEnabled,
 };
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss,
     Element, Empty, EventHandler, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseState, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::keymap::{ContextPredicate, FixedBinding, Keystroke};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::switch::SwitchStateHandle;
-use warpui::{
+use zap_ng_ui::keymap::{ContextPredicate, FixedBinding, Keystroke};
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::ui_components::switch::SwitchStateHandle;
+use zap_ng_ui::{
     Action, AppContext, DisplayIdx, Entity, EventContext, ModelHandle, SingletonEntity, Tracked,
     TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
@@ -174,7 +174,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
     context: &ContextPredicate,
     builder: fn(SettingsAction) -> T,
 ) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     // Add all of the toggle settings from the Features Page that you want to show up on the Command Palette here.
     let mut toggle_binding_pairs = vec![
@@ -654,11 +654,11 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
         id!("Workspace"),
     )]);
 
-    if DefaultTerminal::can_warp_become_default() {
+    if DefaultTerminal::can_zap_ng_become_default() {
         app.register_fixed_bindings([FixedBinding::empty(
             crate::t!("settings-features-make-default-terminal"),
             builder(SettingsAction::FeaturesPageToggle(
-                FeaturesPageAction::MakeWarpDefaultTerminal,
+                FeaturesPageAction::MakeZapNGDefaultTerminal,
             )),
             context.to_owned() & !id!(flags::WARP_IS_DEFAULT_TERMINAL),
         )]);
@@ -750,7 +750,7 @@ pub enum FeaturesPageAction {
     ToggleAutoOpenCodeReviewPane,
     ToggleShowTerminalInputMessageLine,
     ToggleAgentInAppNotifications,
-    MakeWarpDefaultTerminal,
+    MakeZapNGDefaultTerminal,
 }
 
 lazy_static! {
@@ -1238,9 +1238,9 @@ impl FeaturesPageAction {
             },
             // Zap:ToggleOutlineCodebaseSymbolsForAtContextMenu 已下线,
             // telemetry 分支一并删除。
-            Self::MakeWarpDefaultTerminal => TelemetryEvent::FeaturesPageAction {
+            Self::MakeZapNGDefaultTerminal => TelemetryEvent::FeaturesPageAction {
                 action: "MakeWarpDefaultTerminal".to_string(),
-                value: to_string(DefaultTerminal::as_ref(ctx).is_warp_default()),
+                value: to_string(DefaultTerminal::as_ref(ctx).is_zap_ng_default()),
             },
             Self::ToggleAutoOpenCodeReviewPane => TelemetryEvent::FeaturesPageAction {
                 action: "ToggleAutoOpenCodeReviewPane".to_string(),
@@ -1965,7 +1965,7 @@ impl TypedActionView for FeaturesPageView {
                 self.force_x11_changed = true;
                 // This is a workaround to make sure the user sees the new text that is added to the description after changing the setting.
                 // Without scrolling, the new description text gets cut off.
-                self.page.scroll_by(warpui::units::Pixels::new(40.));
+                self.page.scroll_by(zap_ng_ui::units::Pixels::new(40.));
                 ctx.notify();
             }
             ToggleQuitOnLastWindowClosed => {
@@ -2017,9 +2017,9 @@ impl TypedActionView for FeaturesPageView {
                     }
                 }
             }
-            MakeWarpDefaultTerminal => {
+            MakeZapNGDefaultTerminal => {
                 DefaultTerminal::handle(ctx).update(ctx, |default_terminal, ctx| {
-                    default_terminal.make_warp_default(ctx);
+                    default_terminal.make_zap_ng_default(ctx);
                 });
             }
         }
@@ -2053,7 +2053,7 @@ impl FeaturesPageView {
 
         ctx.subscribe_to_model(&SelectionSettings::handle(ctx), |_, _, _, ctx| ctx.notify());
 
-        // TODO(CORE-3029): Remove when we launch the new SSH Warpification.
+        // TODO(CORE-3029): Remove when we launch the new SSH ZapNGification.
         ctx.subscribe_to_model(&SshSettings::handle(ctx), |_, _, _, ctx| ctx.notify());
         ctx.subscribe_to_model(&AltScreenReporting::handle(ctx), |_, _, _, ctx| {
             ctx.notify()
@@ -2266,8 +2266,8 @@ impl FeaturesPageView {
         let default_session_mode_dropdown = ctx.add_typed_action_view(FilterableDropdown::new);
         Self::update_default_session_mode_dropdown(default_session_mode_dropdown.clone(), ctx);
 
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), |me, _, event, ctx| {
-            if matches!(event, WarpConfigUpdateEvent::TabConfigs) {
+        ctx.subscribe_to_model(&ZapNGConfig::handle(ctx), |me, _, event, ctx| {
+            if matches!(event, ZapNGConfigUpdateEvent::TabConfigs) {
                 Self::update_default_session_mode_dropdown(
                     me.default_session_mode_dropdown.clone(),
                     ctx,
@@ -2625,7 +2625,7 @@ impl FeaturesPageView {
             general_widgets.push(Box::new(AutoOpenCodeReviewPaneWidget::default()));
         }
 
-        if DefaultTerminal::can_warp_become_default() {
+        if DefaultTerminal::can_zap_ng_become_default() {
             general_widgets.push(Box::new(DefaultTerminalWidget::default()));
         }
 
@@ -3510,7 +3510,7 @@ impl FeaturesPageView {
                     .collect();
 
                 // Append each loaded tab config
-                let tab_configs = WarpConfig::as_ref(ctx).tab_configs().to_vec();
+                let tab_configs = ZapNGConfig::as_ref(ctx).tab_configs().to_vec();
                 for config in &tab_configs {
                     if let Some(path) = &config.source_path {
                         items.push(DropdownItem::new(
@@ -4214,7 +4214,7 @@ impl SettingsPageMeta for FeaturesPageView {
     }
 
     fn on_page_selected(&mut self, _: bool, ctx: &mut ViewContext<Self>) {
-        // On MacOS, we rely on [`warpui::platform::AppCallbacks::on_screen_changed`] to update and
+        // On MacOS, we rely on [`zap_ng_ui::platform::AppCallbacks::on_screen_changed`] to update and
         // notify on the [`DisplayCount`] model. However, no mechanism exists on Linux to trigger
         // that callback. As a workaround, we check for updates here where quake mode is
         // configured.
@@ -4916,7 +4916,7 @@ impl SettingsWidget for DefaultTerminalWidget {
     ) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder();
         let default_terminal = DefaultTerminal::as_ref(app);
-        if default_terminal.is_warp_default() {
+        if default_terminal.is_zap_ng_default() {
             ui_builder
                 .wrappable_text(
                     crate::t!("settings-features-default-terminal-current"),
@@ -4935,7 +4935,7 @@ impl SettingsWidget for DefaultTerminalWidget {
                     crate::t!("settings-features-make-default-terminal"),
                     None,
                     Some(Box::new(|ctx| {
-                        ctx.dispatch_typed_action(FeaturesPageAction::MakeWarpDefaultTerminal);
+                        ctx.dispatch_typed_action(FeaturesPageAction::MakeZapNGDefaultTerminal);
                     })),
                     self.link_state.clone(),
                 )
@@ -7391,15 +7391,15 @@ impl SettingsWidget for WindowSystemWidget {
             secondary_text.push_str("\n\n");
             secondary_text.push_str(&crate::t!("settings-features-restart-warp-to-apply"));
         }
-        let warp_theme = appearance.theme();
+        let zap_ng_theme = appearance.theme();
         children.add_child(
             appearance
                 .ui_builder()
                 .wrappable_text(secondary_text, true)
                 .with_style(UiComponentStyles {
                     font_color: Some(
-                        warp_theme
-                            .sub_text_color(warp_theme.background())
+                        zap_ng_theme
+                            .sub_text_color(zap_ng_theme.background())
                             .into_solid(),
                     ),
                     ..Default::default()

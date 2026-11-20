@@ -9,11 +9,11 @@ use crate::search::item::SearchItem;
 use crate::search::result_renderer::ItemHighlightState;
 use crate::util::time_format::format_approx_duration_from_now_utc;
 use crate::util::truncation::truncate_from_end;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
 const MAX_TITLE_LENGTH: usize = 45;
 

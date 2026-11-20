@@ -1,10 +1,10 @@
 //! AI Assistant has since been renamed to "Zap AI" in the product.
 use std::{collections::HashSet, sync::Arc};
 
-use crate::{server::telemetry::OpenedWarpAISource, terminal::model::terminal_model::BlockIndex};
+use crate::{server::telemetry::OpenedZapNGAISource, terminal::model::terminal_model::BlockIndex};
 use lazy_static::lazy_static;
 use pathfinder_color::ColorU;
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 
 pub mod execution_context;
 pub mod panel;
@@ -55,14 +55,14 @@ pub enum AskAIType {
     },
 }
 
-impl From<&AskAIType> for OpenedWarpAISource {
+impl From<&AskAIType> for OpenedZapNGAISource {
     fn from(value: &AskAIType) -> Self {
         match value {
-            AskAIType::FromAICommandSearch { .. } => OpenedWarpAISource::FromAICommandSearch,
+            AskAIType::FromAICommandSearch { .. } => OpenedZapNGAISource::FromAICommandSearch,
             AskAIType::FromBlock { .. } | AskAIType::FromBlocks { .. } => {
-                OpenedWarpAISource::HelpWithBlock
+                OpenedZapNGAISource::HelpWithBlock
             }
-            AskAIType::FromTextSelection { .. } => OpenedWarpAISource::HelpWithTextSelection,
+            AskAIType::FromTextSelection { .. } => OpenedZapNGAISource::HelpWithTextSelection,
         }
     }
 }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ordered_float::OrderedFloat;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
         Highlight, MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
@@ -117,7 +117,7 @@ impl SearchItem for WorkflowSearchItem {
                 } else {
                     Icon::Workflow
                 }
-                .to_warpui_icon(highlight_state.icon_fill(appearance))
+                .to_zap_ng_ui_icon(highlight_state.icon_fill(appearance))
                 .finish(),
             )
             .with_width(appearance.monospace_font_size())

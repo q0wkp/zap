@@ -1,5 +1,5 @@
 use futures_util::future::{AbortHandle, Abortable, Aborted};
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::*;
 

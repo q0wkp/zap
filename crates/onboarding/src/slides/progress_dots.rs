@@ -1,5 +1,5 @@
-use warp_core::ui::{appearance::Appearance, theme::color::internal_colors};
-use warpui::{
+use zap_ng_core::ui::{appearance::Appearance, theme::color::internal_colors};
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CornerRadius, Empty, Flex, MainAxisSize, ParentElement, Radius,
     },

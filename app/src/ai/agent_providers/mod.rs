@@ -51,7 +51,7 @@ pub use secrets::AgentProviderSecrets;
 use std::collections::HashMap;
 
 use settings::Setting;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::ai::llms::{
     AvailableLLMs, DisableReason, LLMContextWindow, LLMInfo, LLMProvider, LLMUsageMetadata,

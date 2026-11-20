@@ -1,4 +1,4 @@
-use warpui::{EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use super::{CLIAgentEvent, CLIAgentSession, CLIAgentSessionsModel};
 use crate::terminal::cli_agent_sessions::event::parse_event;
@@ -245,7 +245,7 @@ pub struct CLIAgentSessionListener {
     inner: Box<dyn CLIAgentSessionHandler>,
 }
 
-impl warpui::Entity for CLIAgentSessionListener {
+impl zap_ng_ui::Entity for CLIAgentSessionListener {
     type Event = ();
 }
 

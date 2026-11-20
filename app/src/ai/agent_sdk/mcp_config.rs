@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use serde_json::{Map, Value};
-use warp_cli::mcp::MCPSpec;
+use zap_ng_cli::mcp::MCPSpec;
 
 use crate::ai::mcp::TemplatableMCPServer;
 
@@ -10,7 +10,7 @@ use crate::ai::mcp::TemplatableMCPServer;
 /// If user input includes wrapper shapes like `{ "mcpServers": { ... } }`, we unpack them.
 ///
 /// Notes:
-/// - UUID specs are coerced into `{"<uuid>": {"warp_id": "<uuid>"}}`.
+/// - UUID specs are coerced into `{"<uuid>": {"zap_ng_id": "<uuid>"}}`.
 /// - We do light validation to catch obvious config errors before sending the request.
 pub(super) fn build_mcp_servers_from_specs(
     specs: &[MCPSpec],
@@ -125,23 +125,23 @@ fn validate_server_config(server_name: &str, config: &Value) -> anyhow::Result<(
         anyhow::anyhow!("MCP server '{server_name}' config must be a JSON object")
     })?;
 
-    let has_warp_id = obj.contains_key("warp_id");
+    let has_zap_ng_id = obj.contains_key("warp_id");
     let has_command = obj.contains_key("command");
     let has_url = obj.contains_key("url");
 
-    let kind_count = usize::from(has_warp_id) + usize::from(has_command) + usize::from(has_url);
+    let kind_count = usize::from(has_zap_ng_id) + usize::from(has_command) + usize::from(has_url);
     if kind_count != 1 {
         anyhow::bail!(
             "MCP server '{server_name}' must have exactly one of: 'warp_id', 'command', or 'url'"
         );
     }
 
-    if has_warp_id {
-        let warp_id = obj.get("warp_id").and_then(Value::as_str).ok_or_else(|| {
+    if has_zap_ng_id {
+        let zap_ng_id = obj.get("warp_id").and_then(Value::as_str).ok_or_else(|| {
             anyhow::anyhow!("MCP server '{server_name}' field 'warp_id' must be a string")
         })?;
 
-        uuid::Uuid::parse_str(warp_id).with_context(|| {
+        uuid::Uuid::parse_str(zap_ng_id).with_context(|| {
             format!("MCP server '{server_name}' field 'warp_id' must be a UUID")
         })?;
     }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use futures_lite::future::yield_now;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::cloud_object::model::persistence::ObjectStoreModel;
 use crate::notebooks::manager::NotebookManager;

@@ -1,7 +1,7 @@
 use crate::terminal::shared_session::protocol::SessionSourceType;
 use pathfinder_geometry::vector::vec2f;
 
-use warpui::App;
+use zap_ng_ui::App;
 
 use crate::context_chips::prompt_type::PromptType;
 

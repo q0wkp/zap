@@ -1,8 +1,8 @@
 use std::time::Duration;
-use warp::integration_testing::workflow::{
+use zap_ng::integration_testing::workflow::{
     assert_no_team_workflow_pane_open, assert_open_team_workflow_pane_count_equals,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{
         self,
         assertions::{go_offline, go_online, join_a_workspace},
@@ -21,7 +21,7 @@ use warp::{
     },
     workflows::CategoriesView,
 };
-use warpui::{async_assert_eq, integration::TestStep, ViewHandle};
+use zap_ng_ui::{async_assert_eq, integration::TestStep, ViewHandle};
 
 use crate::Builder;
 
@@ -104,7 +104,7 @@ pub fn test_loading_project_workflows() -> Builder {
 
                     workflows.read(app, |workflows, _| {
                         // Note that this can be a synchronous assertion because unlike the next assertion,
-                        // we don't have concurrency with a WarpConfig watcher thread
+                        // we don't have concurrency with a ZapNGConfig watcher thread
                         async_assert_eq!(
                             workflows.project_workflows().count(),
                             0,

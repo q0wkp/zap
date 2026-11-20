@@ -4,9 +4,9 @@ use crate::terminal::model::session::{
     command_executor::testing::TestCommandExecutor, SessionInfo,
 };
 use typed_path::TypedPathBuf;
-use warp_completer::signatures::CommandRegistry;
-use warp_completer::{meta::SpannedItem, parsers::ParsedToken};
-use warpui::App;
+use zap_ng_completer::signatures::CommandRegistry;
+use zap_ng_completer::{meta::SpannedItem, parsers::ParsedToken};
+use zap_ng_ui::App;
 
 use super::*;
 

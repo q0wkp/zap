@@ -5,7 +5,7 @@ use crate::server::ids::SyncId;
 use crate::{appearance::Appearance, cloud_object::StoredObject};
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warpui::{
+use zap_ng_ui::{
     elements::{Highlight, Text},
     AppContext, SingletonEntity,
 };

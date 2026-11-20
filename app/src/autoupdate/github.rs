@@ -1,4 +1,4 @@
-// openWarp(Channel::Oss)autoupdate 走 GitHub Releases API,而非 Zap 官方
+// ZapNG(Channel::Oss)autoupdate 走 GitHub Releases API,而非 Zap 官方
 // channel_versions / GCS。本模块只负责"取最新 release 元数据" + "按文件名挑资产";
 // 实际的下载落盘 + 打开目录由 mac.rs / linux.rs 完成。
 

@@ -18,7 +18,7 @@
 use anyhow::Context as _;
 use futures::StreamExt;
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatStreamEvent};
-use warpui::{AppContext, EntityId, SingletonEntity as _};
+use zap_ng_ui::{AppContext, EntityId, SingletonEntity as _};
 
 use super::chat_stream;
 use super::request_inspector::{self, CallKind, CallOrigin};

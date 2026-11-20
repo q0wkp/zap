@@ -1,6 +1,6 @@
 use vim::vim::VimMode;
-use warp_core::features::FeatureFlag;
-use warpui::{keymap::Keystroke, platform::WindowStyle, App};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{keymap::Keystroke, platform::WindowStyle, App};
 
 use crate::editor::{DisplayPoint, EditorOptions, EditorView};
 

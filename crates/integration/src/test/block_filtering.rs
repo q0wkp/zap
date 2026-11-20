@@ -12,22 +12,22 @@ use crate::test::integration_testing::terminal::{
 };
 use crate::test::new_step_with_default_assertions;
 use crate::test::TestStep;
-use warp::cmd_or_ctrl_shift;
-use warp::integration_testing::settings::{
+use zap_ng::cmd_or_ctrl_shift;
+use zap_ng::integration_testing::settings::{
     toggle_hide_secrets_in_block_list_setting, toggle_safe_mode_setting,
 };
-use warp::integration_testing::terminal::util::current_shell_starter_and_version;
-use warp::integration_testing::terminal::{
+use zap_ng::integration_testing::terminal::util::current_shell_starter_and_version;
+use zap_ng::integration_testing::terminal::{
     assert_context_menu_is_open, initialize_secret_regexes,
     wait_until_bootstrapped_single_pane_for_tab,
 };
-use warp::integration_testing::view_getters::single_terminal_view_for_tab;
+use zap_ng::integration_testing::view_getters::single_terminal_view_for_tab;
 
-use warp::terminal::model::index::Point;
-use warp::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
-use warp::terminal::shell::ShellType;
-use warp::terminal::GridType;
-use warpui::{async_assert, async_assert_eq};
+use zap_ng::terminal::model::index::Point;
+use zap_ng::terminal::model::terminal_model::{BlockIndex, WithinBlock, WithinModel};
+use zap_ng::terminal::shell::ShellType;
+use zap_ng::terminal::GridType;
+use zap_ng_ui::{async_assert, async_assert_eq};
 
 use crate::Builder;
 

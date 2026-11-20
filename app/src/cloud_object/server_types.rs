@@ -5,8 +5,8 @@ use chrono::{DateTime, Utc};
 use derivative::Derivative;
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
-use warp_core::ui::{appearance::Appearance, theme::Fill, Icon};
-use warpui::{
+use zap_ng_core::ui::{appearance::Appearance, theme::Fill, Icon};
+use zap_ng_ui::{
     elements::{
         Align, ChildAnchor, ConstrainedBox, Hoverable, MouseStateHandle, OffsetPositioning,
         ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
@@ -394,7 +394,7 @@ impl StoredObjectStatuses {
 
         let icon_and_tooltip_text = if should_show_error_indicator {
             Some((
-                Icon::AlertTriangle.to_warpui_icon(Fill::Solid(theme.ui_error_color())),
+                Icon::AlertTriangle.to_zap_ng_ui_icon(Fill::Solid(theme.ui_error_color())),
                 SYNC_STATUS_TOOLTIP_ERROR,
             ))
         } else {

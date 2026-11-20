@@ -2,11 +2,11 @@ use std::borrow::Cow;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::{
+use zap_ng_core::{
     features::FeatureFlag,
     ui::{appearance::Appearance, color::blend::Blend as _, theme::color::internal_colors, Icon},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow,
         Expanded, Flex, Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor,
@@ -24,7 +24,7 @@ use crate::util::bindings::{keybinding_name_to_display_string, BindingGroup, Cus
 const BUTTON_MIN_WIDTH: f32 = 149.;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -106,7 +106,7 @@ impl ProjectButtons {
 
         Hoverable::new(mouse_state, move |state| {
             let icon_el = Container::new(
-                ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+                ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                     .with_height(20.)
                     .with_width(20.)
                     .finish(),

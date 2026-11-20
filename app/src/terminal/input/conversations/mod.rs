@@ -7,8 +7,8 @@ mod view;
 pub use view::{InlineConversationMenuEvent, InlineConversationMenuView};
 
 use pathfinder_color::ColorU;
-use warp_core::ui::appearance::Appearance;
-use warpui::{keymap::Keystroke, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{keymap::Keystroke, SingletonEntity};
 
 use crate::ai::conversation_navigation::ConversationNavigationData;
 use crate::terminal::input::inline_menu::{

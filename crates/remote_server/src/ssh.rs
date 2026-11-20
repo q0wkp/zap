@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use command::r#async::Command;
-use warpui::r#async::FutureExt as _;
+use zap_ng_ui::r#async::FutureExt as _;
 
 /// Timeout for `ssh -O exit`. The command only talks to the local
 /// ControlMaster over a Unix socket, so it should return almost
@@ -32,7 +32,7 @@ pub fn ssh_args(socket_path: &Path) -> Vec<String> {
 /// without waiting for multiplexed channels to finish draining.
 ///
 /// The user's interactive ssh is spawned with `-o ControlMaster=yes` by
-/// `warp_ssh_helper`, so it is both the interactive session and the
+/// `zap_ng_ssh_helper`, so it is both the interactive session and the
 /// multiplex master. When the user's remote shell exits, that ssh can
 /// hang waiting for half-closed slave channels (e.g. from
 /// `ssh ... remote-server-proxy`) to finish cleanup on the remote

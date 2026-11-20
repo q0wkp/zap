@@ -1,6 +1,6 @@
 use std::{path::PathBuf, time::Duration};
 
-use warpui::{
+use zap_ng_ui::{
     async_assert,
     integration::{AssertionOutcome, TestStep},
     ModelHandle,
@@ -8,29 +8,29 @@ use warpui::{
 
 use super::{assert_approx_eq, new_builder, TEST_ONLY_ASSETS};
 use crate::Builder;
-use warp::integration_testing::{
+use zap_ng::integration_testing::{
     pane_group::assert_focused_pane_index,
     window::assert_num_windows_open,
     workspace::{assert_focused_tab_index, assert_tab_count},
 };
-use warp::integration_testing::{
+use zap_ng::integration_testing::{
     step::new_step_with_default_assertions,
     terminal::{validate_block_output, wait_until_bootstrapped_single_pane_for_tab},
 };
-use warp::search::command_palette::launch_config;
-use warp::workspace::NEW_TAB_BUTTON_POSITION_ID;
-use warp::{features::FeatureFlag, integration_testing::settings::set_window_custom_size};
-use warp::{
+use zap_ng::search::command_palette::launch_config;
+use zap_ng::workspace::NEW_TAB_BUTTON_POSITION_ID;
+use zap_ng::{features::FeatureFlag, integration_testing::settings::set_window_custom_size};
+use zap_ng::{
     integration_testing::type_getters::get_launch_config_ui_location, search::SyncDataSource,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{self},
     search::data_source::Query,
 };
 
-/// Adds a launch config to the mocked out warp config directory and verifies that
+/// Adds a launch config to the mocked out zap-ng config directory and verifies that
 /// the launch config appears in the launch config palette.
-pub fn test_add_launch_config_to_warp_config() -> Builder {
+pub fn test_add_launch_config_to_zap_ng_config() -> Builder {
     new_builder()
         .with_setup(move |utils| {
             utils.set_env("WARP_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
@@ -50,7 +50,7 @@ pub fn test_add_launch_config_to_warp_config() -> Builder {
                         .clone();
                     launch_config_data_source.read(app, |palette, app| {
                         // Note that this can be a synchronous assertion because unlike the next test step,
-                        // we don't have concurrency with a WarpConfig watcher thread
+                        // we don't have concurrency with a ZapNGConfig watcher thread
                         assert_eq!(
                             palette.run_query(&Query::from(""), app).unwrap().len(),
                             0,
@@ -104,9 +104,9 @@ pub fn test_with_launch_config() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config:
-                                warp::launch_configs::launch_config::make_mock_single_window_launch_config(),
+                                zap_ng::launch_configs::launch_config::make_mock_single_window_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,
                         },
@@ -164,10 +164,10 @@ pub fn test_open_launch_config_from_add_tab_menu_legacy() -> Builder {
 }
 
 pub fn test_launch_config_single_child_branch() -> Builder {
-    use warp::launch_configs::launch_config::{
+    use zap_ng::launch_configs::launch_config::{
         LaunchConfig, PaneMode, PaneTemplateType, SplitDirection, TabTemplate, WindowTemplate,
     };
-    use warpui::actions::StandardAction;
+    use zap_ng_ui::actions::StandardAction;
 
     /// Create a launch config that has a branch with a single child
     fn create_launch_config() -> LaunchConfig {
@@ -202,7 +202,7 @@ pub fn test_launch_config_single_child_branch() -> Builder {
                 .with_action(move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config: create_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,
@@ -234,9 +234,9 @@ pub fn test_open_launch_config_with_custom_size() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config:
-                                warp::launch_configs::launch_config::make_mock_single_window_launch_config(),
+                                zap_ng::launch_configs::launch_config::make_mock_single_window_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,
                         },
@@ -274,9 +274,9 @@ pub fn test_open_launch_config_in_active_window() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config:
-                                warp::launch_configs::launch_config::make_mock_single_window_launch_config(),
+                                zap_ng::launch_configs::launch_config::make_mock_single_window_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: true,
                         },
@@ -295,7 +295,7 @@ pub fn test_open_launch_config_in_active_window() -> Builder {
 }
 
 pub fn test_with_launch_config_with_active_tab_index() -> Builder {
-    use warp::launch_configs::launch_config::{
+    use zap_ng::launch_configs::launch_config::{
         LaunchConfig, PaneMode, PaneTemplateType, SplitDirection, TabTemplate, WindowTemplate,
     };
 
@@ -338,7 +338,7 @@ pub fn test_with_launch_config_with_active_tab_index() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config: create_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,
@@ -355,7 +355,7 @@ pub fn test_with_launch_config_with_active_tab_index() -> Builder {
 }
 
 pub fn test_with_launch_config_with_active_pane() -> Builder {
-    use warp::launch_configs::launch_config::{
+    use zap_ng::launch_configs::launch_config::{
         LaunchConfig, PaneMode, PaneTemplateType, SplitDirection, TabTemplate, WindowTemplate,
     };
 
@@ -416,7 +416,7 @@ pub fn test_with_launch_config_with_active_pane() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config: create_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,
@@ -434,7 +434,7 @@ pub fn test_with_launch_config_with_active_pane() -> Builder {
 }
 
 pub fn test_with_launch_config_with_no_active_pane() -> Builder {
-    use warp::launch_configs::launch_config::{
+    use zap_ng::launch_configs::launch_config::{
         LaunchConfig, PaneMode, PaneTemplateType, SplitDirection, TabTemplate, WindowTemplate,
     };
 
@@ -495,7 +495,7 @@ pub fn test_with_launch_config_with_no_active_pane() -> Builder {
                 move |app, _, _| {
                     app.dispatch_global_action(
                         "root_view:open_launch_config",
-                        warp::root_view::OpenLaunchConfigArg {
+                        zap_ng::root_view::OpenLaunchConfigArg {
                             launch_config: create_launch_config(),
                             ui_location: get_launch_config_ui_location(),
                             open_in_active_window: false,

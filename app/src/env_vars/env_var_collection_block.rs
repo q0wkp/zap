@@ -10,9 +10,9 @@ use settings::Setting as _;
 use std::borrow::Cow;
 use std::rc::Rc;
 use std::sync::Arc;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::{features::FeatureFlag, ui::Icon};
-use warpui::{
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_core::{features::FeatureFlag, ui::Icon};
+use zap_ng_ui::{
     elements::{
         get_rich_content_position_id, Border, Clipped, Container, CornerRadius, CrossAxisAlignment,
         Flex, FormattedTextElement, MouseStateHandle, ParentElement, Radius, SavePosition,
@@ -117,7 +117,7 @@ pub struct EnvVarCollectionBlock {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(

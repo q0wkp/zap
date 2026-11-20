@@ -1,7 +1,7 @@
 use crate::terminal::shell::ShellType;
 
 use super::*;
-use warpui::App;
+use zap_ng_ui::App;
 
 async fn execute_test_command<F>(
     executor: Arc<TmuxCommandExecutor>,

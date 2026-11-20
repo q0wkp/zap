@@ -3,7 +3,7 @@ mod serialized_block;
 
 pub use interaction_mode::*;
 pub use serialized_block::*;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use super::grid::grid_handler::{GridHandler, PerformResetGridChecks};
 use super::grid::{Cursor, RespectDisplayedOutput};
@@ -16,7 +16,7 @@ use super::selection::ScrollDelta;
 use super::session::{command_executor, Sessions};
 pub use super::BlockId;
 use super::{bootstrap::BootstrapStage, find::RegexDFAs};
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::{AgentViewDisplayMode, AgentViewState};
@@ -54,11 +54,11 @@ use hex;
 use instant::Instant;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::command::ExitCode;
-use warp_terminal::model::grid::Dimensions as _;
-use warp_util::path::user_friendly_path;
-use warpui::units::{IntoLines, Lines};
-use warpui::{r#async::executor::Background, record_trace_event};
+use zap_ng_core::command::ExitCode;
+use zap_ng_terminal::model::grid::Dimensions as _;
+use zap_ng_util::path::user_friendly_path;
+use zap_ng_ui::units::{IntoLines, Lines};
+use zap_ng_ui::{r#async::executor::Background, record_trace_event};
 
 use enum_iterator::all;
 use lazy_static::lazy_static;
@@ -518,7 +518,7 @@ impl From<&Block> for BlockType {
 
         match block.bootstrap_stage() {
             BootstrapStage::RestoreBlocks => BlockType::Restored,
-            BootstrapStage::WarpInput | BootstrapStage::Bootstrapped => BlockType::BootstrapHidden,
+            BootstrapStage::ZapNGInput | BootstrapStage::Bootstrapped => BlockType::BootstrapHidden,
             BootstrapStage::ScriptExecution => {
                 if block.is_empty(&AgentViewState::Inactive) {
                     BlockType::BootstrapHidden
@@ -605,7 +605,7 @@ pub struct BlockSize {
     pub block_padding: BlockPadding,
     pub size: SizeInfo,
     pub max_block_scroll_limit: usize,
-    pub warp_prompt_height_lines: f32,
+    pub zap_ng_prompt_height_lines: f32,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -919,7 +919,7 @@ impl Block {
         event_proxy: ChannelEventListener,
         background_executor: Arc<Background>,
         bootstrap_stage: BootstrapStage,
-        show_warp_bootstrap_input: bool,
+        show_zap_ng_bootstrap_input: bool,
         show_in_band_command_blocks: bool,
         show_memory_stats: bool,
         block_index: BlockIndex,
@@ -976,7 +976,7 @@ impl Block {
             background_executor,
             event_proxy,
             bootstrap_stage,
-            show_bootstrap_block: show_warp_bootstrap_input,
+            show_bootstrap_block: show_zap_ng_bootstrap_input,
             show_in_band_command_blocks,
             show_memory_stats,
             creation_ts: Local::now(),
@@ -1421,7 +1421,7 @@ impl Block {
             }
         }
 
-        let is_bootstrap_block = self.bootstrap_stage == BootstrapStage::WarpInput;
+        let is_bootstrap_block = self.bootstrap_stage == BootstrapStage::ZapNGInput;
         let is_empty_bootstrap_script_execution_block = self.bootstrap_stage
             == BootstrapStage::ScriptExecution
             && self.command_should_show_as_empty_when_finished()
@@ -2149,7 +2149,7 @@ impl Block {
         let escape_char = session.shell_family().escape_char();
 
         // Parse the raw command string to get the top-level command.
-        let command = warp_completer::parsers::simple::top_level_command(
+        let command = zap_ng_completer::parsers::simple::top_level_command(
             self.command_to_string(),
             escape_char,
         )?;
@@ -2159,7 +2159,7 @@ impl Block {
             .alias_value(command.as_str())
             .map(|s| s.to_owned())
             // An alias can technically expand into an entire command (e.g. "gl" => "PAGER=0 git log").
-            .and_then(|s| warp_completer::parsers::simple::top_level_command(s, escape_char))
+            .and_then(|s| zap_ng_completer::parsers::simple::top_level_command(s, escape_char))
             // If alias expansion didn't work, then just return the original top-level command.
             .or(Some(command))
     }
@@ -2485,7 +2485,7 @@ impl Block {
 
         self.background_executor
             .spawn(async move {
-                warpui::r#async::Timer::after(std::time::Duration::from_millis(delay_ms)).await;
+                zap_ng_ui::r#async::Timer::after(std::time::Duration::from_millis(delay_ms)).await;
                 ready_to_render.store(true, Ordering::Relaxed);
                 event_proxy.send_wakeup_event();
             })
@@ -2806,7 +2806,7 @@ impl Block {
     }
 
     pub fn grid_storage_lines(&self) -> usize {
-        use warp_terminal::model::grid::Dimensions as _;
+        use zap_ng_terminal::model::grid::Dimensions as _;
 
         self.all_grids_iter()
             .map(|grid| grid.grid_storage().total_rows())

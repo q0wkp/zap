@@ -1,4 +1,4 @@
-//! Read-only image viewer pane contents. Renders a local image fit-to-pane via the warpui
+//! Read-only image viewer pane contents. Renders a local image fit-to-pane via the zap_ng_ui
 //! `Image` element. Mirrors the markdown `FileNotebookView`, but without the rich-text editor,
 //! workflow, or link machinery — an image emits nothing and only needs to be displayed.
 
@@ -7,8 +7,8 @@ use std::{
     sync::Arc,
 };
 
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     assets::asset_cache::{AssetCache, AssetSource},
     elements::{Align, CacheOption, DispatchEventResult, Empty, EventHandler, Image, Text},
     image_cache::ImageType,
@@ -177,7 +177,7 @@ impl View for ImageViewerView {
     fn accessibility_contents(&self, _ctx: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new_without_help(
             format!("{} image", self.title()),
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         ))
     }
 

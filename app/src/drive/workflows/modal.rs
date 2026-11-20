@@ -5,11 +5,11 @@ use std::collections::HashSet;
 use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
 use string_offset::CharOffset;
-use warp_core::ui::theme::Fill;
-use warp_editor::editor::NavigationKey;
-use warpui::elements::Clipped;
-use warpui::FocusContext;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::elements::Clipped;
+use zap_ng_ui::FocusContext;
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{
         Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
@@ -38,7 +38,7 @@ use crate::{
         ObjectType, Owner, Revision, StoredObject, StoredObjectEventEntrypoint,
     },
     drive::{
-        cloud_object_styling::warp_drive_icon_color, items::WarpDriveItemId, DriveObjectType,
+        cloud_object_styling::zap_ng_drive_icon_color, items::ZapNGDriveItemId, DriveObjectType,
         ObjectTypeAndId,
     },
     editor::{
@@ -152,7 +152,7 @@ pub struct WorkflowModal {
     pub(super) ai_metadata_assist_state: AiAssistState,
     breadcrumbs: Option<Vec<BreadcrumbState<ContainingObject>>>,
     /// ID of the breadcrumb space/folder a user clicked on before the unsaved dialog popped up
-    clicked_breadcrumb: Option<WarpDriveItemId>,
+    clicked_breadcrumb: Option<ZapNGDriveItemId>,
     menu: ViewHandle<Menu<WorkflowModalAction>>,
     menu_open: bool,
     arguments_clipped_scroll_state: ClippedScrollStateHandle,
@@ -170,7 +170,7 @@ pub enum WorkflowModalAction {
     CloseUnsavedChangesDialog,
     ForceClose,
     AiAssist,
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     OpenOverflowMenu,
     CopyObjectToClipboard,
     TrashObject,
@@ -181,7 +181,7 @@ pub enum WorkflowModalEvent {
     UpdatedWorkflow(SyncId),
     AiAssistError(String),
     AiAssistUpgradeError(Option<ServerId>, UserUid),
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
 }
 
 /// A grouping of various error states the modal can be in. Any of these being
@@ -598,7 +598,7 @@ impl WorkflowModal {
         title_is_empty && description_is_empty && content_is_empty
     }
 
-    fn view_in_warp_drive(&mut self, id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    fn view_in_zap_ng_drive(&mut self, id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         ctx.emit(WorkflowModalEvent::ViewInWarpDrive(id));
         self.close(false /* force */, ctx);
         self.clicked_breadcrumb = None;
@@ -1395,8 +1395,8 @@ impl WorkflowModal {
         let workflow_icon = Container::new(
             ConstrainedBox::new(
                 Icon::from(DriveObjectType::Workflow)
-                    .to_warpui_icon(
-                        warp_drive_icon_color(appearance, DriveObjectType::Workflow).into(),
+                    .to_zap_ng_ui_icon(
+                        zap_ng_drive_icon_color(appearance, DriveObjectType::Workflow).into(),
                     )
                     .finish(),
             )
@@ -1439,8 +1439,8 @@ impl WorkflowModal {
                 appearance,
                 |ctx, _, object| {
                     let item_id = match object.kind {
-                        ContainingObjectKind::Object(id) => WarpDriveItemId::Object(id),
-                        ContainingObjectKind::Space(space) => WarpDriveItemId::Space(space),
+                        ContainingObjectKind::Object(id) => ZapNGDriveItemId::Object(id),
+                        ContainingObjectKind::Space(space) => ZapNGDriveItemId::Space(space),
                     };
                     ctx.dispatch_typed_action(WorkflowModalAction::ViewInWarpDrive(item_id));
                 },
@@ -1697,7 +1697,7 @@ impl WorkflowModal {
             let text_and_icon = TextAndIcon::new(
                 TextAndIconAlignment::TextFirst,
                 label,
-                icon.to_warpui_icon(appearance.theme().active_ui_text_color()),
+                icon.to_zap_ng_ui_icon(appearance.theme().active_ui_text_color()),
                 MainAxisSize::Min,
                 MainAxisAlignment::Center,
                 vec2f(16., 16.),
@@ -1914,7 +1914,7 @@ impl TypedActionView for WorkflowModal {
             WorkflowModalAction::ForceClose => {
                 self.close(true, ctx);
                 if let Some(id) = self.clicked_breadcrumb {
-                    self.view_in_warp_drive(id, ctx);
+                    self.view_in_zap_ng_drive(id, ctx);
                 }
             }
             WorkflowModalAction::AiAssist => self.issue_request(ctx),
@@ -1924,7 +1924,7 @@ impl TypedActionView for WorkflowModal {
                     self.show_unsaved_changes_dialog(ctx);
                     return;
                 }
-                self.view_in_warp_drive(*id, ctx)
+                self.view_in_zap_ng_drive(*id, ctx)
             }
             WorkflowModalAction::OpenOverflowMenu => self.open_overflow_menu(ctx),
             WorkflowModalAction::CopyObjectToClipboard => self.copy_object_to_clipboard(ctx),

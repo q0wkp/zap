@@ -12,10 +12,10 @@ use settings::Setting as _;
 
 use std::fmt;
 use std::num::NonZeroUsize;
-use warp_core::semantic_selection::SemanticSelection;
-use warpui::elements::{DispatchEventResult, SelectionHandle};
-use warpui::ModelAsRef;
-use warpui::{
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_ui::elements::{DispatchEventResult, SelectionHandle};
+use zap_ng_ui::ModelAsRef;
+use zap_ng_ui::{
     elements::{Container, Element, EventHandler, SavePosition, SelectableArea, Text},
     fonts::{Properties, Weight},
     presenter::ChildView,
@@ -39,7 +39,7 @@ use crate::terminal::model::session::Sessions;
 use crate::terminal::view::PADDING_LEFT as TERMINAL_VIEW_PADDING_LEFT;
 
 use crate::terminal::model::ObfuscateSecrets;
-use warpui::units::Pixels;
+use zap_ng_ui::units::Pixels;
 
 /// How long we're willing to wait after precmd for a marker-based prompt to appear before we
 /// display an empty prompt grid in the input.

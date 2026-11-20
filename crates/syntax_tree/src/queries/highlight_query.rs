@@ -4,11 +4,11 @@ use arborium::tree_sitter::{Node, Parser, Query, QueryCursor, TextProvider, Tree
 use rangemap::RangeMap;
 use streaming_iterator::StreamingIterator;
 use string_offset::{ByteOffset, CharOffset};
-use warp_editor::content::{
+use zap_ng_editor::content::{
     buffer::{Buffer, ToBufferByteOffset, ToBufferCharOffset},
     text::Bytes,
 };
-use warpui::color::ColorU;
+use zap_ng_ui::color::ColorU;
 
 thread_local! {
     static INJECTION_PARSER: RefCell<Parser> = RefCell::new(Parser::new());

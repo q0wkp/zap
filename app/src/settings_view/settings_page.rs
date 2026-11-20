@@ -15,8 +15,8 @@ use super::{
     keybindings::KeybindingsView,
     mcp_servers_page::MCPServersSettingsPageView,
     network_page::NetworkPageView,
-    warp_drive_page::WarpDriveSettingsPageView,
-    warpify_page::WarpifyPageView,
+    zap_ng_drive_page::ZapNGDriveSettingsPageView,
+    zapngify_page::ZapNGifyPageView,
     SettingsSection,
 };
 use crate::{
@@ -27,11 +27,11 @@ use crate::{
     view_components::{Dropdown, SubmittableTextInput},
 };
 use settings::Setting;
-use warp_core::{
+use zap_ng_core::{
     settings::SyncToCloud,
     ui::{color::blend::Blend, theme::color::internal_colors},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         new_scrollable::{ClippedAxisConfiguration, DualAxisConfig, SingleAxisConfig},
         Align, Border, ChildView, ClippedScrollStateHandle, ConstrainedBox, Container,
@@ -105,10 +105,10 @@ pub enum SettingsPageViewHandle {
     // Zap Wave 6-8:`SharedBlocks` / `Referrals` variant 随 `ShowBlocksView` /
     // `ReferralsPageView` 与对应 ServerApi client trait 物理删。
     // Zap Wave 7-3:`CloudEnvironments` variant 随 ambient-agent UI 子系统物理删。
-    Warpify(ViewHandle<WarpifyPageView>),
+    ZapNGify(ViewHandle<ZapNGifyPageView>),
     AI(ViewHandle<AISettingsPageView>),
     MCPServers(ViewHandle<MCPServersSettingsPageView>),
-    ZapDrive(ViewHandle<WarpDriveSettingsPageView>),
+    ZapDrive(ViewHandle<ZapNGDriveSettingsPageView>),
     /// 全局 HTTP 代理设置页。
     Network(ViewHandle<NetworkPageView>),
     /// 云同步设置页。
@@ -127,7 +127,7 @@ impl SettingsPageViewHandle {
             // Zap Wave 3-1:`OzCloudAPIKeys` arm 随 `platform_page` 一同物理删。
             // Zap Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
             // Zap Wave 7-3:`CloudEnvironments` arm 随 ambient-agent UI 一同物理删。
-            Warpify(view_handle) => ChildView::new(view_handle).finish(),
+            ZapNGify(view_handle) => ChildView::new(view_handle).finish(),
             AI(view_handle) => ChildView::new(view_handle).finish(),
             MCPServers(view_handle) => ChildView::new(view_handle).finish(),
             ZapDrive(view_handle) => ChildView::new(view_handle).finish(),
@@ -430,7 +430,7 @@ pub fn render_full_pane_width_ai_button(
                 .with_child(
                     ConstrainedBox::new(
                         Icon::ChevronRight
-                            .to_warpui_icon(appearance.theme().main_text_color(icon_bg))
+                            .to_zap_ng_ui_icon(appearance.theme().main_text_color(icon_bg))
                             .finish(),
                     )
                     .with_width(16.)
@@ -650,7 +650,7 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
     if let Some(icon) = label_icon {
         label.add_child(
             Container::new(
-                ConstrainedBox::new(icon.to_warpui_icon(label_color).finish())
+                ConstrainedBox::new(icon.to_zap_ng_ui_icon(label_color).finish())
                     .with_width(16.)
                     .with_height(16.)
                     .finish(),
@@ -667,15 +667,15 @@ pub fn render_body_item_label_internal<T: Clone + Action>(
         // `additional_info` gets moved into `render_info_icon()`.
         let secondary_text_child =
             if let Some(secondary_text) = additional_info.secondary_text.clone() {
-                let warp_theme = appearance.theme();
+                let zap_ng_theme = appearance.theme();
                 Some(
                     appearance
                         .ui_builder()
                         .span(secondary_text)
                         .with_style(UiComponentStyles {
                             font_color: Some(
-                                warp_theme
-                                    .sub_text_color(warp_theme.surface_2())
+                                zap_ng_theme
+                                    .sub_text_color(zap_ng_theme.surface_2())
                                     .into_solid(),
                             ),
                             margin: Some(Coords {
@@ -844,14 +844,14 @@ pub fn render_dropdown_item_label(
         )
         .finish();
     let label = if let Some(secondary_text) = secondary_text {
-        let warp_theme = appearance.theme();
+        let zap_ng_theme = appearance.theme();
         let secondary_text_child = appearance
             .ui_builder()
             .span(secondary_text)
             .with_style(UiComponentStyles {
                 font_color: Some(
                     color_override
-                        .unwrap_or(warp_theme.sub_text_color(warp_theme.surface_2()))
+                        .unwrap_or(zap_ng_theme.sub_text_color(zap_ng_theme.surface_2()))
                         .into_solid(),
                 ),
                 margin: Some(Coords {
@@ -939,7 +939,7 @@ pub(crate) fn render_settings_info_banner(
     let icon = Container::new(
         ConstrainedBox::new(
             Icon::AlertCircle
-                .to_warpui_icon(appearance.theme().active_ui_text_color())
+                .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                 .finish(),
         )
         .with_width(16.)
@@ -1176,7 +1176,7 @@ where
 
 /// Structured contents of a settings tab page. This type breaks all the content into
 /// [`SettingsWidget`]s.
-pub(super) enum PageType<V: warpui::View> {
+pub(super) enum PageType<V: zap_ng_ui::View> {
     /// A page where the contents cannot be separated for showing search results. If any part
     /// matches the search query, the whole page must show. The whole page is one big
     /// [`SettingsWidget`].
@@ -1256,7 +1256,7 @@ impl From<usize> for MatchData {
     }
 }
 
-impl<V: warpui::View> PageType<V> {
+impl<V: zap_ng_ui::View> PageType<V> {
     /// A page where the contents cannot be separated for showing search results. If any part
     /// matches the search query, the whole page must show. The whole page is one big
     /// [`SettingsWidget`].
@@ -1740,7 +1740,7 @@ impl<V: warpui::View> PageType<V> {
                 },
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                zap_ng_ui::elements::Fill::None,
             )
             .finish(),
             vec![(
@@ -1767,7 +1767,7 @@ impl<V: warpui::View> PageType<V> {
                     },
                     theme.nonactive_ui_detail().into(),
                     theme.active_ui_detail().into(),
-                    warpui::elements::Fill::None,
+                    zap_ng_ui::elements::Fill::None,
                 )
                 .finish(),
             )],
@@ -1791,7 +1791,7 @@ impl<V: warpui::View> PageType<V> {
 }
 
 /// The results from a [`PageType`] with only matching [`SettingsWidget`]s.
-pub(super) enum FilteredPageType<'a, V: warpui::View> {
+pub(super) enum FilteredPageType<'a, V: zap_ng_ui::View> {
     Monolith {
         widget: Option<&'a dyn SettingsWidget<View = V>>,
         title: Option<&'static str>,
@@ -1815,13 +1815,13 @@ pub(super) enum FilteredPageType<'a, V: warpui::View> {
 }
 
 /// A grouping of related [`SettingsWidget`]s that fall under the same sub-header.
-pub(super) struct Category<V: warpui::View> {
+pub(super) struct Category<V: zap_ng_ui::View> {
     title: &'static str,
     subtitle: Option<&'static str>,
     widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
 }
 
-impl<V: warpui::View> Category<V> {
+impl<V: zap_ng_ui::View> Category<V> {
     pub(super) fn new(
         title: &'static str,
         widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
@@ -1840,7 +1840,7 @@ impl<V: warpui::View> Category<V> {
 }
 
 /// A [`Category`] with only the results which match a search query.
-pub(super) struct FilteredCategory<'a, V: warpui::View> {
+pub(super) struct FilteredCategory<'a, V: zap_ng_ui::View> {
     pub(super) title: &'static str,
     pub(super) subtitle: Option<&'static str>,
     pub(super) widgets: Vec<&'a dyn SettingsWidget<View = V>>,
@@ -1850,7 +1850,7 @@ pub(super) struct FilteredCategory<'a, V: warpui::View> {
 /// content to match against.
 pub(super) trait SettingsWidget {
     /// Which View (settings page) this widget belongs to.
-    type View: warpui::View;
+    type View: zap_ng_ui::View;
 
     fn static_widget_id() -> &'static str
     where

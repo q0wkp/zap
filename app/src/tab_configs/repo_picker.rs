@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use warpui::{
+use zap_ng_ui::{
     elements::{Border, ChildView, Container, Hoverable, MouseStateHandle, Text},
     platform::Cursor,
     ui_components::components::UiComponentStyles,

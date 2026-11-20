@@ -1,5 +1,5 @@
 use super::super::Buffer;
-use warpui::text::point::Point;
+use zap_ng_ui::text::point::Point;
 
 #[test]
 fn test_subword_boundaries_forward_starts() {

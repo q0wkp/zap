@@ -213,7 +213,7 @@ fn fast_path_finds_agents_md_in_cwd() {
 
 #[cfg(feature = "local_fs")]
 #[test]
-fn fast_path_warp_md_takes_priority_over_agents_md() {
+fn fast_path_zap_ng_md_takes_priority_over_agents_md() {
     let tmp = tempfile::tempdir().unwrap();
     let cwd = tmp.path().canonicalize().unwrap();
     std::fs::write(cwd.join("WARP.md"), "warp wins").unwrap();
@@ -353,7 +353,7 @@ fn fast_path_finds_claude_md() {
 
 #[cfg(feature = "local_fs")]
 #[test]
-fn fast_path_warp_md_priority_over_claude_md() {
+fn fast_path_zap_ng_md_priority_over_claude_md() {
     let tmp = tempfile::tempdir().unwrap();
     let cwd = tmp.path().canonicalize().unwrap();
     std::fs::write(cwd.join("WARP.md"), "warp wins").unwrap();

@@ -15,7 +15,7 @@ use crate::{
     settings::{AISettings, AgentModeCodingPermissionsType, AgentModeCommandExecutionPredicate},
     workspaces::{user_workspaces::UserWorkspaces, workspace::AiAutonomySettings},
 };
-use warp_core::execution_mode::AppExecutionMode;
+use zap_ng_core::execution_mode::AppExecutionMode;
 
 use crate::ai::mcp::mcp_provider_from_file_path;
 #[cfg(not(target_family = "wasm"))]
@@ -23,11 +23,11 @@ use crate::ai::mcp::TemplatableMCPServerManager;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use warp_completer::parsers::simple::decompose_command;
-use warp_core::user_preferences::GetUserPreferences;
-use warp_core::{features::FeatureFlag, settings::Setting};
-use warp_util::path::EscapeChar;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_completer::parsers::simple::decompose_command;
+use zap_ng_core::user_preferences::GetUserPreferences;
+use zap_ng_core::{features::FeatureFlag, settings::Setting};
+use zap_ng_util::path::EscapeChar;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use super::BlocklistAIHistoryModel;
 
@@ -1153,7 +1153,7 @@ impl BlocklistAIPermissions {
         terminal_view_id: Option<EntityId>,
         ctx: &AppContext,
     ) -> bool {
-        // openWarp 改:auto-approve(ctrl+shift+i)只对 shell/编辑等执行类工具自动通过,
+        // ZapNG 改:auto-approve(ctrl+shift+i)只对 shell/编辑等执行类工具自动通过,
         // ask_user_question 永远要求弹给用户,避免模型问问题被静默吞掉。
         // 仅显式选 `Never` 才跳过。
         let _ = conversation_id;

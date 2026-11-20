@@ -127,7 +127,7 @@ jobs:
           unzip -q -o "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
           echo "PROTOC=$RUNNER_TEMP/protoc/bin/protoc" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
-          # warpui compiles its shaders with metal, which Xcode 26 ships as a separate download.
+          # zap_ng_ui compiles its shaders with metal, which Xcode 26 ships as a separate download.
           xcodebuild -downloadComponent MetalToolchain
 
       - name: Add the Rust target

@@ -2,12 +2,12 @@ use anyhow::Context;
 use std::sync::Arc;
 use url::Url;
 
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::{
     app_state::{LeafContents, NotebookPaneSnapshot},
     cloud_object::Space,
-    drive::{items::WarpDriveItemId, ObjectTypeAndId, ZapDriveObjectSettings},
+    drive::{items::ZapNGDriveItemId, ObjectTypeAndId, ZapDriveObjectSettings},
     notebooks::{
         link::{LinkEvent, NotebookLinks},
         manager::{NotebookManager, NotebookSource},
@@ -178,15 +178,15 @@ pub(super) fn subscribe_to_link_model(
     ctx.subscribe_to_model(handle, move |pane_group, _, event, ctx| match event {
         LinkEvent::OpenFileNotebook { path, session } => {
             // Opening local files is delegated to the parent workspace.
-            ctx.emit(crate::pane_group::Event::OpenFileInWarp {
+            ctx.emit(crate::pane_group::Event::OpenFileInZapNG {
                 path: path.clone(),
                 session: session.clone(),
             })
         }
         LinkEvent::ZapDriveLink {
-            open_warp_drive_args,
+            open_zap_ng_drive_args,
         } => ctx.emit(crate::pane_group::Event::ZapDriveLink {
-            open_warp_drive_args: open_warp_drive_args.clone(),
+            open_zap_ng_drive_args: open_zap_ng_drive_args.clone(),
         }),
         LinkEvent::StartLocalSession { path } => {
             pane_group.add_session_in_directory(
@@ -230,7 +230,7 @@ fn handle_notebook_event(
         NotebookEvent::EditWorkflow(id) => {
             ctx.emit(crate::pane_group::Event::OpenCloudWorkflowForEdit(*id))
         }
-        NotebookEvent::ViewInWarpDrive(id) => view_in_warp_drive(*id, ctx),
+        NotebookEvent::ViewInWarpDrive(id) => view_in_zap_ng_drive(*id, ctx),
         NotebookEvent::MoveToSpace {
             object_type_and_id,
             new_space,
@@ -261,7 +261,7 @@ fn run_notebook_workflow(
     });
 }
 
-fn view_in_warp_drive(id: WarpDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
+fn view_in_zap_ng_drive(id: ZapNGDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
     ctx.emit(crate::pane_group::Event::ViewInWarpDrive(id))
 }
 

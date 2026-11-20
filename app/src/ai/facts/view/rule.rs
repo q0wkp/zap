@@ -25,14 +25,14 @@ use markdown_parser::{
 };
 use std::fmt::Debug;
 use std::path::PathBuf;
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::{Appearance, AppearanceEvent},
     theme::color::internal_colors,
 };
-use warpui::elements::Shrinkable;
-use warpui::platform::FilePickerConfiguration;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::{
+use zap_ng_ui::elements::Shrinkable;
+use zap_ng_ui::platform::FilePickerConfiguration;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Expanded, Flex, FormattedTextElement, HighlightedHyperlink, Hoverable, MainAxisAlignment,
@@ -394,7 +394,7 @@ impl RuleView {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        warpui::elements::Icon::new(
+                        zap_ng_ui::elements::Icon::new(
                             Icon::BookOpen.into(),
                             appearance
                                 .theme()
@@ -499,13 +499,13 @@ impl RuleView {
             if is_selected {
                 container = container
                     .with_background(appearance.theme().surface_2())
-                    .with_corner_radius(CornerRadius::with_all(warpui::elements::Radius::Pixels(
+                    .with_corner_radius(CornerRadius::with_all(zap_ng_ui::elements::Radius::Pixels(
                         4.,
                     )));
             } else if state.is_hovered() {
                 container = container
                     .with_background(appearance.theme().surface_1())
-                    .with_corner_radius(CornerRadius::with_all(warpui::elements::Radius::Pixels(
+                    .with_corner_radius(CornerRadius::with_all(zap_ng_ui::elements::Radius::Pixels(
                         4.,
                     )));
             }
@@ -567,7 +567,7 @@ impl RuleView {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::Info
-                                .to_warpui_icon(
+                                .to_zap_ng_ui_icon(
                                     appearance
                                         .theme()
                                         .sub_text_color(appearance.theme().background()),
@@ -585,7 +585,7 @@ impl RuleView {
                 .finish(),
         )
         .with_background(appearance.theme().accent_overlay())
-        .with_corner_radius(CornerRadius::with_all(warpui::elements::Radius::Pixels(4.)))
+        .with_corner_radius(CornerRadius::with_all(zap_ng_ui::elements::Radius::Pixels(4.)))
         .with_uniform_padding(style::BANNER_PADDING)
         .with_margin_bottom(style::ITEM_BOTTOM_MARGIN)
         .finish()
@@ -647,7 +647,7 @@ impl RuleView {
         Some(
             Container::new(row.finish())
                 .with_background(internal_colors::neutral_1(appearance.theme()))
-                .with_corner_radius(CornerRadius::with_all(warpui::elements::Radius::Pixels(4.)))
+                .with_corner_radius(CornerRadius::with_all(zap_ng_ui::elements::Radius::Pixels(4.)))
                 .with_border(
                     Border::all(1.)
                         .with_border_color(internal_colors::neutral_2(appearance.theme())),
@@ -721,7 +721,7 @@ impl RuleView {
 
             Container::new(row.finish())
                 .with_background(bg_color)
-                .with_corner_radius(CornerRadius::with_all(warpui::elements::Radius::Pixels(4.)))
+                .with_corner_radius(CornerRadius::with_all(zap_ng_ui::elements::Radius::Pixels(4.)))
                 .with_border(
                     Border::all(1.)
                         .with_border_color(internal_colors::neutral_2(appearance.theme())),

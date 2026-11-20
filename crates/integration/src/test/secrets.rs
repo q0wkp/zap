@@ -1,7 +1,7 @@
-use warp::integration_testing::terminal::{
+use zap_ng::integration_testing::terminal::{
     initialize_secret_regexes, open_context_menu_for_selected_block,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{
         clipboard::assert_clipboard_contains_string,
         secret_redaction::{assert_secret_tooltip_open, assert_secrets_redacted_for_ai},
@@ -16,7 +16,7 @@ use warp::{
     },
     terminal::model::{index::Point, terminal_model::WithinModel},
 };
-use warpui::{async_assert, integration::TestStep};
+use zap_ng_ui::{async_assert, integration::TestStep};
 
 use crate::util::skip_if_powershell_core_2303;
 

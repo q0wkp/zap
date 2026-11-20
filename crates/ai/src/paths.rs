@@ -1,5 +1,5 @@
 use typed_path::{TypedPath, TypedPathBuf};
-use warpui::platform::OperatingSystem;
+use zap_ng_ui::platform::OperatingSystem;
 
 fn use_unix_paths() -> bool {
     OperatingSystem::get().is_linux() || OperatingSystem::get().is_mac()

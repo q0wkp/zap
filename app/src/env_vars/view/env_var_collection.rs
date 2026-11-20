@@ -1,7 +1,7 @@
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 
-use warp_core::features::FeatureFlag;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{
         Align, AnchorPair, ChildAnchor, Clipped, ClippedScrollStateHandle, ClippedScrollable,
@@ -27,7 +27,7 @@ use crate::{
         update_manager::{FetchSingleObjectOption, UpdateManager},
         Owner, StoredObjectEventEntrypoint,
     },
-    drive::{items::WarpDriveItemId, sharing::ContentEditability},
+    drive::{items::ZapNGDriveItemId, sharing::ContentEditability},
     editor::EditorView,
     env_vars::{
         active_env_var_collection_data::{
@@ -310,7 +310,7 @@ pub struct EnvVarCollectionView {
 pub enum EnvVarCollectionEvent {
     Pane(PaneEvent),
     UpdatedEnvVarCollection(SyncId),
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     Invoke(EnvVarCollectionType),
 }
 #[derive(Debug, Clone)]
@@ -346,7 +346,7 @@ pub enum EnvVarCollectionAction {
     ForceClose,
     CloseUnsavedChangesDialog,
     // Breadcrumbs action
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
 }
 
 /// Defines the view for a collection of environment variables
@@ -1098,7 +1098,7 @@ impl EnvVarCollectionView {
             });
     }
 
-    fn view_in_warp_drive(&mut self, id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    fn view_in_zap_ng_drive(&mut self, id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         ctx.emit(EnvVarCollectionEvent::ViewInWarpDrive(id));
     }
 
@@ -1286,7 +1286,7 @@ impl View for EnvVarCollectionView {
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         let theme = appearance.theme();
         let mut content = Flex::column();
@@ -1539,7 +1539,7 @@ impl TypedActionView for EnvVarCollectionView {
                 self.update_open_modal_state(ctx);
                 ctx.notify();
             }
-            EnvVarCollectionAction::ViewInWarpDrive(id) => self.view_in_warp_drive(*id, ctx),
+            EnvVarCollectionAction::ViewInWarpDrive(id) => self.view_in_zap_ng_drive(*id, ctx),
         }
     }
 }

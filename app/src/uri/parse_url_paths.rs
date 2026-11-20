@@ -1,21 +1,21 @@
-use crate::cloud_object::extract_server_id_and_object_type_from_warp_drive_link;
+use crate::cloud_object::extract_server_id_and_object_type_from_zap_ng_drive_link;
 use crate::drive::ZapDriveObjectArgs;
 use crate::ChannelState;
 use url::Url;
 
 #[derive(PartialEq, Debug)]
-pub enum WarpWebLink {
+pub enum ZapNGWebLink {
     Session,
     DriveObject(Box<ZapDriveObjectArgs>),
 }
 
-pub fn get_item_data_from_warp_link(url: &Url) -> Option<WarpWebLink> {
+pub fn get_item_data_from_zap_ng_link(url: &Url) -> Option<ZapNGWebLink> {
     if url.origin() == ChannelState::server_root_domain() {
         url.path_segments().and_then(|mut path_segments| {
             path_segments.next().and_then(|segment| match segment {
-                "drive" => extract_server_id_and_object_type_from_warp_drive_link(url)
-                    .map(|args| WarpWebLink::DriveObject(Box::new(args))),
-                "session" => Some(WarpWebLink::Session),
+                "drive" => extract_server_id_and_object_type_from_zap_ng_drive_link(url)
+                    .map(|args| ZapNGWebLink::DriveObject(Box::new(args))),
+                "session" => Some(ZapNGWebLink::Session),
                 _ => None,
             })
         })

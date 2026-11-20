@@ -1,7 +1,7 @@
 //! Context chips built into Zap
 
 use chrono::Local;
-use warp_util::path::user_friendly_path;
+use zap_ng_util::path::user_friendly_path;
 
 use crate::terminal::shell::ShellType;
 
@@ -94,7 +94,7 @@ pub fn ssh_session(ctx: &GeneratorContext) -> Option<ChipValue> {
     if session.is_legacy_ssh_session()
         || matches!(
             session.session_type(),
-            crate::terminal::model::session::SessionType::WarpifiedRemote { .. }
+            crate::terminal::model::session::SessionType::ZapNGifiedRemote { .. }
         )
     {
         let user = session.user();

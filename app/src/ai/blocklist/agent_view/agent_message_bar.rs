@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use parking_lot::FairMutex;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{Container, Element, Empty, MouseStateHandle};
-use warpui::keymap::Keystroke;
-use warpui::platform::OperatingSystem;
-use warpui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::elements::{Container, Element, Empty, MouseStateHandle};
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::OperatingSystem;
+use zap_ng_ui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
 use super::{AgentViewState, EphemeralMessageModel, EphemeralMessageModelEvent};
 use crate::ai::agent::conversation::AIConversation;
@@ -351,7 +351,7 @@ impl View for AgentMessageBar {
 
         // Zap(Phase 3c A1):删除 ambient credits banner UI。
         // 本地化后 `ambient_only_credits_remaining` 恒为 None，原分支只会走 None。
-        let right_element: Option<Box<dyn warpui::Element>> = None;
+        let right_element: Option<Box<dyn zap_ng_ui::Element>> = None;
 
         // Append a Figma MCP chip to the message if applicable.
         match self.figma_button_status(app) {

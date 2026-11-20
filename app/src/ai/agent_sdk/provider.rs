@@ -2,11 +2,11 @@
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use comfy_table::Cell;
 use serde::Serialize;
-use warp_cli::{
+use zap_ng_cli::{
     provider::{ProviderCommand, ProviderType},
     GlobalOptions,
 };
-use warpui::{platform::TerminationMode, AppContext, ModelContext, SingletonEntity};
+use zap_ng_ui::{platform::TerminationMode, AppContext, ModelContext, SingletonEntity};
 
 use crate::ai::agent_sdk::output::{self, TableFormat};
 
@@ -105,7 +105,7 @@ impl ProviderCommandRunner {
     }
 }
 
-impl warpui::Entity for ProviderCommandRunner {
+impl zap_ng_ui::Entity for ProviderCommandRunner {
     type Event = ();
 }
 impl SingletonEntity for ProviderCommandRunner {}

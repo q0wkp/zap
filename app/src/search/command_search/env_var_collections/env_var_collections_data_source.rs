@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::cloud_object::model::persistence::ObjectStoreModel;
 

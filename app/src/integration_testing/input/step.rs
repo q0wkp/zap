@@ -1,6 +1,6 @@
 use pathfinder_geometry::vector::Vector2F;
-use warpui::integration::TestStep;
-use warpui::{windowing::WindowManager, SingletonEntity};
+use zap_ng_ui::integration::TestStep;
+use zap_ng_ui::{windowing::WindowManager, SingletonEntity};
 
 use crate::{
     integration_testing::{

@@ -18,12 +18,12 @@ use crate::{
         },
         settings::{SpacingMode, TerminalSettings},
         view::TerminalAction,
-        warpify::render::{render_subshell_flag, render_subshell_flag_pole},
+        zapngify::render::{render_subshell_flag, render_subshell_flag_pole},
     },
 };
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ChildView, Clipped, Container, DropTarget, Element, Empty, Flex,
         Hoverable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,

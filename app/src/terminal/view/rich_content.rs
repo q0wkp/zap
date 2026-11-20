@@ -1,4 +1,4 @@
-use warpui::{prelude::ChildView, Element, EntityId, View, ViewContext, ViewHandle};
+use zap_ng_ui::{prelude::ChildView, Element, EntityId, View, ViewContext, ViewHandle};
 
 use crate::{
     ai::{
@@ -11,14 +11,14 @@ use crate::{
         model::{
             blocks::RichContentItem, rich_content::RichContentType, terminal_model::BlockIndex,
         },
-        ssh::{error::SshErrorBlock, install_tmux::SshInstallTmuxBlock, warpify::SshWarpifyBlock},
+        ssh::{error::SshErrorBlock, install_tmux::SshInstallTmuxBlock, zapngify::SshZapNGifyBlock},
         view::{
             ambient_agent::AmbientAgentEntryBlock,
             block_onboarding::onboarding_agentic_suggestions_block::OnboardingAgenticSuggestionsBlock,
             ssh_remote_server_choice_view::SshRemoteServerChoiceView,
             ssh_remote_server_failed_banner::SshRemoteServerFailedBanner,
         },
-        warpify::success_block::WarpifySuccessBlock,
+        zapngify::success_block::ZapNGifySuccessBlock,
         TerminalView,
     },
 };
@@ -207,8 +207,8 @@ pub enum RichContentMetadata {
     EnvVarCollectionBlock {
         env_var_collection_block_handle: ViewHandle<EnvVarCollectionBlock>,
     },
-    SshWarpifyBlock {
-        ssh_warpify_block_handle: ViewHandle<SshWarpifyBlock>,
+    SshZapNGifyBlock {
+        ssh_zapngify_block_handle: ViewHandle<SshZapNGifyBlock>,
     },
     SshInstallTmuxBlock {
         ssh_install_tmux_block_handle: ViewHandle<SshInstallTmuxBlock>,
@@ -222,8 +222,8 @@ pub enum RichContentMetadata {
     SshRemoteServerFailedBanner {
         handle: ViewHandle<SshRemoteServerFailedBanner>,
     },
-    WarpifySuccessBlock {
-        bootstrap_success_block_handle: ViewHandle<WarpifySuccessBlock>,
+    ZapNGifySuccessBlock {
+        bootstrap_success_block_handle: ViewHandle<ZapNGifySuccessBlock>,
     },
     AgentViewEntry(AgentViewEntryMetadata),
     AmbientAgentBlock {

@@ -7,20 +7,20 @@ use bimap::BiMap;
 
 use futures_util::stream::AbortHandle;
 use string_offset::{ByteOffset, CharOffset};
-use warp_core::features::FeatureFlag;
-use warp_editor::content::buffer::{Buffer, ToBufferCharOffset};
-use warp_editor::content::diff::{text_diff, TextDiff};
-use warp_util::content_version::ContentVersion;
-use warp_util::file::{FileId, FileLoadError, FileSaveError};
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_editor::content::buffer::{Buffer, ToBufferCharOffset};
+use zap_ng_editor::content::diff::{text_diff, TextDiff};
+use zap_ng_util::content_version::ContentVersion;
+use zap_ng_util::file::{FileId, FileLoadError, FileSaveError};
+use zap_ng_ui::{Entity, ModelContext, ModelHandle, SingletonEntity, WeakModelHandle};
 
 use super::buffer_location::{BufferLocation, SyncClock};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
-        use warp_files::{FileModelEvent, FileModel};
-        use warp_editor::content::text::IndentBehavior;
-        use warp_editor::content::text::IndentUnit;
+        use zap_ng_files::{FileModelEvent, FileModel};
+        use zap_ng_editor::content::text::IndentBehavior;
+        use zap_ng_editor::content::text::IndentUnit;
     }
 }
 
@@ -975,7 +975,7 @@ impl GlobalBufferModel {
         line_numbers: Vec<usize>,
         ctx: &mut ModelContext<Self>,
     ) -> Option<Vec<(usize, String)>> {
-        use warp_editor::content::text::LineCount;
+        use zap_ng_editor::content::text::LineCount;
 
         if line_numbers.is_empty() {
             return Some(Vec::new());
@@ -1058,7 +1058,7 @@ impl GlobalBufferModel {
 
         #[cfg(feature = "local_tty")]
         {
-            use warp_editor::content::buffer::BufferEvent;
+            use zap_ng_editor::content::buffer::BufferEvent;
 
             // Extract fields before moving remote_path into the buffer source.
             let path_str = remote_path.path.as_str().to_string();
@@ -1197,7 +1197,7 @@ impl GlobalBufferModel {
     #[cfg_attr(not(feature = "local_tty"), allow(dead_code))]
     pub fn handle_buffer_updated_push(
         &mut self,
-        host_id: &warp_core::HostId,
+        host_id: &zap_ng_core::HostId,
         path: &str,
         new_server_version: u64,
         expected_client_version: u64,
@@ -1446,7 +1446,7 @@ impl GlobalBufferModel {
     // ── Public accessors ──────────────────────────────────────────────
 
     /// Returns the buffer text content for a given `FileId`.
-    pub fn content_for_file(&self, file_id: FileId, ctx: &warpui::AppContext) -> Option<String> {
+    pub fn content_for_file(&self, file_id: FileId, ctx: &zap_ng_ui::AppContext) -> Option<String> {
         let state = self.buffers.get(&file_id)?;
         let buffer = state.buffer.upgrade(ctx)?;
         Some(buffer.as_ref(ctx).text().into_string())
@@ -1564,8 +1564,8 @@ impl GlobalBufferModel {
     /// future remote-buffer regression tests.
     pub(crate) fn seed_remote_buffer_for_test(
         &mut self,
-        host_id: warp_core::HostId,
-        path: warp_util::standardized_path::StandardizedPath,
+        host_id: zap_ng_core::HostId,
+        path: zap_ng_util::standardized_path::StandardizedPath,
         content: &str,
         server_version: u64,
         ctx: &mut ModelContext<Self>,

@@ -14,12 +14,12 @@ use remote_server::proto::{
 };
 use uuid::Uuid;
 use walkdir::WalkDir;
-use warp_completer::completer::CommandExitStatus;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::{HostId, SessionId};
-use warp_util::standardized_path::StandardizedPath;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use zap_ng_completer::completer::CommandExitStatus;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::{HostId, SessionId};
+use zap_ng_util::standardized_path::StandardizedPath;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment,
     DispatchEventResult, Dismiss, Element, Empty, EventHandler, Flex, Hoverable, MainAxisAlignment,
@@ -28,11 +28,11 @@ use warpui::elements::{
     SavePosition, ScrollStateHandle, Scrollable, ScrollableElement, ScrollbarWidth, Shrinkable,
     Stack, Text, UniformList, UniformListState,
 };
-use warpui::modals::{AlertDialogWithCallbacks, ModalButton};
-use warpui::platform::{Cursor, FilePickerConfiguration, SaveFilePickerConfiguration};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{
+use zap_ng_ui::modals::{AlertDialogWithCallbacks, ModalButton};
+use zap_ng_ui::platform::{Cursor, FilePickerConfiguration, SaveFilePickerConfiguration};
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::r#async::{SpawnedFutureHandle, Timer};
+use zap_ng_ui::{
     AppContext, BlurContext, Entity, FocusContext, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WeakViewHandle,
 };
@@ -2755,7 +2755,7 @@ impl ServerFileBrowserView {
         } else {
             theme.sub_text_color(theme.background())
         };
-        let icon_el = ConstrainedBox::new(Icon::ListOpen.to_warpui_icon(icon_color).finish())
+        let icon_el = ConstrainedBox::new(Icon::ListOpen.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(TOOLBAR_ICON_SIZE)
             .with_height(TOOLBAR_ICON_SIZE)
             .finish();
@@ -2919,7 +2919,7 @@ impl ServerFileBrowserView {
 
         let panel_body = Container::new(column.finish())
             .with_uniform_padding(12.0)
-            .with_background(warpui::elements::Fill::Solid(theme.surface_2().into_solid()))
+            .with_background(zap_ng_ui::elements::Fill::Solid(theme.surface_2().into_solid()))
             .with_border(Border::all(1.0).with_border_color(theme.outline().into()))
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(6.0)))
             .finish();
@@ -2937,7 +2937,7 @@ impl ServerFileBrowserView {
         let icon_color = theme.sub_text_color(theme.background());
         let make_btn =
             |icon: Icon, state: MouseStateHandle, action: ServerFileBrowserAction| -> Box<dyn Element> {
-                let icon_el = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+                let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                     .with_width(TOOLBAR_ICON_SIZE)
                     .with_height(TOOLBAR_ICON_SIZE)
                     .finish();
@@ -3063,7 +3063,7 @@ impl ServerFileBrowserView {
                 ScrollbarWidth::Auto,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                zap_ng_ui::elements::Fill::None,
             )
             .with_overlayed_scrollbar()
             .finish(),
@@ -3137,7 +3137,7 @@ fn render_entry_row(
         } else {
             Icon::ChevronRight
         };
-        ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+        ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(ITEM_ICON_SIZE)
             .with_height(ITEM_ICON_SIZE)
             .finish()
@@ -3147,7 +3147,7 @@ fn render_entry_row(
             .finish()
     };
     let icon = if is_directory { Icon::Folder } else { Icon::File };
-    let icon_el = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+    let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
         .with_width(ITEM_ICON_SIZE)
         .with_height(ITEM_ICON_SIZE)
         .finish();
@@ -3649,7 +3649,7 @@ async fn list_directory_via_session(
     session: Arc<Session>,
     path: String,
 ) -> Result<(String, Vec<ServerFileBrowserEntry>), String> {
-    let escaped = warp_util::path::ShellFamily::Posix.shell_escape(&path);
+    let escaped = zap_ng_util::path::ShellFamily::Posix.shell_escape(&path);
     let script = format!(
         "cd {escaped} && find . -maxdepth 1 -type d -print0 && printf '\\000' && find . -maxdepth 1 -not -type d -print0"
     );
@@ -3737,7 +3737,7 @@ async fn resolve_path_via_session(
     session: Arc<Session>,
     path: String,
 ) -> Result<ResolvedRemotePath, String> {
-    let escaped = warp_util::path::ShellFamily::Posix.shell_escape(&path);
+    let escaped = zap_ng_util::path::ShellFamily::Posix.shell_escape(&path);
     // Use a single stat command to determine file type.
     let script = format!(
         "if [ -d {escaped} ]; then echo d; elif [ -f {escaped} ]; then echo f; elif [ -L {escaped} ]; then echo l; else echo o; fi"
@@ -4315,11 +4315,11 @@ async fn verify_staging_files(
 }
 
 fn staging_cleanup_shell_commands(staging_root: &str) -> String {
-    let escaped_staging_root = warp_util::path::ShellFamily::Posix.shell_escape(staging_root);
+    let escaped_staging_root = zap_ng_util::path::ShellFamily::Posix.shell_escape(staging_root);
     let mut commands = vec![format!("rm -rf -- {escaped_staging_root}")];
     if let Some(staging_parent) = remote_parent(staging_root) {
         let escaped_staging_parent =
-            warp_util::path::ShellFamily::Posix.shell_escape(&staging_parent);
+            zap_ng_util::path::ShellFamily::Posix.shell_escape(&staging_parent);
         commands.push(format!("rmdir -- {escaped_staging_parent} 2>/dev/null || true"));
     }
     commands.join("; ")
@@ -4352,7 +4352,7 @@ async fn promote_staging_files(
         let mut roots: Vec<String> = directory_overwrite_roots.into_iter().collect();
         roots.sort_by_key(|root| std::cmp::Reverse(root.len()));
         for root in roots {
-            let escaped = warp_util::path::ShellFamily::Posix.shell_escape(&root);
+            let escaped = zap_ng_util::path::ShellFamily::Posix.shell_escape(&root);
             script_lines.push(format!("rm -rf -- {escaped}"));
         }
     }
@@ -4365,9 +4365,9 @@ async fn promote_staging_files(
         let Some(parent) = remote_parent(&final_path) else {
             continue;
         };
-        let escaped_parent = warp_util::path::ShellFamily::Posix.shell_escape(&parent);
-        let escaped_staging = warp_util::path::ShellFamily::Posix.shell_escape(&staging_path);
-        let escaped_final = warp_util::path::ShellFamily::Posix.shell_escape(&final_path);
+        let escaped_parent = zap_ng_util::path::ShellFamily::Posix.shell_escape(&parent);
+        let escaped_staging = zap_ng_util::path::ShellFamily::Posix.shell_escape(&staging_path);
+        let escaped_final = zap_ng_util::path::ShellFamily::Posix.shell_escape(&final_path);
         script_lines.push(format!("mkdir -p -- {escaped_parent}"));
         script_lines.push(format!(
             "mv {mv_flag} -- {escaped_staging} {escaped_final}"
@@ -4510,7 +4510,7 @@ async fn delete_remote_path(
         if session.is_none() && client.is_none() {
             return Err(crate::t!("server-file-browser-delete-requires-session"));
         }
-        let escaped = warp_util::path::ShellFamily::Posix.shell_escape(&path);
+        let escaped = zap_ng_util::path::ShellFamily::Posix.shell_escape(&path);
         let script = format!("rm -rf -- {escaped}");
         return execute_remote_shell_script(session, client, remote_session_id, script).await;
     }
@@ -4524,7 +4524,7 @@ async fn delete_remote_path(
     if session.is_none() && client.is_none() {
         return Err(crate::t!("server-file-browser-no-session"));
     }
-    let escaped = warp_util::path::ShellFamily::Posix.shell_escape(&path);
+    let escaped = zap_ng_util::path::ShellFamily::Posix.shell_escape(&path);
     let script = format!("rm -f -- {escaped}");
     execute_remote_shell_script(session, client, remote_session_id, script).await
 }
@@ -4540,8 +4540,8 @@ async fn rename_remote_path(
         crate::t!("server-file-browser-operation-failed", error = "missing parent path")
     })?;
     let new_path = join_remote_path(&parent, &new_name);
-    let escaped_from = warp_util::path::ShellFamily::Posix.shell_escape(&from_path);
-    let escaped_to = warp_util::path::ShellFamily::Posix.shell_escape(&new_path);
+    let escaped_from = zap_ng_util::path::ShellFamily::Posix.shell_escape(&from_path);
+    let escaped_to = zap_ng_util::path::ShellFamily::Posix.shell_escape(&new_path);
     let script = format!("mv -- {escaped_from} {escaped_to}");
     execute_remote_shell_script(session, client, remote_session_id, script).await
 }
@@ -4666,7 +4666,7 @@ fn context_menu_submenu(
     }
 }
 
-fn clear_context_menu_state<A: warpui::Action + Clone>(
+fn clear_context_menu_state<A: zap_ng_ui::Action + Clone>(
     position: &mut Option<Vector2F>,
     items: &mut Vec<MenuItem<A>>,
 ) {

@@ -5,8 +5,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_broadcast::InactiveReceiver;
-use warpui::r#async::FutureExt;
-use warpui::{ViewContext, WeakViewHandle};
+use zap_ng_ui::r#async::FutureExt;
+use zap_ng_ui::{ViewContext, WeakViewHandle};
 
 use crate::ssh_manager::shell_prompt::bytes_look_like_shell_prompt;
 use crate::terminal::TerminalView;
@@ -22,7 +22,7 @@ pub fn spawn_startup_command_injector<O>(
     startup_command: String,
     ctx: &mut ViewContext<O>,
 ) where
-    O: warpui::View + 'static,
+    O: zap_ng_ui::View + 'static,
 {
     let Some(rx) = pty_reads_rx else {
         log::debug!("ssh startup command injector: no pty_reads_rx — skip");

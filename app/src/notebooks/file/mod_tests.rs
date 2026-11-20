@@ -5,10 +5,10 @@ use pathfinder_geometry::vector::vec2f;
 #[cfg(feature = "local_fs")]
 use repo_metadata::RepoMetadataModel;
 use repo_metadata::{repositories::DetectedRepositories, watcher::DirectoryWatcher};
-use warp_core::ui::appearance::Appearance;
+use zap_ng_core::ui::appearance::Appearance;
 #[cfg(feature = "local_fs")]
-use warp_files::FileModel;
-use warpui::{platform::WindowStyle, App, SingletonEntity, View};
+use zap_ng_files::FileModel;
+use zap_ng_ui::{platform::WindowStyle, App, SingletonEntity, View};
 
 use crate::terminal::keys::TerminalKeybindings;
 use crate::{
@@ -185,14 +185,14 @@ fn test_load_static() {
 #[cfg(feature = "local_fs")]
 #[test]
 fn test_reload_and_discard_after_failed_open() {
-    use warpui::TypedActionView;
+    use zap_ng_ui::TypedActionView;
 
     /// Opens the notebook's current file and waits for the read to settle.
     async fn await_open(
-        app: &mut warpui::App,
-        handle: &warpui::ViewHandle<FileNotebookView>,
-        open: impl FnOnce(&mut FileNotebookView, &mut warpui::ViewContext<FileNotebookView>),
-    ) -> warp_util::file::FileId {
+        app: &mut zap_ng_ui::App,
+        handle: &zap_ng_ui::ViewHandle<FileNotebookView>,
+        open: impl FnOnce(&mut FileNotebookView, &mut zap_ng_ui::ViewContext<FileNotebookView>),
+    ) -> zap_ng_util::file::FileId {
         let (file_id, future) = handle.update(app, |file_notebook, ctx| {
             open(file_notebook, ctx);
             let file_id = file_notebook.file_id.expect("File should have a file_id");

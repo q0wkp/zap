@@ -9,8 +9,8 @@ use crate::{
 use instant::Duration;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{
+use zap_ng_ui::r#async::{SpawnedFutureHandle, Timer};
+use zap_ng_ui::{
     accessibility::AccessibilityContent,
     elements::{
         ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Fill,
@@ -21,7 +21,7 @@ use warpui::{
     ui_components::components::{UiComponent, UiComponentStyles},
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
 };
-use warpui::{FocusContext, ViewHandle};
+use zap_ng_ui::{FocusContext, ViewHandle};
 
 use super::render_util::non_hoverable_participant_avatar;
 
@@ -175,7 +175,7 @@ impl ParticipantAvatarView {
         Container::new(
             ConstrainedBox::new(
                 Icon::Edit
-                    .to_warpui_icon(appearance.theme().foreground())
+                    .to_zap_ng_ui_icon(appearance.theme().foreground())
                     .finish(),
             )
             .with_height(8.)
@@ -185,7 +185,7 @@ impl ParticipantAvatarView {
         .with_uniform_padding(2.)
         .with_background(background)
         .with_corner_radius(CornerRadius::with_all(
-            warpui::elements::Radius::Percentage(50.),
+            zap_ng_ui::elements::Radius::Percentage(50.),
         ))
         .finish()
     }

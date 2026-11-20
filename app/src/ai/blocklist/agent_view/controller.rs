@@ -3,10 +3,10 @@ use std::{sync::Arc, time::Duration};
 use instant::Instant;
 
 use parking_lot::FairMutex;
-use warp_core::ui::appearance::Appearance;
-use warpui::keymap::Keystroke;
-use warpui::AppContext;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::AppContext;
+use zap_ng_ui::{
     r#async::SpawnedFutureHandle, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity,
 };
 
@@ -136,7 +136,7 @@ pub enum AgentViewEntryOrigin {
     /// Entered agent view by opening an existing non-Oz ambient agent run (live shared-session
     /// viewer or transcript viewer).
     ExternalAmbientAgent,
-    /// Entered agent view via the CLI (e.g. `warp agent run`).
+    /// Entered agent view via the CLI (e.g. `zap-ng agent run`).
     Cli,
     /// Entered agent view by adding an image (drag-and-drop or paste).
     ImageAdded,
@@ -412,7 +412,7 @@ impl AgentViewController {
     /// and whether the escape keybinding should be displayed.
     pub fn can_exit_agent_view(
         &self,
-        ctx: &impl warpui::ModelAsRef,
+        ctx: &impl zap_ng_ui::ModelAsRef,
     ) -> Result<(), ExitAgentViewError> {
         let model = self.terminal_model.lock();
 
@@ -494,7 +494,7 @@ impl AgentViewController {
         self.pending_confirmation = Some(pending_confirmation);
 
         let abort_handle = ctx.spawn_abortable(
-            async move { warpui::r#async::Timer::after(ENTER_OR_EXIT_CONFIRMATION_WINDOW).await },
+            async move { zap_ng_ui::r#async::Timer::after(ENTER_OR_EXIT_CONFIRMATION_WINDOW).await },
             move |me, _, _ctx| {
                 me.pending_confirmation = None;
                 me.pending_confirmation_abort_handle = None;
@@ -1000,7 +1000,7 @@ fn exit_confirmation_message(
     should_stop_and_exit: bool,
     app: &AppContext,
 ) -> Message {
-    use warpui::SingletonEntity;
+    use zap_ng_ui::SingletonEntity;
 
     use crate::terminal::input::message_bar::{Message, MessageItem};
 

@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use itertools::Itertools;
 use string_offset::CharOffset;
-use warpui::text::TextBuffer;
+use zap_ng_ui::text::TextBuffer;
 
 use crate::{
     vim::{BracketChar, BracketEnd, BracketType},

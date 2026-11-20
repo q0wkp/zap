@@ -1,8 +1,8 @@
 //! Trigger button + [`CodeReviewDiffMenu`] overlay for picking the diff
 //! target in the code review header.
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{
         ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Element, Flex, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
@@ -180,7 +180,7 @@ impl View for DiffSelector {
         // for short labels.
         let icon = ConstrainedBox::new(
             Icon::SwitchHorizontal01
-                .to_warpui_icon(Fill::Solid(text_color))
+                .to_zap_ng_ui_icon(Fill::Solid(text_color))
                 .finish(),
         )
         .with_width(15.)

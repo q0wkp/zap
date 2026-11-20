@@ -1,11 +1,11 @@
 //! Issue #116:`collect_user_rules` 的集成测试。
 //!
-//! 用 `warpui::App::test` harness 把 `AIFact::Memory` 真实塞到 `ObjectStoreModel`,
+//! 用 `zap_ng_ui::App::test` harness 把 `AIFact::Memory` 真实塞到 `ObjectStoreModel`,
 //! 验证收集逻辑(过滤 trashed / 排序 / no-name 等)。harness 初始化复用
 //! `data_source_tests.rs` 的样板。
 
 use settings::manager::SettingsManager;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 use super::collect_user_rules;
 use crate::ai::facts::{AIFact, AIFactObject, AIFactObjectModel, AIMemory};

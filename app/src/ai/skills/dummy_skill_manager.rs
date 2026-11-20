@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use ai::skills::{ParsedSkill, SkillProvider, SkillReference, SkillScope};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::skills::SkillDescriptor;
 

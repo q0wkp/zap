@@ -43,9 +43,9 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashSet;
 use std::sync::{mpsc::SyncSender, Arc};
-use warpui::r#async::FutureId;
-use warpui::AppContext;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::r#async::FutureId;
+use zap_ng_ui::AppContext;
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 lazy_static! {
     static ref DUPLICATE_OBJECT_NAME_REGEX: Regex =
@@ -1009,7 +1009,7 @@ impl UpdateManager {
         ctx: &mut ModelContext<Self>,
     ) {
         self.create_object(
-            // TODO(INT-789): support creating folders as warp packs
+            // TODO(INT-789): support creating folders as zap-ng packs
             FolderObjectModel::new(&name, false),
             owner,
             client_id,

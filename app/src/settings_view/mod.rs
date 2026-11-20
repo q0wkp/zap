@@ -42,15 +42,15 @@ use settings_page::{
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::{
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::{
     channel::ChannelState, context_flag::ContextFlag, features::FeatureFlag,
     settings::ToggleableSetting as _, ui::theme::color::internal_colors,
 };
-use warp_editor::editor::NavigationKey;
-use warpify_page::{WarpifyPageAction, WarpifyPageView};
-use warpui::Element;
-use warpui::{
+use zap_ng_editor::editor::NavigationKey;
+use zapngify_page::{ZapNGifyPageAction, ZapNGifyPageView};
+use zap_ng_ui::Element;
+use zap_ng_ui::{
     elements::{
         get_rich_content_position_id, Align, Border, ChildAnchor, ChildView, Clipped,
         ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, CornerRadius,
@@ -91,8 +91,8 @@ pub(crate) mod settings_page;
 // 一同物理删。
 // Zap Wave 7-2:`update_environment_form` 随 cloud ambient agent 主体物理删 ——
 // `terminal::view::ambient_agent::first_time_setup` 与 `cloud_environments` 一同下线。
-mod warp_drive_page;
-mod warpify_page;
+mod zap_ng_drive_page;
+mod zapngify_page;
 
 #[cfg(not(target_family = "wasm"))]
 pub(crate) use ai_page::cli_agent_settings_widget_id;
@@ -168,16 +168,16 @@ pub enum SettingsSection {
     Features,
     Keybindings,
     ZapDrive,
-    Warpify,
+    ZapNGify,
     /// Internal backing-page identifier for AISettingsPageView. Multiple subpages
-    /// (WarpAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents) share this single
+    /// (ZapNGAgent, AgentProfiles, Knowledge, ThirdPartyCLIAgents) share this single
     /// backing page, so this variant is needed as the key in `settings_pages`.
-    /// External callers should navigate to a specific subpage (e.g. `WarpAgent`) instead.
+    /// External callers should navigate to a specific subpage (e.g. `ZapNGAgent`) instead.
     AI,
     // ── Agents umbrella subpages ──
     // 去中心化分支:Settings 默认页改为 Zap Agent(本地 AI 设置)。
     #[default]
-    WarpAgent,
+    ZapNGAgent,
     AgentProfiles,
     AgentMCPServers,
     /// 自定义 AI 提供商配置(BYOP),Agents 二级菜单的 Providers 子页。
@@ -210,9 +210,9 @@ impl Display for SettingsSection {
             SettingsSection::Features => crate::t!("settings-section-features"),
             SettingsSection::Keybindings => crate::t!("settings-section-keybindings"),
             SettingsSection::ZapDrive => crate::t!("settings-section-warp-drive"),
-            SettingsSection::Warpify => crate::t!("settings-section-warpify"),
+            SettingsSection::ZapNGify => crate::t!("settings-section-warpify"),
             SettingsSection::AI => crate::t!("settings-section-ai"),
-            SettingsSection::WarpAgent => crate::t!("settings-section-warp-agent"),
+            SettingsSection::ZapNGAgent => crate::t!("settings-section-warp-agent"),
             SettingsSection::AgentProfiles => crate::t!("settings-section-agent-profiles"),
             SettingsSection::AgentMCPServers => crate::t!("settings-section-agent-mcp-servers"),
             SettingsSection::AgentProviders => crate::t!("settings-section-agent-providers"),
@@ -244,7 +244,7 @@ impl SettingsSection {
     pub fn is_ai_subpage(&self) -> bool {
         matches!(
             self,
-            Self::WarpAgent
+            Self::ZapNGAgent
                 | Self::AgentProfiles
                 | Self::AgentMCPServers
                 | Self::AgentProviders
@@ -272,7 +272,7 @@ impl SettingsSection {
     /// The ordered list of AI subpage sections shown under the Agents umbrella.
     pub fn ai_subpages() -> &'static [Self] {
         &[
-            Self::WarpAgent,
+            Self::ZapNGAgent,
             Self::AgentProfiles,
             Self::AgentProviders,
             Self::AgentMCPServers,
@@ -294,10 +294,10 @@ impl FromStr for SettingsSection {
             "Code" => Ok(Self::Code),
             "Features" => Ok(Self::Features),
             "Keyboard shortcuts" => Ok(Self::Keybindings),
-            "Warpify" => Ok(Self::Warpify),
+            "Warpify" => Ok(Self::ZapNGify),
             "ZapDrive" | "Zap Drive" => Ok(Self::ZapDrive),
             // This page was called "Oz" at one point, keep for backward compatibility.
-            "Oz" | "Zap Agent" => Ok(Self::WarpAgent),
+            "Oz" | "Zap Agent" => Ok(Self::ZapNGAgent),
             "Profiles" | "AgentProfiles" => Ok(Self::AgentProfiles),
             "MCP servers" | "AgentMCPServers" => Ok(Self::AgentMCPServers),
             "Providers" | "AgentProviders" => Ok(Self::AgentProviders),
@@ -465,7 +465,7 @@ pub fn init_actions_from_parent_view<T: Action + Clone>(
 ) {
     appearance_page::init_actions_from_parent_view(app, context, builder);
     features_page::init_actions_from_parent_view(app, context, builder);
-    warpify_page::init_actions_from_parent_view(app, context, builder);
+    zapngify_page::init_actions_from_parent_view(app, context, builder);
     ai_page::init_actions_from_parent_view(app, context, builder);
     code_page::init_actions_from_parent_view(app, context, builder);
 
@@ -623,7 +623,7 @@ impl<T: Action + Clone> ToggleSettingActionPair<T> {
         context_prefix: &ContextPredicate,
         context_boolean_flag: &'static str,
     ) -> Self {
-        use warpui::keymap::macros::id;
+        use zap_ng_ui::keymap::macros::id;
 
         ToggleSettingActionPair {
             descriptions: SettingActionPairDescriptions {
@@ -776,9 +776,9 @@ pub enum SettingsAction {
     FeaturesPageToggle(FeaturesPageAction),
     AI(AISettingsPageAction),
     Code(CodeSettingsPageAction),
-    ZapDrive(warp_drive_page::WarpDriveSettingsPageAction),
+    ZapDrive(zap_ng_drive_page::ZapNGDriveSettingsPageAction),
     CloudSync(cloud_sync_page::CloudSyncPageAction),
-    WarpifyPageToggle(WarpifyPageAction),
+    ZapNGifyPageToggle(ZapNGifyPageAction),
     Tab,
     Split(Direction),
     ToggleMaximizePane,
@@ -924,7 +924,7 @@ macro_rules! update_page {
             SettingsPageViewHandle::Appearance(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
-            SettingsPageViewHandle::Warpify(handle) => $ctx.update_view(handle, $update),
+            SettingsPageViewHandle::ZapNGify(handle) => $ctx.update_view(handle, $update),
             // Zap Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
             // Zap Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
             // Zap Wave 7-3:`CloudEnvironments` arm 随 ambient-agent UI 一同物理删。
@@ -1025,17 +1025,17 @@ impl SettingsView {
             me.handle_code_page_event(event, ctx);
         });
 
-        let warpify_page_handle = ctx.add_typed_action_view(WarpifyPageView::new);
-        ctx.subscribe_to_view(&warpify_page_handle, |me, _, event, ctx| {
-            me.handle_warpify_page_event(event, ctx);
+        let zapngify_page_handle = ctx.add_typed_action_view(ZapNGifyPageView::new);
+        ctx.subscribe_to_view(&zapngify_page_handle, |me, _, event, ctx| {
+            me.handle_zapngify_page_event(event, ctx);
         });
 
         // Zap Wave 6-8:Referrals 设置页随 `ReferralsPageView` / `ReferralsClient`
         // 物理删,handle / 事件订阅一同移除。
 
         // Zap Drive page
-        let warp_drive_page_handle =
-            ctx.add_typed_action_view(warp_drive_page::WarpDriveSettingsPageView::new);
+        let zap_ng_drive_page_handle =
+            ctx.add_typed_action_view(zap_ng_drive_page::ZapNGDriveSettingsPageView::new);
 
         // Zap Wave 3-1:`platform_page_handle` 随 `platform_page` 一同物理删。
 
@@ -1087,8 +1087,8 @@ impl SettingsView {
             SettingsPage::new(features_page_handle),
             SettingsPage::new(keybindings_handle),
             // Zap Wave 3-1:`platform_page_handle` 随 UI 一同物理删。
-            SettingsPage::new(warpify_page_handle),
-            SettingsPage::new(warp_drive_page_handle),
+            SettingsPage::new(zapngify_page_handle),
+            SettingsPage::new(zap_ng_drive_page_handle),
         ];
 
         settings_pages.extend(vec![
@@ -1097,7 +1097,7 @@ impl SettingsView {
         ]);
 
         // 仅在 flag 启用时装配 Network page。
-        if warp_core::features::FeatureFlag::HttpProxySettings.is_enabled() {
+        if zap_ng_core::features::FeatureFlag::HttpProxySettings.is_enabled() {
             settings_pages.push(SettingsPage::new(network_page_handle));
         }
 
@@ -1114,13 +1114,13 @@ impl SettingsView {
             SettingsNavItem::Page(SettingsSection::Appearance),
             SettingsNavItem::Page(SettingsSection::Features),
             SettingsNavItem::Page(SettingsSection::Keybindings),
-            SettingsNavItem::Page(SettingsSection::Warpify),
+            SettingsNavItem::Page(SettingsSection::ZapNGify),
             SettingsNavItem::Page(SettingsSection::CloudSync),
             SettingsNavItem::Page(SettingsSection::About),
         ];
 
         // 仅在 flag 启用时在侧栏加 Network 页。插在 About 之前。
-        if warp_core::features::FeatureFlag::HttpProxySettings.is_enabled() {
+        if zap_ng_core::features::FeatureFlag::HttpProxySettings.is_enabled() {
             let about_pos = nav_items
                 .iter()
                 .position(|i| matches!(i, SettingsNavItem::Page(SettingsSection::About)))
@@ -1130,7 +1130,7 @@ impl SettingsView {
 
         // Resolve the initial page: map internal backing-page sections to their default subpage.
         let initial_page = match page {
-            Some(SettingsSection::AI) => SettingsSection::WarpAgent,
+            Some(SettingsSection::AI) => SettingsSection::ZapNGAgent,
             Some(section) if section.is_subpage() => section,
             other => other.unwrap_or_default(),
         };
@@ -1607,7 +1607,7 @@ impl SettingsView {
         }
     }
 
-    fn handle_warpify_page_event(
+    fn handle_zapngify_page_event(
         &mut self,
         event: &SettingsPageEvent,
         ctx: &mut ViewContext<Self>,
@@ -1715,7 +1715,7 @@ impl SettingsView {
         // Map internal backing-page sections to their default subpage.
         // External callers should use subpage variants directly.
         let section = match section {
-            SettingsSection::AI => SettingsSection::WarpAgent,
+            SettingsSection::AI => SettingsSection::ZapNGAgent,
             other => other,
         };
 
@@ -1809,7 +1809,7 @@ impl SettingsView {
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
             // Zap Wave 3-1:`OzCloudAPIKeys` arm 随 variant 一同物理删。
             // Zap Wave 6-8:`SharedBlocks` / `Referrals` arm 随 variant 物理删。
-            SettingsPageViewHandle::Warpify(v) => v.as_ref(app).should_render(app),
+            SettingsPageViewHandle::ZapNGify(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::AI(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::MCPServers(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::Code(v) => v.as_ref(app).should_render(app),
@@ -2021,7 +2021,7 @@ impl SettingsView {
                     Container::new(
                         ConstrainedBox::new(
                             icons::Icon::SearchSmall
-                                .to_warpui_icon(appearance.theme().active_ui_text_color())
+                                .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -2374,11 +2374,11 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-            SettingsAction::ZapDrive(warp_drive_action) => {
-                if let Some(warp_drive_page) = self.settings_page(SettingsSection::ZapDrive) {
-                    if let SettingsPageViewHandle::ZapDrive(view) = &warp_drive_page.view_handle {
+            SettingsAction::ZapDrive(zap_ng_drive_action) => {
+                if let Some(zap_ng_drive_page) = self.settings_page(SettingsSection::ZapDrive) {
+                    if let SettingsPageViewHandle::ZapDrive(view) = &zap_ng_drive_page.view_handle {
                         view.update(ctx, |view, ctx| {
-                            view.handle_action(warp_drive_action, ctx);
+                            view.handle_action(zap_ng_drive_action, ctx);
                         })
                     }
                 }
@@ -2392,11 +2392,11 @@ impl TypedActionView for SettingsView {
                     }
                 }
             }
-            SettingsAction::WarpifyPageToggle(warpify_action) => {
-                if let Some(warpify_page) = self.settings_page(SettingsSection::Warpify) {
-                    if let SettingsPageViewHandle::Warpify(view) = &warpify_page.view_handle {
+            SettingsAction::ZapNGifyPageToggle(zapngify_action) => {
+                if let Some(zapngify_page) = self.settings_page(SettingsSection::ZapNGify) {
+                    if let SettingsPageViewHandle::ZapNGify(view) = &zapngify_page.view_handle {
                         view.update(ctx, |view, ctx| {
-                            view.handle_action(warpify_action, ctx);
+                            view.handle_action(zapngify_action, ctx);
                         })
                     }
                 }
@@ -2458,16 +2458,16 @@ impl BackingView for SettingsView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         action: &Self::PaneHeaderOverflowMenuAction,
-        ctx: &mut warpui::ViewContext<Self>,
+        ctx: &mut zap_ng_ui::ViewContext<Self>,
     ) {
         self.handle_action(action, ctx)
     }
 
-    fn close(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut zap_ng_ui::ViewContext<Self>) {
         ctx.emit(SettingsViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut zap_ng_ui::ViewContext<Self>) {
         self.focus_search_editor_if_no_child_is_focused(ctx)
     }
 

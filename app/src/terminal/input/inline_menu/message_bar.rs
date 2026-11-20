@@ -1,8 +1,8 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::Element;
-use warpui::prelude::Container;
-use warpui::scene::Border;
-use warpui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::Element;
+use zap_ng_ui::prelude::Container;
+use zap_ng_ui::scene::Border;
+use zap_ng_ui::{AppContext, Entity, ModelHandle, SingletonEntity, View, ViewContext};
 
 use crate::ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent};
 use crate::terminal::input::inline_menu::model::InlineMenuModel;

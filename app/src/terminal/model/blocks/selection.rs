@@ -2,9 +2,9 @@ use std::{cmp::max, fmt::Debug, mem, ops::RangeInclusive};
 
 use sum_tree::SeekBias;
 use vec1::{vec1, Vec1};
-use warp_core::semantic_selection::SemanticSelection;
-use warp_terminal::model::grid::CellType;
-use warpui::{
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_terminal::model::grid::CellType;
+use zap_ng_ui::{
     text::{IsRect, SelectionType},
     units::{IntoLines as _, Lines},
     AppContext, EntityId, ViewAsRef as _,
@@ -21,7 +21,7 @@ use crate::{
             selection::{ExpandedSelectionRange, Selection, SelectionDirection},
             terminal_model::{BlockIndex, WithinBlock},
         },
-        warpify::success_block::WarpifySuccessBlock,
+        zapngify::success_block::ZapNGifySuccessBlock,
         GridType,
     },
 };
@@ -955,11 +955,11 @@ impl BlockList {
 
                             if let Some(active_window_id) = app.windows().active_window() {
                                 if let Some(ssh_block) = app
-                                    .view_with_id::<WarpifySuccessBlock>(active_window_id, *view_id)
+                                    .view_with_id::<ZapNGifySuccessBlock>(active_window_id, *view_id)
                                 {
-                                    let warpify_success_block = app.view(&ssh_block);
+                                    let zapngify_success_block = app.view(&ssh_block);
                                     if let Some(selected_text) =
-                                        warpify_success_block.selected_text()
+                                        zapngify_success_block.selected_text()
                                     {
                                         selected_texts.push(selected_text);
                                     }
@@ -1074,10 +1074,10 @@ impl BlockList {
                         }
 
                         if let Some(ssh_block) =
-                            app.view_with_id::<WarpifySuccessBlock>(active_window_id, view_id)
+                            app.view_with_id::<ZapNGifySuccessBlock>(active_window_id, view_id)
                         {
-                            let warpify_success_block = app.view(&ssh_block);
-                            if let Some(selected_text) = warpify_success_block.selected_text() {
+                            let zapngify_success_block = app.view(&ssh_block);
+                            if let Some(selected_text) = zapngify_success_block.selected_text() {
                                 selected_texts.push(selected_text);
                             }
                         }

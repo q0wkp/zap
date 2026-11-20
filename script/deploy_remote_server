@@ -136,7 +136,7 @@ echo ""
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc \
 CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C symbol-mangling-version=v0" \
   cargo build \
-    -p warp \
+    -p zap-ng \
     --bin "$WARP_BIN" \
     --target "$TARGET" \
     --profile "$CARGO_PROFILE" \

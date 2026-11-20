@@ -2,8 +2,8 @@
 
 use std::ops::Range;
 
-use warp_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
-use warpui::{
+use zap_ng_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
+use zap_ng_ui::{
     PaintContext,
     elements::{CornerRadius, Point, Radius},
     geometry::{

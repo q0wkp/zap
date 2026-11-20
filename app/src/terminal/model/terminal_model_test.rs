@@ -8,10 +8,10 @@ use crate::terminal::model::kitty::VirtualPlacement;
 use crate::terminal::model::selection::ExpandedSelectionRange;
 use chrono::{DateTime, Local};
 use vec1::vec1;
-use warp_core::command::ExitCode;
-use warp_terminal::model::ansi::ClearMode;
-use warpui::text::str_to_byte_vec;
-use warpui::text::SelectionType;
+use zap_ng_core::command::ExitCode;
+use zap_ng_terminal::model::ansi::ClearMode;
+use zap_ng_ui::text::str_to_byte_vec;
+use zap_ng_ui::text::SelectionType;
 
 /// Helper function to create a SerializedBlock with default values,
 /// including the new is_local field.
@@ -120,7 +120,7 @@ pub fn test_restored_empty_command_block() {
         !restored_block.is_command_empty(),
         "The empty block should have nonzero length"
     );
-    // The mocked terminal model comes with a WarpInput block and the active block.
+    // The mocked terminal model comes with a ZapNGInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), 3);
 }
 
@@ -280,7 +280,7 @@ fn test_restored_blocks_on_different_host() {
         .into(),
     ];
     let model = TerminalModel::mock(Some(&restored_blocks), None);
-    // The mocked terminal model comes with a WarpInput block and the active block.
+    // The mocked terminal model comes with a ZapNGInput block and the active block.
     assert_eq!(model.block_list().blocks().len(), restored_blocks.len() + 2);
     for restored_block in model
         .block_list()

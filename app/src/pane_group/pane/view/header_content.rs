@@ -3,8 +3,8 @@
 //! This module provides the infrastructure for backing views to declaratively
 //! specify their header content without worrying about draggable behavior.
 
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{DraggableState, MouseStateHandle},
     fonts::Properties,
     text_layout::ClipConfig,

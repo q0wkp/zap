@@ -7,15 +7,15 @@
 
 use std::collections::HashMap;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::{
     Border, ChildView, ClippedScrollStateHandle, ClippedScrollable, Container, CrossAxisAlignment,
     DispatchEventResult, EventHandler, Fill, Flex, Hoverable, MainAxisSize, MouseStateHandle,
     ParentElement, ScrollbarWidth, Shrinkable, Text, Wrap,
 };
-use warpui::{AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View};
-use warpui::{ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View};
+use zap_ng_ui::{ViewContext, ViewHandle};
 
 use super::store::{
     conversation_short_label, record_text, request_text, response_text, summary_line, CallFilter,

@@ -13,14 +13,14 @@ use std::{
     str,
     time::Duration,
 };
-use warp_core::safe_error;
+use zap_ng_core::safe_error;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use channel_versions::VersionInfo;
 use nix::unistd::{fchown, getgid};
 use nix::{errno::Errno, unistd::getuid};
-use warp_core::macos::get_bundle_path;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use zap_ng_core::macos::get_bundle_path;
+use zap_ng_ui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::{
     appearance::AppearanceManager,
@@ -47,7 +47,7 @@ const OLD_EXECUTABLE_FILE_NAME: &str = "old";
 const PERMISSIONS_TMP_FILE_NAME: &str = "permission_test";
 
 fn old_executable_file_path() -> PathBuf {
-    warp_core::paths::state_dir().join(OLD_EXECUTABLE_FILE_NAME)
+    zap_ng_core::paths::state_dir().join(OLD_EXECUTABLE_FILE_NAME)
 }
 
 /// Removes the old executable dir from the app bundle. This is necessary because after an
@@ -139,7 +139,7 @@ where
 pub(super) fn relaunch() -> Result<()> {
     let channel = ChannelState::channel();
 
-    // openWarp(Channel::Oss):没有代码签名,无法用 RENAME_SWAP 在原地替换 bundle。
+    // ZapNG(Channel::Oss):没有代码签名,无法用 RENAME_SWAP 在原地替换 bundle。
     // 改成调 `/usr/bin/open <dmg>`,让 Finder 弹出标准挂载窗口,用户拖到
     // Applications 目录完成安装。这里不调用 `open -n bundle` 重启自己,因为
     // 当前进程在 apply_update 阶段已请求 terminate,UI 已经知道要等用户手动
@@ -166,7 +166,7 @@ pub(super) fn relaunch() -> Result<()> {
     let mut open_args = format!(
         "/usr/bin/open -n {} --args {}",
         quoted_bundle,
-        warp_cli::finish_update_flag(),
+        zap_ng_cli::finish_update_flag(),
     );
     // 测试本地通道版本 JSON 时，让新启动的二进制继续引用同一个文件，
     // 以便验证自动更新后的 changelog 展示。
@@ -192,7 +192,7 @@ fn oss_open_installer() -> Result<()> {
     // 进入这条路径前 AutoupdateState.stage 必然是 UpdateReady / Updating,
     // downloaded_update.update_id 必然存在;但我们不在 stateless 函数里访问
     // AutoupdateState,改成扫描磁盘:遍历 cache_dir/autoupdate/ 找最新 dmg。
-    let mut autoupdate_dir = warp_core::paths::cache_dir();
+    let mut autoupdate_dir = zap_ng_core::paths::cache_dir();
     autoupdate_dir.push("autoupdate");
 
     let dmg = find_latest_dmg(&autoupdate_dir).ok_or_else(|| {
@@ -266,7 +266,7 @@ pub async fn cleanup(update_id: &str) {
 /// This helps prevent accumulation of old update directories from failed downloads,
 /// race conditions, or incomplete cleanups.
 pub async fn cleanup_all_except(preserve_update_id: Option<&str>) {
-    let mut autoupdate_dir = warp_core::paths::cache_dir();
+    let mut autoupdate_dir = zap_ng_core::paths::cache_dir();
     autoupdate_dir.push("autoupdate");
 
     if !autoupdate_dir.exists() {
@@ -391,7 +391,7 @@ async fn verify_code_signature(component: &str, path: &Path) -> Result<()> {
         .arg("-v")
         .arg(format!(
             "-R=certificate leaf[subject.OU] = \"{}\"",
-            warp_core::macos::APPLE_TEAM_ID
+            zap_ng_core::macos::APPLE_TEAM_ID
         ))
         .arg(path)
         .output()
@@ -435,7 +435,7 @@ pub(super) async fn download_update_and_cleanup(
         }
     }
 
-    // openWarp(Channel::Oss):没有 Apple Developer ID 签名,不能走官方
+    // ZapNG(Channel::Oss):没有 Apple Developer ID 签名,不能走官方
     // download_and_extract_binary(mount + cp + codesign verify + RENAME_SWAP)。
     // OSS 路径只把 dmg 流式下载到 cache_dir/autoupdate/<id>/,apply 时由
     // `relaunch()` 走 `open <dmg>` 让 Finder 弹标准挂载窗口,用户拖到 Applications。
@@ -835,7 +835,7 @@ async fn download_dmg(
 }
 
 fn get_download_dir(update_id: &str) -> PathBuf {
-    let mut dir = warp_core::paths::cache_dir();
+    let mut dir = zap_ng_core::paths::cache_dir();
     dir.push("autoupdate");
     dir.push(update_id);
     dir

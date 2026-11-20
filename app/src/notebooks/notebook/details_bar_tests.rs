@@ -1,4 +1,4 @@
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 use crate::{
     auth::UserUid,

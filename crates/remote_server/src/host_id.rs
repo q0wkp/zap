@@ -1,3 +1,3 @@
-// Re-export from warp_core so existing `remote_server::HostId` imports
+// Re-export from zap_ng_core so existing `remote_server::HostId` imports
 // continue to work.
-pub use warp_core::HostId;
+pub use zap_ng_core::HostId;

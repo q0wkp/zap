@@ -1,7 +1,7 @@
 //! `manager.rs` 的纯函数级单元测试。
 //!
 //! 这里只覆盖纯函数 helper —— 不触碰 `RemoteServerManager` 本体,
-//! 因为后者依赖 `warpui::Entity` / `ModelContext`,要起一整套 App
+//! 因为后者依赖 `zap_ng_ui::Entity` / `ModelContext`,要起一整套 App
 //! 上下文,放到 integration testing 框架更合适。
 
 use super::*;

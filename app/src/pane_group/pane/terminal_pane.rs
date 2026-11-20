@@ -6,7 +6,7 @@ use std::sync::mpsc::SyncSender;
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use warp_multi_agent_api as multi_agent_api;
 
-use warpui::{
+use zap_ng_ui::{
     AppContext, EntityId, ModelHandle, SingletonEntity, ViewContext, ViewHandle, WindowId,
 };
 
@@ -29,7 +29,7 @@ use crate::{
 #[cfg(feature = "local_fs")]
 use crate::ai::blocklist::BlocklistAIHistoryEvent;
 
-use warp_core::execution_mode::AppExecutionMode;
+use zap_ng_core::execution_mode::AppExecutionMode;
 
 use super::{
     DetachType, PaneConfiguration, PaneContent, PaneId, PaneStackEvent, PaneView, ShareableLink,
@@ -660,21 +660,21 @@ fn handle_terminal_view_event(
             Event::OpenCLIAgentToolbarEditor => {
                 ctx.emit(pane_group::Event::OpenCLIAgentToolbarEditor);
             }
-            Event::OpenFileInWarp { path, session } => {
-                ctx.emit(pane_group::Event::OpenFileInWarp {
+            Event::OpenFileInZapNG { path, session } => {
+                ctx.emit(pane_group::Event::OpenFileInZapNG {
                     path: path.clone(),
                     session: session.clone(),
                 });
             }
             #[cfg(feature = "local_fs")]
-            Event::PreviewCodeInWarp { source } => {
-                ctx.emit(pane_group::Event::PreviewCodeInWarp {
+            Event::PreviewCodeInZapNG { source } => {
+                ctx.emit(pane_group::Event::PreviewCodeInZapNG {
                     source: source.clone(),
                 });
             }
             #[cfg(feature = "local_fs")]
-            Event::OpenCodeInWarp { source, layout } => {
-                ctx.emit(pane_group::Event::OpenCodeInWarp {
+            Event::OpenCodeInZapNG { source, layout } => {
+                ctx.emit(pane_group::Event::OpenCodeInZapNG {
                     source: source.clone(),
                     layout: *layout,
                     line_col: if let CodeSource::Link { range_start, .. } = source {

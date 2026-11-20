@@ -11,7 +11,7 @@ mod rendering;
 pub use block_onboarding_layer::{BlockOnboarding, BLOCK_ONBOARDING_LAYER};
 pub use improved_palette_search_layer::{ImprovedPaletteSearch, IMPROVED_PALETTE_SEARCH_LAYER};
 pub use login_layer::LOGIN_LAYER;
-use warp_core::user_preferences::GetUserPreferences as _;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
 
 use crate::auth::AuthStateProvider;
 use crate::channel::{Channel, ChannelState};
@@ -24,7 +24,7 @@ use std::ops::Range;
 use std::str::FromStr;
 use std::{collections::HashMap, hash::Hasher};
 
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::send_telemetry_sync_from_app_ctx;
 

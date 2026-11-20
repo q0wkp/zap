@@ -26,7 +26,7 @@ pub use crate::terminal::history::HistoryEntry;
 
 use super::ansi::{
     FinishUpdateValue, InputBufferValue, Mode, PendingHook, TmuxInstallFailedInfo,
-    WarpificationUnavailableReason,
+    ZapNGificationUnavailableReason,
 };
 use super::block::{
     AgentInteractionMetadata, Block, BlockId, BlockMetadata, BlockSize, BlocklistEnvVarMetadata,
@@ -55,7 +55,7 @@ use super::{tmux, Secret, SecretHandle};
 use crate::terminal::model::ansi::{
     ClearValue, CommandFinishedValue, ExitShellValue, InitShellValue, InitSshValue,
     InitSubshellValue, PreInteractiveSSHSessionValue, PrecmdValue, PreexecValue, SSHValue,
-    SourcedRcFileForWarpValue,
+    SourcedRcFileForZapNGValue,
 };
 use crate::terminal::model::grid::IndexRegion;
 use crate::terminal::model::session::SessionInfo;
@@ -64,9 +64,9 @@ use crate::terminal::zmx;
 
 use crate::terminal::model::secrets::ObfuscateSecrets;
 use crate::terminal::shared_session::protocol::SessionSourceType;
-use warp_core::report_error;
+use zap_ng_core::report_error;
 #[cfg(not(target_family = "wasm"))]
-use warpui::util::save_as_file;
+use zap_ng_ui::util::save_as_file;
 
 use crate::terminal::shared_session::protocol::{
     AICommandMetadata, OrderedTerminalEventType, ParticipantId,
@@ -84,14 +84,14 @@ use std::ops::{Range, RangeInclusive};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
-use warp_core::features::FeatureFlag;
-use warp_core::semantic_selection::SemanticSelection;
-pub use warp_terminal::model::BlockIndex;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use warpui::assets::asset_cache::Asset;
-use warpui::image_cache::ImageType;
-use warpui::r#async::executor::Background;
-use warpui::AppContext;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::semantic_selection::SemanticSelection;
+pub use zap_ng_terminal::model::BlockIndex;
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use zap_ng_ui::assets::asset_cache::Asset;
+use zap_ng_ui::image_cache::ImageType;
+use zap_ng_ui::r#async::executor::Background;
+use zap_ng_ui::AppContext;
 
 /// Max size of the window title stack.
 const TITLE_STACK_MAX_DEPTH: usize = 4096;
@@ -364,7 +364,7 @@ enum IsReceivingHook {
     No,
 }
 
-/// Information needed to render a warpify "success" block upon successful subshell bootstrap.
+/// Information needed to render a zapngify "success" block upon successful subshell bootstrap.
 #[derive(Debug, Clone)]
 pub struct SubshellSuccessBlockInfo {
     /// The ID of the newly bootstrapped subshell session.
@@ -391,8 +391,8 @@ pub enum TmuxInstallationState {
     /// This means tmux was installed by Zap in this session, successfully or unsuccessfully.
     InstalledByWarpInThisSession,
     InstalledByWarpInPriorSession,
-    /// This means that warp did not install it locally. It was either installed by the user
-    /// or it was installed by warp in a prior session using the package manager.
+    /// This means that zap-ng did not install it locally. It was either installed by the user
+    /// or it was installed by zap-ng in a prior session using the package manager.
     InstalledByUser,
     /// This means we never tried to install tmux in this session.
     #[default]
@@ -421,12 +421,12 @@ impl FromStr for TmuxInstallationState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct WarpInitiatedTmuxControlMode {
+pub struct ZapNGInitiatedTmuxControlMode {
     pub start_time: Instant,
     pub tmux_installation: Option<TmuxInstallationState>,
 }
 
-impl WarpInitiatedTmuxControlMode {
+impl ZapNGInitiatedTmuxControlMode {
     pub fn new(tmux_installation: Option<TmuxInstallationState>) -> Self {
         Self {
             start_time: Instant::now(),
@@ -438,15 +438,15 @@ impl WarpInitiatedTmuxControlMode {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TmuxControlModeContext {
     UserInitiated,
-    WarpInitiatedForSsh(WarpInitiatedTmuxControlMode),
+    ZapNGInitiatedForSsh(ZapNGInitiatedTmuxControlMode),
 }
 
 impl TmuxControlModeContext {
     pub fn tmux_installation(&self) -> Option<TmuxInstallationState> {
         match self {
             TmuxControlModeContext::UserInitiated => None,
-            TmuxControlModeContext::WarpInitiatedForSsh(warp_initiated) => {
-                warp_initiated.tmux_installation
+            TmuxControlModeContext::ZapNGInitiatedForSsh(zap_ng_initiated) => {
+                zap_ng_initiated.tmux_installation
             }
         }
     }
@@ -491,10 +491,10 @@ pub struct TerminalModel {
     pending_legacy_ssh_session: Option<SSHValue>,
 
     /// This variable allows us to differentiate between warp-initiated and user-initiated invocations of
-    /// control mode. Whenever we attempt to warpify an ssh session, we track the context of when warp initiated
+    /// control mode. Whenever we attempt to zapngify an ssh session, we track the context of when zap-ng initiated
     /// control mode, indicating that we expect the shell to enter control mode. We reset to None whenever
     /// the active block finishes. If we enter control mode and option is None, then we know it's user-initiated.
-    pending_warp_initiated_control_mode: Option<WarpInitiatedTmuxControlMode>,
+    pending_zap_ng_initiated_control_mode: Option<ZapNGInitiatedTmuxControlMode>,
 
     tmux_control_mode_context: Option<TmuxControlModeContext>,
 
@@ -1169,7 +1169,7 @@ impl TerminalModel {
             is_receiving_agent_conversation_replay: false,
             tmux_background_outputs: HashMap::new(),
             tmux_control_mode_context: None,
-            pending_warp_initiated_control_mode: None,
+            pending_zap_ng_initiated_control_mode: None,
             notify_on_end_of_ssh_login: None,
             is_receiving_hook: IsReceivingHook::No,
             image_id_to_metadata: HashMap::new(),
@@ -2214,25 +2214,25 @@ impl TerminalModel {
         self.env_var_collection_name = value;
     }
 
-    pub fn set_pending_warp_initiated_control_mode(&mut self) {
+    pub fn set_pending_zap_ng_initiated_control_mode(&mut self) {
         let tmux_installation = self
             .tmux_control_mode_context
             .and_then(|context| context.tmux_installation());
-        self.pending_warp_initiated_control_mode =
-            Some(WarpInitiatedTmuxControlMode::new(tmux_installation));
+        self.pending_zap_ng_initiated_control_mode =
+            Some(ZapNGInitiatedTmuxControlMode::new(tmux_installation));
     }
 
-    pub fn set_pending_warp_initiated_control_mode_with_install_tmux(&mut self, with_root: bool) {
-        self.pending_warp_initiated_control_mode =
-            Some(WarpInitiatedTmuxControlMode::new(Some(if with_root {
+    pub fn set_pending_zap_ng_initiated_control_mode_with_install_tmux(&mut self, with_root: bool) {
+        self.pending_zap_ng_initiated_control_mode =
+            Some(ZapNGInitiatedTmuxControlMode::new(Some(if with_root {
                 TmuxInstallationState::InstalledByWarpRootInThisSession
             } else {
                 TmuxInstallationState::InstalledByWarpInThisSession
             })));
     }
 
-    pub fn clear_pending_warp_initiated_control_mode(&mut self) {
-        self.pending_warp_initiated_control_mode = None;
+    pub fn clear_pending_zap_ng_initiated_control_mode(&mut self) {
+        self.pending_zap_ng_initiated_control_mode = None;
     }
 
     /// Informs the terminal model to start watching for ssh output that indicates the session
@@ -2284,7 +2284,7 @@ impl TerminalModel {
             SshLoginState::LastLogin | SshLoginState::PromptDetected => {
                 self.event_proxy
                     .send_terminal_event(Event::DetectedEndOfSshLogin(
-                        SshLoginStatus::ReadyToWarpify,
+                        SshLoginStatus::ReadyToZapNGify,
                     ));
 
                 ssh_login_state.notification_state = SshLoginNotificationState::Completed;
@@ -2295,7 +2295,7 @@ impl TerminalModel {
                     if ssh_login_state.notification_state == SshLoginNotificationState::Monitoring {
                         self.event_proxy
                             .send_terminal_event(Event::DetectedEndOfSshLogin(
-                                SshLoginStatus::RecheckBeforeWarpifying,
+                                SshLoginStatus::RecheckBeforeZapNGifying,
                             ));
 
                         // We want to avoid emitting redundant events for the initial check.
@@ -2305,7 +2305,7 @@ impl TerminalModel {
                 } else {
                     self.event_proxy
                         .send_terminal_event(Event::DetectedEndOfSshLogin(
-                            SshLoginStatus::ReadyToWarpify,
+                            SshLoginStatus::ReadyToZapNGify,
                         ));
 
                     ssh_login_state.notification_state = SshLoginNotificationState::Completed;
@@ -2333,14 +2333,14 @@ impl TerminalModel {
         self.tmux_control_mode_context.is_some()
     }
 
-    pub fn is_pending_warp_initiated_control_mode(&self) -> bool {
-        self.pending_warp_initiated_control_mode.is_some()
+    pub fn is_pending_zap_ng_initiated_control_mode(&self) -> bool {
+        self.pending_zap_ng_initiated_control_mode.is_some()
     }
 
-    pub fn is_warpified_ssh(&self) -> bool {
+    pub fn is_zapngified_ssh(&self) -> bool {
         matches!(
             self.tmux_control_mode_context,
-            Some(TmuxControlModeContext::WarpInitiatedForSsh { .. })
+            Some(TmuxControlModeContext::ZapNGInitiatedForSsh { .. })
         )
     }
 }
@@ -2829,7 +2829,7 @@ impl ansi::Handler for TerminalModel {
         delegate!(self.configure_charset(index, charset));
     }
 
-    fn set_color(&mut self, index: usize, color: warpui::color::ColorU) {
+    fn set_color(&mut self, index: usize, color: zap_ng_ui::color::ColorU) {
         self.override_colors[index] = Some(color);
     }
 
@@ -3073,7 +3073,7 @@ impl ansi::Handler for TerminalModel {
                 self.pending_legacy_ssh_session.take(),
                 matches!(
                     self.tmux_control_mode_context,
-                    Some(TmuxControlModeContext::WarpInitiatedForSsh { .. })
+                    Some(TmuxControlModeContext::ZapNGInitiatedForSsh { .. })
                 ),
                 self.block_list().active_block().session_id(),
             );
@@ -3099,7 +3099,7 @@ impl ansi::Handler for TerminalModel {
     }
 
     fn init_subshell(&mut self, data: InitSubshellValue) {
-        let is_tmux_ssh = self.pending_warp_initiated_control_mode.is_some();
+        let is_tmux_ssh = self.pending_zap_ng_initiated_control_mode.is_some();
         let shell_type = ShellType::from_name(data.shell.as_str());
         if let Some(shell_type) = shell_type {
             self.event_proxy
@@ -3116,7 +3116,7 @@ impl ansi::Handler for TerminalModel {
             if is_tmux_ssh {
                 self.event_proxy
                     .send_terminal_event(Event::RemoteWarpificationIsUnavailable(
-                        WarpificationUnavailableReason::UnsupportedShell {
+                        ZapNGificationUnavailableReason::UnsupportedShell {
                             shell_name: data.shell,
                         },
                     ))
@@ -3124,7 +3124,7 @@ impl ansi::Handler for TerminalModel {
         }
     }
 
-    fn sourced_rc_file(&mut self, data: SourcedRcFileForWarpValue) {
+    fn sourced_rc_file(&mut self, data: SourcedRcFileForZapNGValue) {
         // If the blocklist is already bootstrapped, the user's RC file must be sourced in a
         // subshell.
         if self.block_list.is_bootstrapped() {
@@ -3163,7 +3163,7 @@ impl ansi::Handler for TerminalModel {
             _ => self
                 .event_proxy
                 .send_terminal_event(Event::RemoteWarpificationIsUnavailable(
-                    WarpificationUnavailableReason::UnsupportedShell {
+                    ZapNGificationUnavailableReason::UnsupportedShell {
                         shell_name: data.shell,
                     },
                 )),
@@ -3175,14 +3175,14 @@ impl ansi::Handler for TerminalModel {
             .send_terminal_event(Event::FinishUpdate(data));
     }
 
-    fn remote_warpification_is_unavailable(&mut self, data: WarpificationUnavailableReason) {
+    fn remote_zapngification_is_unavailable(&mut self, data: ZapNGificationUnavailableReason) {
         self.event_proxy
             .send_terminal_event(Event::RemoteWarpificationIsUnavailable(data));
     }
 
     fn notify_ssh_tmux_is_installed(&mut self, tmux_installation: TmuxInstallationState) {
-        if let Some(ref mut warp_initiated_for_ssh) = self.pending_warp_initiated_control_mode {
-            warp_initiated_for_ssh.tmux_installation = Some(tmux_installation);
+        if let Some(ref mut zap_ng_initiated_for_ssh) = self.pending_zap_ng_initiated_control_mode {
+            zap_ng_initiated_for_ssh.tmux_installation = Some(tmux_installation);
         }
         self.event_proxy
             .send_terminal_event(Event::SshTmuxInstaller(tmux_installation));
@@ -3304,9 +3304,9 @@ impl ansi::Handler for TerminalModel {
                 }
             }
             tmux::ControlModeEvent::Starting => {
-                if let Some(warp_initiated_for_ssh) = self.pending_warp_initiated_control_mode {
+                if let Some(zap_ng_initiated_for_ssh) = self.pending_zap_ng_initiated_control_mode {
                     self.tmux_control_mode_context = Some(
-                        TmuxControlModeContext::WarpInitiatedForSsh(warp_initiated_for_ssh),
+                        TmuxControlModeContext::ZapNGInitiatedForSsh(zap_ng_initiated_for_ssh),
                     );
                 } else {
                     self.tmux_control_mode_context = Some(TmuxControlModeContext::UserInitiated);
@@ -3773,7 +3773,7 @@ impl ModeProvider for TerminalModel {
     }
 }
 
-/// Validates and decodes in-band command output sent via `warp_send_generator_output_osc_message`.
+/// Validates and decodes in-band command output sent via `zap_ng_send_generator_output_osc_message`.
 /// Upon success, returns the string content of the generator output. The OSC payload is expected
 /// to conform to the following format:
 ///

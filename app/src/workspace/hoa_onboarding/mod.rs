@@ -4,9 +4,9 @@ mod welcome_banner;
 
 pub use hoa_onboarding_flow::{init, HoaOnboardingFlow, HoaOnboardingFlowEvent, HoaOnboardingStep};
 
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
-use warp_core::user_preferences::GetUserPreferences;
+use zap_ng_core::user_preferences::GetUserPreferences;
 
 const HAS_COMPLETED_HOA_ONBOARDING_KEY: &str = "HasCompletedHOAOnboarding";
 

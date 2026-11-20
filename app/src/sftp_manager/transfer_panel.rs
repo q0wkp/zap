@@ -4,13 +4,13 @@
 //! author: logic
 //! date: 2026-05-26
 
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::{
     Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisSize, MainAxisAlignment, MouseStateHandle, ParentElement, Radius, SavePosition, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::Element;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::Element;
 
 use crate::sftp_manager::browser::SftpBrowserAction;
 use crate::sftp_manager::types::{TransferDirection, TransferState, TransferTask};
@@ -34,7 +34,7 @@ fn render_direction_icon(
         TransferDirection::Download => Icon::Download,
     };
 
-    ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+    ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
         .with_width(14.0)
         .with_height(14.0)
         .finish()
@@ -156,7 +156,7 @@ fn render_transfer_row(task: &TransferTask, appearance: &Appearance) -> Box<dyn 
         let position_id = format!("sftp_btn:cancel_transfer:{task_id}");
 
         let cancel_el = Hoverable::new(task.cancel_btn_state.clone(), move |_| {
-            let icon_el = ConstrainedBox::new(Icon::X.to_warpui_icon(icon_color).finish())
+            let icon_el = ConstrainedBox::new(Icon::X.to_zap_ng_ui_icon(icon_color).finish())
                 .with_width(12.0)
                 .with_height(12.0)
                 .finish();
@@ -213,7 +213,7 @@ pub fn render_transfer_panel(
     // 关闭按钮
     let icon_color = theme.sub_text_color(theme.background());
     let close_btn = Hoverable::new(close_btn_state, move |_| {
-        let icon_el = ConstrainedBox::new(Icon::X.to_warpui_icon(icon_color).finish())
+        let icon_el = ConstrainedBox::new(Icon::X.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(12.0)
             .with_height(12.0)
             .finish();
@@ -271,8 +271,8 @@ mod tests {
     use std::rc::Rc;
 
     use pathfinder_geometry::vector::vec2f;
-    use warpui::platform::WindowStyle;
-    use warpui::{
+    use zap_ng_ui::platform::WindowStyle;
+    use zap_ng_ui::{
         App, AppContext, Entity, Event, Presenter, SingletonEntity, TypedActionView, View,
         ViewContext, WindowInvalidation,
     };

@@ -26,15 +26,15 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use settings::Setting;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ChildView, Container, CornerRadius, CrossAxisAlignment, Expanded, Flex, MainAxisAlignment,
     MouseStateHandle, ParentElement, Radius, Text, Wrap,
 };
-use warpui::ui_components::{
+use zap_ng_ui::ui_components::{
     button::ButtonVariant,
     components::{Coords, UiComponent, UiComponentStyles},
 };
-use warpui::{AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, Element, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::ai::agent_providers::AgentProviderSecrets;
 use crate::appearance::Appearance;
@@ -661,7 +661,7 @@ impl AgentProvidersWidget {
         provider: &AgentProvider,
         row: &ProviderRow,
         draft_editors: ProviderDraftEditors,
-        label_color: warp_core::ui::theme::Fill,
+        label_color: zap_ng_core::ui::theme::Fill,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let label_text = Container::new(
@@ -1633,7 +1633,7 @@ impl AgentProvidersWidget {
     fn render_disabled_provider_card(
         provider: &AgentProvider,
         row: &ProviderRow,
-        label_color: warp_core::ui::theme::Fill,
+        label_color: zap_ng_core::ui::theme::Fill,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let dim = appearance.theme().disabled_ui_text_color();
@@ -1767,7 +1767,7 @@ fn single_line_editor_options(
 fn field_block(
     label: &str,
     editor_element: Box<dyn Element>,
-    label_color: warp_core::ui::theme::Fill,
+    label_color: zap_ng_core::ui::theme::Fill,
     appearance: &Appearance,
 ) -> Box<dyn Element> {
     let label_text = Container::new(

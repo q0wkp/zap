@@ -1,13 +1,13 @@
 use asset_macro::bundled_or_fetched_asset;
 use pathfinder_color::ColorU;
-use warp_core::ui::{
+use zap_ng_core::ui::{
     color::{blend::Blend, coloru_with_opacity, OPAQUE},
     theme::{
         color::CustomDetails, AnsiColor, AnsiColors, Details, Fill, HorizontalGradient, Image,
-        TerminalColors, VerticalGradient, WarpTheme,
+        TerminalColors, VerticalGradient, ZapNGTheme,
     },
 };
-use warp_core::ui::theme::ui_colors::UiColors;
+use zap_ng_core::ui::theme::ui_colors::UiColors;
 
 const DARK_MODE_NORMAL_COLORS: AnsiColors = AnsiColors::new(
     AnsiColor::from_u32(0x616161FF),
@@ -311,8 +311,8 @@ pub(super) fn vscode_2026_dark_colors() -> TerminalColors {
 
 /// VS Code 2026 Dark 内置主题；配色源: vscode/extensions/theme-defaults/themes/2026-dark.json。
 /// 包含完整 UiColors 覆盖，将 VS Code 的 editor/panel 颜色映射到 Zap UI 组件。
-pub(super) fn vscode_2026_dark() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn vscode_2026_dark() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x191A1BFF)),
         ColorU::from_u32(0xCCCCCCFF),
         Fill::Solid(ColorU::from_u32(0x3994BCFF)),
@@ -397,8 +397,8 @@ pub(super) fn wezterm_classic_colors() -> TerminalColors {
 }
 
 /// Default bundled themes
-pub fn dark_theme() -> WarpTheme {
-    WarpTheme::new(
+pub fn dark_theme() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x000000FF)),
         ColorU::from_u32(0xffffffff),
         Fill::Solid(ColorU::from_u32(0x19AAD8FF)),
@@ -411,8 +411,8 @@ pub fn dark_theme() -> WarpTheme {
     )
 }
 
-pub fn light_theme() -> WarpTheme {
-    WarpTheme::new(
+pub fn light_theme() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::white()),
         ColorU::new(17, 17, 17, OPAQUE),
         Fill::Solid(ColorU::from_u32(0x00c2ffff)),
@@ -425,8 +425,8 @@ pub fn light_theme() -> WarpTheme {
     )
 }
 
-pub(super) fn dracula() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn dracula() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x282A36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xFF79C6FF)),
@@ -439,8 +439,8 @@ pub(super) fn dracula() -> WarpTheme {
     )
 }
 
-pub(super) fn solarized_light() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn solarized_light() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0xFDF6E3FF)),
         ColorU::from_u32(0x586E75FF),
         Fill::Solid(ColorU::from_u32(0x66B5A9FF)),
@@ -453,8 +453,8 @@ pub(super) fn solarized_light() -> WarpTheme {
     )
 }
 
-pub(super) fn solarized_dark() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn solarized_dark() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x002B36FF)),
         ColorU::from_u32(0xF8F8F2FF),
         Fill::Solid(ColorU::from_u32(0xCB4B16FF)),
@@ -467,8 +467,8 @@ pub(super) fn solarized_dark() -> WarpTheme {
     )
 }
 
-pub(super) fn gruvbox_dark() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn gruvbox_dark() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x282828FF)),
         ColorU::from_u32(0xEBDBB2FF),
         Fill::Solid(ColorU::from_u32(0xFC802DFF)),
@@ -481,8 +481,8 @@ pub(super) fn gruvbox_dark() -> WarpTheme {
     )
 }
 
-pub(super) fn gruvbox_light() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn gruvbox_light() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBF1C7FF)),
         ColorU::from_u32(0x3C3836FF),
         Fill::Solid(ColorU::from_u32(0xAD3B14FF)),
@@ -496,8 +496,8 @@ pub(super) fn gruvbox_light() -> WarpTheme {
 }
 
 /// Bundled gradient themes
-pub(super) fn cyber_wave() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn cyber_wave() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::black().blend(&coloru_with_opacity(ColorU::from_u32(0x00C2FFFF), 20)),
             ColorU::black(),
@@ -516,8 +516,8 @@ pub(super) fn cyber_wave() -> WarpTheme {
     )
 }
 
-pub(super) fn willow_dream() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn willow_dream() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x206169FF),
             ColorU::from_u32(0x022F27FF),
@@ -536,8 +536,8 @@ pub(super) fn willow_dream() -> WarpTheme {
     )
 }
 
-pub(super) fn fancy_dracula() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn fancy_dracula() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x252630FF),
             ColorU::from_u32(0x3D3F4FFF),
@@ -556,8 +556,8 @@ pub(super) fn fancy_dracula() -> WarpTheme {
     )
 }
 
-pub(super) fn phenomenon() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn phenomenon() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x121212FF)),
         ColorU::from_u32(0xFAF9F6FF),
         Fill::Solid(ColorU::from_u32(0x2E5D9EFF)),
@@ -574,8 +574,8 @@ pub(super) fn phenomenon() -> WarpTheme {
 }
 
 /// Bundled themes with background images
-pub(super) fn jellyfish() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn jellyfish() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1718FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x538682FF)),
@@ -591,8 +591,8 @@ pub(super) fn jellyfish() -> WarpTheme {
     )
 }
 
-pub(super) fn koi() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn koi() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x211719FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0xFF3131FF)),
@@ -608,8 +608,8 @@ pub(super) fn koi() -> WarpTheme {
     )
 }
 
-pub(super) fn leafy() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn leafy() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::black()),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0x55972DFF)),
@@ -625,8 +625,8 @@ pub(super) fn leafy() -> WarpTheme {
     )
 }
 
-pub(super) fn marble() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn marble() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0xE3E3E3FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0x585858FF)),
@@ -642,11 +642,11 @@ pub(super) fn marble() -> WarpTheme {
     )
 }
 
-pub(super) fn pink_city() -> WarpTheme {
+pub(super) fn pink_city() -> ZapNGTheme {
     let details = CustomDetails {
         ..CustomDetails::lighter_details()
     };
-    WarpTheme::new(
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0xFBEFF6FF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0xE10087FF)),
@@ -662,8 +662,8 @@ pub(super) fn pink_city() -> WarpTheme {
     )
 }
 
-pub(super) fn snowy() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn snowy() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0xFFFFFFFF),
             ColorU::from_u32(0xDEE6EBFF),
@@ -682,8 +682,8 @@ pub(super) fn snowy() -> WarpTheme {
     )
 }
 
-pub(super) fn red_rock() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn red_rock() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x211719FF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x4C3435FF), 45)),
@@ -704,8 +704,8 @@ pub(super) fn red_rock() -> WarpTheme {
     )
 }
 
-pub(super) fn dark_city() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn dark_city() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::VerticalGradient(VerticalGradient::new(
             ColorU::from_u32(0x01181FFF)
                 .blend(&coloru_with_opacity(ColorU::from_u32(0x1A363FFF), 45)),
@@ -726,8 +726,8 @@ pub(super) fn dark_city() -> WarpTheme {
     )
 }
 
-pub(super) fn sent_referral_reward() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn sent_referral_reward() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x334567FF)),
         ColorU::white(),
         Fill::Solid(ColorU::from_u32(0xCD51FFFF)),
@@ -743,8 +743,8 @@ pub(super) fn sent_referral_reward() -> WarpTheme {
     )
 }
 
-pub(super) fn solar_flare() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn solar_flare() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1B1C18FF)),
         ColorU::from_u32(0xDDE6EEFF),
         Fill::Solid(ColorU::from_u32(0x34895CFF)),
@@ -760,8 +760,8 @@ pub(super) fn solar_flare() -> WarpTheme {
     )
 }
 
-pub(super) fn tokyo_night() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn tokyo_night() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1A1B26FF)),
         ColorU::from_u32(0xC0CAF5FF),
         Fill::Solid(ColorU::from_u32(0x7AA2F7FF)),
@@ -774,8 +774,8 @@ pub(super) fn tokyo_night() -> WarpTheme {
     )
 }
 
-pub(super) fn one_dark() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn one_dark() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x282C34FF)),
         ColorU::from_u32(0xABB2BFFF),
         Fill::Solid(ColorU::from_u32(0x74ADE8FF)),
@@ -788,8 +788,8 @@ pub(super) fn one_dark() -> WarpTheme {
     )
 }
 
-pub(super) fn adeberry() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn adeberry() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -803,8 +803,8 @@ pub(super) fn adeberry() -> WarpTheme {
 }
 
 // 16 色 ANSI 与背景/前景对齐 WezTerm 默认配色；强调色 #52AD70 为本项目自选，非 WezTerm 规范色。
-pub(super) fn wezterm_classic() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn wezterm_classic() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x000000FF)),
         ColorU::from_u32(0xE0E0E0FF),
         Fill::Solid(ColorU::from_u32(0x52AD70FF)),
@@ -817,8 +817,8 @@ pub(super) fn wezterm_classic() -> WarpTheme {
     )
 }
 
-pub(super) fn received_referral_reward() -> WarpTheme {
-    WarpTheme::new(
+pub(super) fn received_referral_reward() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0xFFFFFFFF)),
         ColorU::black(),
         Fill::Solid(ColorU::from_u32(0xCD51FFFF)),

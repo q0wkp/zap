@@ -6,10 +6,10 @@ use crate::{
     ui_components::icons::Icon,
 };
 use pathfinder_geometry::vector::vec2f;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ConstrainedBox, CornerRadius, CrossAxisAlignment, Flex,
-        Icon as WarpUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
+        Icon as ZapNGUiIcon, MainAxisAlignment, MouseStateHandle, OffsetPositioning, ParentElement,
         PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Stack,
     },
     presenter::ChildView,
@@ -108,7 +108,7 @@ impl<A: Action + Clone> CompactDropdown<A> {
     }
 
     /// Render an icon at the configured icon size.
-    fn render_sized_icon(&self, appearance: &Appearance, icon: WarpUiIcon) -> Box<dyn Element> {
+    fn render_sized_icon(&self, appearance: &Appearance, icon: ZapNGUiIcon) -> Box<dyn Element> {
         let icon_size = self.icon_size.unwrap_or(appearance.ui_font_size());
         ConstrainedBox::new(icon.finish())
             .with_width(icon_size)
@@ -130,13 +130,13 @@ impl<A: Action + Clone> CompactDropdown<A> {
                     .override_icon_color()
                     .unwrap_or_else(|| appearance.theme().active_ui_text_color());
                 button_label
-                    .add_child(self.render_sized_icon(appearance, icon.to_warpui_icon(icon_color)));
+                    .add_child(self.render_sized_icon(appearance, icon.to_zap_ng_ui_icon(icon_color)));
             }
         }
 
         button_label.add_child(self.render_sized_icon(
             appearance,
-            WarpUiIcon::new(
+            ZapNGUiIcon::new(
                 "bundled/svg/chevron-down.svg",
                 appearance.theme().active_ui_text_color(),
             ),

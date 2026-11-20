@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use warpui::platform::FullscreenState;
+use zap_ng_ui::platform::FullscreenState;
 
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::AgentManagementFilters;
@@ -22,7 +22,7 @@ use crate::terminal::ShellLaunchData;
 use crate::themes::theme::{AnsiColorIdentifier, ThemeKind};
 use crate::workspace::view::left_panel::ToolPanelView;
 use crate::workspace::WorkspaceRegistry;
-use warpui::SingletonEntity as _;
+use zap_ng_ui::SingletonEntity as _;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AppState {
@@ -147,7 +147,7 @@ pub enum LeafContents {
     },
     /// A new first-time user experience which prioritizes choosing a coding repository.
     GetStarted,
-    /// SSH 服务器编辑器 pane(openWarp 独有)。引用 `ssh_servers.node_id` 主键
+    /// SSH 服务器编辑器 pane(ZapNG 独有)。引用 `ssh_servers.node_id` 主键
     /// 加载/保存。**不持久化** — 重启后用户从左侧 SSH 管理器树重新打开。
     SshServer {
         node_id: String,

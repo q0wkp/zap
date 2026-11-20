@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context as _, Result};
 use channel_versions::VersionInfo;
 use instant::Duration;
-use warp_core::channel::{Channel, ChannelState};
+use zap_ng_core::channel::{Channel, ChannelState};
 
 use super::command_update::{self, PkgsRelease, PkgsTarget};
 use super::release_assets_directory_url;
@@ -100,9 +100,9 @@ mod appimage {
         let channel = ChannelState::channel();
         // The AppImage of the release being installed, as the release workflow names it.
         let asset = github::appimage_name(&version_info.version);
-        // openWarp:从 GitHub Release 缓存里取真实下载 URL,绕开空的 releases_base_url。
+        // ZapNG:从 GitHub Release 缓存里取真实下载 URL,绕开空的 releases_base_url。
         // 官方 channel 仍然走 release_assets_directory_url。
-        let url = if matches!(channel, warp_core::channel::Channel::Oss) {
+        let url = if matches!(channel, zap_ng_core::channel::Channel::Oss) {
             if let Some(release) = crate::autoupdate::github::cached_release() {
                 if let Some(found) = release.find_asset(&asset) {
                     found.browser_download_url.clone()
@@ -183,9 +183,9 @@ mod appimage {
             total,
         });
 
-        // openWarp:在覆盖原 AppImage 之前先对临时文件做 SHA-256 校验,
+        // ZapNG:在覆盖原 AppImage 之前先对临时文件做 SHA-256 校验,
         // 防御 CDN 中间人 / 网络损坏。其他 channel 跳过(有自家流程)。
-        if matches!(channel, warp_core::channel::Channel::Oss) {
+        if matches!(channel, zap_ng_core::channel::Channel::Oss) {
             let temp_path = new_appimage.path().to_path_buf();
             if let Err(e) = crate::autoupdate::verify_oss_asset_sha256(&temp_path, &asset) {
                 // 临时文件会随 NamedTempFile drop 自动清理,这里只需返回错误。
@@ -229,7 +229,7 @@ mod appimage {
         let mut command = command::blocking::Command::new(appimage_path);
         // Pass a flag to the app to let it know it was restarted as part of the
         // autoupdate process.
-        command.arg(warp_cli::finish_update_flag());
+        command.arg(zap_ng_cli::finish_update_flag());
         // 测试本地通道版本 JSON 时，让新启动的二进制继续引用同一个文件，
         // 以便验证自动更新后的 changelog 展示。
         if let Ok(path) = std::env::var("WARP_CHANNEL_VERSIONS_PATH") {
@@ -253,10 +253,10 @@ mod package_manager {
         };
         log::info!("Relaunching using path: {program:?}");
         let mut command = command::blocking::Command::new(program);
-        // Add any arguments that were passed to warp, skipping the first
+        // Add any arguments that were passed to zap-ng, skipping the first
         // argument (the name of the executable) and dropping the flag for
         // finishing an update.
-        let finish_update_flag = warp_cli::finish_update_flag();
+        let finish_update_flag = zap_ng_cli::finish_update_flag();
         command.args(
             std::env::args()
                 .skip(1)

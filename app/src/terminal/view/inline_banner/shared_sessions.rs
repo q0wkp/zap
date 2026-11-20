@@ -1,6 +1,6 @@
 //! The rendering logic for shared session banners.
 use chrono::{DateTime, Datelike, Local};
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize,
         ParentElement, Radius, Rect, Shrinkable, Text,

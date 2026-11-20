@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 use diesel::{result::Error, SqliteConnection};
 use serde::{Deserialize, Serialize};
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::{
     auth::UserUid,

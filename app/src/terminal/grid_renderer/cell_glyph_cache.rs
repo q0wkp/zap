@@ -1,11 +1,11 @@
 //! This module defines CellGlyphCache, a struct which manages the caching of glyph values for cells
 //! when rendering Grids within Zap.
-use warpui::elements::DEFAULT_LINE_HEIGHT_RATIO;
+use zap_ng_ui::elements::DEFAULT_LINE_HEIGHT_RATIO;
 
-use warpui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Properties};
-use warpui::platform::LineStyle;
-use warpui::text_layout::{StyleAndFont, DEFAULT_TOP_BOTTOM_RATIO};
-use warpui::PaintContext;
+use zap_ng_ui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Properties};
+use zap_ng_ui::platform::LineStyle;
+use zap_ng_ui::text_layout::{StyleAndFont, DEFAULT_TOP_BOTTOM_RATIO};
+use zap_ng_ui::PaintContext;
 
 use std::collections::HashMap;
 

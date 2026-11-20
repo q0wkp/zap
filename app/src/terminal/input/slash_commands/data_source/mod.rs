@@ -3,7 +3,7 @@ mod zero_state;
 
 use ai::skills::SkillProvider;
 pub(crate) use saved_prompts::*;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 pub use zero_state::*;
 
 use std::collections::HashMap;
@@ -11,9 +11,9 @@ use std::path::PathBuf;
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warpui::fonts::FamilyId;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::fonts::FamilyId;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::blocklist::BlocklistAIHistoryModel;
 use crate::ai::skills::{SkillDescriptor, SkillManager};
@@ -25,7 +25,7 @@ use crate::terminal::cli_agent_sessions::{
     CLIAgentInputState, CLIAgentSessionsModel, CLIAgentSessionsModelEvent,
 };
 use crate::terminal::model::session::SessionType;
-use warp_core::ui::Icon as WarpIcon;
+use zap_ng_core::ui::Icon as ZapNGIcon;
 
 use super::AcceptSlashCommandOrSavedPrompt;
 use crate::{
@@ -253,7 +253,7 @@ impl SyncDataSource for SlashCommandDataSource {
     fn run_query(
         &self,
         query: &Query,
-        app: &warpui::AppContext,
+        app: &zap_ng_ui::AppContext,
     ) -> Result<Vec<QueryResult<Self::Action>>, DataSourceRunErrorWrapper> {
         if query.text.is_empty() {
             return Ok(vec![]);
@@ -418,13 +418,13 @@ impl InlineItem {
             override_icon
         } else {
             match skill.provider {
-                SkillProvider::Zap => WarpIcon::Zap,
-                SkillProvider::Claude => WarpIcon::ClaudeLogo,
-                SkillProvider::Codex => WarpIcon::OpenAILogo,
-                SkillProvider::Gemini => WarpIcon::GeminiLogo,
-                SkillProvider::Droid => WarpIcon::DroidLogo,
-                SkillProvider::OpenCode => WarpIcon::OpenCodeLogo,
-                _ => WarpIcon::Zap,
+                SkillProvider::Zap => ZapNGIcon::Zap,
+                SkillProvider::Claude => ZapNGIcon::ClaudeLogo,
+                SkillProvider::Codex => ZapNGIcon::OpenAILogo,
+                SkillProvider::Gemini => ZapNGIcon::GeminiLogo,
+                SkillProvider::Droid => ZapNGIcon::DroidLogo,
+                SkillProvider::OpenCode => ZapNGIcon::OpenCodeLogo,
+                _ => ZapNGIcon::Zap,
             }
         };
 

@@ -1,6 +1,6 @@
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CrossAxisAlignment, Flex, FormattedTextElement,
         HighlightedHyperlink, HyperlinkLens, MainAxisAlignment, MainAxisSize, ParentElement,
@@ -184,7 +184,7 @@ impl PromptAlertView {
                     ANONYMOUS_USER_REQUEST_LIMIT_ACTION_TEXT,
                     WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: "api".to_string(),
-                        section: Some(SettingsSection::WarpAgent),
+                        section: Some(SettingsSection::ZapNGAgent),
                     },
                 ));
             }
@@ -195,7 +195,7 @@ impl PromptAlertView {
                         "use your own API keys",
                         WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "api".to_string(),
-                            section: Some(SettingsSection::WarpAgent),
+                            section: Some(SettingsSection::ZapNGAgent),
                         },
                     ));
                 }
@@ -268,7 +268,7 @@ impl View for PromptAlertView {
             chip_row.add_child(
                 ConstrainedBox::new(
                     Icon::AlertTriangle
-                        .to_warpui_icon(error_color(appearance.theme()).into())
+                        .to_zap_ng_ui_icon(error_color(appearance.theme()).into())
                         .finish(),
                 )
                 .with_width(icon_size)

@@ -8,16 +8,16 @@ use crate::ui_components::blended_colors;
 use crate::util::time_format::format_approx_duration_from_now;
 use chrono::{Local, TimeZone};
 use uuid::Uuid;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::external_product_icon::ExternalProductIcon;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{Align, Empty, Padding, Shrinkable};
-use warpui::fonts::{Properties, Weight};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::SingletonEntity;
-use warpui::{
+use zap_ng_core::ui::color::coloru_with_opacity;
+use zap_ng_core::ui::external_product_icon::ExternalProductIcon;
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::{Align, Empty, Padding, Shrinkable};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
         MainAxisAlignment, MouseStateHandle, ParentElement, Radius, Text,
@@ -136,7 +136,7 @@ impl UpdateModalBody {
                     let mut icon = Container::new(
                         ConstrainedBox::new(
                             Icon::X
-                                .to_warpui_icon(theme.active_ui_text_color())
+                                .to_zap_ng_ui_icon(theme.active_ui_text_color())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -338,7 +338,7 @@ impl UpdateModalBody {
         let corner_down_left_icon = Container::new(
             ConstrainedBox::new(
                 Icon::CornerDownLeft
-                    .to_warpui_icon(appearance.theme().active_ui_text_color())
+                    .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_width(appearance.monospace_font_size())

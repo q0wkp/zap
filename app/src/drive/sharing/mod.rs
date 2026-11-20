@@ -1,8 +1,8 @@
 use std::{borrow::Cow, str::FromStr};
 
 use serde::{Deserialize, Serialize};
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     color::ColorU,
     ui_components::components::{UiComponent, UiComponentStyles},
     AppContext, SingletonEntity,

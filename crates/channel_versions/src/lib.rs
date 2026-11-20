@@ -34,7 +34,7 @@ impl std::fmt::Display for ChannelVersions {
 lazy_static! {
     static ref VERSION_RE: Regex = Regex::new(r"v(\d+)\.(.+)\.(.+)_(\d+)").unwrap();
 
-    // openWarp(OSS)发布 tag 形如 `v2026.05.26.2`(4 段:年.月.日.序号),没有
+    // ZapNG(OSS)发布 tag 形如 `v2026.05.26.2`(4 段:年.月.日.序号),没有
     // 官方版本里 `_NN` 后缀和 channel 名。主正则匹配不到时再尝试这条 fallback,
     // 让 is_current_version_ahead_of_latest_version / is_incoming_version_past_current
     // 能正确比较大小,从而识别回滚或本地构建超前 release 的场景。

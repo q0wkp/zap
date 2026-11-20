@@ -1,17 +1,17 @@
 //! Zap 本地 managed-secrets client。
 //!
 //! Zap 上游这里原本通过 server_api 调云端接口维护团队/用户托管密钥。
-//! Zap 保留 `warp_managed_secrets` crate 供本地功能复用,但所有云端托管密钥
+//! Zap 保留 `zap_ng_managed_secrets` crate 供本地功能复用,但所有云端托管密钥
 //! 动作都不可达:查询返回空集合,写动作和 OIDC token 颁发返回 disabled 错误。
 
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use warp_managed_secrets::client::{
+use zap_ng_managed_secrets::client::{
     ManagedSecretConfigs, ManagedSecretsClient, SecretOwner, TaskIdentityToken,
 };
-use warp_managed_secrets::{ManagedSecret, ManagedSecretType, ManagedSecretValue};
+use zap_ng_managed_secrets::{ManagedSecret, ManagedSecretType, ManagedSecretValue};
 
 pub(crate) struct DisabledManagedSecretsClient;
 
@@ -63,7 +63,7 @@ impl ManagedSecretsClient for DisabledManagedSecretsClient {
 
     async fn issue_task_identity_token(
         &self,
-        _options: warp_managed_secrets::client::IdentityTokenOptions,
+        _options: zap_ng_managed_secrets::client::IdentityTokenOptions,
     ) -> Result<TaskIdentityToken> {
         Err(anyhow!("Task identity token issuance disabled in Zap"))
     }

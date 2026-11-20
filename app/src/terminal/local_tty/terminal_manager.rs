@@ -3,7 +3,7 @@ use crate::auth::AuthState;
 use crate::auth::AuthStateProvider;
 use crate::terminal::model::terminal_model::ExitReason;
 use crate::terminal::shell::ShellName;
-use crate::terminal::warpify::settings::WarpifySettings;
+use crate::terminal::zapngify::settings::ZapNGifySettings;
 use crate::terminal::TerminalManager as _;
 use anyhow::Context as _;
 use async_broadcast::InactiveReceiver;
@@ -19,8 +19,8 @@ use parking_lot::{FairMutex, Mutex};
 use pathfinder_geometry::vector::Vector2F;
 
 use settings::Setting as _;
-use warpui::r#async::executor::Background;
-use warpui::{AppContext, ModelContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
+use zap_ng_ui::r#async::executor::Background;
+use zap_ng_ui::{AppContext, ModelContext, ModelHandle, SingletonEntity, ViewHandle, WindowId};
 
 use crate::ai::blocklist::{InputConfig, SerializedBlockListItem};
 use crate::terminal::view::ConversationRestorationInNewPaneType;
@@ -530,9 +530,9 @@ impl TerminalManager {
     /// Sends bindkey to notify shell process to switch to Zap prompt logic for prompt
     /// with the combined prompt/command grid (we unset the PS1, but save the value for potential
     /// future restoration).
-    pub fn send_switch_to_warp_prompt_bindkey(&self, app_ctx: &mut AppContext) {
+    pub fn send_switch_to_zap_ng_prompt_bindkey(&self, app_ctx: &mut AppContext) {
         self.pty_controller.update(app_ctx, |pty_controller, ctx| {
-            pty_controller.send_switch_to_warp_prompt_bindkey(ctx);
+            pty_controller.send_switch_to_zap_ng_prompt_bindkey(ctx);
         });
     }
 
@@ -582,10 +582,10 @@ impl TerminalManager {
 
         // The TMUX SSH wrapper supercedes the original ControlMaster wrapper.
         let enable_ssh_wrapper = if FeatureFlag::SSHTmuxWrapper.is_enabled() {
-            *WarpifySettings::as_ref(ctx)
-                .enable_ssh_warpification
+            *ZapNGifySettings::as_ref(ctx)
+                .enable_ssh_zapngification
                 .value()
-                && !*WarpifySettings::as_ref(ctx).use_ssh_tmux_wrapper.value()
+                && !*ZapNGifySettings::as_ref(ctx).use_ssh_tmux_wrapper.value()
         } else {
             *SshSettings::as_ref(ctx).enable_legacy_ssh_wrapper.value()
         };

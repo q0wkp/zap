@@ -12,9 +12,9 @@
 //! for a full guide on the server-side experiment framework.
 
 use crate::features::FeatureFlag;
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 #[cfg(test)]
-use warpui::SingletonEntity;
+use zap_ng_ui::SingletonEntity;
 
 mod convert;
 mod model;
@@ -27,8 +27,8 @@ pub enum ServerExperiment {
     DisableAgentModeExperiment,
     EnvVarsEarlyAccessExperiment,
     AgentModeAnalyticsExperiment,
-    TmuxSshWarpificationControl,
-    TmuxSshWarpificationExperiment,
+    TmuxSshZapNGificationControl,
+    TmuxSshZapNGificationExperiment,
     SuggestedCodeDiffsControl,
     SuggestedCodeDiffsExperiment,
     PromptSuggestionsViaMaaControl,
@@ -68,8 +68,8 @@ impl ServerExperiment {
                 FeatureFlag::AIRules.set_enabled(true);
                 FeatureFlag::SuggestedRules.set_enabled(true);
             }
-            Self::TmuxSshWarpificationControl => FeatureFlag::SSHTmuxWrapper.set_enabled(false),
-            Self::TmuxSshWarpificationExperiment => FeatureFlag::SSHTmuxWrapper.set_enabled(true),
+            Self::TmuxSshZapNGificationControl => FeatureFlag::SSHTmuxWrapper.set_enabled(false),
+            Self::TmuxSshZapNGificationExperiment => FeatureFlag::SSHTmuxWrapper.set_enabled(true),
             Self::SuggestedCodeDiffsExperiment => {}
             Self::SuggestedCodeDiffsControl => {}
             Self::PromptSuggestionsViaMaaControl => {

@@ -30,11 +30,11 @@ use std::{
 };
 use string_offset::{ByteOffset, CharOffset, impl_offset};
 use sum_tree::{Cursor, SeekBias, SumTree};
-use warp_core::features::FeatureFlag;
-use warpui::elements::ListIndentLevel;
-use warpui::text::BlockHeaderSize as HeaderSize;
-use warpui::text::point::Point;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::elements::ListIndentLevel;
+use zap_ng_ui::text::BlockHeaderSize as HeaderSize;
+use zap_ng_ui::text::point::Point;
+use zap_ng_ui::{
     AppContext,
     fonts::{Properties, Style, Weight},
 };

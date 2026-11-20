@@ -1,7 +1,7 @@
 use crate::ai::blocklist::block::ImportedCommentGroup;
-use warpui::elements::{CrossAxisAlignment, Flex, ParentElement};
-use warpui::prelude::ChildView;
-use warpui::{AppContext, Element};
+use zap_ng_ui::elements::{CrossAxisAlignment, Flex, ParentElement};
+use zap_ng_ui::prelude::ChildView;
+use zap_ng_ui::{AppContext, Element};
 
 pub(crate) fn render_imported_comments(
     group: &ImportedCommentGroup,

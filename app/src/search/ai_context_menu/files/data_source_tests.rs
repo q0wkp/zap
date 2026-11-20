@@ -17,11 +17,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tempfile::tempdir;
-use warpui::platform::WindowStyle;
-use warpui::r#async::block_on;
-use warpui::windowing::WindowManager;
-use warpui::SingletonEntity;
-use warpui::{elements::Empty, App, AppContext, Element, Entity, TypedActionView, View};
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::r#async::block_on;
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{elements::Empty, App, AppContext, Element, Entity, TypedActionView, View};
 struct TestView;
 
 impl Entity for TestView {

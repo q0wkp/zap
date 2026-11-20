@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use warp_cli::agent::Harness;
+use zap_ng_cli::agent::Harness;
 
 use crate::ai::ambient_agents::task::{
     AgentConfigSnapshot, HarnessConfig, RequestUsage, TaskCreatorInfo,

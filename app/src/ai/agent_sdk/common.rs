@@ -4,8 +4,8 @@ use std::future::Future;
 
 use futures::TryFutureExt;
 
-use warpui::r#async::FutureExt;
-use warpui::{AppContext, SingletonEntity as _};
+use zap_ng_ui::r#async::FutureExt;
+use zap_ng_ui::{AppContext, SingletonEntity as _};
 
 use crate::ai::agent_sdk::driver::WARP_DRIVE_SYNC_TIMEOUT;
 
@@ -85,7 +85,7 @@ pub fn refresh_workspace_metadata<C>(
 }
 
 /// Refresh Zap Drive before executing an operation.
-pub fn refresh_warp_drive(
+pub fn refresh_zap_ng_drive(
     ctx: &AppContext,
 ) -> impl Future<Output = anyhow::Result<()>> + Send + 'static {
     ObjectStoreModel::as_ref(ctx)

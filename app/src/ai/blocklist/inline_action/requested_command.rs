@@ -7,13 +7,13 @@ use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::Icon;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{ConstrainedBox, ScrollbarWidth};
-use warpui::ui_components::components::UiComponent as _;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::Icon;
+use zap_ng_editor::render::element::VerticalExpansionBehavior;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::{ConstrainedBox, ScrollbarWidth};
+use zap_ng_ui::ui_components::components::UiComponent as _;
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, Clipped, Container, CornerRadius, CrossAxisAlignment, Expanded,
         Flex, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentElement, Radius,
@@ -27,8 +27,8 @@ use warpui::{
 use crate::ai::agent::{AIAgentActionResult, AIAgentActionType};
 use crate::ai::agent_providers::active_ai::ui_language_name;
 use crate::ai::agent_providers::explain_command::{self, CommandExplanation, CommandRisk};
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{EntityId, EventContext};
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::{EntityId, EventContext};
 
 use crate::ai::agent::RequestCommandOutputResult;
 use crate::ai::agent::{icons, AIAgentActionResultType};
@@ -126,7 +126,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -823,7 +823,7 @@ impl RequestedCommandView {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::Info
-                                .to_warpui_icon(
+                                .to_zap_ng_ui_icon(
                                     blended_colors::text_sub(theme, theme.surface_1()).into(),
                                 )
                                 .finish(),
@@ -1824,9 +1824,9 @@ impl View for RequestedCommandView {
                 OffsetPositioning::offset_from_save_position_element(
                     Self::get_position_id_for_accept_split_button(&self.position_id_prefix),
                     vec2f(0., 8.),
-                    warpui::elements::PositionedElementOffsetBounds::WindowByPosition,
-                    warpui::elements::PositionedElementAnchor::BottomRight,
-                    warpui::elements::ChildAnchor::TopRight,
+                    zap_ng_ui::elements::PositionedElementOffsetBounds::WindowByPosition,
+                    zap_ng_ui::elements::PositionedElementAnchor::BottomRight,
+                    zap_ng_ui::elements::ChildAnchor::TopRight,
                 ),
             );
         }

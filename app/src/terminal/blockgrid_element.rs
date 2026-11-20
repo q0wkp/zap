@@ -6,12 +6,12 @@ use crate::terminal::model::grid::Dimensions;
 use crate::terminal::model::ObfuscateSecrets;
 use crate::terminal::{color, SizeInfo};
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warpui::elements::{
+use zap_ng_ui::elements::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext, Point,
     SizeConstraint,
 };
-use warpui::event::DispatchedEvent;
-use warpui::geometry::rect::RectF;
+use zap_ng_ui::event::DispatchedEvent;
+use zap_ng_ui::geometry::rect::RectF;
 
 use super::blockgrid_renderer::GridRenderParams;
 
@@ -44,7 +44,7 @@ impl BlockGridElement {
             block_grid: block_grid.clone(),
             block_grid_params: BlockGridParams {
                 grid_render_params: GridRenderParams {
-                    warp_theme: theme.clone(),
+                    zap_ng_theme: theme.clone(),
                     font_family: appearance.monospace_font_family(),
                     font_size: appearance.monospace_font_size(),
                     font_weight: appearance.monospace_font_weight(),

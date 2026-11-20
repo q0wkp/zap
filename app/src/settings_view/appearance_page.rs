@@ -48,8 +48,8 @@ use crate::terminal::settings::{
 };
 use crate::terminal::{BlockListSettings, ShowBlockDividers};
 use crate::terminal::{ShowJumpToBottomOfBlockButton, SizeInfo};
-use crate::themes::theme::{self, RespectSystemTheme, SelectedSystemThemes, ThemeKind, WarpTheme};
-use crate::user_config::WarpConfig;
+use crate::themes::theme::{self, RespectSystemTheme, SelectedSystemThemes, ThemeKind, ZapNGTheme};
+use crate::user_config::ZapNGConfig;
 use crate::util::bindings;
 use crate::window_settings::{
     BackgroundBlurRadius, BackgroundOpacity, LeftPanelVisibilityAcrossTabs,
@@ -77,25 +77,25 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
-use warp_core::ui::theme::color::internal_colors;
-use warp_util::path::user_friendly_path;
-use warpui::elements::{
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_util::path::user_friendly_path;
+use zap_ng_ui::elements::{
     Clipped, Empty, FormattedTextElement, MainAxisAlignment, MainAxisSize, Text, Wrap,
 };
-use warpui::fonts::{FamilyId, FontInfo, Weight};
-use warpui::keymap::{ContextPredicate, FixedBinding};
-use warpui::platform::{Cursor, FilePickerConfiguration, GraphicsBackend};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::radio_buttons::{
+use zap_ng_ui::fonts::{FamilyId, FontInfo, Weight};
+use zap_ng_ui::keymap::{ContextPredicate, FixedBinding};
+use zap_ng_ui::platform::{Cursor, FilePickerConfiguration, GraphicsBackend};
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::ui_components::radio_buttons::{
     RadioButtonItem, RadioButtonLayout, RadioButtonStateHandle,
 };
-use warpui::ui_components::slider::SliderStateHandle;
-use warpui::ui_components::switch::SwitchStateHandle;
-use warpui::units::IntoPixels;
+use zap_ng_ui::ui_components::slider::SliderStateHandle;
+use zap_ng_ui::ui_components::switch::SwitchStateHandle;
+use zap_ng_ui::units::IntoPixels;
 
-use warpui::id;
-use warpui::{
+use zap_ng_ui::id;
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Dismiss, Element, Fill, Flex, Hoverable, MouseStateHandle, ParentElement, Radius,
@@ -103,8 +103,8 @@ use warpui::{
     },
     rendering::ThinStrokes,
 };
-use warpui::{platform::SystemTheme, Action};
-use warpui::{
+use zap_ng_ui::{platform::SystemTheme, Action};
+use zap_ng_ui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, UpdateModel, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -1102,7 +1102,7 @@ impl AppearanceSettingsPageView {
             // `all_system_fonts` API doesn't exist.
             #[cfg(not(target_family = "wasm"))]
             {
-                let all_system_fonts = warpui::fonts::Cache::handle(ctx)
+                let all_system_fonts = zap_ng_ui::fonts::Cache::handle(ctx)
                     .update(ctx, |font_cache, ctx| font_cache.all_system_fonts(ctx));
                 ctx.spawn(all_system_fonts, Self::set_system_fonts);
             }
@@ -2747,10 +2747,10 @@ impl AppearanceSettingsPageView {
             return;
         }
 
-        let dialog = warpui::modals::AlertDialogWithCallbacks::for_app(
+        let dialog = zap_ng_ui::modals::AlertDialogWithCallbacks::for_app(
             crate::t!("language-restart-required-title"),
             crate::t!("language-restart-required-body"),
-            vec![warpui::modals::ModalButton::for_app(
+            vec![zap_ng_ui::modals::ModalButton::for_app(
                 crate::t!("common-ok"),
                 |_app| {},
             )],
@@ -3174,7 +3174,7 @@ impl ThemeSelectWidget {
         is_selected: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        let theme: WarpTheme = WarpConfig::as_ref(app).theme_config().theme(&theme_kind);
+        let theme: ZapNGTheme = ZapNGConfig::as_ref(app).theme_config().theme(&theme_kind);
         let mode_ui_label: String = match theme_chooser_mode {
             ThemeChooserMode::SystemLight => crate::t!("settings-appearance-theme-mode-light"),
             ThemeChooserMode::SystemDark => crate::t!("settings-appearance-theme-mode-dark"),

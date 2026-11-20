@@ -7,18 +7,18 @@ use pathfinder_geometry::{
     vector::{vec2f, Vector2F},
 };
 use settings::Setting as _;
-use warp::integration_testing::terminal::{
+use zap_ng::integration_testing::terminal::{
     assert_command_executed_for_single_terminal_in_tab, assert_focused_editor_in_tab,
     assert_long_running_block_executing_for_single_terminal_in_tab,
 };
-use warp::integration_testing::view_getters::{terminal_view, workspace_view};
-use warp::integration_testing::window::{
+use zap_ng::integration_testing::view_getters::{terminal_view, workspace_view};
+use zap_ng::integration_testing::window::{
     add_and_save_window, assert_num_windows_open, save_active_window_id,
 };
-use warp::integration_testing::workspace::{
+use zap_ng::integration_testing::workspace::{
     assert_focused_tab_index, assert_tab_count, press_native_modal_button,
 };
-use warp::{
+use zap_ng::{
     cmd_or_ctrl_shift,
     integration_testing::{
         pane_group::assert_focused_pane_index,
@@ -32,7 +32,7 @@ use warp::{
     settings::PaneSettings,
     workspace::NEW_TAB_BUTTON_POSITION_ID,
 };
-use warpui::{
+use zap_ng_ui::{
     async_assert, async_assert_eq,
     event::{Event, ModifiersState},
     integration::{AssertionOutcome, TestStep},
@@ -69,7 +69,7 @@ fn focus_other_window(other_window_key: &'static str, known_window_key: &'static
     })
 }
 
-fn dispatch_mouse_event(app: &mut warpui::App, window_id: WindowId, event: Event) {
+fn dispatch_mouse_event(app: &mut zap_ng_ui::App, window_id: WindowId, event: Event) {
     let window = app.read(|ctx| {
         ctx.windows()
             .platform_window(window_id)
@@ -80,7 +80,7 @@ fn dispatch_mouse_event(app: &mut warpui::App, window_id: WindowId, event: Event
     });
 }
 
-fn tab_bounds(app: &mut warpui::App, window_id: WindowId, tab_index: usize) -> RectF {
+fn tab_bounds(app: &mut zap_ng_ui::App, window_id: WindowId, tab_index: usize) -> RectF {
     let presenter = app.presenter(window_id).expect("presenter should exist");
     let bounds = presenter
         .borrow()
@@ -90,12 +90,12 @@ fn tab_bounds(app: &mut warpui::App, window_id: WindowId, tab_index: usize) -> R
     bounds
 }
 
-fn tab_center(app: &mut warpui::App, window_id: WindowId, tab_index: usize) -> Vector2F {
+fn tab_center(app: &mut zap_ng_ui::App, window_id: WindowId, tab_index: usize) -> Vector2F {
     tab_bounds(app, window_id, tab_index).center()
 }
 
 fn source_local_point_for_screen_point(
-    app: &mut warpui::App,
+    app: &mut zap_ng_ui::App,
     source_window_id: WindowId,
     screen_point: Vector2F,
 ) -> Vector2F {
@@ -106,7 +106,7 @@ fn source_local_point_for_screen_point(
 }
 
 fn tab_screen_point(
-    app: &mut warpui::App,
+    app: &mut zap_ng_ui::App,
     window_id: WindowId,
     tab_index: usize,
     x_offset: f32,
@@ -147,7 +147,7 @@ fn set_saved_window_origin(window_key: &'static str, origin: Vector2F) -> TestSt
 
 fn assert_total_tab_count(
     expected_total_tab_count: usize,
-) -> impl FnMut(&mut warpui::App, WindowId) -> AssertionOutcome {
+) -> impl FnMut(&mut zap_ng_ui::App, WindowId) -> AssertionOutcome {
     move |app, _| {
         let total_tab_count = app
             .window_ids()

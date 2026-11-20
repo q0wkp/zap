@@ -10,7 +10,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use warpui::r#async::{executor, FutureExt as _};
+use zap_ng_ui::r#async::{executor, FutureExt as _};
 
 use remote_server::auth::RemoteServerAuthContext;
 use remote_server::client::RemoteServerClient;
@@ -890,7 +890,7 @@ impl RemoteTransport for SshTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use warpui::r#async::BoxFuture;
+    use zap_ng_ui::r#async::BoxFuture;
     fn static_auth_context() -> Arc<RemoteServerAuthContext> {
         Arc::new(RemoteServerAuthContext::new(
             || -> BoxFuture<'static, Option<String>> { Box::pin(async { None }) },

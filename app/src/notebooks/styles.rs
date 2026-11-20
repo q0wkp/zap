@@ -1,6 +1,6 @@
 //! Shared styles for notebooks.
 
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Container, CrossAxisAlignment, Flex, Hoverable, MainAxisAlignment, MouseStateHandle,
         ParentElement,

@@ -1,4 +1,4 @@
-use warp_terminal::model::grid::CellType;
+use zap_ng_terminal::model::grid::CellType;
 
 use crate::terminal::model::index::Point;
 

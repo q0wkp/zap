@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use instant::Instant;
-use warp_cli::agent::Harness;
-use warp_core::features::FeatureFlag;
-use warpui::r#async::{SpawnedFutureHandle, Timer};
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_cli::agent::Harness;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::r#async::{SpawnedFutureHandle, Timer};
+use zap_ng_ui::{Entity, EntityId, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_conversations_model::AgentConversationsModel;

@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use similar::DiffableStr;
-use warpui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
-use warpui::platform::Cursor;
+use zap_ng_ui::elements::{MouseStateHandle, PartialClickableElement, SecretRange};
+use zap_ng_ui::platform::Cursor;
 
 use crate::ai::agent::{AIAgentOutput, AIAgentTextSection, AgentOutputText};
 use crate::terminal::model::secrets::{SecretLevel, SecretsRegex, SECRETS_REGEX};

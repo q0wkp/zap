@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use warpui::{
+use zap_ng_ui::{
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, ModelHandle,
     PaintContext, SizeConstraint, WeakViewHandle,
     elements::Point,

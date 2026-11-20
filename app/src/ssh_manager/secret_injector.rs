@@ -20,8 +20,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_broadcast::InactiveReceiver;
-use warpui::r#async::FutureExt;
-use warpui::{ViewContext, WeakViewHandle};
+use zap_ng_ui::r#async::FutureExt;
+use zap_ng_ui::{ViewContext, WeakViewHandle};
 use zeroize::Zeroizing;
 
 use crate::ssh_manager::password_prompt::bytes_look_like_password_prompt;
@@ -45,7 +45,7 @@ pub fn spawn_password_injector<O>(
     secret: Zeroizing<String>,
     ctx: &mut ViewContext<O>,
 ) where
-    O: warpui::View + 'static,
+    O: zap_ng_ui::View + 'static,
 {
     let Some(rx) = pty_reads_rx else {
         log::debug!("ssh secret injector: no pty_reads_rx (non-local session) — skip");

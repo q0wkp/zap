@@ -3,7 +3,7 @@ use crate::search::searcher::{CustomTokenizer, MIN_MEMORY_BUDGET};
 use itertools::Itertools;
 use std::sync::Arc;
 use tantivy::tokenizer::{TextAnalyzer, Token};
-use warpui::r#async::executor::Background;
+use zap_ng_ui::r#async::executor::Background;
 
 fn token_stream_helper(text: &str) -> Vec<Token> {
     let mut a = TextAnalyzer::from(CustomTokenizer::default());
@@ -40,7 +40,7 @@ fn test_tokenizer_simple() {
 }
 
 #[test]
-fn test_tokenizer_warp_special_chars() {
+fn test_tokenizer_zap_ng_special_chars() {
     // Test string includes warp-related terms with hyphen, underscore, forward slash, backslash, and colon
     let test_string = "warp-cli/launch_command:run C:\\\\Program_Files\\\\Zap\\\\core-engine.dll check_status:/dev/warp_drive-0";
     let tokens = token_stream_helper(test_string);

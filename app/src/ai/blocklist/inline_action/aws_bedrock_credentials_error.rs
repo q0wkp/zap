@@ -1,12 +1,12 @@
 use settings::Setting as _;
-use warp_core::ui::Icon;
-use warpui::elements::{
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Shrinkable, SizeConstraintCondition,
     SizeConstraintSwitch, Text,
 };
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -131,7 +131,7 @@ impl View for AwsBedrockCredentialsErrorView {
         let make_alert_icon = || {
             ConstrainedBox::new(
                 Icon::AlertTriangle
-                    .to_warpui_icon(error_color(theme).into())
+                    .to_zap_ng_ui_icon(error_color(theme).into())
                     .finish(),
             )
             .with_width(icon_size(app))

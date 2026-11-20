@@ -15,10 +15,10 @@ default-members = [
   "crates/editor",
   "crates/markdown_parser",
   "crates/sum_tree",
-  "crates/warpui",
-  "crates/warp_completer",
-  "crates/warp_terminal",
-  "crates/warp_util",
+  "crates/zap_ng_ui",
+  "crates/zap_ng_completer",
+  "crates/zap_ng_terminal",
+  "crates/zap_ng_util",
 ]
 
 [workspace.package]
@@ -64,27 +64,27 @@ ui_components = { path = "crates/ui_components" }
 vim = { path = "crates/vim" }
 virtual-fs = { path = "crates/virtual_fs" }
 voice_input = { path = "crates/voice_input" }
-warp = { path = "app" }
-warp_cli = { path = "crates/warp_cli" }
-warp_completer = { path = "crates/warp_completer" }
-warp_core = { path = "crates/warp_core" }
-warp_editor = { path = "crates/editor" }
-warp_features = { path = "crates/warp_features" }
+zap-ng = { path = "app" }
+zap_ng_cli = { path = "crates/zap_ng_cli" }
+zap_ng_completer = { path = "crates/zap_ng_completer" }
+zap_ng_core = { path = "crates/zap_ng_core" }
+zap_ng_editor = { path = "crates/editor" }
+zap_ng_features = { path = "crates/zap_ng_features" }
 remote_server = { path = "crates/remote_server" }
-warp_files = { path = "crates/warp_files" }
-warp_isolation_platform = { path = "crates/isolation_platform" }
-warp_js = { path = "crates/warp_js" }
-warp_logging = { path = "crates/warp_logging" }
-warp_managed_secrets = { path = "crates/managed_secrets" }
-warp_ripgrep = { path = "crates/warp_ripgrep" }
-warp_ssh_manager = { path = "crates/warp_ssh_manager" }
-warp_terminal = { path = "crates/warp_terminal" }
-warp_util = { path = "crates/warp_util" }
+zap_ng_files = { path = "crates/zap_ng_files" }
+zap_ng_isolation_platform = { path = "crates/isolation_platform" }
+zap_ng_js = { path = "crates/zap_ng_js" }
+zap_ng_logging = { path = "crates/zap_ng_logging" }
+zap_ng_managed_secrets = { path = "crates/managed_secrets" }
+zap_ng_ripgrep = { path = "crates/zap_ng_ripgrep" }
+zap_ng_ssh_manager = { path = "crates/zap_ng_ssh_manager" }
+zap_ng_terminal = { path = "crates/zap_ng_terminal" }
+zap_ng_util = { path = "crates/zap_ng_util" }
 zap_sync = { path = "crates/zap_sync" }
-warp_web_event_bus = { path = "crates/warp_web_event_bus" }
-warpui = { path = "crates/warpui" }
-warpui_core = { path = "crates/warpui_core" }
-warpui_extras = { path = "crates/warpui_extras", default-features = false }
+zap_ng_web_event_bus = { path = "crates/zap_ng_web_event_bus" }
+zap_ng_ui = { path = "crates/zap_ng_ui" }
+zap_ng_ui_core = { path = "crates/zap_ng_ui_core" }
+zap_ng_ui_extras = { path = "crates/zap_ng_ui_extras", default-features = false }
 watcher = { path = "crates/watcher" }
 websocket = { path = "crates/websocket" }
 

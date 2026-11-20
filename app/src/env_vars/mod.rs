@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use view::command_dialog::EnvVarSecretCommand;
-use warp_util::path::ShellFamily;
+use zap_ng_util::path::ShellFamily;
 
 pub mod active_env_var_collection_data;
 pub mod env_var_collection_block;
@@ -17,7 +17,7 @@ use crate::{
         GenericStoredObject, GenericStringObjectFormat, GenericStringObjectUniqueKey,
         JsonObjectType,
     },
-    drive::items::{env_var_collection::WarpDriveEnvVarCollection, WarpDriveItem},
+    drive::items::{env_var_collection::ZapNGDriveEnvVarCollection, ZapNGDriveItem},
     external_secrets::ExternalSecret,
     server::ids::SyncId,
     terminal::shell::ShellType,
@@ -184,7 +184,7 @@ impl StringModel for EnvVarCollection {
         true
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         true
     }
 
@@ -196,13 +196,13 @@ impl StringModel for EnvVarCollection {
         true
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         env_var_collection: &EnvVarCollectionObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveEnvVarCollection::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveEnvVarCollection::new(
             ObjectTypeAndId::GenericStringObject {
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                 id,

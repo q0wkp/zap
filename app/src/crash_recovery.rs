@@ -4,14 +4,14 @@ use std::collections::HashMap;
 use ::settings::Setting as _;
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
-use warp_cli::RecoveryMechanism;
-use warp_core::channel::{Channel, ChannelState};
-use warpui::{Entity, ModelContext, SingletonEntity, WindowId};
-use warpui_extras::user_preferences::UserPreferences;
+use zap_ng_cli::RecoveryMechanism;
+use zap_ng_core::channel::{Channel, ChannelState};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity, WindowId};
+use zap_ng_ui_extras::user_preferences::UserPreferences;
 
 use crate::{report_if_error, settings};
 
-/// Keep in sync with [`warp_cli::AppArgs`].
+/// Keep in sync with [`zap_ng_cli::AppArgs`].
 pub const RECOVERY_MECHANISM_ARG: &str = "crash-recovery-mechanism";
 
 lazy_static! {
@@ -32,7 +32,7 @@ pub enum Event {
 }
 
 /// Returns true if this process is the crash recovery process.
-pub fn is_crash_recovery_process(args: &warp_cli::AppArgs) -> bool {
+pub fn is_crash_recovery_process(args: &zap_ng_cli::AppArgs) -> bool {
     args.crash_recovery_mechanism.is_some()
 }
 
@@ -77,7 +77,7 @@ impl CrashRecoveryProcess {
 
         *IS_CRASH_RECOVERY_PROCESS_RUNNING.write() = false;
         self.is_alive = false;
-        warp_logging::on_crash_recovery_process_killed();
+        zap_ng_logging::on_crash_recovery_process_killed();
     }
 
     fn handle_draw_frame_error(&mut self, window_id: WindowId) {
@@ -213,14 +213,14 @@ impl CrashRecovery {
     }
 
     #[cfg(test)]
-    pub fn register_for_test(app: &mut warpui::App) {
-        use warp_core::user_preferences::GetUserPreferences as _;
+    pub fn register_for_test(app: &mut zap_ng_ui::App) {
+        use zap_ng_core::user_preferences::GetUserPreferences as _;
 
         app.update(|ctx| {
             ctx.add_singleton_model(|ctx| {
                 let user_preferences = ctx.private_user_preferences();
                 let launch_mode = crate::LaunchMode::App {
-                    args: warp_cli::AppArgs::default(),
+                    args: zap_ng_cli::AppArgs::default(),
                     api_key: None,
                 };
                 crate::crash_recovery::CrashRecovery::new(&launch_mode, user_preferences)
@@ -328,7 +328,7 @@ fn spawn_recovery_process(
 }
 
 #[cfg(unix)]
-fn wait_for_parent_crash(args: &warp_cli::AppArgs) {
+fn wait_for_parent_crash(args: &zap_ng_cli::AppArgs) {
     use nix::unistd::Pid;
 
     let parent_pid = args
@@ -356,7 +356,7 @@ fn handle_parent_crash(
     recovery_mechanism: RecoveryMechanism,
     user_preferences: &dyn UserPreferences,
 ) -> bool {
-    warp_logging::on_parent_process_crash();
+    zap_ng_logging::on_parent_process_crash();
 
     match recovery_mechanism {
         #[cfg(target_os = "linux")]

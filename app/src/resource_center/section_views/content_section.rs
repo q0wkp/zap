@@ -1,5 +1,5 @@
 use pathfinder_color::ColorU;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, Element, Empty, Flex, MouseStateHandle, ParentElement,
         Shrinkable,

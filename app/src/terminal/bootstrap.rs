@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use memo_map::MemoMap;
-use warpui::{AppContext, AssetProvider, SingletonEntity};
+use zap_ng_ui::{AppContext, AssetProvider, SingletonEntity};
 
 use crate::{
     env_vars::EnvVar,
@@ -13,7 +13,7 @@ use crate::{
 #[cfg(feature = "local_fs")]
 use super::{
     model::session::{BootstrapSessionType, SessionInfo},
-    warpify::settings::{PIPENV_SUBSHELL_COMMAND_REGEX, POETRY_SUBSHELL_COMMAND_REGEX},
+    zapngify::settings::{PIPENV_SUBSHELL_COMMAND_REGEX, POETRY_SUBSHELL_COMMAND_REGEX},
 };
 
 lazy_static! {
@@ -88,7 +88,7 @@ pub fn should_use_rc_file_bootstrap_method(
                 || is_poetry_subshell
                 || (is_pipenv_subshell && shell_type == ShellType::Zsh)
         }
-        BootstrapSessionType::WarpifiedRemote => false,
+        BootstrapSessionType::ZapNGifiedRemote => false,
     }
 }
 

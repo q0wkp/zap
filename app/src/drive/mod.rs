@@ -17,8 +17,8 @@ use std::{cmp::Ordering, fmt};
 pub use index::DriveIndexVariant;
 pub use panel::{DrivePanel, DrivePanelEvent};
 use serde::{Deserialize, Serialize};
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::AppContext;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::AppContext;
 
 use crate::{
     cloud_object::{

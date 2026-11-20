@@ -57,7 +57,7 @@ fn tool_name_for(tc: &api::message::ToolCall) -> Option<String> {
 
 /// 单条 `api::Message` 的视图。
 #[derive(Clone, Copy)]
-pub struct WarpMessageView<'a> {
+pub struct ZapNGMessageView<'a> {
     pub msg: &'a api::Message,
     pub state: &'a CompactionState,
     pub tool_names: &'a ToolNameLookup,
@@ -94,7 +94,7 @@ fn estimate_message(msg: &api::Message) -> usize {
     estimate(&" ".repeat(chars))
 }
 
-impl<'a> MessageRef for WarpMessageView<'a> {
+impl<'a> MessageRef for ZapNGMessageView<'a> {
     type Id = String;
     type CallId = String;
 
@@ -164,13 +164,13 @@ impl<'a> MessageRef for WarpMessageView<'a> {
     }
 }
 
-/// 把一组 messages 投影成 `Vec<WarpMessageView>`,按 timestamp 升序排序 —
+/// 把一组 messages 投影成 `Vec<ZapNGMessageView>`,按 timestamp 升序排序 —
 /// 与 [`crate::ai::agent_providers::chat_stream::build_chat_request`] 的排序保持一致。
 pub fn project<'a>(
     messages: &'a [&'a api::Message],
     state: &'a CompactionState,
     tool_names: &'a ToolNameLookup,
-) -> Vec<WarpMessageView<'a>> {
+) -> Vec<ZapNGMessageView<'a>> {
     let mut sorted: Vec<&api::Message> = messages.to_vec();
     sorted.sort_by_key(|m| {
         m.timestamp
@@ -180,7 +180,7 @@ pub fn project<'a>(
     });
     sorted
         .into_iter()
-        .map(|msg| WarpMessageView {
+        .map(|msg| ZapNGMessageView {
             msg,
             state,
             tool_names,

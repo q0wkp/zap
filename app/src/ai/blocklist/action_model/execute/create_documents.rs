@@ -1,5 +1,5 @@
 use futures::{future::BoxFuture, FutureExt};
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{
     ai::{
@@ -19,13 +19,13 @@ use super::{ActionExecution, AnyActionExecution, ExecuteActionInput, PreprocessA
 
 pub struct CreateDocumentsExecutor {
     active_session: ModelHandle<ActiveSession>,
-    terminal_view_id: warpui::EntityId,
+    terminal_view_id: zap_ng_ui::EntityId,
 }
 
 impl CreateDocumentsExecutor {
     pub fn new(
         active_session: ModelHandle<ActiveSession>,
-        terminal_view_id: warpui::EntityId,
+        terminal_view_id: zap_ng_ui::EntityId,
     ) -> Self {
         Self {
             active_session,
@@ -104,7 +104,7 @@ impl CreateDocumentsExecutor {
                 // Add plan artifact to the conversation.
                 let artifact = Artifact::Plan {
                     document_uid: id.to_string(),
-                    notebook_uid: None, // openWarp 不同步到云 notebook,始终为 None;本地打开走 document_uid
+                    notebook_uid: None, // ZapNG 不同步到云 notebook,始终为 None;本地打开走 document_uid
                     title: Some(document.title.clone()),
                 };
                 let terminal_view_id = self.terminal_view_id;
@@ -136,7 +136,7 @@ impl CreateDocumentsExecutor {
             model.clear_streaming_documents_for_action(&conversation_id, action_id, ctx);
         });
 
-        // openWarp 不再把 plan 推送到 Zap Drive；plan 内容已通过
+        // ZapNG 不再把 plan 推送到 Zap Drive；plan 内容已通过
         // AIDocumentModel::enqueue_save 写入本地 SQLite ai_document_panes 表,
         // 用户在右侧 pane 中可直接查看与编辑。
 

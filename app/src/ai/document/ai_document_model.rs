@@ -11,7 +11,7 @@ use anyhow;
 use chrono::{DateTime, Local, Utc};
 use itertools::Itertools;
 use uuid::Uuid;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WindowId};
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity, WindowId};
 
 use crate::ai::ai_document_view::DEFAULT_PLANNING_DOCUMENT_TITLE;
 use crate::global_resource_handles::GlobalResourceHandlesProvider;
@@ -37,8 +37,8 @@ use crate::{
     throttle::throttle,
 };
 use ai::diff_validation::DiffDelta;
-use warp_editor::{model::RichTextEditorModel, render::model::RichTextStyles};
-use warpui::color::ColorU;
+use zap_ng_editor::{model::RichTextEditorModel, render::model::RichTextStyles};
+use zap_ng_ui::color::ColorU;
 
 /// The frequency at which we check for modifications and save the AI document to the server.
 /// Uses the same 2-second period as notebooks for consistency.
@@ -50,7 +50,7 @@ struct AIDocumentSaveRequest {
 
 /// The status of saving an AI Document.
 ///
-/// openWarp 中 plan 只写本地 SQLite,不写云端 Drive,因此
+/// ZapNG 中 plan 只写本地 SQLite,不写云端 Drive,因此
 /// 只保留 `Saved` / `NotSaved` 两种状态。
 pub enum AIDocumentSaveStatus {
     /// 已保存到本地 SQLite
@@ -187,11 +187,11 @@ impl AIDocumentModel {
         }
     }
 
-    /// 返回文档的本地保存状态。在 openWarp 下只要文档还存在内存中,
+    /// 返回文档的本地保存状态。在 ZapNG 下只要文档还存在内存中,
     /// 其 markdown 内容就已由 throttle save 通道写入 SQLite 了,
     /// 因此始终为 `Saved`。
     pub fn get_document_save_status(&self, id: &AIDocumentId) -> AIDocumentSaveStatus {
-        // openWarp 不使用云端同步；Plan 内容已自动写入本地 SQLite，
+        // ZapNG 不使用云端同步；Plan 内容已自动写入本地 SQLite，
         // 文档存在即视为已保存。
         if self.documents.contains_key(id) {
             AIDocumentSaveStatus::Saved
@@ -225,7 +225,7 @@ impl AIDocumentModel {
 
     /// Create a document from an existing local AI document id and content.
     ///
-    /// openWarp 本地化:原 `create_document_from_notebook` 依赖云 notebook 提供
+    /// ZapNG 本地化:原 `create_document_from_notebook` 依赖云 notebook 提供
     /// title + sync_id;本地路径只需要 id + content,仅用于「会话恢复
     /// 时 plan 不在内存中」的占位重建。
     pub fn create_document_with_id(
@@ -534,7 +534,7 @@ impl AIDocumentModel {
     pub fn get_document_content(
         &self,
         id: &AIDocumentId,
-        ctx: &warpui::AppContext,
+        ctx: &zap_ng_ui::AppContext,
     ) -> Option<String> {
         let doc = self.documents.get(id)?;
         Some(doc.editor.as_ref(ctx).markdown_unescaped(ctx))
@@ -709,7 +709,7 @@ impl AIDocumentModel {
                 version,
                 source,
             });
-            // openWarp 本地化:不再向云 notebook 推送新版本内容,全走本地 SQLite。
+            // ZapNG 本地化:不再向云 notebook 推送新版本内容,全走本地 SQLite。
             Some(version)
         } else {
             None
@@ -737,7 +737,7 @@ impl AIDocumentModel {
             ctx,
         );
 
-        // openWarp 本地化:plan 只存本地 SQLite,不再从云 notebook 反查 sync_id。
+        // ZapNG 本地化:plan 只存本地 SQLite,不再从云 notebook 反查 sync_id。
     }
 
     /// This is used for restoring EditDocuments results where we already have the final content.
@@ -814,7 +814,7 @@ impl AIDocumentModel {
             .copied()
             .unwrap_or(false)
         {
-            // openWarp 本地化:不再向云 notebook 推送内容,只写本地 SQLite。
+            // ZapNG 本地化:不再向云 notebook 推送内容,只写本地 SQLite。
             self.persist_content_to_sqlite(&request.document_id, ctx);
             self.content_dirty_flags.insert(request.document_id, false);
         }
@@ -914,7 +914,7 @@ impl AIDocumentModel {
 }
 
 impl AIDocumentEarlierVersion {
-    pub fn get_content(&self, ctx: &warpui::AppContext) -> String {
+    pub fn get_content(&self, ctx: &zap_ng_ui::AppContext) -> String {
         self.editor.as_ref(ctx).markdown_unescaped(ctx)
     }
 }

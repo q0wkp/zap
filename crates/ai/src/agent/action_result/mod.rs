@@ -4,9 +4,9 @@ use std::{fmt::Display, ops::Range, time::SystemTime};
 
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 use warp_multi_agent_api::apply_file_diffs_result::success::UpdatedFileContent;
-use warp_terminal::model::BlockId;
+use zap_ng_terminal::model::BlockId;
 
 use crate::{
     agent::FileLocations,
@@ -524,7 +524,7 @@ pub enum RequestFileEditsResult {
         lines_removed: usize,
         /// Remarks for the model on how the edits were matched against the files, such as a
         /// search that matched only once indentation was ignored. Only BYOP models get them:
-        /// Warp's protocol has no field for them, so they are not stored with the conversation.
+        /// ZapNG's protocol has no field for them, so they are not stored with the conversation.
         notes: Vec<String>,
     },
     Cancelled,

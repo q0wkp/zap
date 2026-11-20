@@ -3,10 +3,10 @@
 use num_traits::Zero;
 use pathfinder_geometry::vector::vec2f;
 use pathfinder_geometry::vector::Vector2F;
-use warpui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
-use warpui::fonts::Cache as FontCache;
-use warpui::fonts::FamilyId;
-use warpui::text_layout::ComputeBaselinePositionFn;
+use zap_ng_ui::elements::DEFAULT_UI_LINE_HEIGHT_RATIO;
+use zap_ng_ui::fonts::Cache as FontCache;
+use zap_ng_ui::fonts::FamilyId;
+use zap_ng_ui::text_layout::ComputeBaselinePositionFn;
 
 /// Computes the grid cell size given the font and size at which the grid should
 /// be rendered. We use a similar algorithm to Alacritty to do this, where the

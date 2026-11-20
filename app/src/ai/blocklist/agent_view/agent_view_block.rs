@@ -1,7 +1,7 @@
 use pathfinder_color::ColorU;
 use settings::Setting;
-use warp_core::ui::{appearance::Appearance, Icon};
-use warpui::{
+use zap_ng_core::ui::{appearance::Appearance, Icon};
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, Hoverable, MainAxisSize,
         MouseStateHandle, ParentElement, Shrinkable, Text,
@@ -191,7 +191,7 @@ impl View for AgentViewEntryBlock {
         "EnterAgentBlock"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         if self.agent_view_controller.as_ref(app).is_fullscreen() {
             return Empty::new().finish();
         }
@@ -303,7 +303,7 @@ impl View for AgentViewEntryBlock {
         row.add_child(
             ConstrainedBox::new(
                 Icon::ChevronRight
-                    .to_warpui_icon(
+                    .to_zap_ng_ui_icon(
                         blended_colors::text_sub(
                             appearance.theme(),
                             appearance.theme().background(),

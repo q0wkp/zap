@@ -8,11 +8,11 @@ use crate::search::ai_context_menu::styles;
 use crate::search::ai_context_menu::{mixer::AIContextMenuSearchableAction, safe_truncate};
 use crate::search::item::SearchItem;
 use crate::search::result_renderer::ItemHighlightState;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, Icon, ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
 const MAX_COMBINED_LENGTH: usize = 55;
 

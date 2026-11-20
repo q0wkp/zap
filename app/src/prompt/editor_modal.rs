@@ -1,14 +1,14 @@
 use itertools::Itertools;
-use warp_core::ui::theme::Fill;
+use zap_ng_core::ui::theme::Fill;
 
 use pathfinder_geometry::vector::vec2f;
 use serde::Serialize;
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
-use warpui::{
+use zap_ng_ui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -31,7 +31,7 @@ use crate::terminal::session_settings::SessionSettings;
 use crate::view_components::{Dropdown, DropdownItem};
 use crate::Appearance;
 use crate::{report_if_error, send_telemetry_from_ctx};
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Empty, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
@@ -55,7 +55,7 @@ const DROPDOWN_WIDTH: f32 = 72.;
 const CHECKBOX_SIZE: f32 = 16.;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -79,8 +79,8 @@ pub enum EditorModalEvent {
 struct MouseStateHandles {
     cancel_button_handle: MouseStateHandle,
     save_button_handle: MouseStateHandle,
-    restore_default_warp_prompt_handle: MouseStateHandle,
-    warp_prompt_mouse_state_handle: MouseStateHandle,
+    restore_default_zap_ng_prompt_handle: MouseStateHandle,
+    zap_ng_prompt_mouse_state_handle: MouseStateHandle,
     ps1_mouse_state_handle: MouseStateHandle,
     same_line_prompt_checkbox_state_handle: MouseStateHandle,
 }
@@ -108,9 +108,9 @@ pub struct EditorModal {
 
     /// Dropdown to select the separator for the Zap prompt, in the case of
     /// same line prompt. This separator is added at the end of the Zap prompt.
-    warp_prompt_separator_dropdown: ViewHandle<Dropdown<EditorModalAction>>,
+    zap_ng_prompt_separator_dropdown: ViewHandle<Dropdown<EditorModalAction>>,
     /// The separator currently selected for the Zap prompt.
-    warp_prompt_separator: WarpPromptSeparator,
+    zap_ng_prompt_separator: WarpPromptSeparator,
 
     /// True if there was any change while the modal was open.
     is_dirty: bool,
@@ -122,14 +122,14 @@ pub struct EditorModal {
 enum PromptType {
     PS1,
     Zap,
-    WarpDefault,
+    ZapNGDefault,
 }
 
 impl PromptType {
-    fn warp_prompt_from_settings(app: &AppContext) -> PromptType {
+    fn zap_ng_prompt_from_settings(app: &AppContext) -> PromptType {
         let session_settings = SessionSettings::as_ref(app);
         if matches!(*session_settings.saved_prompt, PromptSelection::Default) {
-            PromptType::WarpDefault
+            PromptType::ZapNGDefault
         } else {
             PromptType::Zap
         }
@@ -140,7 +140,7 @@ impl PromptType {
         if *session_settings.honor_ps1 {
             PromptType::PS1
         } else {
-            Self::warp_prompt_from_settings(app)
+            Self::zap_ng_prompt_from_settings(app)
         }
     }
 }
@@ -151,10 +151,10 @@ pub enum EditorModalAction {
     Save,
     Chip(ChipConfiguratorAction),
     UsePS1,
-    UseWarpPrompt,
-    ResetWarpPrompt,
+    UseZapNGPrompt,
+    ResetZapNGPrompt,
     ToggleSameLinePrompt,
-    SetWarpPromptSeparator { separator: WarpPromptSeparator },
+    SetZapNGPromptSeparator { separator: WarpPromptSeparator },
 }
 
 impl EditorModal {
@@ -166,39 +166,39 @@ impl EditorModal {
             .value()
             .same_line_prompt_enabled();
 
-        let warp_prompt_separator = match SessionSettings::as_ref(ctx).saved_prompt.value() {
+        let zap_ng_prompt_separator = match SessionSettings::as_ref(ctx).saved_prompt.value() {
             PromptSelection::CustomChipSelection(config) => config.separator(),
             // If the "default Zap prompt" i.e. no context chips, is selected, then default to no Zap prompt separator.
             _ => WarpPromptSeparator::None,
         };
-        let warp_prompt_separator_label = warp_prompt_separator.dropdown_item_label().to_owned();
+        let zap_ng_prompt_separator_label = zap_ng_prompt_separator.dropdown_item_label().to_owned();
 
-        let warp_prompt_separator_dropdown = ctx.add_typed_action_view(|ctx| {
+        let zap_ng_prompt_separator_dropdown = ctx.add_typed_action_view(|ctx| {
             let mut dropdown = Dropdown::new(ctx);
             dropdown.set_top_bar_max_width(DROPDOWN_WIDTH);
             dropdown.set_menu_width(DROPDOWN_WIDTH, ctx);
             let items = vec![
                 DropdownItem::new(
                     WarpPromptSeparator::None.dropdown_item_label(),
-                    EditorModalAction::SetWarpPromptSeparator {
+                    EditorModalAction::SetZapNGPromptSeparator {
                         separator: WarpPromptSeparator::None,
                     },
                 ),
                 DropdownItem::new(
                     WarpPromptSeparator::PercentSign.dropdown_item_label(),
-                    EditorModalAction::SetWarpPromptSeparator {
+                    EditorModalAction::SetZapNGPromptSeparator {
                         separator: WarpPromptSeparator::PercentSign,
                     },
                 ),
                 DropdownItem::new(
                     WarpPromptSeparator::DollarSign.dropdown_item_label(),
-                    EditorModalAction::SetWarpPromptSeparator {
+                    EditorModalAction::SetZapNGPromptSeparator {
                         separator: WarpPromptSeparator::DollarSign,
                     },
                 ),
                 DropdownItem::new(
                     WarpPromptSeparator::ChevronSymbol.dropdown_item_label(),
-                    EditorModalAction::SetWarpPromptSeparator {
+                    EditorModalAction::SetZapNGPromptSeparator {
                         separator: WarpPromptSeparator::ChevronSymbol,
                     },
                 ),
@@ -211,7 +211,7 @@ impl EditorModal {
             }
 
             dropdown.set_items(items, ctx);
-            dropdown.set_selected_by_name(warp_prompt_separator_label, ctx);
+            dropdown.set_selected_by_name(zap_ng_prompt_separator_label, ctx);
             dropdown
         });
 
@@ -223,8 +223,8 @@ impl EditorModal {
             prompt_type,
             chip_runtime_capabilities: Default::default(),
             same_line_prompt_enabled,
-            warp_prompt_separator_dropdown,
-            warp_prompt_separator,
+            zap_ng_prompt_separator_dropdown,
+            zap_ng_prompt_separator,
         }
     }
 
@@ -286,15 +286,15 @@ impl EditorModal {
     }
 
     /// Updates the state of the Zap prompt separator dropdown to be enabled/disabled based on the current state of the modal.
-    fn update_warp_separator_dropdown_state(&mut self, ctx: &mut ViewContext<Self>) {
+    fn update_zap_ng_separator_dropdown_state(&mut self, ctx: &mut ViewContext<Self>) {
         // If we are using the Zap prompt and SLP is enabled, then we enable the dropdown. Otherwise, disable it.
         if self.prompt_type != PromptType::PS1 && self.same_line_prompt_enabled {
-            self.warp_prompt_separator_dropdown
+            self.zap_ng_prompt_separator_dropdown
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_enabled(ctx);
                 });
         } else {
-            self.warp_prompt_separator_dropdown
+            self.zap_ng_prompt_separator_dropdown
                 .update(ctx, |dropdown, ctx| {
                     dropdown.set_disabled(ctx);
                 });
@@ -310,7 +310,7 @@ impl EditorModal {
                         report_if_error!(settings.honor_ps1.set_value(true, ctx));
                     });
                 }
-                PromptType::WarpDefault => {
+                PromptType::ZapNGDefault => {
                     Prompt::handle(ctx).update(ctx, |prompt, ctx| {
                         report_if_error!(prompt.reset(ctx));
                     });
@@ -339,7 +339,7 @@ impl EditorModal {
                         report_if_error!(prompt.update(
                             new_setup,
                             self.same_line_prompt_enabled,
-                            self.warp_prompt_separator,
+                            self.zap_ng_prompt_separator,
                             ctx
                         ));
                     });
@@ -348,7 +348,7 @@ impl EditorModal {
 
             let prompt_info = match self.prompt_type {
                 PromptType::PS1 => PromptChoice::PS1,
-                PromptType::WarpDefault => PromptChoice::Default,
+                PromptType::ZapNGDefault => PromptChoice::Default,
                 PromptType::Zap => PromptChoice::Custom {
                     builtin_chips: self
                         .chip_configurator
@@ -404,25 +404,25 @@ impl TypedActionView for EditorModal {
                 self.is_dirty = true;
                 self.prompt_type = PromptType::PS1;
                 // Disable the Zap separator dropdown (only applies to Zap prompt).
-                self.update_warp_separator_dropdown_state(ctx);
+                self.update_zap_ng_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::UseWarpPrompt => {
+            Self::Action::UseZapNGPrompt => {
                 self.is_dirty = true;
-                self.prompt_type = PromptType::warp_prompt_from_settings(ctx);
+                self.prompt_type = PromptType::zap_ng_prompt_from_settings(ctx);
                 // Enable the Zap separator dropdown, if SLP is on.
-                self.update_warp_separator_dropdown_state(ctx);
+                self.update_zap_ng_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::ResetWarpPrompt => {
+            Self::Action::ResetZapNGPrompt => {
                 self.is_dirty = true;
-                self.prompt_type = PromptType::WarpDefault;
+                self.prompt_type = PromptType::ZapNGDefault;
 
                 let default_prompt = PromptConfiguration::default_prompt();
                 self.same_line_prompt_enabled = default_prompt.same_line_prompt_enabled();
-                self.warp_prompt_separator = default_prompt.separator();
+                self.zap_ng_prompt_separator = default_prompt.separator();
                 // Disable the Zap separator dropdown, since SLP is off for the default Zap prompt.
-                self.update_warp_separator_dropdown_state(ctx);
+                self.update_zap_ng_separator_dropdown_state(ctx);
                 let restored_chips = default_prompt.chip_kinds();
                 self.update_used_chips(restored_chips, ctx);
                 ctx.notify();
@@ -435,12 +435,12 @@ impl TypedActionView for EditorModal {
                 // same line prompt - it's no longer the default prompt.
                 self.prompt_type = PromptType::Zap;
 
-                self.update_warp_separator_dropdown_state(ctx);
+                self.update_zap_ng_separator_dropdown_state(ctx);
                 ctx.notify();
             }
-            Self::Action::SetWarpPromptSeparator { separator } => {
+            Self::Action::SetZapNGPromptSeparator { separator } => {
                 self.is_dirty = true;
-                self.warp_prompt_separator = *separator;
+                self.zap_ng_prompt_separator = *separator;
                 ctx.notify();
             }
         }
@@ -480,7 +480,7 @@ impl EditorModal {
             .span(crate::t!("prompt-editor-title"))
             .with_style(UiComponentStyles {
                 font_size: Some(appearance.ui_font_heading_3()),
-                font_weight: Some(warpui::fonts::Weight::Bold),
+                font_weight: Some(zap_ng_ui::fonts::Weight::Bold),
                 ..Default::default()
             })
             .build()
@@ -489,7 +489,7 @@ impl EditorModal {
 
     fn render_unused_chips(&self, appearance: &Appearance) -> Box<dyn Element> {
         self.chip_configurator.render_unused_chips_bank(
-            EditorModalAction::UseWarpPrompt,
+            EditorModalAction::UseZapNGPrompt,
             EditorModalAction::Chip,
             appearance,
         )
@@ -497,7 +497,7 @@ impl EditorModal {
 
     fn render_used_chips(&self, appearance: &Appearance) -> Box<dyn Element> {
         self.chip_configurator.render_used_drop_zone(
-            EditorModalAction::UseWarpPrompt,
+            EditorModalAction::UseZapNGPrompt,
             EditorModalAction::Chip,
             appearance,
         )
@@ -557,13 +557,13 @@ impl EditorModal {
         .finish()
     }
 
-    fn render_restore_default_warp_prompt_button(
+    fn render_restore_default_zap_ng_prompt_button(
         &self,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let button = Hoverable::new(
             self.mouse_state_handles
-                .restore_default_warp_prompt_handle
+                .restore_default_zap_ng_prompt_handle
                 .clone(),
             |_state| {
                 appearance
@@ -577,10 +577,10 @@ impl EditorModal {
                     .finish()
             },
         )
-        .on_click(|ctx, _, _| ctx.dispatch_typed_action(EditorModalAction::ResetWarpPrompt))
+        .on_click(|ctx, _, _| ctx.dispatch_typed_action(EditorModalAction::ResetZapNGPrompt))
         .with_cursor(Cursor::PointingHand);
 
-        if matches!(self.prompt_type, PromptType::WarpDefault) && !self.is_dirty {
+        if matches!(self.prompt_type, PromptType::ZapNGDefault) && !self.is_dirty {
             button.disable().finish()
         } else {
             button.finish()
@@ -643,14 +643,14 @@ impl EditorModal {
                 .finish(),
             )
             .with_child(
-                Container::new(ChildView::new(&self.warp_prompt_separator_dropdown).finish())
+                Container::new(ChildView::new(&self.zap_ng_prompt_separator_dropdown).finish())
                     .with_margin_left(DROPDOWN_LABEL_MARGIN_RIGHT)
                     .finish(),
             )
             .finish()
     }
 
-    fn render_warp_prompt_section(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_zap_ng_prompt_section(&self, appearance: &Appearance) -> Box<dyn Element> {
         let body = Flex::column()
             .with_child(
                 Container::new(self.render_unused_chips(appearance))
@@ -671,27 +671,27 @@ impl EditorModal {
                     .span(crate::t!("prompt-editor-warp-prompt-section"))
                     .with_style(UiComponentStyles {
                         font_size: Some(appearance.ui_font_subheading()),
-                        font_weight: Some(warpui::fonts::Weight::Semibold),
+                        font_weight: Some(zap_ng_ui::fonts::Weight::Semibold),
                         ..Default::default()
                     })
                     .build()
                     .finish(),
             )
-            .with_child(self.render_restore_default_warp_prompt_button(appearance))
+            .with_child(self.render_restore_default_zap_ng_prompt_button(appearance))
             .with_main_axis_alignment(MainAxisAlignment::SpaceBetween)
             .with_main_axis_size(MainAxisSize::Max)
             .finish();
 
         self.render_prompt_section(
             appearance,
-            matches!(self.prompt_type, PromptType::Zap | PromptType::WarpDefault),
+            matches!(self.prompt_type, PromptType::Zap | PromptType::ZapNGDefault),
             header_row,
             None,
             body,
             self.mouse_state_handles
-                .warp_prompt_mouse_state_handle
+                .zap_ng_prompt_mouse_state_handle
                 .clone(),
-            EditorModalAction::UseWarpPrompt,
+            EditorModalAction::UseZapNGPrompt,
         )
     }
 
@@ -720,7 +720,7 @@ impl EditorModal {
             .span(crate::t!("prompt-editor-shell-prompt-section"))
             .with_style(UiComponentStyles {
                 font_size: Some(appearance.ui_font_subheading()),
-                font_weight: Some(warpui::fonts::Weight::Semibold),
+                font_weight: Some(zap_ng_ui::fonts::Weight::Semibold),
                 ..Default::default()
             })
             .build()
@@ -838,7 +838,7 @@ impl View for EditorModal {
             ConstrainedBox::new(
                 column
                     .with_child(
-                        Container::new(self.render_warp_prompt_section(appearance))
+                        Container::new(self.render_zap_ng_prompt_section(appearance))
                             .with_margin_bottom(MARGIN_BETWEEN_MODAL_SECTIONS)
                             .finish(),
                     )

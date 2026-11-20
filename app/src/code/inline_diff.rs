@@ -4,15 +4,15 @@ use std::rc::Rc;
 use crate::ai::blocklist::inline_action::code_diff_view::DiffSessionType;
 use ai::diff_validation::DiffType;
 #[cfg(not(target_family = "wasm"))]
-use warp_files::{FileModel, FileModelEvent};
-use warp_util::file::FileId;
+use zap_ng_files::{FileModel, FileModelEvent};
+use zap_ng_util::file::FileId;
 #[cfg(not(target_family = "wasm"))]
-use warp_util::file::FileSaveError;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::elements::ChildView;
+use zap_ng_util::file::FileSaveError;
+use zap_ng_util::standardized_path::StandardizedPath;
+use zap_ng_ui::elements::ChildView;
 #[cfg(not(target_family = "wasm"))]
-use warpui::SingletonEntity;
-use warpui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use super::diff_viewer::DiffViewer;
 use super::diff_viewer::DisplayMode;

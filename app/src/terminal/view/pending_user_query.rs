@@ -1,5 +1,5 @@
-use warp_core::features::FeatureFlag;
-use warpui::{SingletonEntity, ViewContext};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{SingletonEntity, ViewContext};
 
 use crate::{
     ai::{

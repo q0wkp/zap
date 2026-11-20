@@ -1,18 +1,18 @@
 use chrono::{OutOfRangeError, Utc};
 use futures::stream::AbortHandle;
 
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::{AppContext, Entity, ModelContext};
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::{AppContext, Entity, ModelContext};
 
 use crate::{
     ai::{RequestLimitInfo, RequestUsageInfo},
     ai_assistant::utils::{AssistantTranscriptPart, TranscriptPartSubType},
     send_telemetry_from_ctx,
-    server::telemetry::{TelemetryEvent, WarpAIRequestResult},
+    server::telemetry::{TelemetryEvent, ZapNGAIRequestResult},
 };
 
 use super::{
-    execution_context::WarpAiExecutionContext,
+    execution_context::ZapNGAiExecutionContext,
     utils::{markdown_segments_from_text, FormattedTranscriptMessage, TranscriptPart},
 };
 use anyhow::Result;
@@ -111,7 +111,7 @@ impl Requests {
 
     pub fn update_ai_execution_context(
         &mut self,
-        _ai_execution_context: Option<WarpAiExecutionContext>,
+        _ai_execution_context: Option<ZapNGAiExecutionContext>,
     ) {
     }
 
@@ -164,8 +164,8 @@ impl Requests {
         });
         self.request_status = RequestStatus::NotInFlight;
         send_telemetry_from_ctx!(
-            TelemetryEvent::WarpAIRequestIssued {
-                result: WarpAIRequestResult::Failed
+            TelemetryEvent::ZapNGAIRequestIssued {
+                result: ZapNGAIRequestResult::Failed
             },
             ctx
         );

@@ -10,8 +10,8 @@ use crate::terminal::local_tty::shell::{
 use crate::terminal::model::session::command_executor::shell_escape_single_quotes;
 use crate::terminal::shell::ShellType;
 use crate::ASSETS;
-use warp_core::features::FeatureFlag;
-use warp_core::safe_error;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::safe_error;
 
 use crate::report_if_error;
 use itertools::Itertools;
@@ -45,8 +45,8 @@ use std::{
     path::{Path, PathBuf},
     ptr,
 };
-use warp_core::channel::ChannelState;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 const BASH_HISTORY_SIZE_SENTINEL: &str = "57265949261";
 
@@ -167,7 +167,7 @@ fn current_user_via_getpwuid(uid: nix::unistd::Uid) -> Option<CurrentUser> {
 
 /// `getent` is the host's own (typically glibc-dynamic) binary, so it consults
 /// the host's full NSS configuration — including SSSD/LDAP/AD — which a
-/// static/musl Warp binary cannot do in-process.
+/// static/musl ZapNG binary cannot do in-process.
 fn current_user_via_getent(uid: u32) -> Option<CurrentUser> {
     let output = Command::new("getent")
         .arg("passwd")
@@ -478,7 +478,7 @@ fn spawn_command_in_pty(
 
     // Detect isolation platform outside pre_exec, since detect() is not async-signal-safe.
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-    let is_isolated = warp_isolation_platform::detect().is_some();
+    let is_isolated = zap_ng_isolation_platform::detect().is_some();
 
     unsafe {
         let fdlimit = libc::sysconf(libc::_SC_OPEN_MAX) as i32;

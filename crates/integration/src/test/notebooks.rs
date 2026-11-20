@@ -1,4 +1,4 @@
-use warp::{
+use zap_ng::{
     cmd_or_ctrl_shift,
     features::FeatureFlag,
     integration_testing::{
@@ -6,7 +6,7 @@ use warp::{
         notebook::{
             assert_notebook_contents, assert_notebook_id, assert_notebook_not_open,
             assert_notebook_open, assert_notebook_renders_mermaid_diagram,
-            assert_open_in_warp_banner_open, create_a_personal_notebook,
+            assert_open_in_zap_ng_banner_open, create_a_personal_notebook,
             enter_notebook_edit_mode_and_set_markdown, move_notebook_cursor_to_offset,
             open_notebook,
         },
@@ -20,7 +20,7 @@ use warp::{
         window::{add_and_save_window, close_window, save_active_window_id},
     },
 };
-use warpui::integration::TestStep;
+use zap_ng_ui::integration::TestStep;
 
 use super::{new_builder, Builder};
 
@@ -148,7 +148,7 @@ pub fn test_close_notebook_window() -> Builder {
         )
 }
 
-pub fn test_open_in_warp_banner() -> Builder {
+pub fn test_open_in_zap_ng_banner() -> Builder {
     new_builder()
         .with_setup(|utils| {
             std::fs::write(utils.test_dir().join("README.md"), "# Hello, world!")
@@ -162,7 +162,7 @@ pub fn test_open_in_warp_banner() -> Builder {
                 ExpectedExitStatus::Success,
                 (),
             )
-            .add_assertion(assert_open_in_warp_banner_open(0, 0)),
+            .add_assertion(assert_open_in_zap_ng_banner_open(0, 0)),
         )
         .with_step(
             new_step_with_default_assertions("Click Open in Zap banner")

@@ -2,7 +2,7 @@ pub mod inactivity_modal;
 use inactivity_modal::InactivityModal;
 
 use async_channel::Sender;
-use warpui::{
+use zap_ng_ui::{
     elements::MouseStateHandle, r#async::SpawnedFutureHandle, SingletonEntity, ViewContext,
     ViewHandle,
 };

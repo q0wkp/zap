@@ -27,9 +27,9 @@ use std::thread::JoinHandle;
 use ai::project_context::model::ProjectRulePath;
 use chrono::{DateTime, Local, Utc};
 use uuid::Uuid;
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 use warp_multi_agent_api as api;
-use warpui::{AppContext, Entity, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, SingletonEntity};
 
 use crate::ai::blocklist::PersistedAIInput;
 use crate::ai::mcp::TemplatableMCPServerInstallation;

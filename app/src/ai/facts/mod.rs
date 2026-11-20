@@ -1,5 +1,5 @@
 use crate::ai::agent::SuggestedLoggingId;
-use crate::drive::items::{ai_fact::WarpDriveAIFact, WarpDriveItem};
+use crate::drive::items::{ai_fact::ZapNGDriveAIFact, ZapNGDriveItem};
 use crate::server::ids::SyncId;
 use crate::{
     cloud_object::{
@@ -13,7 +13,7 @@ use crate::{
     drive::ObjectTypeAndId,
 };
 use serde::{Deserialize, Serialize};
-use warp_core::ui::appearance::Appearance;
+use zap_ng_core::ui::appearance::Appearance;
 
 pub mod manager;
 pub mod view;
@@ -82,17 +82,17 @@ impl StringModel for AIFact {
         None
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         false
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         ai_fact: &AIFactObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveAIFact::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveAIFact::new(
             ObjectTypeAndId::GenericStringObject {
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::AIFact),
                 id,

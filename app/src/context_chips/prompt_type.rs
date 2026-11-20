@@ -1,4 +1,4 @@
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{
     menu::{MenuItem, MenuItemFields},
@@ -15,12 +15,12 @@ use super::{
     ContextChipKind,
 };
 
-/// The type of warp prompt being used
+/// The type of zap-ng prompt being used
 #[derive(Clone)]
 pub enum PromptType {
-    /// A warp prompt that refreshes chip values on its own. Typical for local sessions.
+    /// A zap-ng prompt that refreshes chip values on its own. Typical for local sessions.
     Dynamic { prompt: ModelHandle<CurrentPrompt> },
-    /// A warp prompt that does not change unless explicitly overwritten. Used for viewers of shared sessions.
+    /// A zap-ng prompt that does not change unless explicitly overwritten. Used for viewers of shared sessions.
     Static { snapshot: PromptSnapshot },
 }
 

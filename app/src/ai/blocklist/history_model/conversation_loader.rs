@@ -93,9 +93,9 @@ pub fn convert_persisted_conversation_to_ai_conversation_with_metadata(
 
 /// Boxes a future with the right type for the platform.
 /// On WASM, futures must not implement Send.
-fn box_future<F>(f: F) -> warpui::r#async::BoxFuture<'static, Option<LoadedConversationData>>
+fn box_future<F>(f: F) -> zap_ng_ui::r#async::BoxFuture<'static, Option<LoadedConversationData>>
 where
-    F: Future<Output = Option<LoadedConversationData>> + warpui::r#async::Spawnable,
+    F: Future<Output = Option<LoadedConversationData>> + zap_ng_ui::r#async::Spawnable,
 {
     cfg_if::cfg_if! {
         if #[cfg(target_family = "wasm")] {
@@ -118,7 +118,7 @@ impl BlocklistAIHistoryModel {
     pub fn load_conversation_data(
         &self,
         conversation_id: AIConversationId,
-    ) -> warpui::r#async::BoxFuture<'static, Option<LoadedConversationData>> {
+    ) -> zap_ng_ui::r#async::BoxFuture<'static, Option<LoadedConversationData>> {
         // First check if the conversation is already in memory
         if let Some(conversation) = self.conversations_by_id.get(&conversation_id) {
             return box_future(futures::future::ready(Some(LoadedConversationData::Oz(

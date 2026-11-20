@@ -6,13 +6,13 @@ use onboarding::components::onboarding_callout::{
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
 use ui_components::Component as _;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, WarpTheme};
-use warpui::color::ColorU;
-use warpui::elements::{Rect, Stack};
-use warpui::fonts::{Cache, FamilyId, Weight};
-use warpui::platform;
-use warpui::{prelude::*, AddWindowOptions, AssetProvider, ModelContext};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, TerminalColors, ZapNGTheme};
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::elements::{Rect, Stack};
+use zap_ng_ui::fonts::{Cache, FamilyId, Weight};
+use zap_ng_ui::platform;
+use zap_ng_ui::{prelude::*, AddWindowOptions, AssetProvider, ModelContext};
 
 #[derive(Clone, Copy, RustEmbed)]
 #[folder = "../../app/assets"]
@@ -113,7 +113,7 @@ impl TypedActionView for RootView {
     fn handle_action(&mut self, _action: &Self::Action, _ctx: &mut ViewContext<Self>) {}
 }
 
-fn mock_theme() -> WarpTheme {
+fn mock_theme() -> ZapNGTheme {
     let normal = AnsiColors::new(
         AnsiColor::from_u32(0x121212FF),
         AnsiColor::from_u32(0xC76156FF),
@@ -136,7 +136,7 @@ fn mock_theme() -> WarpTheme {
         AnsiColor::from_u32(0xFFFFFFFF),
     );
 
-    WarpTheme::new(
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -150,7 +150,7 @@ fn mock_theme() -> WarpTheme {
 }
 
 fn build_appearance(
-    theme: WarpTheme,
+    theme: ZapNGTheme,
     ui_font_family: FamilyId,
     ctx: &mut ModelContext<Appearance>,
 ) -> Appearance {

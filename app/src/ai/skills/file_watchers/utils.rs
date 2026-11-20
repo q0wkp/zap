@@ -10,9 +10,9 @@ use ai::skills::{
 use anyhow::Error;
 use regex::Regex;
 use repo_metadata::{local_model::GetContentsArgs, RepoContent, RepoMetadataModel};
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
-use crate::warp_managed_paths_watcher::warp_managed_skill_dirs;
+use crate::zap_ng_managed_paths_watcher::zap_ng_managed_skill_dirs;
 
 /// Finds all skill directories in a repository by querying the RepoMetadataModel tree.
 ///
@@ -85,15 +85,15 @@ static SKILL_FILE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 pub fn extract_skill_parent_directory(path: &Path) -> Result<PathBuf, Error> {
-    let is_warp_home_skill = path
+    let is_zap_ng_home_skill = path
         .file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name == "SKILL.md")
         && path
             .parent()
             .and_then(Path::parent)
-            .is_some_and(|parent| warp_managed_skill_dirs().iter().any(|dir| parent == dir));
-    if is_warp_home_skill {
+            .is_some_and(|parent| zap_ng_managed_skill_dirs().iter().any(|dir| parent == dir));
+    if is_zap_ng_home_skill {
         return dirs::home_dir()
             .ok_or_else(|| anyhow::anyhow!("Home directory not available for {}", path.display()));
     }
@@ -128,7 +128,7 @@ pub fn is_home_skill_directory(path: &Path) -> bool {
 pub fn is_home_provider_path(path: &Path) -> bool {
     SKILL_PROVIDER_DEFINITIONS.iter().any(|provider| {
         if provider.provider == SkillProvider::Zap {
-            return warp_managed_skill_dirs().iter().any(|dir| path == dir);
+            return zap_ng_managed_skill_dirs().iter().any(|dir| path == dir);
         }
         home_skills_path(provider.provider)
             .as_ref()

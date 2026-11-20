@@ -2,16 +2,16 @@ use std::time::Duration;
 
 use crate::modal::Modal;
 use crate::ui_components::blended_colors;
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::{
     ChildView, Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::r#async::Timer;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 

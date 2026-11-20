@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use warp_core::HostId;
-use warp_util::content_version::ContentVersion;
-use warp_util::standardized_path::StandardizedPath;
+use zap_ng_core::HostId;
+use zap_ng_util::content_version::ContentVersion;
+use zap_ng_util::standardized_path::StandardizedPath;
 
 /// Identifies a file on a remote host.
 ///
@@ -137,7 +137,7 @@ impl SyncClock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use warp_util::file_type::is_markdown_file;
+    use zap_ng_util::file_type::is_markdown_file;
 
     fn remote(path: &str) -> BufferLocation {
         BufferLocation::Remote(RemotePath::new(

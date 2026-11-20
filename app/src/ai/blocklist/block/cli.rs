@@ -3,33 +3,33 @@ use pathfinder_color::ColorU;
 use settings::Setting as _;
 use std::time::Duration;
 use std::{cell::RefCell, cmp::Ordering, rc::Rc, sync::Arc};
-use warp_core::features::FeatureFlag;
-use warp_core::report_error;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::new_scrollable::SingleAxisConfig;
-use warpui::elements::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::report_error;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::new_scrollable::SingleAxisConfig;
+use zap_ng_ui::elements::{
     resizable_state_handle, ClippedScrollStateHandle, ConstrainedBox, DispatchEventResult,
     DragBarSide, Empty, EventHandler, Fill, FormattedTextElement, Highlight, HighlightedHyperlink,
     Hoverable, MainAxisAlignment, MainAxisSize, NewScrollable, Resizable, ResizableStateHandle,
     SavePosition, ScrollTarget, ScrollToPositionMode, SelectableArea, SizeConstraintCondition,
     SizeConstraintSwitch,
 };
-use warpui::fonts::Weight;
-use warpui::platform::{Cursor, OperatingSystem};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::units::IntoPixels;
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::platform::{Cursor, OperatingSystem};
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::units::IntoPixels;
 
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::vec2f;
 
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::{
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::{
     content::buffer::InitialBufferState, render::element::VerticalExpansionBehavior,
 };
-use warpui::r#async::Timer;
-use warpui::{
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{
         Border, ChildAnchor, ChildView, Container, CornerRadius, CrossAxisAlignment, DropShadow,
@@ -303,7 +303,7 @@ const HAS_PENDING_NON_TRANSFER_CONTROL_ACTION_CONTEXT_KEY: &str =
 const BLOCKED_ACTION_MESSAGE_FOR_TRANSFER_CONTROL: &str = "Agent is asking you to take control.";
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::{macros::*, FixedBinding};
+    use zap_ng_ui::keymap::{macros::*, FixedBinding};
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -1446,7 +1446,7 @@ impl View for CLISubagentView {
         "CLISubagentView"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         let terminal_model = self.terminal_model.lock();
         let Some(block) = terminal_model.block_list().block_with_id(&self.block_id) else {
             return Empty::new().finish();
@@ -2065,7 +2065,7 @@ impl View for CLISubagentView {
             .finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if self.mode == CLISubagentViewMode::RestoredReadOnly {
             return context;
@@ -2270,7 +2270,7 @@ fn render_action(action: AIAgentActionType, app: &AppContext) -> Option<Box<dyn 
 
     let icon = Container::new(
         ConstrainedBox::new(
-            warpui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
+            zap_ng_ui::elements::Icon::new(icon.into(), internal_colors::neutral_5(theme)).finish(),
         )
         .with_width(icon_size(app))
         .with_height(icon_size(app))
@@ -2312,7 +2312,7 @@ fn render_web_search(query: Option<String>, app: &AppContext) -> Box<dyn Element
 
     let icon = Container::new(
         ConstrainedBox::new(
-            warpui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
+            zap_ng_ui::elements::Icon::new(Icon::Search.into(), internal_colors::neutral_5(theme))
                 .finish(),
         )
         .with_width(icon_size(app))
@@ -2529,7 +2529,7 @@ fn render_permissions_speedbump(
     .with_hyperlink_font_color(blended_colors::accent_fg_strong(theme).into())
     .register_default_click_handlers(|_, ctx, _| {
         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPage(
-            SettingsSection::WarpAgent,
+            SettingsSection::ZapNGAgent,
         ));
     })
     .finish();
@@ -2811,7 +2811,7 @@ fn render_blocked_action(props: BlockedActionProps<'_>, app: &AppContext) -> Box
 mod tests {
     use super::*;
     use crate::ai::agent::{AIAgentOutputMessage, AgentOutputText, MessageId};
-    use warpui::{elements::SelectionBound, text::SelectionType};
+    use zap_ng_ui::{elements::SelectionBound, text::SelectionType};
 
     fn cli_subagent_test_text_output(
         message_id: &str,

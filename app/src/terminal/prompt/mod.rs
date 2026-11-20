@@ -1,4 +1,4 @@
-use warp_util::path::user_friendly_path;
+use zap_ng_util::path::user_friendly_path;
 
 use crate::terminal::model::block::Block;
 use crate::terminal::model::session::Sessions;
@@ -22,7 +22,7 @@ pub fn user_and_host_name_string(
 ) -> Option<String> {
     match session_type {
         SessionType::Local => None,
-        SessionType::WarpifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
+        SessionType::ZapNGifiedRemote { .. } => Some(format!("{user}@{hostname}:")),
     }
 }
 

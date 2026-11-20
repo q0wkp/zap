@@ -8,7 +8,7 @@ use crate::{util::skip_if_powershell_core_2303, Builder};
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use settings::{Setting, ToggleableSetting};
-use warp::{
+use zap_ng::{
     cmd_or_ctrl_shift,
     features::FeatureFlag,
     integration_testing::{
@@ -23,7 +23,7 @@ use warp::{
     settings::SelectionSettings,
 };
 use warp_multi_agent_api as api;
-use warpui::{async_assert, integration::TestStep, text::SelectionType, Event, SingletonEntity};
+use zap_ng_ui::{async_assert, integration::TestStep, text::SelectionType, Event, SingletonEntity};
 
 cfg_if::cfg_if! {
     if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {

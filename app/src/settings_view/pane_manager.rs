@@ -4,7 +4,7 @@ use crate::{
     PaneViewLocator,
 };
 use std::collections::HashMap;
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use zap_ng_ui::{Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use super::SettingsView;
 struct SettingsPaneData {

@@ -6,7 +6,7 @@
 //! 唤出但永远没有候选项。这样可以避免大改上层 view / suggestions mode
 //! 的接线,等未来若要接入「当前 pane group 实时 cwd」再补回数据来源。
 
-use warpui::{AppContext, Entity};
+use zap_ng_ui::{AppContext, Entity};
 
 use crate::search::data_source::{Query, QueryResult};
 use crate::search::mixer::{AsyncDataSource, BoxFuture, DataSourceRunErrorWrapper};

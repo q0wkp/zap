@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use sum_tree::{Cursor, Dimension};
-use warpui::{
+use zap_ng_ui::{
     geometry::vector::Vector2F,
     text_layout::Line,
     units::{IntoPixels, Pixels},

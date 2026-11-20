@@ -9,21 +9,21 @@ use async_channel::{self, Receiver, Sender};
 use async_trait::async_trait;
 use chrono::DateTime;
 use parking_lot::{Mutex, MutexGuard};
-use warp_core::command::ExitCode;
-use warp_terminal::model::Point;
-use warpui::r#async::block_on;
+use zap_ng_core::command::ExitCode;
+use zap_ng_terminal::model::Point;
+use zap_ng_ui::r#async::block_on;
 
 use crate::safe_info;
 use crate::server::datetime_ext::DateTimeExt;
 use crate::terminal::event::ExecutedExecutorCommandEvent;
 use crate::terminal::shell::{Shell, ShellType};
-use warp_util::on_cancel::OnCancelFutureExt;
+use zap_ng_util::on_cancel::OnCancelFutureExt;
 
 use crate::terminal::model::session::command_executor::{
     shared, CommandExecutor, ExecutorCommandEvent,
 };
 use crate::terminal::SizeInfo;
-use warp_completer::completer::{CommandExitStatus, CommandOutput};
+use zap_ng_completer::completer::{CommandExitStatus, CommandOutput};
 
 #[derive(Clone, Debug)]
 pub struct InBandCommand {
@@ -412,7 +412,7 @@ impl CommandExecutor for InBandCommandExecutor {
     /// "Cancels" active in-band commands.
     ///
     /// In reality, this does not cancel command execution (that is, however, actually done on the
-    /// shell side in `warp_preexec`). This merely clears the running and pending command IDs from
+    /// shell side in `zap_ng_preexec`). This merely clears the running and pending command IDs from
     /// the executor's, such that subsequently calling `handle_executed_command_event` with
     /// a cleared command ID is a no-op.
     fn cancel_active_commands(&self) {

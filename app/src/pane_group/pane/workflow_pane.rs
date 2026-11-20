@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     app_state::{LeafContents, WorkflowPaneSnapshot},
-    drive::{items::WarpDriveItemId, ZapDriveObjectSettings},
+    drive::{items::ZapNGDriveItemId, ZapDriveObjectSettings},
     server::ids::SyncId,
     workflows::{
         manager::{WorkflowManager, WorkflowOpenSource},
@@ -16,7 +16,7 @@ use crate::{
 use anyhow::Context;
 use std::{collections::HashMap, sync::Arc};
 use url::Url;
-use warpui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, ViewContext, ViewHandle};
 
 pub struct WorkflowPane {
     view: ViewHandle<PaneView<WorkflowView>>,
@@ -184,7 +184,7 @@ fn handle_workflow_event(
 ) {
     match event {
         WorkflowViewEvent::Pane(pane_event) => group.handle_pane_event(pane_id, pane_event, ctx),
-        WorkflowViewEvent::ViewInWarpDrive(id) => view_in_warp_drive(*id, ctx),
+        WorkflowViewEvent::ViewInWarpDrive(id) => view_in_zap_ng_drive(*id, ctx),
         WorkflowViewEvent::RunWorkflow {
             workflow,
             source,
@@ -213,6 +213,6 @@ fn run_workflow(
     });
 }
 
-fn view_in_warp_drive(id: WarpDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
+fn view_in_zap_ng_drive(id: ZapNGDriveItemId, ctx: &mut ViewContext<PaneGroup>) {
     ctx.emit(crate::pane_group::Event::ViewInWarpDrive(id))
 }

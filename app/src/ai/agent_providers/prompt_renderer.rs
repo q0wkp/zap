@@ -592,7 +592,7 @@ fn fallback_system(model_id: &str) -> String {
 mod tests {
     use super::*;
     use crate::ai::agent::AIAgentContext;
-    use crate::ai_assistant::execution_context::{WarpAiExecutionContext, WarpAiOsContext};
+    use crate::ai_assistant::execution_context::{ZapNGAiExecutionContext, WarpAiOsContext};
 
     #[test]
     fn render_init_project_command_uses_command_template_arguments() {
@@ -692,7 +692,7 @@ mod tests {
                 home_dir: Some("/home/user".into()),
                 are_file_symbols_indexed: false,
             },
-            AIAgentContext::ExecutionEnvironment(WarpAiExecutionContext {
+            AIAgentContext::ExecutionEnvironment(ZapNGAiExecutionContext {
                 os: WarpAiOsContext {
                     category: Some("linux".into()),
                     distribution: Some("Ubuntu 22.04".into()),
@@ -808,7 +808,7 @@ mod tests {
     fn render_omits_skill_path_for_bundled_skill() {
         use crate::ai::skills::SkillDescriptor;
         use ai::skills::{SkillProvider, SkillReference, SkillScope};
-        use warp_core::ui::icons::Icon;
+        use zap_ng_core::ui::icons::Icon;
 
         let skill = SkillDescriptor {
             reference: SkillReference::BundledSkillId("find-skills".into()),
@@ -816,7 +816,7 @@ mod tests {
             description: "Help discover and install new agent skills.".into(),
             scope: SkillScope::Bundled,
             provider: SkillProvider::Zap,
-            icon_override: Some(Icon::WarpLogoLight),
+            icon_override: Some(Icon::ZapNGLogoLight),
         };
         let ctx = vec![AIAgentContext::Skills {
             skills: vec![skill],

@@ -6,10 +6,10 @@
 //! without a LayoutContext. Use the exported BLOCK_BANNER_HEIGHT const when the banner height
 //! needs to be taken into account.
 
-mod warpify;
+mod zapngify;
 
-pub use warpify::*;
-use warpui::{
+pub use zapngify::*;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CornerRadius, Hoverable, MouseState, MouseStateHandle,
         ParentElement, Radius, Stack,
@@ -17,7 +17,7 @@ use warpui::{
     Element,
 };
 
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::ZapNGTheme;
 
 const CONSTRAINED_BANNER_HEIGHT: f32 = 48.;
 const BANNER_TOP_MARGIN: f32 = 16.;
@@ -28,22 +28,22 @@ pub const BLOCK_BANNER_HEIGHT: f32 = CONSTRAINED_BANNER_HEIGHT + BANNER_TOP_MARG
 pub const BLOCK_BANNER_DESCRIPTION_MAX_HEIGHT: f32 = 24.;
 
 pub enum WithinBlockBanner {
-    WarpifyBanner(WarpifyBannerState),
+    ZapNGifyBanner(ZapNGifyBannerState),
 }
 
 impl WithinBlockBanner {
     pub fn banner_height(&self) -> f32 {
-        match self.warpify_mode() {
-            Some(WarpificationMode::Ssh { .. }) => {
+        match self.zapngify_mode() {
+            Some(ZapNGificationMode::Ssh { .. }) => {
                 BLOCK_BANNER_HEIGHT + BLOCK_BANNER_DESCRIPTION_MAX_HEIGHT
             }
-            Some(WarpificationMode::Subshell { .. }) | None => BLOCK_BANNER_HEIGHT,
+            Some(ZapNGificationMode::Subshell { .. }) | None => BLOCK_BANNER_HEIGHT,
         }
     }
 
-    pub fn warpify_mode(&self) -> Option<&WarpificationMode> {
+    pub fn zapngify_mode(&self) -> Option<&ZapNGificationMode> {
         match self {
-            WithinBlockBanner::WarpifyBanner(state) => Some(&state.mode),
+            WithinBlockBanner::ZapNGifyBanner(state) => Some(&state.mode),
         }
     }
 }
@@ -53,7 +53,7 @@ impl WithinBlockBanner {
 fn render_block_banner(
     build_child: impl FnOnce(&MouseState) -> Box<dyn Element>,
     hover_state: MouseStateHandle,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
 ) -> Box<dyn Element> {
     Stack::new()
         .with_child(

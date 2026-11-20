@@ -4,19 +4,19 @@ use std::rc::Rc;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use unindent::Unindent;
 use vim::vim::{MotionType, VimMode};
-use warp_core::{features::FeatureFlag, settings::Setting, ui::appearance::Appearance};
-use warp_editor::model::CoreEditorModel;
-use warp_editor::{
+use zap_ng_core::{features::FeatureFlag, settings::Setting, ui::appearance::Appearance};
+use zap_ng_editor::model::CoreEditorModel;
+use zap_ng_editor::{
     content::buffer::{InitialBufferState, ToBufferCharOffset, ToBufferPoint},
     render::element::VerticalExpansionBehavior,
     render::model::viewport::SizeInfo,
 };
-use warp_util::user_input::UserInput;
-use warpui::keymap::Keystroke;
-use warpui::platform::WindowStyle;
-use warpui::text::point::Point;
-use warpui::units::IntoPixels;
-use warpui::{
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::text::point::Point;
+use zap_ng_ui::units::IntoPixels;
+use zap_ng_ui::{
     App, EntityId, Event, Presenter, SingletonEntity, TypedActionView, UpdateModel, ViewHandle,
     WindowId, WindowInvalidation,
 };

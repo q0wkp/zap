@@ -21,8 +21,8 @@ use chrono::{DateTime, Local};
 use markdown_parser::FormattedTextFragment;
 use std::collections::HashMap;
 use std::time::Duration;
-use warpui::{elements::MouseStateHandle, ModelHandle, ViewContext, ViewHandle};
-use warpui::{AppContext, Element};
+use zap_ng_ui::{elements::MouseStateHandle, ModelHandle, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, Element};
 
 /// The kind of shared session this is.
 pub enum Kind {

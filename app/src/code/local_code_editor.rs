@@ -13,15 +13,15 @@ use std::{
 };
 
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::{features::FeatureFlag, ui::appearance::Appearance};
-use warp_editor::{content::buffer::InitialBufferState, render::model::LineCount};
-use warp_util::{
+use zap_ng_core::{features::FeatureFlag, ui::appearance::Appearance};
+use zap_ng_editor::{content::buffer::InitialBufferState, render::model::LineCount};
+use zap_ng_util::{
     content_version::ContentVersion,
     file::{FileId, FileLoadError, FileSaveError},
     path::to_relative_path,
 };
-use warpui::platform::SaveFilePickerConfiguration;
-use warpui::{
+use zap_ng_ui::platform::SaveFilePickerConfiguration;
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
         CrossAxisAlignment, DropShadow, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
@@ -55,7 +55,7 @@ use crate::{
 use ai::diff_validation::DiffType;
 use pathfinder_color::ColorU;
 use vim::vim::{MotionType, VimMode};
-use warp_core::ui::icons::Icon;
+use zap_ng_core::ui::icons::Icon;
 
 use crate::workspace::WorkspaceAction;
 
@@ -1024,13 +1024,13 @@ impl View for LocalCodeEditorView {
         "LocalCodeEditorView"
     }
 
-    fn on_focus(&mut self, focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         if focus_ctx.is_self_focused() {
             self.editor.update(ctx, |editor, ctx| editor.focus(ctx));
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         // Rendering the version conflict banner.
         let base: Box<dyn Element> = if self.has_version_conflicts(app) {
             let appearance = Appearance::as_ref(app);
@@ -1131,7 +1131,7 @@ pub fn render_unsaved_changes_banner(
             Container::new(
                 ConstrainedBox::new(
                     Icon::Warning
-                        .to_warpui_icon(appearance.theme().active_ui_text_color())
+                        .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(16.)

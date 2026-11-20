@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use async_trait::async_trait;
 use itertools::Itertools as _;
 use natural_language_detection::natural_language_words_score;
-use warp_completer::ParsedTokensSnapshot;
+use zap_ng_completer::ParsedTokensSnapshot;
 
 use crate::{
     ClassificationResult, Context, InputClassifier, InputType,
@@ -68,7 +68,7 @@ impl InputClassifier for HeuristicClassifier {
 
     async fn classify_input(
         &self,
-        input: warp_completer::ParsedTokensSnapshot,
+        input: zap_ng_completer::ParsedTokensSnapshot,
         context: &Context,
     ) -> anyhow::Result<super::ClassificationResult> {
         if contains_cjk(input.buffer_text.as_str()) {

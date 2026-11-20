@@ -3,24 +3,24 @@ use std::path::PathBuf;
 use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextLine, FormattedTextStyles, Hyperlink,
 };
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex,
     FormattedTextElement, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
     Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::geometry::vector::Vector2F;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::platform::file_picker::{FilePickerConfiguration, FilePickerError};
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::geometry::vector::Vector2F;
+use zap_ng_ui::keymap::{FixedBinding, Keystroke};
+use zap_ng_ui::platform::file_picker::{FilePickerConfiguration, FilePickerError};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::{
     AppContext, Element, Entity, EventContext, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
 
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
+use zap_ng_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
 
 use crate::appearance::Appearance;
 use crate::settings::AISettings;
@@ -120,8 +120,8 @@ impl HoaOnboardingStep {
     }
 }
 
-pub fn init(app: &mut warpui::AppContext) {
-    use warpui::keymap::macros::*;
+pub fn init(app: &mut zap_ng_ui::AppContext) {
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "enter",
@@ -571,7 +571,7 @@ impl View for HoaOnboardingFlow {
         "HoaOnboardingFlow"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

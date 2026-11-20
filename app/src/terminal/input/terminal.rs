@@ -17,8 +17,8 @@ use crate::{
         settings::TerminalSettings, view::TerminalAction,
     },
 };
-use warp_core::settings::Setting;
-use warpui::{
+use zap_ng_core::settings::Setting;
+use zap_ng_ui::{
     elements::{
         Border, Clipped, Container, DropTarget, Element, Flex, Hoverable, ParentElement,
         SavePosition, Stack,
@@ -299,9 +299,9 @@ impl Input {
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use warp_core::ui::theme::WarpTheme;
+    use zap_ng_core::ui::theme::ZapNGTheme;
 
-    pub fn default_border_color(theme: &WarpTheme) -> ColorU {
+    pub fn default_border_color(theme: &ZapNGTheme) -> ColorU {
         theme.outline().into()
     }
 }

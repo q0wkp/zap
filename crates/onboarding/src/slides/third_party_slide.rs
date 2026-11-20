@@ -6,10 +6,10 @@ use crate::slides::{bottom_nav, layout, slide_content};
 use crate::OnboardingIntention;
 
 use ui_components::{button, Component as _, Options as _};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::prelude::Align;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::prelude::Align;
+use zap_ng_ui::{
     elements::{
         ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
         MainAxisSize, MouseStateHandle, ParentElement,

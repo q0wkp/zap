@@ -1,6 +1,6 @@
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use pathfinder_color::ColorU;
-use warp_core::{
+use zap_ng_core::{
     features::FeatureFlag,
     ui::{
         external_product_icon::ExternalProductIcon,
@@ -8,7 +8,7 @@ use warp_core::{
         theme::{color::internal_colors, AnsiColorIdentifier},
     },
 };
-use warpui::{
+use zap_ng_ui::{
     accessibility::ActionAccessibilityContent,
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Expanded, Fill, Flex,
@@ -526,7 +526,7 @@ impl ServerCardView {
                 .with_child(
                     Container::new(
                         ConstrainedBox::new(
-                            chevron_icon.to_warpui_icon(text_color.into()).finish(),
+                            chevron_icon.to_zap_ng_ui_icon(text_color.into()).finish(),
                         )
                         .with_width(chevron_dimensions)
                         .with_height(chevron_dimensions)
@@ -564,7 +564,7 @@ impl ServerCardView {
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_spacing(2.)
                 .with_child(
-                    ConstrainedBox::new(icon.to_warpui_icon(chip_color.into()).finish())
+                    ConstrainedBox::new(icon.to_zap_ng_ui_icon(chip_color.into()).finish())
                         .with_width(chip_font_size)
                         .with_height(chip_font_size)
                         .finish(),
@@ -879,7 +879,7 @@ impl ServerCardView {
         }
 
         if self.render_options.show_add_icon {
-            let add_icon = warpui::elements::Icon::new(
+            let add_icon = zap_ng_ui::elements::Icon::new(
                 Icon::Plus.into(),
                 blended_colors::text_main(appearance.theme(), appearance.theme().background()),
             );

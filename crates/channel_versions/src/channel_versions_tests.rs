@@ -82,7 +82,7 @@ fn test_ignores_unknown_channels() {
     );
 }
 
-// openWarp(OSS)使用 vYYYY.MM.DD.N 这种简化 tag。下面这些测试确保:
+// ZapNG(OSS)使用 vYYYY.MM.DD.N 这种简化 tag。下面这些测试确保:
 // 1. 这种格式能被 ParsedVersion 解析(否则 is_current_version_ahead_of_latest_version
 //    会一直返回 Err,导致用户被错误引导去"升级"到一个回滚版本)。
 // 2. 大小比较在 (major=0, date, patch) 三元组上是单调的。

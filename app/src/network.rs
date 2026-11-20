@@ -1,6 +1,6 @@
 use std::future::Future;
 
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use crate::util::sync::Condition;
 

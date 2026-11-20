@@ -1,13 +1,13 @@
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use itertools::Itertools;
-use warpui::{AppContext, Entity};
+use zap_ng_ui::{AppContext, Entity};
 
 use super::SshServerSearchItem;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
 use crate::search::data_source::{Query, QueryResult};
 use crate::search::mixer::{DataSourceRunErrorWrapper, SyncDataSource};
 
-use warp_ssh_manager::{NodeKind, SshRepository};
+use zap_ng_ssh_manager::{NodeKind, SshRepository};
 
 /// 上限。SSH 一般几个到几十个,不会爆。
 const MAX_SSH_SERVERS_CONSIDERED: usize = 200;
@@ -37,7 +37,7 @@ impl SyncDataSource for SshServersDataSource {
         // DataSourceRunErrorWrapper 是 Box<dyn DataSourceRunError> 自定义 trait,
         // 包装成本太高 — 失败时 log + 返回空结果(palette 里不显示 SSH,但其他
         // source 不受影响)。
-        let nodes = match warp_ssh_manager::with_conn(|c| Ok(SshRepository::list_nodes(c)?)) {
+        let nodes = match zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::list_nodes(c)?)) {
             Ok(n) => n,
             Err(e) => {
                 log::warn!("command palette ssh: failed to load nodes: {e}");
@@ -57,7 +57,7 @@ impl SyncDataSource for SshServersDataSource {
             .into_iter()
             .filter_map(|node| {
                 let server =
-                    warp_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, &node.id)?))
+                    zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, &node.id)?))
                         .ok()
                         .flatten()?;
 

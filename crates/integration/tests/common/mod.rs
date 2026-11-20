@@ -1,6 +1,6 @@
 use std::env;
 use std::process::Stdio;
-use warpui::integration::RERUN_EXIT_CODE;
+use zap_ng_ui::integration::RERUN_EXIT_CODE;
 
 use command::blocking::Command;
 
@@ -8,7 +8,7 @@ const MAX_TEST_RUNS: usize = 10;
 
 /// Runs a single integration test.
 ///
-/// This runs the `integration` binary from the `warp` crate, passing it the
+/// This runs the `integration` binary from the `zap-ng` crate, passing it the
 /// name of the test to execute as the one positional argument.
 pub fn run_integration_test(name: &str) -> Result<(), String> {
     let mut keep_going = true;

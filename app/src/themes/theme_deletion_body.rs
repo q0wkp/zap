@@ -2,21 +2,21 @@ use crate::appearance::Appearance;
 use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::settings::{active_theme_kind, ThemeSettings};
-use crate::themes::theme::{ThemeKind, WarpTheme};
+use crate::themes::theme::{ThemeKind, ZapNGTheme};
 use crate::user_config;
 use crate::user_config::util::from_yaml;
 use std::default::Default;
 use std::fs;
 use std::fs::remove_file;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::elements::{
     Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, SavePosition, Shrinkable, Text,
 };
-use warpui::fonts::Weight;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     platform::Cursor, AppContext, Element, Entity, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -75,7 +75,7 @@ impl ThemeDeletionBody {
         // Check if the theme directory exists
         if fs::metadata(&dir).is_ok() {
             if let Some(ThemeKind::Custom(custom_theme)) = &self.theme_kind {
-                if let Ok(theme_from_yaml) = from_yaml::<WarpTheme>(custom_theme.path()) {
+                if let Ok(theme_from_yaml) = from_yaml::<ZapNGTheme>(custom_theme.path()) {
                     // If theme has an image
                     if let Some(image) = theme_from_yaml.background_image() {
                         // Only delete the image if it is in the ./warp/themes directory.

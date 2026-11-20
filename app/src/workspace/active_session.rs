@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity, WindowId};
+use zap_ng_ui::{Entity, EntityId, ModelContext, SingletonEntity, WindowId};
 
 use crate::terminal::model::session::Session;
 

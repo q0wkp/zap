@@ -2,9 +2,9 @@ use pathfinder_geometry::rect::RectF;
 use std::any::Any;
 use std::fmt::Debug;
 use std::ops::AddAssign;
-use warp_util::file::FileSaveError;
-use warpui::elements::DropTargetData;
-use warpui::AppContext;
+use zap_ng_util::file::FileSaveError;
+use zap_ng_ui::elements::DropTargetData;
+use zap_ng_ui::AppContext;
 
 pub mod buffer_location;
 pub mod diff_viewer;

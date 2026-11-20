@@ -1,6 +1,6 @@
 use crate::slides::progress_dots;
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         Align, Container, CrossAxisAlignment, Empty, Flex, MainAxisSize, ParentElement, Shrinkable,
     },

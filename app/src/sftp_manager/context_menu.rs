@@ -5,13 +5,13 @@
 //! date: 2026-05-26
 
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Flex, Hoverable,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, SavePosition, Text,
 };
-use warpui::platform::Cursor;
-use warpui::Element;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::Element;
 
 /// 右键菜单宽度
 const CONTEXT_MENU_WIDTH: f32 = 150.0;
@@ -203,7 +203,7 @@ pub fn render_context_menu(state: &ContextMenuState, appearance: &Appearance) ->
 mod tests {
     use super::*;
     use pathfinder_geometry::vector::Vector2F;
-    use warpui::TypedActionView;
+    use zap_ng_ui::TypedActionView;
 
     // ============================================================
     // ContextMenuState 测试
@@ -305,19 +305,19 @@ mod tests {
     fn test_render_context_menu_via_browser() {
         use crate::settings_view::keybindings::KeybindingChangedNotifier;
         use crate::test_util::settings::initialize_settings_for_tests;
-        use warp_core::ui::appearance::Appearance;
+        use zap_ng_core::ui::appearance::Appearance;
 
-        warpui::App::test((), |mut app| async move {
+        zap_ng_ui::App::test((), |mut app| async move {
             initialize_settings_for_tests(&mut app);
             app.add_singleton_model(|_| Appearance::mock());
             app.add_singleton_model(|_| KeybindingChangedNotifier::mock());
             app.add_singleton_model(|_| crate::workspace::ToastStack);
 
             let temp_db = std::env::temp_dir().join("warp_sftp_ctx_test.sqlite");
-            let _ = warp_ssh_manager::set_database_path(temp_db);
+            let _ = zap_ng_ssh_manager::set_database_path(temp_db);
 
             let (_, view) = app.add_window(
-                warpui::platform::WindowStyle::NotStealFocus,
+                zap_ng_ui::platform::WindowStyle::NotStealFocus,
                 |ctx| crate::sftp_manager::browser::SftpBrowserView::new("test-node".to_string(), ctx),
             );
 

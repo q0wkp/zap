@@ -1,6 +1,6 @@
 use enum_iterator::Sequence;
 use serde::{Deserialize, Serialize};
-use warp_core::{
+use zap_ng_core::{
     channel::{Channel, ChannelState},
     settings::{macros::define_settings_group, SupportedPlatforms, SyncToCloud},
 };

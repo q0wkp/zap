@@ -1,7 +1,7 @@
 //! End-to-end editor tests.
 
-use warp_core::features::FeatureFlag;
-use warpui::{App, ModelHandle, ReadModel};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{App, ModelHandle, ReadModel};
 
 use crate::content::{
     buffer::{

@@ -28,8 +28,8 @@ use std::path::PathBuf;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{SystemTime, UNIX_EPOCH};
 use string_offset::CharOffset;
-use warp_core::features::FeatureFlag;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
     App, SingletonEntity,
     assets::asset_cache::{AssetCache, AssetSource, AssetState},
     fonts::{Properties, Style, Weight},

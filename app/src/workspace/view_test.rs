@@ -58,7 +58,7 @@ use crate::resource_center::Tip;
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::test_util::settings::initialize_settings_for_tests;
 use crate::undo_close::UndoCloseSettings;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::zap_ng_managed_paths_watcher::ZapNGManagedPathsWatcher;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::ObjectActions;
 use crate::{experiments, workspace, GlobalResourceHandlesProvider};
@@ -69,8 +69,8 @@ use crate::terminal::shared_session::protocol::SessionId;
 use ai::project_context::model::ProjectContextModel;
 use pane_group::{NotebookPane, PaneState, SplitPaneState, TerminalPaneId};
 use terminal::view::ActiveSessionState;
-use warpui::AddSingletonModel;
-use warpui::{platform::WindowStyle, App, ViewHandle};
+use zap_ng_ui::AddSingletonModel;
+use zap_ng_ui::{platform::WindowStyle, App, ViewHandle};
 
 fn initialize_app(app: &mut App) {
     initialize_settings_for_tests(app);
@@ -120,7 +120,7 @@ fn initialize_app(app: &mut App) {
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
     app.add_singleton_model(DirectoryWatcher::new);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(FileMCPWatcher::new);
     app.add_singleton_model(|_| FileBasedMCPManager::default());
 
@@ -171,7 +171,7 @@ fn initialize_app(app: &mut App) {
     // binding descriptions eagerly, and `workspace:send_feedback`'s dynamic
     // label calls `is_feedback_skill_available`, which reads `SkillManager`.
     // Registered after `HomeDirectoryWatcher`, `DirectoryWatcher`,
-    // `WarpManagedPathsWatcher`, `DetectedRepositories`, and `RepoMetadataModel`
+    // `ZapNGManagedPathsWatcher`, `DetectedRepositories`, and `RepoMetadataModel`
     // because `SkillWatcher::new` subscribes to all of them.
     app.add_singleton_model(SkillManager::new);
 
@@ -1291,20 +1291,20 @@ fn test_terminal_model_isnt_leaked() {
 }
 
 #[test]
-fn test_open_or_toggle_warp_drive() {
+fn test_open_or_toggle_zap_ng_drive() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
 
         let workspace = mock_workspace(&mut app);
         workspace.update(&mut app, |workspace, ctx| {
             // First, unconditionally open Zap Drive as a system action. WD should be open and welcome tips should not have opening zap drive.
-            workspace.open_or_toggle_warp_drive(
+            workspace.open_or_toggle_zap_ng_drive(
                 false, /* toggle */
                 false, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                workspace.current_workspace_state.is_warp_drive_open,
+                workspace.current_workspace_state.is_zap_ng_drive_open,
                 "Zap Drive should be open"
             );
             assert!(
@@ -1317,13 +1317,13 @@ fn test_open_or_toggle_warp_drive() {
             );
 
             // Next, toggle zap drive as a user action. WD should be closed and tip should not be filled out.
-            workspace.open_or_toggle_warp_drive(
+            workspace.open_or_toggle_zap_ng_drive(
                 true, /* toggle */
                 true, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                !workspace.current_workspace_state.is_warp_drive_open,
+                !workspace.current_workspace_state.is_zap_ng_drive_open,
                 "Zap Drive should be closed"
             );
             assert!(
@@ -1336,13 +1336,13 @@ fn test_open_or_toggle_warp_drive() {
             );
 
             // Finally, toggle zap drive again as a user action. WD should be open and tip filled out.
-            workspace.open_or_toggle_warp_drive(
+            workspace.open_or_toggle_zap_ng_drive(
                 true, /* toggle */
                 true, /* explicit_user_action */
                 ctx,
             );
             assert!(
-                workspace.current_workspace_state.is_warp_drive_open,
+                workspace.current_workspace_state.is_zap_ng_drive_open,
                 "Zap Drive should be open"
             );
             assert!(
@@ -1434,7 +1434,7 @@ fn test_switch_focus_panels() {
 
         // Shift focus from terminal to left panel when WD is open
         workspace.update(&mut app, |view, ctx| {
-            view.current_workspace_state.is_warp_drive_open = true;
+            view.current_workspace_state.is_zap_ng_drive_open = true;
             view.focus_left_panel(ctx);
         });
         workspace.update(&mut app, |view, ctx| {

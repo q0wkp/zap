@@ -6,7 +6,7 @@ use crate::{
         GenericStoredObject, GenericStringObjectFormat, GenericStringObjectUniqueKey, ObjectType,
         SerializedModel, StoredObject, StoredObjectModel,
     },
-    drive::{items::WarpDriveItem, ObjectTypeAndId},
+    drive::{items::ZapNGDriveItem, ObjectTypeAndId},
     persistence::ModelEvent,
     server::ids::{ObjectUid, ServerId, SyncId},
 };
@@ -60,8 +60,8 @@ pub trait StringModel: Clone + Debug + PartialEq + Send + Sync + 'static {
     /// Returns the display name for this model.
     fn display_name(&self) -> String;
 
-    /// Returns whether to render this model as a WarpDriveItem.
-    fn renders_in_warp_drive(&self) -> bool {
+    /// Returns whether to render this model as a ZapNGDriveItem.
+    fn renders_in_zap_ng_drive(&self) -> bool {
         false
     }
 
@@ -80,12 +80,12 @@ pub trait StringModel: Clone + Debug + PartialEq + Send + Sync + 'static {
 
     /// Creates a new zap drive item for this model type. Returns None
     /// if this object does not render in Zap Drive.
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         _id: SyncId,
         _appearance: &Appearance,
         _object: &Self::StoredObjectType,
-    ) -> Option<Box<dyn WarpDriveItem>> {
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
         None
     }
 
@@ -230,17 +230,17 @@ where
         S::serialize(&self.string_model)
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
-        self.string_model.renders_in_warp_drive()
+    fn renders_in_zap_ng_drive(&self) -> bool {
+        self.string_model.renders_in_zap_ng_drive()
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         appearance: &Appearance,
         object: &GenericStoredObject<GenericStringObjectId, Self>,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        self.string_model.to_warp_drive_item(id, appearance, object)
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        self.string_model.to_zap_ng_drive_item(id, appearance, object)
     }
 }
 

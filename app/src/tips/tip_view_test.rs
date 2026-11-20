@@ -1,5 +1,5 @@
 use super::*;
-use warpui::{
+use zap_ng_ui::{
     elements::{ChildView, Empty, SavePosition},
     platform::WindowStyle,
     App, ViewHandle,

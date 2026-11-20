@@ -1,5 +1,5 @@
 //! Module for test-only convenience methods on `TerminalView`.
-use warpui::ModelHandle;
+use zap_ng_ui::ModelHandle;
 
 use crate::terminal::find::TerminalFindModel;
 cfg_if::cfg_if! {
@@ -7,7 +7,7 @@ cfg_if::cfg_if! {
         use std::sync::Arc;
 
         use parking_lot::FairMutex;
-        use warpui::{ViewContext};
+        use zap_ng_ui::{ViewContext};
 
         use crate::{
             ai::blocklist::SerializedBlockListItem, pane_group::TerminalViewResources,
@@ -33,7 +33,7 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         use pathfinder_geometry::vector::vec2f;
-        use warpui::units::{IntoPixels as _, Pixels};
+        use zap_ng_ui::units::{IntoPixels as _, Pixels};
 
         use crate::{
             terminal::{
@@ -68,7 +68,7 @@ impl TerminalView {
             block_padding,
             size: size_info,
             max_block_scroll_limit,
-            warp_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
+            zap_ng_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
         };
 
         let terminal_view_resources = TerminalViewResources {

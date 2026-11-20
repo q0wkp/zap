@@ -2,12 +2,12 @@
 use std::sync::mpsc::SyncSender;
 
 #[cfg(feature = "local_tty")]
-use warpui::geometry::vector::Vector2F;
+use zap_ng_ui::geometry::vector::Vector2F;
 #[cfg(feature = "local_tty")]
-use warpui::ModelHandle;
-use warpui::ViewContext;
+use zap_ng_ui::ModelHandle;
+use zap_ng_ui::ViewContext;
 #[cfg(not(target_family = "wasm"))]
-use warpui::ViewHandle;
+use zap_ng_ui::ViewHandle;
 
 #[cfg(feature = "local_tty")]
 use crate::pane_group::TerminalViewResources;

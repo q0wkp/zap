@@ -1,4 +1,4 @@
-use warpui::{elements::Text, Element};
+use zap_ng_ui::{elements::Text, Element};
 
 use crate::appearance::Appearance;
 

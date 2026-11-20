@@ -47,7 +47,7 @@ use crate::uri::browser_url_handler::update_browser_url;
 use crate::util::openable_file_type::FileTarget;
 use crate::view_components::ToastFlavor;
 use crate::workflows::workflow::Workflow;
-use warp_terminal::shell::{ShellName, ShellType};
+use zap_ng_terminal::shell::{ShellName, ShellType};
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -68,24 +68,24 @@ use serde::{Deserialize, Serialize};
 use tree::DEFAULT_FLEX_VALUE;
 use url::Url;
 use uuid::Uuid;
-use warp_cli::agent::Harness;
-use warp_core::command::ExitCode;
-use warp_core::context_flag::ContextFlag;
-use warp_core::HostId;
+use zap_ng_cli::agent::Harness;
+use zap_ng_core::command::ExitCode;
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::HostId;
 #[cfg(feature = "local_fs")]
-use warp_util::path::LineAndColumnArg;
-use warpui::elements::{
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::elements::{
     CrossAxisAlignment, DispatchEventResult, EventHandler, Flex, MainAxisSize, Shrinkable, Stack,
 };
-use warpui::keymap::{Context, EditableBinding, FixedBinding};
-use warpui::notification::NotificationSendError;
+use zap_ng_ui::keymap::{Context, EditableBinding, FixedBinding};
+use zap_ng_ui::notification::NotificationSendError;
 
-use warpui::windowing::WindowManager;
-use warpui::{
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::{
     elements::{ChildView, Element, ParentElement},
     AppContext, Entity, EntityId, ModelHandle, TypedActionView, View, ViewHandle, WindowId,
 };
-use warpui::{SingletonEntity, ViewContext};
+use zap_ng_ui::{SingletonEntity, ViewContext};
 
 use crate::ai::blocklist::SerializedBlockListItem;
 use crate::ai_assistant::AskAIType;
@@ -100,7 +100,7 @@ use crate::appearance::Appearance;
 use crate::banner::{Banner, BannerEvent, BannerState, BannerTextContent, DismissalType};
 use crate::channel::{Channel, ChannelState};
 use crate::code::view::CodeView;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::ZapNGDriveItemId;
 use crate::drive::{ObjectTypeAndId, ZapDriveObjectArgs};
 use crate::features::FeatureFlag;
 use crate::launch_configs::launch_config::{self, PaneMode, PaneTemplateType};
@@ -268,7 +268,7 @@ enum PaneRemovalReason {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
     app.register_binding_validator::<PaneGroup>(is_binding_pty_compliant);
 
     self::pane::init(app);
@@ -477,23 +477,23 @@ pub enum Event {
     OpenAgentToolbarEditor,
     OpenCLIAgentToolbarEditor,
     /// tell the workspace to open a file within Zap.
-    OpenFileInWarp {
+    OpenFileInZapNG {
         /// The file path to open.
         path: PathBuf,
         /// The session that the path was opened from.
         session: Arc<Session>,
     },
     ZapDriveLink {
-        open_warp_drive_args: ZapDriveObjectArgs,
+        open_zap_ng_drive_args: ZapDriveObjectArgs,
     },
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
         layout: crate::util::file::external_editor::settings::EditorLayout,
         line_col: Option<LineAndColumnArg>,
     },
     #[cfg(feature = "local_fs")]
-    PreviewCodeInWarp {
+    PreviewCodeInZapNG {
         source: CodeSource,
     },
     OpenCodeDiff {
@@ -532,7 +532,7 @@ pub enum Event {
     FocusPaneInWorkspace {
         locator: PaneViewLocator,
     },
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     MoveToSpace {
         object_type_and_id: ObjectTypeAndId,
         space: Space,
@@ -2317,7 +2317,7 @@ impl PaneGroup {
                                 if honor_ps1 {
                                     manager.send_switch_to_ps1_bindkey(ctx);
                                 } else {
-                                    manager.send_switch_to_warp_prompt_bindkey(ctx);
+                                    manager.send_switch_to_zap_ng_prompt_bindkey(ctx);
                                 }
                             }
                         });

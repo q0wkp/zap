@@ -8,8 +8,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use settings::EditorChoice;
-use warp_util::path::LineAndColumnArg;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 pub use self::settings::{EditorLayout, EditorSettings};
 

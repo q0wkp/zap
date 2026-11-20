@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::Wrap;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::Wrap;
+use zap_ng_ui::{
     elements::{
         Container, CornerRadius, Flex, Hoverable, MouseStateHandle, ParentElement, Radius, Text,
     },
@@ -13,7 +13,7 @@ use warpui::{
 };
 
 use crate::appearance::Appearance;
-use crate::drive::settings::{WarpDriveSettings, WarpDriveSettingsChangedEvent};
+use crate::drive::settings::{ZapNGDriveSettings, ZapNGDriveSettingsChangedEvent};
 use crate::search::FilterChipRenderer;
 use crate::search::QueryFilter;
 use crate::settings::{AISettings, AISettingsChangedEvent};
@@ -60,8 +60,8 @@ impl CommandSearchZeroStateView {
             }
         });
 
-        ctx.subscribe_to_model(&WarpDriveSettings::handle(ctx), |_, _, event, ctx| {
-            if let WarpDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
+        ctx.subscribe_to_model(&ZapNGDriveSettings::handle(ctx), |_, _, event, ctx| {
+            if let ZapNGDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
                 ctx.notify();
             }
         });
@@ -191,7 +191,7 @@ impl View for CommandSearchZeroStateView {
         "CommandSearchZeroStateView"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
 
         let command_search_text = Container::new(
@@ -299,7 +299,7 @@ fn valid_query_filters(app: &AppContext) -> Vec<QueryFilter> {
         filters.push(QueryFilter::PromptHistory);
     }
 
-    if WarpDriveSettings::is_warp_drive_enabled(app) {
+    if ZapNGDriveSettings::is_zap_ng_drive_enabled(app) {
         filters.extend([QueryFilter::Workflows, QueryFilter::Notebooks]);
 
         filters.push(QueryFilter::EnvironmentVariables);

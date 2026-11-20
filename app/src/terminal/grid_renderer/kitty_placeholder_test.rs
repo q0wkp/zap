@@ -1,4 +1,4 @@
-use warpui::color::ColorU;
+use zap_ng_ui::color::ColorU;
 
 use super::*;
 use crate::terminal::model::ansi::Color;

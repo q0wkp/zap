@@ -12,7 +12,7 @@ path = "src/bin/main.rs"
 required-features = ["bin"]
 
 [features]
-bin = ["warpui/log_named_telemetry_events"]
+bin = ["zap_ng_ui/log_named_telemetry_events"]
 
 [dependencies]
 ai.workspace = true
@@ -29,6 +29,6 @@ serde_json.workspace = true
 strum.workspace = true
 strum_macros.workspace = true
 uuid.workspace = true
-warp_core = { workspace = true }
-warpui.workspace = true
-warp_logging.workspace = true
+zap_ng_core = { workspace = true }
+zap_ng_ui.workspace = true
+zap_ng_logging.workspace = true

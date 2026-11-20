@@ -2,7 +2,7 @@ use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
 use settings::Setting as _;
 use std::{any::Any, path::PathBuf, sync::Arc};
-use warpui::{AppContext, SingletonEntity, ViewHandle};
+use zap_ng_ui::{AppContext, SingletonEntity, ViewHandle};
 
 use crate::PrivacySettings;
 use crate::{
@@ -44,7 +44,7 @@ pub trait TerminalManager: Any {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl warpui::Entity for Box<dyn TerminalManager> {
+impl zap_ng_ui::Entity for Box<dyn TerminalManager> {
     type Event = ();
 }
 
@@ -72,7 +72,7 @@ pub(super) fn compute_block_size(initial_size: Vector2F, ctx: &mut AppContext) -
         block_padding: terminal_spacing.block_padding,
         size: size_info,
         max_block_scroll_limit: maximum_grid_size,
-        warp_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
+        zap_ng_prompt_height_lines: WARP_PROMPT_HEIGHT_LINES,
     }
 }
 

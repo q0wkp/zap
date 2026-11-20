@@ -6,8 +6,8 @@ use std::{
 use crate::ai::skills::SkillOpenOrigin;
 use ai::skills::SkillReference;
 use serde::{Deserialize, Serialize};
-use warp_util::path::LineAndColumnArg;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, ViewHandle, WindowId};
 
 use crate::{
     ai::agent::AIAgentActionId,
@@ -121,7 +121,7 @@ pub enum CodeSource {
     ProjectRules { path: PathBuf },
     /// Opened from file tree.
     FileTree { path: PathBuf },
-    /// 从远端文件树点击打开的远端文件(openWarp 独有)。通过 buffer-sync 协议
+    /// 从远端文件树点击打开的远端文件(ZapNG 独有)。通过 buffer-sync 协议
     /// 与 SSH daemon 同步内容,本地没有对应路径,因此 tab 身份用 [`RemotePath`]
     /// 标识。pane 不持久化 —— 远端 buffer 依赖活跃 SSH 连接。
     RemoteFileTree {

@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use bimap::BiMap;
-use warp_editor::content::buffer::Buffer;
-use warp_util::file::FileId;
-use warpui::{ModelContext, ModelHandle, SingletonEntity as _};
+use zap_ng_editor::content::buffer::Buffer;
+use zap_ng_util::file::FileId;
+use zap_ng_ui::{ModelContext, ModelHandle, SingletonEntity as _};
 
 use super::server_model::{ConnectionId, ServerModel};
 use crate::code::global_buffer_model::GlobalBufferModel;

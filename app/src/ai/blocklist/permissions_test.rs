@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use uuid::Uuid;
 
-use warp_util::path::EscapeChar;
-use warpui::{App, EntityId, ModelHandle};
+use zap_ng_util::path::EscapeChar;
+use zap_ng_ui::{App, EntityId, ModelHandle};
 
-use warp_core::execution_mode::ExecutionMode;
+use zap_ng_core::execution_mode::ExecutionMode;
 
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::{

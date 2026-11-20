@@ -1,8 +1,8 @@
 use markdown_parser::CodeBlockText;
-use warpui::fonts::Weight;
+use zap_ng_ui::fonts::Weight;
 
 use markdown_parser::FormattedTable;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use super::{
     BufferBlockItem, BufferTextStyle, CodeBlockType, MarkdownStyle, TextStyles,

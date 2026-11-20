@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::terminal::event_listener::ChannelEventListener;
 use crate::terminal::model::ansi::{self, Handler};

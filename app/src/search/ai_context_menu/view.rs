@@ -1,6 +1,6 @@
 use crate::appearance::Appearance;
 use crate::debounce::debounce;
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 #[cfg(not(target_family = "wasm"))]
 use crate::search::ai_context_menu::blocks::data_source::BlockDataSource;
 #[cfg(not(target_family = "wasm"))]
@@ -34,30 +34,30 @@ use itertools::Itertools;
 use std::collections::HashSet;
 use std::ops::Range;
 use std::time::Duration;
-use warp_core::features::FeatureFlag;
-use warpui::elements::ConstrainedBox;
-use warpui::elements::CrossAxisAlignment;
-use warpui::elements::Empty;
-use warpui::elements::Fill;
-use warpui::elements::Hoverable;
-use warpui::elements::MouseStateHandle;
-use warpui::elements::ScrollStateHandle;
-use warpui::elements::Scrollable;
-use warpui::elements::ScrollableElement;
-use warpui::elements::ScrollbarWidth;
-use warpui::elements::UniformList;
-use warpui::elements::UniformListState;
-use warpui::elements::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::elements::ConstrainedBox;
+use zap_ng_ui::elements::CrossAxisAlignment;
+use zap_ng_ui::elements::Empty;
+use zap_ng_ui::elements::Fill;
+use zap_ng_ui::elements::Hoverable;
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::elements::ScrollStateHandle;
+use zap_ng_ui::elements::Scrollable;
+use zap_ng_ui::elements::ScrollableElement;
+use zap_ng_ui::elements::ScrollbarWidth;
+use zap_ng_ui::elements::UniformList;
+use zap_ng_ui::elements::UniformListState;
+use zap_ng_ui::elements::{
     AnchorPair, Border, ChildView, Container, CornerRadius, Dismiss, Flex, Icon, OffsetPositioning,
     OffsetType, ParentElement, PositionedElementOffsetBounds, PositioningAxis, Radius,
     SavePosition, Shrinkable, Stack, Text, XAxisAnchor, YAxisAnchor,
 };
 
-use warpui::platform::Cursor;
-use warpui::windowing::WindowManager;
-use warpui::SingletonEntity;
-use warpui::View;
-use warpui::{
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::View;
+use zap_ng_ui::{
     AppContext, Element, Entity, ModelHandle, TypedActionView, ViewContext, ViewHandle,
     WeakViewHandle,
 };
@@ -383,7 +383,7 @@ impl AIContextMenu {
         is_cli_agent_input: bool,
         app: &AppContext,
     ) -> Vec<AIContextMenuCategory> {
-        let show_warp_drive = WarpDriveSettings::is_warp_drive_enabled(app);
+        let show_zap_ng_drive = ZapNGDriveSettings::is_zap_ng_drive_enabled(app);
 
         // Compute once — used by CLI agent, AI-mode, and terminal-mode branches.
         let is_active_dir_in_git_repo = {
@@ -425,7 +425,7 @@ impl AIContextMenu {
         // For ambient agent sessions, only show limited categories
         if is_in_ambient_agent {
             let mut categories = vec![];
-            if show_warp_drive {
+            if show_zap_ng_drive {
                 if FeatureFlag::DriveObjectsAsContext.is_enabled() {
                     categories.push(AIContextMenuCategory::Workflows);
                     categories.push(AIContextMenuCategory::Notebooks);
@@ -453,7 +453,7 @@ impl AIContextMenu {
             }
             categories.push(AIContextMenuCategory::Blocks);
             // Zap:Code 分类随 outline 下线同步推退,不再 push。
-            if show_warp_drive && FeatureFlag::DriveObjectsAsContext.is_enabled() {
+            if show_zap_ng_drive && FeatureFlag::DriveObjectsAsContext.is_enabled() {
                 categories.push(AIContextMenuCategory::Workflows);
                 categories.push(AIContextMenuCategory::Notebooks);
                 categories.push(AIContextMenuCategory::Plans);
@@ -467,7 +467,7 @@ impl AIContextMenu {
             if FeatureFlag::ConversationsAsContext.is_enabled() {
                 categories.push(AIContextMenuCategory::Conversations);
             }
-            if show_warp_drive {
+            if show_zap_ng_drive {
                 categories.push(AIContextMenuCategory::Rules);
             }
             categories.push(AIContextMenuCategory::Skills);

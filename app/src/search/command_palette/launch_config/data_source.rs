@@ -3,11 +3,11 @@ use crate::search::command_palette::launch_config::search_item::SearchItem;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
 use crate::search::data_source::{DataSourceSearchError, Query, QueryResult};
 use crate::search::mixer::{DataSourceRunErrorWrapper, SyncDataSource};
-use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
+use crate::user_config::{ZapNGConfig, ZapNGConfigUpdateEvent};
 use fuzzy_match::match_indices_case_insensitive;
 use std::collections::HashMap;
 use std::sync::Arc;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 /// Datasource that searches against `LaunchConfig`s.
 pub struct DataSource {
@@ -17,7 +17,7 @@ pub struct DataSource {
 impl DataSource {
     #[cfg(not(target_family = "wasm"))]
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
-        if warp_core::features::FeatureFlag::UseTantivySearch.is_enabled() {
+        if zap_ng_core::features::FeatureFlag::UseTantivySearch.is_enabled() {
             Self::new_full_text(ctx)
         } else {
             Self::new_fuzzy(ctx)
@@ -30,7 +30,7 @@ impl DataSource {
     }
 
     fn new_fuzzy(ctx: &mut ModelContext<Self>) -> Self {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), Self::handle_config_event);
+        ctx.subscribe_to_model(&ZapNGConfig::handle(ctx), Self::handle_config_event);
         let mut searcher = Box::new(FuzzyLaunchConfigSearcher::default());
         searcher.refresh_search_index(ctx);
         Self { searcher }
@@ -38,7 +38,7 @@ impl DataSource {
 
     #[cfg(not(target_family = "wasm"))]
     fn new_full_text(ctx: &mut ModelContext<Self>) -> Self {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), Self::handle_config_event);
+        ctx.subscribe_to_model(&ZapNGConfig::handle(ctx), Self::handle_config_event);
         let mut searcher = Box::new(full_text_searcher::FullTextLaunchConfigSearcher::new(
             ctx.background_executor(),
         ));
@@ -46,8 +46,8 @@ impl DataSource {
         Self { searcher }
     }
 
-    fn handle_config_event(&mut self, event: &WarpConfigUpdateEvent, ctx: &mut ModelContext<Self>) {
-        if matches!(event, WarpConfigUpdateEvent::LaunchConfigs) {
+    fn handle_config_event(&mut self, event: &ZapNGConfigUpdateEvent, ctx: &mut ModelContext<Self>) {
+        if matches!(event, ZapNGConfigUpdateEvent::LaunchConfigs) {
             self.searcher.refresh_search_index(ctx);
         }
     }
@@ -107,7 +107,7 @@ impl LaunchConfigSearcher for FuzzyLaunchConfigSearcher {
     }
 
     fn refresh_search_index(&mut self, app: &AppContext) {
-        self.configs = WarpConfig::as_ref(app)
+        self.configs = ZapNGConfig::as_ref(app)
             .launch_configs()
             .iter()
             .map(|config| (config.name.to_lowercase(), config.clone()))
@@ -122,12 +122,12 @@ mod full_text_searcher {
     use crate::search::command_palette::launch_config::data_source::LaunchConfigSearcher;
     use crate::search::command_palette::launch_config::search_item::SearchItem;
     use crate::search::searcher::{AsyncSearcher, DEFAULT_MEMORY_BUDGET, SCORE_CONVERSION_FACTOR};
-    use crate::user_config::WarpConfig;
+    use crate::user_config::ZapNGConfig;
     use fuzzy_match::FuzzyMatchResult;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use warpui::r#async::executor::Background;
-    use warpui::{AppContext, SingletonEntity};
+    use zap_ng_ui::r#async::executor::Background;
+    use zap_ng_ui::{AppContext, SingletonEntity};
 
     // The name of the launch configs are duplicated to ensure that the searcher
     // hashes the name to uniquely identify the launch config.
@@ -180,7 +180,7 @@ mod full_text_searcher {
         }
 
         fn refresh_search_index(&mut self, app: &AppContext) {
-            self.configs = WarpConfig::as_ref(app)
+            self.configs = ZapNGConfig::as_ref(app)
                 .launch_configs()
                 .iter()
                 .map(|config| (config.name.to_lowercase(), config.clone()))

@@ -3,10 +3,10 @@
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use warp_cli::agent::Harness;
-use warp_core::report_error;
-use warp_core::ui::theme::WarpTheme;
-use warpui::color::ColorU;
+use zap_ng_cli::agent::Harness;
+use zap_ng_core::report_error;
+use zap_ng_core::ui::theme::ZapNGTheme;
+use zap_ng_ui::color::ColorU;
 
 use crate::ai::artifacts::{deserialize_artifacts, Artifact};
 use crate::ui_components::icons::Icon;
@@ -365,7 +365,7 @@ impl AmbientAgentTaskState {
         }
     }
 
-    pub fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &ZapNGTheme) -> (Icon, ColorU) {
         match self {
             AmbientAgentTaskState::Queued
             | AmbientAgentTaskState::Pending

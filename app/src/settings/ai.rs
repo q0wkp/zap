@@ -16,16 +16,16 @@ use cfg_if::cfg_if;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
 use regex::Regex;
-use warpui::platform::OperatingSystem;
-use warpui::{
+use zap_ng_ui::platform::OperatingSystem;
+use zap_ng_ui::{
     platform::keyboard::KeyCode, AppContext, Entity, ModelContext, SingletonEntity, UpdateModel,
 };
 
 use settings::{
     define_settings_group, RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud,
 };
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::execution_mode::AppExecutionMode;
+use zap_ng_core::features::FeatureFlag;
 
 use serde::{de::Deserializer, Deserialize, Serialize};
 use strum::IntoEnumIterator;
@@ -214,8 +214,8 @@ impl VoiceInputToggleKey {
     /// Converts the voice input toggle key to a Keystroke representation.
     /// Since these are standalone modifier keys, we construct the Keystroke directly
     /// rather than using `parse()` (which always requires a non-modifier key to be included).
-    pub fn keystroke(&self) -> Option<warpui::keymap::Keystroke> {
-        use warpui::keymap::Keystroke;
+    pub fn keystroke(&self) -> Option<zap_ng_ui::keymap::Keystroke> {
+        use zap_ng_ui::keymap::Keystroke;
 
         let keystroke = match self {
             VoiceInputToggleKey::None => return None,
@@ -1242,10 +1242,10 @@ define_settings_group!(AISettings, settings: [
     //
     // This is only used when `FeatureFlag::AgentView` is enabled.
     nld_in_terminal_enabled_internal: NLDInTerminalEnabled {
-        // openWarp:NLD in terminal 默认开。HeuristicClassifier 命中 CJK / 自然语言时
-        // 自动切到 AI 输入,这是 openWarp 中文用户能直接在终端写中文当 prompt 的前提。
+        // ZapNG:NLD in terminal 默认开。HeuristicClassifier 命中 CJK / 自然语言时
+        // 自动切到 AI 输入,这是 ZapNG 中文用户能直接在终端写中文当 prompt 的前提。
         // 上游默认 false 是因为 cloud 路线下用户先进 AgentView 全屏,在 terminal mode
-        // 不期望自动切换;openWarp 没有 cloud 全屏入口,terminal 即主输入区。
+        // 不期望自动切换;ZapNG 没有 cloud 全屏入口,terminal 即主输入区。
         type: bool,
         default: true,
         supported_platforms: SupportedPlatforms::ALL,
@@ -1559,7 +1559,7 @@ define_settings_group!(AISettings, settings: [
         description: "Whether the agent uses your saved rules during requests.",
     }
     // Whether zap drive context should be included in AI requests
-    warp_drive_context_enabled: WarpDriveContextEnabled {
+    zap_ng_drive_context_enabled: WarpDriveContextEnabled {
         type: bool,
         default: true,
         supported_platforms: SupportedPlatforms::ALL,
@@ -1625,7 +1625,7 @@ define_settings_group!(AISettings, settings: [
 
     // Whether or not the user has enabled the ability to use Zap credits even when providing
     // their own LLM provider API key.
-    can_use_warp_credits_with_byok: CanUseWarpCreditsWithByok {
+    can_use_zap_ng_credits_with_byok: CanUseWarpCreditsWithByok {
         type: bool,
         default: false,
         supported_platforms: SupportedPlatforms::ALL,
@@ -2141,44 +2141,44 @@ impl AISettings {
             return None;
         }
         let path = std::path::Path::new(path_str);
-        crate::user_config::WarpConfig::as_ref(app)
+        crate::user_config::ZapNGConfig::as_ref(app)
             .tab_configs()
             .iter()
             .find(|config| config.source_path.as_deref().is_some_and(|p| p == path))
             .cloned()
     }
 
-    pub fn is_active_ai_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_active_ai_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_any_ai_enabled(app)
             && *self.is_active_ai_enabled_internal
             && AppExecutionMode::as_ref(app).allows_active_ai()
     }
 
-    pub fn is_prompt_suggestions_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_prompt_suggestions_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.prompt_suggestions_enabled_internal
     }
 
-    pub fn is_rule_suggestions_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_rule_suggestions_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.rule_suggestions_enabled_internal
     }
 
-    pub fn is_code_suggestions_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_code_suggestions_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.code_suggestions_enabled_internal
     }
 
-    pub fn is_natural_language_autosuggestions_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_natural_language_autosuggestions_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.natural_language_autosuggestions_enabled_internal
     }
 
-    pub fn is_git_operations_autogen_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_git_operations_autogen_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.git_operations_autogen_enabled_internal
     }
 
-    pub fn is_intelligent_autosuggestions_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_intelligent_autosuggestions_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_active_ai_enabled(app) && *self.intelligent_autosuggestions_enabled_internal
     }
 
-    pub fn is_voice_input_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_voice_input_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         // Voice input is conditionally-compiled because it requires additional dependencies on some platforms.
         cfg!(feature = "voice_input")
             && self.is_any_ai_enabled(app)
@@ -2189,7 +2189,7 @@ impl AISettings {
     ///
     /// If `FeatureFlag::AgentView` is enabled, this specifically gates NLD enablement in the agent
     /// view only.
-    pub fn is_ai_autodetection_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_ai_autodetection_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.ai_autodetection_enabled_internal
     }
 
@@ -2198,19 +2198,19 @@ impl AISettings {
     /// This is only used when `FeatureFlag::AgentView` is enabled.
     /// If the user has not explicitly set this setting, it defaults to the value of
     /// `ai_autodetection_enabled_internal`.
-    pub fn is_nld_in_terminal_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_nld_in_terminal_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.nld_in_terminal_enabled_internal
     }
 
-    pub fn is_memory_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_memory_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         self.is_any_ai_enabled(app) && *self.memory_enabled
     }
 
-    pub fn is_warp_drive_context_enabled(&self, app: &warpui::AppContext) -> bool {
-        self.is_any_ai_enabled(app) && *self.warp_drive_context_enabled
+    pub fn is_zap_ng_drive_context_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
+        self.is_any_ai_enabled(app) && *self.zap_ng_drive_context_enabled
     }
 
-    pub fn is_file_based_mcp_enabled(&self, app: &warpui::AppContext) -> bool {
+    pub fn is_file_based_mcp_enabled(&self, app: &zap_ng_ui::AppContext) -> bool {
         if !FeatureFlag::FileBasedMcp.is_enabled() || !self.is_any_ai_enabled(app) {
             return false;
         }

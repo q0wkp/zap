@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::any::Any;
 use std::{collections::HashSet, sync::Arc};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::Fill;
-use warpui::{Action, AppContext, Element, Entity, ModelHandle};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{Action, AppContext, Element, Entity, ModelHandle};
 
 use super::mixer::{AsyncDataSource, BoxFuture};
 use super::{item::SearchItem, mixer::DataSourceRunErrorWrapper};
@@ -207,7 +207,7 @@ pub enum QueryFilter {
     /// Filter results for known/indexed code repos.
     Repos,
 
-    /// Filter results for SSH servers in the openWarp SSH 管理器 tree.
+    /// Filter results for SSH servers in the ZapNG SSH 管理器 tree.
     SshServers,
 
     /// Filter results for diff sets.

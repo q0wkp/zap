@@ -7,7 +7,7 @@ use std::time::Duration;
 use dashmap::DashMap;
 use futures::channel::oneshot;
 use futures::io::{AsyncRead, AsyncWrite};
-use warpui::r#async::{executor, FutureExt as _};
+use zap_ng_ui::r#async::{executor, FutureExt as _};
 
 use crate::proto::{
     client_message, read_file_chunk_response, server_message, Abort, Authenticate, BufferEdit,
@@ -23,8 +23,8 @@ use crate::proto::{
 
 use crate::protocol::{self, ProtocolError, RequestId};
 
-use warp_core::SessionId;
-use warpui::r#async::TransportStream;
+use zap_ng_core::SessionId;
+use zap_ng_ui::r#async::TransportStream;
 
 /// Default request timeout (2 minutes).
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);

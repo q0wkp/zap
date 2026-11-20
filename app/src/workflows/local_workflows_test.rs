@@ -1,10 +1,10 @@
 use std::sync::Arc;
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::*;
 
 fn initialize_app(app: &App) {
-    app.add_singleton_model(WarpConfig::mock);
+    app.add_singleton_model(ZapNGConfig::mock);
 }
 
 #[test]

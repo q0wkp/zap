@@ -5,7 +5,7 @@ use crate::{
     settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier},
     themes::theme::Fill,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Hoverable, Icon,
         MouseState, MouseStateHandle, ParentElement, Shrinkable,
@@ -31,7 +31,7 @@ use super::{
 pub enum FeatureSection {
     WhatsNew,
     GettingStarted,
-    MaximizeWarp,
+    MaximizeZapNG,
     AdvancedSetup,
 }
 
@@ -40,7 +40,7 @@ impl FeatureSection {
         match self {
             FeatureSection::WhatsNew => crate::t!("resource-center-whats-new-section"),
             FeatureSection::GettingStarted => crate::t!("resource-center-getting-started-section"),
-            FeatureSection::MaximizeWarp => crate::t!("resource-center-maximize-warp-section"),
+            FeatureSection::MaximizeZapNG => crate::t!("resource-center-maximize-warp-section"),
             FeatureSection::AdvancedSetup => crate::t!("resource-center-advanced-setup-section"),
         }
     }

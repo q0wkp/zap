@@ -1,7 +1,7 @@
 //! Components for the notebook header.
 
-use warp_core::features::FeatureFlag;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
     elements::{
         Container, CrossAxisAlignment, Flex, Highlight, MainAxisAlignment, MainAxisSize,
         MouseStateHandle, ParentElement, Shrinkable,
@@ -142,7 +142,7 @@ impl DetailsBar {
                     .finish()
             });
         } else {
-            // openWarp UX: 给 "铅笔" 切换按钮加 tooltip,避免用户(特别是首次使用)
+            // ZapNG UX: 给 "铅笔" 切换按钮加 tooltip,避免用户(特别是首次使用)
             // 不知道这个图标能点、点了会发生什么。Tooltip 按当前 mode
             // 表达「点击后会发生的动作」,而不是重复旁边的状态文字。
             let tooltip_text = match mode {

@@ -25,20 +25,20 @@ use ai::agent::action::{AIAgentActionType, FileEdit};
 use ai::diff_validation::ParsedDiff;
 use chrono::{DateTime, Utc};
 use parking_lot::FairMutex;
-use warp_core::features::FeatureFlag;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
         use std::{path::PathBuf, time::Duration};
         use crate::ai::blocklist::{read_local_file_context, BlocklistAIPermissions};
-        use warp_terminal::shell::ShellLaunchData;
+        use zap_ng_terminal::shell::ShellLaunchData;
         use crate::util::link_detection::{detect_file_paths, DetectedLinkType};
         use crate::util::openable_file_type::is_binary_file;
         use ai::agent::FileLocations;
-        use warpui::AppContext;
-        use warpui::r#async::FutureExt as AsyncFutureExt;
+        use zap_ng_ui::AppContext;
+        use zap_ng_ui::r#async::FutureExt as AsyncFutureExt;
         use itertools::Itertools;
     }
 }

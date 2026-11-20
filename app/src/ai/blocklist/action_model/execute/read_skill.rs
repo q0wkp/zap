@@ -10,14 +10,14 @@ use ai::skills::SkillReference;
 #[cfg(feature = "local_fs")]
 use ai::skills::parse_skill;
 use std::path::Path;
-use warpui::{ModelContext, SingletonEntity};
+use zap_ng_ui::{ModelContext, SingletonEntity};
 
 use crate::ai::agent::AIAgentActionType;
 use crate::ai::agent::ReadSkillRequest;
 use crate::ai::agent::ReadSkillResult;
 use ai::agent::action_result::FileContext;
 use futures::future::{BoxFuture, FutureExt};
-use warpui::Entity;
+use zap_ng_ui::Entity;
 
 pub struct ReadSkillExecutor;
 

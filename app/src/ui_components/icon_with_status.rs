@@ -1,9 +1,9 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::icons::Icon as WarpIcon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::{Fill as WarpThemeFill, WarpTheme};
-use warpui::{
+use zap_ng_core::ui::icons::Icon as ZapNGIcon;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::{Fill as ZapNGThemeFill, ZapNGTheme};
+use zap_ng_ui::{
     assets::asset_cache::AssetSource,
     elements::{
         CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius, Element,
@@ -36,8 +36,8 @@ const OMP_LOGO_PATH: &str = "bundled/svg/omp.svg";
 
 pub(crate) fn render_cli_agent_logo(
     agent: CLIAgent,
-    icon_color: WarpThemeFill,
-    fallback_icon_color: WarpThemeFill,
+    icon_color: ZapNGThemeFill,
+    fallback_icon_color: ZapNGThemeFill,
 ) -> Box<dyn Element> {
     let multi_color_logo_path = match agent {
         CLIAgent::DeepSeek => Some(DEEPSEEK_LOGO_PATH),
@@ -54,10 +54,10 @@ pub(crate) fn render_cli_agent_logo(
     } else {
         agent
             .icon()
-            .map(|icon| icon.to_warpui_icon(icon_color).finish())
+            .map(|icon| icon.to_zap_ng_ui_icon(icon_color).finish())
             .unwrap_or_else(|| {
-                WarpIcon::Terminal
-                    .to_warpui_icon(fallback_icon_color)
+                ZapNGIcon::Terminal
+                    .to_zap_ng_ui_icon(fallback_icon_color)
                     .finish()
             })
     }
@@ -67,8 +67,8 @@ pub(crate) fn render_cli_agent_logo(
 pub(crate) enum IconWithStatusVariant {
     /// A generic icon with a given color on an overlay background.
     Neutral {
-        icon: WarpIcon,
-        icon_color: WarpThemeFill,
+        icon: ZapNGIcon,
+        icon_color: ZapNGThemeFill,
     },
     /// A pre-built icon element on an overlay background.
     NeutralElement { icon_element: Box<dyn Element> },
@@ -88,14 +88,14 @@ pub(crate) enum IconWithStatusVariant {
 pub(crate) fn render_icon_with_status(
     variant: IconWithStatusVariant,
     sizing: &IconWithStatusSizing,
-    theme: &WarpTheme,
-    badge_ring_background: WarpThemeFill,
+    theme: &ZapNGTheme,
+    badge_ring_background: ZapNGThemeFill,
 ) -> Box<dyn Element> {
     let sub_text = theme.sub_text_color(theme.background());
 
     match variant {
         IconWithStatusVariant::Neutral { icon, icon_color } => {
-            let inner = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+            let inner = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_width(sizing.icon_size)
                 .with_height(sizing.icon_size)
                 .finish();
@@ -122,12 +122,12 @@ pub(crate) fn render_icon_with_status(
         }
         IconWithStatusVariant::OzAgent { status, is_ambient } => {
             let icon = if is_ambient {
-                WarpIcon::OzCloud
+                ZapNGIcon::OzCloud
             } else {
-                WarpIcon::Oz
+                ZapNGIcon::Oz
             };
             let inner = ConstrainedBox::new(
-                icon.to_warpui_icon(theme.main_text_color(theme.background()))
+                icon.to_zap_ng_ui_icon(theme.main_text_color(theme.background()))
                     .finish(),
             )
             .with_width(sizing.icon_size)
@@ -154,7 +154,7 @@ pub(crate) fn render_icon_with_status(
                 .unwrap_or(ColorU::new(100, 100, 100, 255));
             let icon_color = agent.brand_icon_color();
             let icon_element =
-                render_cli_agent_logo(agent, WarpThemeFill::Solid(icon_color), sub_text);
+                render_cli_agent_logo(agent, ZapNGThemeFill::Solid(icon_color), sub_text);
             let inner = ConstrainedBox::new(icon_element)
                 .with_width(sizing.icon_size)
                 .with_height(sizing.icon_size)
@@ -188,14 +188,14 @@ fn render_with_optional_status_badge(
     circle: Box<dyn Element>,
     status: Option<&ConversationStatus>,
     sizing: &IconWithStatusSizing,
-    theme: &WarpTheme,
-    badge_ring_background: WarpThemeFill,
+    theme: &ZapNGTheme,
+    badge_ring_background: ZapNGThemeFill,
 ) -> Box<dyn Element> {
     let Some(status) = status else {
         return circle;
     };
     let (icon, color) = status.status_icon_and_color(theme);
-    let badge_icon = ConstrainedBox::new(icon.to_warpui_icon(WarpThemeFill::Solid(color)).finish())
+    let badge_icon = ConstrainedBox::new(icon.to_zap_ng_ui_icon(ZapNGThemeFill::Solid(color)).finish())
         .with_width(sizing.badge_icon_size)
         .with_height(sizing.badge_icon_size)
         .finish();

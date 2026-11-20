@@ -1,12 +1,12 @@
 use crate::appearance::Appearance;
 use crate::notebooks::file::MarkdownDisplayMode;
-use warpui::elements::{CornerRadius, Fill as UiFill, Radius};
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::UiComponentStyles;
-use warpui::ui_components::segmented_control::{
+use zap_ng_ui::elements::{CornerRadius, Fill as UiFill, Radius};
+use zap_ng_ui::presenter::ChildView;
+use zap_ng_ui::ui_components::components::UiComponentStyles;
+use zap_ng_ui::ui_components::segmented_control::{
     LabelConfig, RenderableOptionConfig, SegmentedControl, SegmentedControlEvent,
 };
-use warpui::{
+use zap_ng_ui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -117,8 +117,8 @@ fn markdown_toggle_styles(app: &AppContext) -> UiComponentStyles {
         border_color: Some(UiFill::Solid(theme.surface_3().into())),
         background: Some(UiFill::Solid(theme.background().into())),
         height: Some(20.0),
-        padding: Some(warpui::ui_components::components::Coords::uniform(0.0)),
-        margin: Some(warpui::ui_components::components::Coords {
+        padding: Some(zap_ng_ui::ui_components::components::Coords::uniform(0.0)),
+        margin: Some(zap_ng_ui::ui_components::components::Coords {
             top: 0.0,
             bottom: 0.0,
             left: 0.0,

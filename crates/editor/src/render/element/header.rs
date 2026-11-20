@@ -31,8 +31,8 @@ impl RenderableBlock for RenderableHeader {
     fn layout(
         &mut self,
         model: &RenderState,
-        ctx: &mut warpui::LayoutContext,
-        app: &warpui::AppContext,
+        ctx: &mut zap_ng_ui::LayoutContext,
+        app: &zap_ng_ui::AppContext,
     ) {
         self.placeholder
             .layout(&self.viewport_item, model, ctx, app, |block| {
@@ -53,7 +53,7 @@ impl RenderableBlock for RenderableHeader {
             });
     }
 
-    fn paint(&mut self, model: &RenderState, ctx: &mut RenderContext, _app: &warpui::AppContext) {
+    fn paint(&mut self, model: &RenderState, ctx: &mut RenderContext, _app: &zap_ng_ui::AppContext) {
         let content = model.content();
         let (paragraph, header_size) = extract_block!(
             self.viewport_item, content,

@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     async_assert_eq,
     integration::{AssertionCallback, AssertionOutcome},
 };

@@ -36,7 +36,7 @@ app/src/search/slash_command_menu/** merge=openwarp-ours
 # openWarp 独有特性:SSH 管理器(2026-05-04 新增)
 # 上游不会有这些路径,标记 merge=openwarp-ours 是为了将来万一上游加同名
 # 文件时不产生意外冲突。
-crates/warp_ssh_manager/** merge=openwarp-ours
+crates/zap_ng_ssh_manager/** merge=openwarp-ours
 app/src/ssh_manager/** merge=openwarp-ours
 app/src/pane_group/pane/ssh_server_pane.rs merge=openwarp-ours
 crates/persistence/migrations/2026-05-04-120000_add_ssh_manager_tables/** merge=openwarp-ours

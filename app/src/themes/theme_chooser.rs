@@ -1,8 +1,8 @@
 use pathfinder_color::ColorU;
 use settings::Setting as _;
-use warp_editor::editor::NavigationKey;
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{
         Align, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         DispatchEventResult, Element, Empty, EventHandler, Fill, Flex, Hoverable, Icon,
@@ -23,7 +23,7 @@ use warpui::{
 
 use crate::resource_center::{mark_feature_used_and_write_to_user_defaults, Tip, TipAction};
 use crate::ui_components::tab_selector::{render_tab_selector, SettingsTab};
-use crate::themes::theme::{RespectSystemTheme, ThemeKind, WarpTheme};
+use crate::themes::theme::{RespectSystemTheme, ThemeKind, ZapNGTheme};
 use crate::util::traffic_lights::traffic_light_data;
 use crate::workspace::PANEL_HEADER_HEIGHT;
 use crate::{
@@ -34,7 +34,7 @@ use crate::{
     report_if_error,
     settings::{respect_system_theme, ThemeSettings},
     themes::theme::SelectedSystemThemes,
-    user_config::{load_theme_configs, themes_dir, WarpConfig, WarpConfigUpdateEvent},
+    user_config::{load_theme_configs, themes_dir, ZapNGConfig, ZapNGConfigUpdateEvent},
     util::traffic_lights::{TrafficLightData, TrafficLightSide},
     window_settings::WindowSettings,
 };
@@ -44,7 +44,7 @@ use crate::{
     server::telemetry::TelemetryEvent, ui_components::window_focus_dimming::WindowFocusDimming,
 };
 use crate::{
-    themes::theme::WarpThemeConfig,
+    themes::theme::ZapNGThemeConfig,
     ui_components::buttons::{close_button, icon_button},
     ui_components::icons,
 };
@@ -188,7 +188,7 @@ pub struct ThemeChooser {
     scope: ThemeScope,
     search_editor: ViewHandle<EditorView>,
     tips_completed: ModelHandle<TipsCompleted>,
-    window_id: warpui::WindowId,
+    window_id: zap_ng_ui::WindowId,
 }
 
 #[derive(Debug)]
@@ -204,7 +204,7 @@ pub enum ThemeChooserAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", ThemeChooserAction::Up, id!("ThemeChooser")),
@@ -214,7 +214,7 @@ pub fn init(app: &mut AppContext) {
     ]);
 }
 
-fn theme_chooser_items(theme_config: &WarpThemeConfig) -> Vec<ThemeChooserItem> {
+fn theme_chooser_items(theme_config: &ZapNGThemeConfig) -> Vec<ThemeChooserItem> {
     // Zap 去中心化:不再有 referral 概念,所有主题(包括两个原 referral-gated
     // 主题)对本地用户始终可见。
     let mut theme_items: Vec<ThemeChooserItem> = theme_config
@@ -244,9 +244,9 @@ impl ThemeChooser {
             me.handle_editor_event(event, ctx);
         });
 
-        let warp_config_handle = WarpConfig::handle(ctx);
-        ctx.subscribe_to_model(&warp_config_handle, |me, _, event, ctx| {
-            if let WarpConfigUpdateEvent::Themes = event {
+        let zap_ng_config_handle = ZapNGConfig::handle(ctx);
+        ctx.subscribe_to_model(&zap_ng_config_handle, |me, _, event, ctx| {
+            if let ZapNGConfigUpdateEvent::Themes = event {
                 me.update_themes(ctx);
                 ctx.notify();
             }
@@ -265,7 +265,7 @@ impl ThemeChooser {
             }
         });
 
-        let themes = theme_chooser_items(WarpConfig::as_ref(ctx).theme_config());
+        let themes = theme_chooser_items(ZapNGConfig::as_ref(ctx).theme_config());
 
         Self {
             themes: Tracked::new(themes),
@@ -328,8 +328,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&ZapNGConfig::handle(ctx), move |zap_ng_config, ctx| {
+                    zap_ng_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_and_save_theme(&theme, ctx);
@@ -341,8 +341,8 @@ impl ThemeChooser {
         ctx.spawn(
             async move { load_theme_configs(&themes_dir()) },
             move |theme_chooser, loaded_themes, ctx| {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.update_theme_config(loaded_themes, ctx);
+                ctx.update_model(&ZapNGConfig::handle(ctx), move |zap_ng_config, ctx| {
+                    zap_ng_config.update_theme_config(loaded_themes, ctx);
                 });
                 theme_chooser.update_themes(ctx);
                 theme_chooser.select_latest_theme(ctx);
@@ -579,7 +579,7 @@ impl ThemeChooser {
     }
 
     fn update_themes(&mut self, ctx: &mut ViewContext<Self>) {
-        *self.themes = theme_chooser_items(WarpConfig::as_ref(ctx).theme_config());
+        *self.themes = theme_chooser_items(ZapNGConfig::as_ref(ctx).theme_config());
     }
 
     fn up(&mut self, ctx: &mut ViewContext<Self>) {
@@ -887,16 +887,16 @@ impl ThemeChooser {
                     .collect::<Vec<_>>()
                     .into_iter()
             });
-            let warp_theme = appearance.theme();
+            let zap_ng_theme = appearance.theme();
 
             Scrollable::vertical(
                 self.scroll_state.clone(),
                 list.finish_scrollable(),
                 SCROLLBAR_WIDTH,
-                warp_theme
-                    .disabled_text_color(warp_theme.surface_2())
+                zap_ng_theme
+                    .disabled_text_color(zap_ng_theme.surface_2())
                     .into(),
-                warp_theme.main_text_color(warp_theme.surface_2()).into(),
+                zap_ng_theme.main_text_color(zap_ng_theme.surface_2()).into(),
                 Fill::None,
             )
             .finish()
@@ -942,7 +942,7 @@ impl View for ThemeChooser {
         Some(AccessibilityContent::new(
                 "Theme chooser. Unfortunately, theme chooser window isn't compatible with screen readers yet.",
                 "Press escape to close.",
-                WarpA11yRole::WindowRole,
+                ZapNGA11yRole::WindowRole,
         ))
     }
 
@@ -973,21 +973,21 @@ impl View for ThemeChooser {
 #[derive(Clone)]
 struct ThemeChooserItem {
     pub kind: ThemeKind,
-    warp_theme: WarpTheme,
+    zap_ng_theme: ZapNGTheme,
     mouse_state: MouseStateHandle,
 }
 
 impl ThemeChooserItem {
-    pub fn new(kind: ThemeKind, warp_theme: WarpTheme) -> Self {
+    pub fn new(kind: ThemeKind, zap_ng_theme: ZapNGTheme) -> Self {
         Self {
             kind,
-            warp_theme,
+            zap_ng_theme,
             mouse_state: MouseStateHandle::default(),
         }
     }
 
     fn render_thumbnail(&self, font_family: FamilyId) -> Box<dyn Element> {
-        theme::render_preview(&self.warp_theme, font_family, None)
+        theme::render_preview(&self.zap_ng_theme, font_family, None)
     }
 
     pub fn render(

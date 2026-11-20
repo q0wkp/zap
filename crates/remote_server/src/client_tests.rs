@@ -9,8 +9,8 @@ use crate::proto::{
     WriteFileChunkResponse, WriteFileChunkSuccess,
 };
 use crate::protocol;
-use warp_core::SessionId;
-use warpui::r#async::executor;
+use zap_ng_core::SessionId;
+use zap_ng_ui::r#async::executor;
 
 use super::*;
 

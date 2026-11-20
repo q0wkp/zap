@@ -5,7 +5,7 @@ use crate::terminal::model::image_map::{ImagePlacementData, ImageType, PlacedIma
 use crate::terminal::model::kitty::DeletionType;
 
 use super::{AbsolutePoint, AbsoluteRectangle, GridHandler};
-use warp_terminal::model::Point;
+use zap_ng_terminal::model::Point;
 
 impl GridHandler {
     pub fn get_image_ids_in_range(

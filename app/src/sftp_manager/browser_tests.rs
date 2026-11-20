@@ -7,9 +7,9 @@
 
 use std::path::PathBuf;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::platform::WindowStyle;
-use warpui::TypedActionView;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::TypedActionView;
 
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
@@ -21,7 +21,7 @@ use super::types::{ConnectionState, Dialog, TransferDirection, TransferState};
 use crate::editor::EditorView;
 
 /// 初始化测试所需的最小单例集合
-fn initialize_app(app: &mut warpui::App) {
+fn initialize_app(app: &mut zap_ng_ui::App) {
     use crate::workspace::ToastStack;
 
     initialize_settings_for_tests(app);
@@ -31,13 +31,13 @@ fn initialize_app(app: &mut warpui::App) {
 
     // SSH 管理器需要一个 SQLite 路径；使用临时文件，查询失败不 panic
     let temp_db = std::env::temp_dir().join("warp_sftp_test.sqlite");
-    let _ = warp_ssh_manager::set_database_path(temp_db);
+    let _ = zap_ng_ssh_manager::set_database_path(temp_db);
 }
 
 /// 创建 SftpBrowserView 并放入窗口
 ///
 /// 视图初始状态为 Disconnected（无 SSH 连接），不影响 UI 状态逻辑测试。
-fn create_view(app: &mut warpui::App) -> (warpui::WindowId, warpui::ViewHandle<SftpBrowserView>) {
+fn create_view(app: &mut zap_ng_ui::App) -> (zap_ng_ui::WindowId, zap_ng_ui::ViewHandle<SftpBrowserView>) {
     app.add_window(WindowStyle::NotStealFocus, |ctx| {
         SftpBrowserView::new("test-node".to_string(), ctx)
     })
@@ -50,7 +50,7 @@ fn create_view(app: &mut warpui::App) -> (warpui::WindowId, warpui::ViewHandle<S
 /// 验证 DragFilesEnter 设置 is_drag_hovering 为 true
 #[test]
 fn test_drag_files_enter() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -70,7 +70,7 @@ fn test_drag_files_enter() {
 /// 验证 DragFilesLeave 设置 is_drag_hovering 为 false
 #[test]
 fn test_drag_files_leave() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -95,7 +95,7 @@ fn test_drag_files_leave() {
 /// 验证 DragAndDropFiles 重置 is_drag_hovering
 #[test]
 fn test_drag_and_drop_resets_hover() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -127,7 +127,7 @@ fn test_drag_and_drop_resets_hover() {
 /// 验证 SelectEntry 选中条目
 #[test]
 fn test_select_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -144,7 +144,7 @@ fn test_select_entry() {
 /// 验证 SelectEntry 切换选中（单选模式：再次选中同一项仍保持选中）
 #[test]
 fn test_toggle_select_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -174,7 +174,7 @@ fn test_toggle_select_entry() {
 /// 验证 SetSearchFilter 设置搜索文本
 #[test]
 fn test_set_search_filter() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -191,7 +191,7 @@ fn test_set_search_filter() {
 /// 验证 ClearSearchFilter 清除搜索文本
 #[test]
 fn test_clear_search_filter() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -220,7 +220,7 @@ fn test_clear_search_filter() {
 /// 验证在根目录 NavigateUp 不改变路径
 #[test]
 fn test_navigate_up_from_root() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -249,7 +249,7 @@ fn test_navigate_up_from_root() {
 /// 验证视图初始状态正确
 #[test]
 fn test_initial_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -272,7 +272,7 @@ fn test_initial_state() {
 fn test_context_menu_sets_state() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -308,7 +308,7 @@ fn test_context_menu_sets_state() {
 fn test_close_context_menu_clears_state() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -345,7 +345,7 @@ fn test_close_context_menu_clears_state() {
 fn test_context_menu_replaces_previous() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -400,7 +400,7 @@ fn test_context_menu_replaces_previous() {
 fn test_context_menu_zero_index() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -429,7 +429,7 @@ fn test_context_menu_zero_index() {
 fn test_context_menu_large_index() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -457,7 +457,7 @@ fn test_context_menu_large_index() {
 fn test_context_menu_negative_position() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -482,7 +482,7 @@ fn test_context_menu_negative_position() {
 /// 验证 CloseContextMenu 在没有菜单打开时不 panic
 #[test]
 fn test_close_context_menu_when_none() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -510,7 +510,7 @@ fn test_close_context_menu_when_none() {
 fn test_context_menu_clears_previous_selection() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -550,7 +550,7 @@ fn test_context_menu_clears_previous_selection() {
 fn test_context_menu_multiple_open_close_cycles() {
     use pathfinder_geometry::vector::Vector2F;
 
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -653,7 +653,7 @@ fn test_action_close_context_menu_variant() {
 /// 验证 DeleteEntry 在无 SFTP 连接时不 panic
 #[test]
 fn test_delete_entry_no_connection() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -667,7 +667,7 @@ fn test_delete_entry_no_connection() {
 /// 验证 RenameEntry 在无 SFTP 连接时不 panic
 #[test]
 fn test_rename_entry_no_connection() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -684,7 +684,7 @@ fn test_rename_entry_no_connection() {
 /// 验证 ConfirmDelete 无 dialog、无连接时不 panic
 #[test]
 fn test_confirm_delete_no_connection_no_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -701,7 +701,7 @@ fn test_confirm_delete_no_connection_no_dialog() {
 /// 验证 ConfirmDelete 有 dialog 但无连接时安全处理
 #[test]
 fn test_confirm_delete_no_connection_with_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -722,7 +722,7 @@ fn test_confirm_delete_no_connection_with_dialog() {
 /// 验证 ConfirmRename 无 dialog、无连接时不 panic
 #[test]
 fn test_confirm_rename_no_connection_no_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -739,7 +739,7 @@ fn test_confirm_rename_no_connection_no_dialog() {
 /// 验证 ConfirmRename 有 dialog 但无连接时提示错误并关闭 dialog
 #[test]
 fn test_confirm_rename_no_connection_with_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -764,7 +764,7 @@ fn test_confirm_rename_no_connection_with_dialog() {
 /// 验证 ConfirmNewFolder 无 dialog、无连接时不 panic
 #[test]
 fn test_confirm_new_folder_no_connection_no_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -781,7 +781,7 @@ fn test_confirm_new_folder_no_connection_no_dialog() {
 /// 验证 ConfirmNewFolder 有 dialog 但无连接时提示错误并关闭 dialog
 #[test]
 fn test_confirm_new_folder_no_connection_with_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -805,7 +805,7 @@ fn test_confirm_new_folder_no_connection_with_dialog() {
 /// 验证 ConfirmMove 无 dialog、无连接时不 panic
 #[test]
 fn test_confirm_move_no_connection_no_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -822,7 +822,7 @@ fn test_confirm_move_no_connection_no_dialog() {
 /// 验证 ConfirmMove 有 dialog 但无连接时提示错误并关闭 dialog
 #[test]
 fn test_confirm_move_no_connection_with_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -847,7 +847,7 @@ fn test_confirm_move_no_connection_with_dialog() {
 /// 验证 NavigateTo 当前路径时不产生重复历史
 #[test]
 fn test_navigate_to_same_path() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -865,7 +865,7 @@ fn test_navigate_to_same_path() {
 /// 验证 NavigateTo 深层路径正确更新
 #[test]
 fn test_navigate_to_deep_path() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -886,7 +886,7 @@ fn test_navigate_to_deep_path() {
 /// 验证 NavigateTo 将反斜杠规范化为正斜杠
 #[test]
 fn test_navigate_to_backslash_path() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -906,7 +906,7 @@ fn test_navigate_to_backslash_path() {
 /// 验证 GoBack 在初始历史位置不做操作
 #[test]
 fn test_go_back_at_initial() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -923,7 +923,7 @@ fn test_go_back_at_initial() {
 /// 验证 GoForward 在初始历史位置不做操作
 #[test]
 fn test_go_forward_at_initial() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -940,7 +940,7 @@ fn test_go_forward_at_initial() {
 /// 验证 GoUp 从根路径不做操作
 #[test]
 fn test_go_up_from_root_via_action() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -957,7 +957,7 @@ fn test_go_up_from_root_via_action() {
 /// 验证多步导航后 GoBack/GoForward 历史追踪正确
 #[test]
 fn test_multiple_navigate_then_back_forward() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -999,7 +999,7 @@ fn test_multiple_navigate_then_back_forward() {
 /// 验证 NewFolder 打开 CreateFolder 对话框
 #[test]
 fn test_new_folder_opens_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1016,7 +1016,7 @@ fn test_new_folder_opens_dialog() {
 /// 验证 CloseDialog 清除对话框
 #[test]
 fn test_close_dialog_clears() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1034,7 +1034,7 @@ fn test_close_dialog_clears() {
 /// 验证 ConfirmOverwrite 关闭对话框
 #[test]
 fn test_confirm_overwrite_closes_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1057,7 +1057,7 @@ fn test_confirm_overwrite_closes_dialog() {
 /// 验证 CloseDialog 在无 dialog 时不 panic
 #[test]
 fn test_close_dialog_when_none() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1074,7 +1074,7 @@ fn test_close_dialog_when_none() {
 /// 验证对话框多次开关循环稳定性
 #[test]
 fn test_dialog_multiple_cycles() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1103,7 +1103,7 @@ fn test_dialog_multiple_cycles() {
 /// 验证取消不存在的任务 ID 不 panic
 #[test]
 fn test_cancel_transfer_nonexistent_id() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1120,7 +1120,7 @@ fn test_cancel_transfer_nonexistent_id() {
 /// 验证取消 ID 为 0 的不存在任务不 panic
 #[test]
 fn test_cancel_transfer_zero_id() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1137,7 +1137,7 @@ fn test_cancel_transfer_zero_id() {
 /// 验证 DownloadSaveAs 越界索引不 panic 且不创建孤立任务
 #[test]
 fn test_download_save_as_out_of_range() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1161,7 +1161,7 @@ fn test_download_save_as_out_of_range() {
 /// 验证 DownloadSaveAs 在空条目列表 index=0 不 panic
 #[test]
 fn test_download_save_as_zero_index_empty() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1184,7 +1184,7 @@ fn test_download_save_as_zero_index_empty() {
 /// 验证 ExecuteUpload 不存在的本地文件且无连接时任务标记为 Failed
 #[test]
 fn test_execute_upload_nonexistent_file() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1212,7 +1212,7 @@ fn test_execute_upload_nonexistent_file() {
 /// 验证 DetailsEntry 越界索引不 panic
 #[test]
 fn test_details_entry_out_of_range() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1229,7 +1229,7 @@ fn test_details_entry_out_of_range() {
 /// 验证 DetailsEntry 在空条目 index=0 不 panic
 #[test]
 fn test_details_entry_zero_empty() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1246,7 +1246,7 @@ fn test_details_entry_zero_empty() {
 /// 验证 DetailsEntry 极大索引不 panic
 #[test]
 fn test_details_entry_usize_max() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1267,7 +1267,7 @@ fn test_details_entry_usize_max() {
 /// 验证 OpenEntry 越界索引不 panic，路径不变
 #[test]
 fn test_open_entry_out_of_range() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1284,7 +1284,7 @@ fn test_open_entry_out_of_range() {
 /// 验证 OpenEntry 在空条目 index=0 不 panic
 #[test]
 fn test_open_entry_zero_empty() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1301,7 +1301,7 @@ fn test_open_entry_zero_empty() {
 /// 验证 DownloadEntry 在空条目列表不 panic
 #[test]
 fn test_download_entry_empty_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1319,7 +1319,7 @@ fn test_download_entry_empty_entries() {
 /// 验证 DeleteSelected 在空选择集不 panic
 #[test]
 fn test_delete_selected_empty_selection() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1336,7 +1336,7 @@ fn test_delete_selected_empty_selection() {
 /// 验证 DeleteSelected 有选择但无条目不 panic
 #[test]
 fn test_delete_selected_no_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1354,7 +1354,7 @@ fn test_delete_selected_no_entries() {
 /// 验证 SelectEntry 接受 usize::MAX 不 panic
 #[test]
 fn test_select_entry_usize_max() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1371,7 +1371,7 @@ fn test_select_entry_usize_max() {
 /// 验证多次 SelectEntry 每次清除前一个选择
 #[test]
 fn test_multiple_select_clears_previous() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1397,7 +1397,7 @@ fn test_multiple_select_clears_previous() {
 /// 验证初始状态一致性（构造函数会尝试连接，可能为 Failed 或 Disconnected）
 #[test]
 fn test_render_disconnected_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1418,7 +1418,7 @@ fn test_render_disconnected_state() {
 /// 验证 drag hover 状态正确设置
 #[test]
 fn test_render_with_drag_hover() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1435,7 +1435,7 @@ fn test_render_with_drag_hover() {
 /// 验证搜索过滤状态正确设置
 #[test]
 fn test_render_with_search_filter() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1452,7 +1452,7 @@ fn test_render_with_search_filter() {
 /// 验证右键菜单状态正确设置
 #[test]
 fn test_render_with_context_menu() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1475,7 +1475,7 @@ fn test_render_with_context_menu() {
 /// 验证对话框打开状态正确设置
 #[test]
 fn test_render_with_dialog_open() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1492,7 +1492,7 @@ fn test_render_with_dialog_open() {
 /// 验证传输任务创建后状态正确
 #[test]
 fn test_render_with_transfer_task() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1512,7 +1512,7 @@ fn test_render_with_transfer_task() {
 /// 验证所有叠加层同时存在时不 panic
 #[test]
 fn test_render_all_overlays_combined() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1546,7 +1546,7 @@ fn test_render_all_overlays_combined() {
 /// 验证所有叠加层关闭后状态正确清零
 #[test]
 fn test_render_after_close_all_overlays() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1584,7 +1584,7 @@ fn test_render_after_close_all_overlays() {
 /// 验证初始路径历史状态
 #[test]
 fn test_render_path_history_initial() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -1598,7 +1598,7 @@ fn test_render_path_history_initial() {
 /// 验证初始 is_loading 为 false
 #[test]
 fn test_render_is_loading_initial_false() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 

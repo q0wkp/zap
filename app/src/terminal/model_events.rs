@@ -13,11 +13,11 @@ use instant::Instant;
 use std::sync::Arc;
 
 use crate::remote_server::manager::RemoteServerManager;
-use warpui::SingletonEntity;
-use warpui::{Entity, ModelContext, ModelHandle};
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{Entity, ModelContext, ModelHandle};
 
 use super::event::SshLoginStatus;
-use super::model::ansi::{FinishUpdateValue, WarpificationUnavailableReason};
+use super::model::ansi::{FinishUpdateValue, ZapNGificationUnavailableReason};
 use super::model::block::BlockId;
 use super::model::completions::ShellCompletion;
 use super::model::terminal_model::{ExitReason, TmuxControlModeContext, TmuxInstallationState};
@@ -189,7 +189,7 @@ impl ModelEventDispatcher {
                 context,
             }) => {
                 {
-                    if let Some(TmuxControlModeContext::WarpInitiatedForSsh(control_mode)) = context
+                    if let Some(TmuxControlModeContext::ZapNGInitiatedForSsh(control_mode)) = context
                     {
                         let duration_ms = Instant::now()
                             .duration_since(control_mode.start_time)
@@ -197,7 +197,7 @@ impl ModelEventDispatcher {
                             // Clip large durations to u64::MAX
                             .min(u64::MAX as u128) as u64;
                         send_telemetry_from_ctx!(
-                            TelemetryEvent::SshTmuxWarpificationSuccess {
+                            TelemetryEvent::SshTmuxZapNGificationSuccess {
                                 duration_ms,
                                 tmux_installation: control_mode.tmux_installation,
                             },
@@ -423,7 +423,7 @@ pub enum ModelEvent {
     /// A line such as "Last login: Wed Oct 30" for example indicates login is complete. This is
     /// useful for detecting when an ssh session becomes ready for warpification.
     DetectedEndOfSshLogin(SshLoginStatus),
-    RemoteWarpificationIsUnavailable(WarpificationUnavailableReason),
+    RemoteWarpificationIsUnavailable(ZapNGificationUnavailableReason),
     SshTmuxInstaller(TmuxInstallationState),
     TmuxInstallFailed {
         line: String,

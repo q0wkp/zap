@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use warpui::{App, AssetProvider, View, ViewHandle, WindowId};
+use zap_ng_ui::{App, AssetProvider, View, ViewHandle, WindowId};
 
 pub mod agent_mode;
 pub mod assertions;
@@ -35,7 +35,7 @@ pub mod terminal;
 pub mod themes;
 pub mod type_getters;
 pub mod view_getters;
-pub mod warp_drive;
+pub mod zap_ng_drive;
 pub mod window;
 pub mod workflow;
 pub mod workspace;

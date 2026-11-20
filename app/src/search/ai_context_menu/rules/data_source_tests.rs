@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use settings::manager::SettingsManager;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 use crate::ai::facts::{AIFact, AIFactObject, AIFactObjectModel, AIMemory};
 use crate::auth::AuthStateProvider;

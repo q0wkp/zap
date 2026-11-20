@@ -2,12 +2,12 @@ use std::{fmt::Write, time::Duration};
 
 use async_channel::Sender;
 use pathfinder_geometry::vector::vec2f;
-use warp_editor::{
+use zap_ng_editor::{
     render::model::{AutoScrollMode, Decoration},
     search::{SearchEvent, Searcher},
 };
-use warpui::{
-    accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole},
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ActionAccessibilityContent, ZapNGA11yRole},
     elements::{
         Border, ChildAnchor, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Empty, Flex, MouseStateHandle, OffsetPositioning, ParentElement, PositionedElementAnchor,
@@ -259,7 +259,7 @@ impl FindBar {
             .ui_builder()
             .button(ButtonVariant::Text, mouse_state_handle)
             // The fill here doesn't matter, since it's overridden by the button text color.
-            .with_icon_label(icon.to_warpui_icon(crate::themes::theme::Fill::white()))
+            .with_icon_label(icon.to_zap_ng_ui_icon(crate::themes::theme::Fill::white()))
             .with_style(base_styles)
             .with_hovered_styles(UiComponentStyles {
                 background: Some(appearance.theme().foreground_button_color().into()),
@@ -356,7 +356,7 @@ impl View for FindBar {
         "FindBar"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         let searcher = self.searcher.as_ref(app);
         let theme = appearance.theme();
@@ -364,7 +364,7 @@ impl View for FindBar {
         let has_matches = searcher.match_count() > 0;
 
         let find_icon = Container::new(
-            ConstrainedBox::new(Icon::Find.to_warpui_icon(theme.active_ui_detail()).finish())
+            ConstrainedBox::new(Icon::Find.to_zap_ng_ui_icon(theme.active_ui_detail()).finish())
                 .with_height(editor_height)
                 .with_width(editor_height)
                 .finish(),
@@ -561,7 +561,7 @@ impl TypedActionView for FindBar {
         };
         Some(AccessibilityContent::new_without_help(
             text,
-            WarpA11yRole::UserAction,
+            ZapNGA11yRole::UserAction,
         ))
         .into()
     }

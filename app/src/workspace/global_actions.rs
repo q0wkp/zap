@@ -9,7 +9,7 @@ use crate::workspace::cross_window_tab_drag::CrossWindowTabDrag;
 // Zap Wave 3-1:`ServerApiProvider` 不再被本文件使用,`debug_create_anonymous_user`
 // debug action 随 AuthClient 一同物理删。
 use ::settings::ToggleableSetting;
-use warp_core::execution_mode::AppExecutionMode;
+use zap_ng_core::execution_mode::AppExecutionMode;
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentExchangeId;
@@ -21,9 +21,9 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use futures::stream::AbortHandle;
-use warpui::r#async::Timer;
-use warpui::windowing::WindowManager;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, TypedActionView};
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity, TypedActionView};
 
 /// Specifies where a forked conversation should be opened.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

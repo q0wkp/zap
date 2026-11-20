@@ -1,4 +1,4 @@
-use warpui::{elements::MouseStateHandle, Element};
+use zap_ng_ui::{elements::MouseStateHandle, Element};
 
 use crate::{
     appearance::Appearance,
@@ -7,21 +7,21 @@ use crate::{
     themes::theme::Fill,
 };
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{ZapNGDriveItem, ZapNGDriveItemId};
 
 #[derive(Clone)]
-pub struct WarpDriveSpace {
+pub struct ZapNGDriveSpace {
     space: Space,
 }
 
-impl WarpDriveSpace {
+impl ZapNGDriveSpace {
     #[allow(dead_code)]
     pub fn new(space: Space) -> Self {
         Self { space }
     }
 }
 
-impl WarpDriveItem for WarpDriveSpace {
+impl ZapNGDriveItem for ZapNGDriveSpace {
     fn display_name(&self) -> Option<String> {
         None
     }
@@ -46,8 +46,8 @@ impl WarpDriveItem for WarpDriveSpace {
         None
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::Space(self.space)
+    fn zap_ng_drive_id(&self) -> ZapNGDriveItemId {
+        ZapNGDriveItemId::Space(self.space)
     }
 
     fn sync_status_icon(
@@ -59,11 +59,11 @@ impl WarpDriveItem for WarpDriveSpace {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn ZapNGDriveItem> {
         Box::new(self.clone())
     }
 
-    fn action_summary(&self, _app: &warpui::AppContext) -> Option<String> {
+    fn action_summary(&self, _app: &zap_ng_ui::AppContext) -> Option<String> {
         None
     }
 }

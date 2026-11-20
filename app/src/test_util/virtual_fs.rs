@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 pub use virtual_fs::{Dirs, Stub, VirtualFS};
 
-pub trait WarpDirs {
+pub trait ZapNGDirs {
     #[allow(dead_code)]
     fn git_repository_fixture(&self) -> PathBuf {
         Zap::fixtures().join("git_repository")
     }
 }
 
-impl WarpDirs for Dirs {}
+impl ZapNGDirs for Dirs {}
 
 pub struct Zap;
 

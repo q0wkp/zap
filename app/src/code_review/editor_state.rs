@@ -1,5 +1,5 @@
-use warpui::elements::MouseStateHandle;
-use warpui::{AppContext, ViewHandle};
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::{AppContext, ViewHandle};
 
 use crate::code::local_code_editor::LocalCodeEditorView;
 

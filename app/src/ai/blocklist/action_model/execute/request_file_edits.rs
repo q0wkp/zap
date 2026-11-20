@@ -2,7 +2,7 @@ mod apply_diff_model;
 mod diff_application;
 mod telemetry;
 
-use warp_util::file::FileSaveError;
+use zap_ng_util::file::FileSaveError;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -11,8 +11,8 @@ use ai::diff_validation::AIRequestedCodeDiff;
 use futures::{channel::oneshot, future::BoxFuture, FutureExt};
 use itertools::Itertools;
 use vec1::{vec1, Vec1};
-use warp_core::send_telemetry_from_ctx;
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _, ViewHandle};
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_ui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _, ViewHandle};
 
 use apply_diff_model::ApplyDiffModel;
 pub(crate) use diff_application::apply_edits;
@@ -401,7 +401,7 @@ impl RequestFileEditsExecutor {
         // Set the session type on the diff view so save/delete/create routes
         // through the correct FileModel backend.
         let diff_session_type = match self.active_session.as_ref(ctx).session_type(ctx) {
-            Some(SessionType::WarpifiedRemote {
+            Some(SessionType::ZapNGifiedRemote {
                 host_id: Some(host_id),
             }) => DiffSessionType::Remote(host_id.clone()),
             _ => DiffSessionType::Local,

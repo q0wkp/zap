@@ -14,11 +14,11 @@ use clap::ValueEnum;
 use itertools::Itertools;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::{HashMap, HashSet};
-use warp_cli::agent::Harness;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::theme::{color::internal_colors, WarpTheme};
-use warpui::color::ColorU;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, WindowId};
+use zap_ng_cli::agent::Harness;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::theme::{color::internal_colors, ZapNGTheme};
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity, WindowId};
 
 const SESSION_EXPIRATION_TIME: chrono::Duration = chrono::Duration::weeks(1);
 
@@ -261,7 +261,7 @@ impl AgentRunDisplayStatus {
         )
     }
 
-    pub fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &ZapNGTheme) -> (Icon, ColorU) {
         match self {
             AgentRunDisplayStatus::TaskQueued
             | AgentRunDisplayStatus::TaskPending

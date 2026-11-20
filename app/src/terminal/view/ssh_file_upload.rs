@@ -4,9 +4,9 @@ use itertools::Itertools;
 use markdown_parser::{
     FormattedText, FormattedTextFragment, FormattedTextHeader, FormattedTextLine,
 };
-use warp_core::command::ExitCode;
-use warp_core::ui::{appearance::Appearance, color::blend::Blend as _};
-use warpui::{
+use zap_ng_core::command::ExitCode;
+use zap_ng_core::ui::{appearance::Appearance, color::blend::Blend as _};
+use zap_ng_ui::{
     elements::{
         Border, Container, CornerRadius, CrossAxisAlignment, Flex, FormattedTextElement,
         HighlightedHyperlink, MainAxisSize, MouseStateHandle, ParentElement, Radius,
@@ -91,7 +91,7 @@ impl TypedActionView for FileUpload {
         &mut self,
         _action: &Self::Action,
         _ctx: &mut ViewContext<Self>,
-    ) -> warpui::accessibility::ActionAccessibilityContent {
+    ) -> zap_ng_ui::accessibility::ActionAccessibilityContent {
         Default::default()
     }
 }
@@ -101,7 +101,7 @@ impl View for FileUpload {
         "SSH File Upload"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         self.render_file_upload_element(&self.uploads, appearance)
     }

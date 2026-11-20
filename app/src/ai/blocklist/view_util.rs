@@ -3,8 +3,8 @@ use std::sync::LazyLock;
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
         MouseStateHandle, ParentElement,
@@ -19,16 +19,16 @@ use warpui::{
 };
 
 use crate::{
-    themes::theme::{AnsiColorIdentifier, Fill, WarpTheme},
+    themes::theme::{AnsiColorIdentifier, Fill, ZapNGTheme},
     ui_components::icons::Icon,
 };
 
-use warpui::elements::ChildAnchor;
-use warpui::elements::Hoverable;
-use warpui::elements::OffsetPositioning;
-use warpui::elements::ParentAnchor;
-use warpui::elements::ParentOffsetBounds;
-use warpui::elements::Stack;
+use zap_ng_ui::elements::ChildAnchor;
+use zap_ng_ui::elements::Hoverable;
+use zap_ng_ui::elements::OffsetPositioning;
+use zap_ng_ui::elements::ParentAnchor;
+use zap_ng_ui::elements::ParentOffsetBounds;
+use zap_ng_ui::elements::Stack;
 
 const PROVIDER_BUTTON_ICON_SIZE: f32 = 14.;
 const PROVIDER_BUTTON_ICON_TEXT_GAP: f32 = 8.;
@@ -49,7 +49,7 @@ pub const CLAUDE_ORANGE: ColorU = ColorU {
 
 /// Returns the color to be used for various AI signifiers
 /// input with AI mode).
-pub fn ai_brand_color(theme: &WarpTheme) -> ColorU {
+pub fn ai_brand_color(theme: &ZapNGTheme) -> ColorU {
     AnsiColorIdentifier::Magenta
         .to_ansi_color(&theme.terminal_colors().normal)
         .into()
@@ -57,7 +57,7 @@ pub fn ai_brand_color(theme: &WarpTheme) -> ColorU {
 
 /// Returns the color to be used for error UI throughout Agent Mode (like the "request limit
 /// exceeded" chip).
-pub fn error_color(theme: &WarpTheme) -> ColorU {
+pub fn error_color(theme: &ZapNGTheme) -> ColorU {
     AnsiColorIdentifier::Red
         .to_ansi_color(&theme.terminal_colors().normal)
         .into()
@@ -90,7 +90,7 @@ pub fn render_ai_follow_up_icon(
                 .tool_tip(crate::t!("ai-block-follow-up-existing-conversation"))
                 .with_style(UiComponentStyles {
                     font_size: Some(12.),
-                    background: Some(warpui::elements::Fill::Solid(tooltip_background)),
+                    background: Some(zap_ng_ui::elements::Fill::Solid(tooltip_background)),
                     font_color: Some(appearance.theme().background().into_solid()),
                     ..Default::default()
                 });
@@ -115,7 +115,7 @@ fn render_input_icon(icon: Icon, color: Fill, app: &AppContext) -> Box<dyn Eleme
     // height.
     let icon_size = ai_indicator_height(app);
     ConstrainedBox::new(
-        Container::new(icon.to_warpui_icon(color).finish())
+        Container::new(icon.to_zap_ng_ui_icon(color).finish())
             .with_uniform_padding(icon_size / 8.)
             .finish(),
     )
@@ -179,7 +179,7 @@ where
 {
     let theme = appearance.theme();
     let font_color = theme.foreground().into_solid();
-    let mut label_children = vec![ConstrainedBox::new(icon.to_warpui_icon(color).finish())
+    let mut label_children = vec![ConstrainedBox::new(icon.to_zap_ng_ui_icon(color).finish())
         .with_width(PROVIDER_BUTTON_ICON_SIZE)
         .with_height(PROVIDER_BUTTON_ICON_SIZE)
         .finish()];

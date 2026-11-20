@@ -3,8 +3,8 @@ use markdown_parser::parse_markdown;
 use parking_lot::FairMutex;
 use settings::Setting as _;
 use std::{borrow::Cow, cmp::Reverse, path::Path, sync::Arc};
-use warp_core::ui::Icon;
-use warpui::{
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::{
     elements::{
         Container, CornerRadius, CrossAxisAlignment, Expanded, Flex, FormattedTextElement,
         MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
@@ -298,7 +298,7 @@ fn format_session_location(session: &Session, working_directory: Option<&str>) -
     let hostname = session.hostname();
     match session_type {
         SessionType::Local => Some(display_path),
-        SessionType::WarpifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
+        SessionType::ZapNGifiedRemote { .. } => Some(format!("{user}@{hostname}:{display_path}")),
     }
 }
 
@@ -463,7 +463,7 @@ fn current_working_directory_for_zero_state(terminal_model: &TerminalModel) -> O
                     .is_some_and(|pending_session_info| {
                         matches!(
                             pending_session_info.session_type,
-                            BootstrapSessionType::WarpifiedRemote
+                            BootstrapSessionType::ZapNGifiedRemote
                         )
                     });
             (!terminal_model.block_list().is_bootstrapped() && !is_bootstrapping_remote_shell)
@@ -507,7 +507,7 @@ fn render_title_and_description(props: HeaderProps, app: &AppContext) -> Vec<Box
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(
+                    icon.to_zap_ng_ui_icon(
                         theme
                             .main_text_color(theme.background())
                             .into_solid()
@@ -542,7 +542,7 @@ fn render_title_and_description(props: HeaderProps, app: &AppContext) -> Vec<Box
                 theme.sub_text_color(bg.into()).into_solid()
             };
             Container::new(
-                ConstrainedBox::new(Icon::X.to_warpui_icon(fill.into()).finish())
+                ConstrainedBox::new(Icon::X.to_zap_ng_ui_icon(fill.into()).finish())
                     .with_height(icon_size)
                     .with_width(icon_size)
                     .finish(),
@@ -883,7 +883,7 @@ fn render_recent_conversations_section(
 }
 
 mod styles {
-    use warp_core::ui::appearance::Appearance;
+    use zap_ng_core::ui::appearance::Appearance;
 
     pub const CONTAINER_VERTICAL_PADDING: f32 = 16.;
     pub const TITLE_MARGIN_BOTTOM: f32 = 8.;

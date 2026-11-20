@@ -6,10 +6,10 @@ use crate::slides::{bottom_nav, layout, slide_content};
 use crate::visuals::{intention_terminal_visual, intention_visual};
 use crate::OnboardingIntention;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::{appearance::Appearance, theme::color::internal_colors};
-use warpui::prelude::Align;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::{appearance::Appearance, theme::color::internal_colors};
+use zap_ng_ui::prelude::Align;
+use zap_ng_ui::{
     elements::{
         ClippedScrollStateHandle, Container, CrossAxisAlignment, Flex, FormattedTextElement,
         MainAxisSize, MouseStateHandle, ParentElement,
@@ -72,7 +72,7 @@ pub struct CustomizeUISlide {
     chip_conversation_mouse: MouseStateHandle,
     chip_file_explorer_mouse: MouseStateHandle,
     chip_global_search_mouse: MouseStateHandle,
-    chip_warp_drive_mouse: MouseStateHandle,
+    chip_zap_ng_drive_mouse: MouseStateHandle,
     // Buttons
     back_button: button::Button,
     next_button: button::Button,
@@ -108,7 +108,7 @@ impl CustomizeUISlide {
             chip_conversation_mouse: MouseStateHandle::default(),
             chip_file_explorer_mouse: MouseStateHandle::default(),
             chip_global_search_mouse: MouseStateHandle::default(),
-            chip_warp_drive_mouse: MouseStateHandle::default(),
+            chip_zap_ng_drive_mouse: MouseStateHandle::default(),
             back_button: button::Button::default(),
             next_button: button::Button::default(),
             scroll_state: ClippedScrollStateHandle::new(),
@@ -327,8 +327,8 @@ impl CustomizeUISlide {
 
             chips.push(ChipSpec {
                 label: localized("onboarding-customize-warp-drive", "Zap Drive"),
-                is_enabled: ui.show_warp_drive,
-                mouse_state: self.chip_warp_drive_mouse.clone(),
+                is_enabled: ui.show_zap_ng_drive,
+                mouse_state: self.chip_zap_ng_drive_mouse.clone(),
                 on_click: Box::new(|ctx, _, _| {
                     ctx.dispatch_typed_action(CustomizeSlideAction::ToggleToolsSubSetting {
                         setting: ToolsPanelSubSetting::ZapDrive,
@@ -806,8 +806,8 @@ impl TypedActionView for CustomizeUISlide {
                             model.set_show_global_search(!current, ctx);
                         }
                         ToolsPanelSubSetting::ZapDrive => {
-                            let current = model.ui_customization().show_warp_drive;
-                            model.set_show_warp_drive(!current, ctx);
+                            let current = model.ui_customization().show_zap_ng_drive;
+                            model.set_show_zap_ng_drive(!current, ctx);
                         }
                     });
                 ctx.notify();

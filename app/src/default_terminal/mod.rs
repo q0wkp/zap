@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     windowing::{StateEvent, WindowManager},
     Entity, ModelContext, SingletonEntity,
 };
@@ -16,12 +16,12 @@ mod non_mac {
         false
     }
 
-    pub fn is_warp_default_terminal() -> bool {
+    pub fn is_zap_ng_default_terminal() -> bool {
         false
     }
 
     /// Sets Zap as the default terminal
-    pub fn set_warp_as_default_terminal() -> Result<(), String> {
+    pub fn set_zap_ng_as_default_terminal() -> Result<(), String> {
         Err("Not implemented".to_string())
     }
 }
@@ -32,7 +32,7 @@ use non_mac::*;
 
 pub struct DefaultTerminal {
     /// Whether the OS will treat Zap as the default app for scripts/executables.
-    is_warp_default: bool,
+    is_zap_ng_default: bool,
 }
 
 impl DefaultTerminal {
@@ -44,13 +44,13 @@ impl DefaultTerminal {
 
         // This can be slow to compute due to calling into platform APIs, so in unit
         // tests, where we shouldn't care, just pretend that we are not.
-        let is_warp_default = if cfg!(test) {
+        let is_zap_ng_default = if cfg!(test) {
             false
         } else {
-            is_warp_default_terminal()
+            is_zap_ng_default_terminal()
         };
 
-        Self { is_warp_default }
+        Self { is_zap_ng_default }
     }
 
     /// This is an OS-level setting. Unlike most other settings, where Zap is the source-of-truth
@@ -60,22 +60,22 @@ impl DefaultTerminal {
         match event {
             StateEvent::ValueChanged { current, previous } => {
                 if current.active_window.is_some() && previous.active_window.is_none() {
-                    let is_warp_default_now = is_warp_default_terminal();
-                    if is_warp_default_now != self.is_warp_default {
-                        self.set_is_warp_default(is_warp_default_now, ctx);
+                    let is_zap_ng_default_now = is_zap_ng_default_terminal();
+                    if is_zap_ng_default_now != self.is_zap_ng_default {
+                        self.set_is_zap_ng_default(is_zap_ng_default_now, ctx);
                     }
                 }
             }
         }
     }
 
-    fn set_is_warp_default(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
-        self.is_warp_default = value;
+    fn set_is_zap_ng_default(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
+        self.is_zap_ng_default = value;
         ctx.emit(DefaultTerminalEvent::ValueChanged);
         ctx.notify();
     }
 
-    pub fn can_warp_become_default() -> bool {
+    pub fn can_zap_ng_become_default() -> bool {
         if cfg!(test) {
             // Determining whether or not we can become the default terminal requires
             // calling into platform APIs, which can be slow, and we can't actually
@@ -86,17 +86,17 @@ impl DefaultTerminal {
         }
     }
 
-    pub fn is_warp_default(&self) -> bool {
-        self.is_warp_default
+    pub fn is_zap_ng_default(&self) -> bool {
+        self.is_zap_ng_default
     }
 
     /// This is a one-way operation. Once we set the default terminal to Zap, we can't really
     /// "unset" it unless we pick a new default terminal. Picking a new default is complicated.
-    pub fn make_warp_default(&mut self, ctx: &mut ModelContext<Self>) {
-        if let Err(e) = set_warp_as_default_terminal() {
+    pub fn make_zap_ng_default(&mut self, ctx: &mut ModelContext<Self>) {
+        if let Err(e) = set_zap_ng_as_default_terminal() {
             log::error!("Error setting Zap as default terminal: {e:#}");
         } else {
-            self.set_is_warp_default(true, ctx);
+            self.set_is_zap_ng_default(true, ctx);
         }
     }
 }

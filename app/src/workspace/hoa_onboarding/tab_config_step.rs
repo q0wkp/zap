@@ -1,12 +1,12 @@
 use std::path::Path;
 
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Container, CrossAxisAlignment, Flex, MouseStateHandle, ParentElement, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::geometry::vector::Vector2F;
-use warpui::Element;
-use warpui::EventContext;
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::geometry::vector::Vector2F;
+use zap_ng_ui::Element;
+use zap_ng_ui::EventContext;
 
 use crate::appearance::Appearance;
 use crate::tab_configs::session_config::SessionType;

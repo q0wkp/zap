@@ -7,9 +7,9 @@ use pathfinder_geometry::vector::Vector2F;
 use crate::search::mixer::AddAsyncSourceOptions;
 use lazy_static::lazy_static;
 use std::{collections::HashSet, ops::Range, sync::Arc, time::Duration};
-use warp_core::features::FeatureFlag;
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{
         resizable_state_handle, Align, AnchorPair, Border, ConstrainedBox, Container, CornerRadius,
         CrossAxisAlignment, Dismiss, Fill, Flex, OffsetPositioning, OffsetType, ParentElement,
@@ -24,11 +24,11 @@ use warpui::{
 };
 
 use crate::{
-    ai_assistant::execution_context::WarpAiExecutionContext,
+    ai_assistant::execution_context::ZapNGAiExecutionContext,
     appearance::Appearance,
     auth::{AuthState, AuthStateProvider},
     completer::SessionContext,
-    drive::settings::WarpDriveSettings,
+    drive::settings::ZapNGDriveSettings,
     search::{
         command_search::searcher::{CommandSearchItemAction, CommandSearchMixer},
         result_renderer::{QueryResultRenderer, QueryResultRendererStyles},
@@ -51,7 +51,7 @@ use super::{
     env_var_collections::EnvVarCollectionDataSource,
     history::history_data_source_for_session,
     notebooks::notebooks_data_source,
-    warp_ai::WarpAIDataSource,
+    zap_ng_ai::ZapNGAIDataSource,
     workflows::{stored_workflows_data_source, WorkflowsDataSource},
     zero_state::{CommandSearchZeroStateEvent, CommandSearchZeroStateView},
 };
@@ -212,7 +212,7 @@ impl CommandSearchView {
         &mut self,
         session_id: SessionId,
         session_context: Option<SessionContext>,
-        _ai_execution_context: Option<WarpAiExecutionContext>,
+        _ai_execution_context: Option<ZapNGAiExecutionContext>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.mixer.update(ctx, |mixer, ctx| {
@@ -223,12 +223,12 @@ impl CommandSearchView {
             // will show up higher in the list (i.e.: further away from the input).
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(
-                    WarpAIDataSource::new(),
+                    ZapNGAIDataSource::new(),
                     HashSet::from([QueryFilter::NaturalLanguage]),
                 );
             }
 
-            if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+            if ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
                 mixer.add_sync_source(
                     WorkflowsDataSource::new(session_context.as_ref(), ctx),
                     HashSet::from([QueryFilter::Workflows]),
@@ -331,7 +331,7 @@ impl CommandSearchView {
         initial_query: String,
         query_filter: Option<QueryFilter>,
         menu_positioning: MenuPositioning,
-        ai_execution_context: Option<WarpAiExecutionContext>,
+        ai_execution_context: Option<ZapNGAiExecutionContext>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.reset_command_search_mixer(session_id, session_context, ai_execution_context, ctx);
@@ -505,7 +505,7 @@ impl CommandSearchView {
             ctx.emit_a11y_content(AccessibilityContent::new(
                 a11y_content,
                 a11y_help_content,
-                WarpA11yRole::UserAction,
+                ZapNGA11yRole::UserAction,
             ));
 
             // Recompute the result index - the incoming index is the index in the
@@ -566,7 +566,7 @@ impl CommandSearchView {
             .build()
             .finish();
         let row = Flex::row()
-            .with_main_axis_size(warpui::elements::MainAxisSize::Max)
+            .with_main_axis_size(zap_ng_ui::elements::MainAxisSize::Max)
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(Shrinkable::new(1., text).finish());
 
@@ -612,7 +612,7 @@ impl CommandSearchView {
 
         Container::new(
             Flex::row()
-                .with_main_axis_size(warpui::elements::MainAxisSize::Max)
+                .with_main_axis_size(zap_ng_ui::elements::MainAxisSize::Max)
                 .with_cross_axis_alignment(CrossAxisAlignment::Center)
                 .with_child(Shrinkable::new(1., text).finish())
                 .finish(),
@@ -854,11 +854,11 @@ impl View for CommandSearchView {
         Some(AccessibilityContent::new(
             "Command Search".to_owned(),
             "Search your history, workflows, and more.  Use the Up and Down arrows to browse search results after typing.  Press Enter to accept a selected result, inserting it into the terminal input.  Press Escape to close.".to_owned(),
-            WarpA11yRole::MenuRole,
+            ZapNGA11yRole::MenuRole,
         ))
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         let mixer = self.mixer.as_ref(app);
 
@@ -970,7 +970,7 @@ impl CommandSearchView {
 pub mod styles {
     use lazy_static::lazy_static;
     use pathfinder_color::ColorU;
-    use warpui::elements::{Border, DropShadow, ScrollbarWidth};
+    use zap_ng_ui::elements::{Border, DropShadow, ScrollbarWidth};
 
     use crate::{appearance::Appearance, themes::theme::Fill};
 

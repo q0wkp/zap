@@ -5,9 +5,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use warp_core::channel::ChannelState;
-use warp_core::user_preferences::GetUserPreferences;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::user_preferences::GetUserPreferences;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use crate::ai::llms::LLMId;
 use crate::ai::mcp::templatable_manager::TemplatableMCPServerManagerEvent;
@@ -971,7 +971,7 @@ impl AIExecutionProfilesModel {
         );
     }
 
-    pub fn set_autosync_plans_to_warp_drive(
+    pub fn set_autosync_plans_to_zap_ng_drive(
         &mut self,
         profile_id: ClientProfileId,
         enabled: bool,

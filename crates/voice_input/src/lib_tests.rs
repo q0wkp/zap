@@ -1,4 +1,4 @@
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::{StartListeningError, VoiceInput, VoiceInputState, VoiceInputToggledFrom};
 

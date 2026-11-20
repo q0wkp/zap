@@ -7,8 +7,8 @@ use std::{
 
 use command::blocking::Command;
 use freedesktop_desktop_entry::DesktopEntry;
-use warp_util::path::LineAndColumnArg;
-use warpui::AppContext;
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::AppContext;
 
 use super::Editor;
 

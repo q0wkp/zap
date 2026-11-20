@@ -1,6 +1,6 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::{self, appearance::Appearance, color::blend::Blend as _};
-use warpui::{
+use zap_ng_core::ui::{self, appearance::Appearance, color::blend::Blend as _};
+use zap_ng_ui::{
     elements::{
         Align, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement as _, Radius,
@@ -34,7 +34,7 @@ use crate::{
 };
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_editable_bindings([EditableBinding::new(
         "workspace:new_tab",
@@ -287,7 +287,7 @@ impl GetStartedView {
                             keybinding_name_to_display_string("workspace:new_tab", app)
                                 .unwrap_or_default()
                         ),
-                        ui::Icon::Terminal.to_warpui_icon(theme.foreground()),
+                        ui::Icon::Terminal.to_zap_ng_ui_icon(theme.foreground()),
                         MainAxisSize::Min,
                         MainAxisAlignment::Center,
                         vec2f(16., 16.),

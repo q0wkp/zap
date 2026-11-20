@@ -13,24 +13,24 @@ use crate::util::bindings::{
 use crate::workspace::WorkspaceAction;
 use lazy_static::lazy_static;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{Border, ChildView, Flex, ParentElement};
-use warpui::elements::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{Border, ChildView, Flex, ParentElement};
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Radius, DEFAULT_UI_LINE_HEIGHT_RATIO,
 };
-use warpui::keymap::Keystroke;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::ui_components::keyboard_shortcut::KeyboardShortcut;
-use warpui::ViewContext;
-use warpui::{
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::ui_components::keyboard_shortcut::KeyboardShortcut;
+use zap_ng_ui::ViewContext;
+use zap_ng_ui::{
     elements::{
         ChildAnchor, CornerRadius, Element, Hoverable, MouseStateHandle, OffsetPositioning,
         ParentAnchor, ParentOffsetBounds, Stack,
     },
     AppContext, SingletonEntity,
 };
-use warpui::{Entity, TypedActionView, View, ViewHandle};
+use zap_ng_ui::{Entity, TypedActionView, View, ViewHandle};
 
 use super::EditorElement;
 
@@ -310,7 +310,7 @@ impl View for AcceptAutosuggestionKeybinding {
             let chevron_down = Container::new(
                 ConstrainedBox::new(
                     Icon::ArrowDropDown
-                        .to_warpui_icon(Fill::Solid(font_color))
+                        .to_zap_ng_ui_icon(Fill::Solid(font_color))
                         .finish(),
                 )
                 .with_height(height_without_border)

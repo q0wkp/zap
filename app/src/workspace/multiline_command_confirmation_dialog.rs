@@ -2,14 +2,14 @@
 //! which runs each of its lines as a separate command.
 
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     Align, ChildAnchor, ChildView, Container, OffsetPositioning, ParentAnchor, ParentOffsetBounds,
     Stack,
 };
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::keymap::{FixedBinding, Keystroke};
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -21,7 +21,7 @@ use crate::view_components::action_button::{
 };
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -91,7 +91,7 @@ impl View for MultilineCommandConfirmationDialog {
         "MultilineCommandConfirmationDialog"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

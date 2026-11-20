@@ -16,7 +16,7 @@
 
 use minijinja::context;
 use serde::Serialize;
-use warpui::{AppContext, EntityId, SingletonEntity};
+use zap_ng_ui::{AppContext, EntityId, SingletonEntity};
 
 use super::oneshot::{
     byop_oneshot_completion, resolve_active_ai_oneshot, resolve_next_command_oneshot,

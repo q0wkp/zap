@@ -2,7 +2,7 @@ use std::any::Any;
 
 use async_channel::Sender;
 
-use warpui::{
+use zap_ng_ui::{
     elements::Point,
     event::DispatchedEvent,
     geometry::{rect::RectF, vector::Vector2F},

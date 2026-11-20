@@ -11,16 +11,16 @@ use serde::Serialize;
 
 use crate::themes::theme::Fill;
 use pathfinder_color::ColorU;
-use warpui::elements::{ChildAnchor, OffsetPositioning, Radius, SavePosition, Shrinkable};
-use warpui::keymap::EditableBinding;
-use warpui::ui_components::components::UiComponent;
-pub use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::elements::{ChildAnchor, OffsetPositioning, Radius, SavePosition, Shrinkable};
+use zap_ng_ui::keymap::EditableBinding;
+use zap_ng_ui::ui_components::components::UiComponent;
+pub use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{ParentElement as _, Stack},
     geometry::vector::vec2f,
     AppContext,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         DropShadow, Element, Flex, Hoverable, MouseStateHandle, ParentAnchor, ParentOffsetBounds,
@@ -28,8 +28,8 @@ use warpui::{
     },
     Entity, SingletonEntity, TypedActionView, View,
 };
-use warpui::{presenter::ChildView, ViewContext, ViewHandle};
-use warpui::{FocusContext, ModelHandle};
+use zap_ng_ui::{presenter::ChildView, ViewContext, ViewHandle};
+use zap_ng_ui::{FocusContext, ModelHandle};
 
 pub const FIND_BAR_WIDTH: f32 = 500.;
 const ICON_PADDING: f32 = 4.;
@@ -125,7 +125,7 @@ pub enum FindAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -258,10 +258,10 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
                     self.model.as_ref(ctx).match_count()
                 ),
                 "Use enter and shift-enter to navigate between matches. Escape to quit.",
-                WarpA11yRole::UserAction,
+                ZapNGA11yRole::UserAction,
             )
         } else {
-            AccessibilityContent::new_without_help("No results.", WarpA11yRole::UserAction)
+            AccessibilityContent::new_without_help("No results.", ZapNGA11yRole::UserAction)
         };
         ctx.emit_a11y_content(content);
     }
@@ -359,7 +359,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -423,7 +423,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(match_icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(match_icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -450,7 +450,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> Find<T> {
         Container::new(
             ConstrainedBox::new(
                 Icon::X
-                    .to_warpui_icon(appearance.theme().active_ui_text_color())
+                    .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_height(height)
@@ -500,7 +500,7 @@ impl<T: FindModel + Entity<Event = FindEvent> + 'static> View for Find<T> {
         Some(AccessibilityContent::new(
             "Type searched phrase.",
             "Press escape to quit, use enter and shift-enter to navigate between matches",
-            WarpA11yRole::TextareaRole,
+            ZapNGA11yRole::TextareaRole,
         ))
     }
 

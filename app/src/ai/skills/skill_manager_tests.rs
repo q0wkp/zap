@@ -1,5 +1,5 @@
 use super::*;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::zap_ng_managed_paths_watcher::ZapNGManagedPathsWatcher;
 use ai::skills::{ParsedSkill, SkillProvider, SkillScope};
 use repo_metadata::{repositories::DetectedRepositories, DirectoryWatcher, RepoMetadataModel};
 use std::collections::{HashMap, HashSet};
@@ -9,8 +9,8 @@ use std::sync::{
     Arc,
 };
 use tempfile::TempDir;
-use warp_core::channel::ChannelState;
-use warpui::App;
+use zap_ng_core::channel::ChannelState;
+use zap_ng_ui::App;
 use watcher::HomeDirectoryWatcher;
 
 // ============================================================================
@@ -24,7 +24,7 @@ fn list_skill_inventory_groups_same_name_skills_and_marks_default() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let repo = PathBuf::from("/repo");
@@ -72,7 +72,7 @@ fn skill_manager_emits_inventory_changed_when_skills_change() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
         let saw_inventory_changed = Arc::new(AtomicBool::new(false));
 
@@ -165,12 +165,12 @@ fn get_skills_for_working_directory_scopes_subdirectory_skills() {
         let repo_handle = app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let skill_manager_handle = app.add_singleton_model(SkillManager::new);
 
         // Register the repo root so get_root_for_path returns Some.
         let canonical_repo =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                 .unwrap();
         repo_handle.update(&mut app, |repos, _ctx| {
             repos.insert_test_repo_root(canonical_repo);
@@ -287,12 +287,12 @@ fn get_skills_for_working_directory_name_collision_returns_both() {
         let repo_handle = app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let skill_manager_handle = app.add_singleton_model(SkillManager::new);
 
         // Register the repo root so get_root_for_path returns Some.
         let canonical_repo =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo)
                 .unwrap();
         repo_handle.update(&mut app, |repos, _ctx| {
             repos.insert_test_repo_root(canonical_repo);
@@ -344,7 +344,7 @@ name: test-skill
 description: Test skill with variables
 ---
 
-Run `{{warp_cli_binary_name}}` to connect to {{warp_server_url}}.
+Run `{{warp_cli_binary_name}}` to connect to {{zap_ng_server_url}}.
 "#,
     )
     .unwrap();
@@ -365,7 +365,7 @@ fn test_read_bundled_skills_preserves_other_content() {
     let temp_dir = TempDir::new().unwrap();
     let skills_dir = temp_dir.path();
 
-    // Create a test skill with both warp and non-warp variables
+    // Create a test skill with both zap-ng and non-warp variables
     let skill_dir = skills_dir.join("test-skill");
     fs::create_dir_all(&skill_dir).unwrap();
     let skill_file = skill_dir.join("SKILL.md");
@@ -478,7 +478,7 @@ fn best_supported_provider_fast_path_returns_deduped_provider() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let claude_skill = make_skill("deploy", ".claude");
@@ -503,7 +503,7 @@ fn best_supported_provider_remaps_to_supported_provider() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let agents_skill = make_skill("deploy", ".agents");
@@ -533,7 +533,7 @@ fn best_supported_provider_falls_back_when_no_match() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let agents_skill = make_skill("deploy", ".agents");
@@ -561,7 +561,7 @@ fn find_skill_by_name_returns_filesystem_skill() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let deploy_skill = make_skill("deploy", ".agents");
@@ -587,7 +587,7 @@ fn find_skill_by_name_prefers_higher_priority_provider() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         let agents_skill = make_skill("deploy", ".agents");
@@ -613,7 +613,7 @@ fn find_skill_by_name_returns_none_for_unknown_name() {
         app.add_singleton_model(|_| DetectedRepositories::default());
         app.add_singleton_model(RepoMetadataModel::new);
         app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-        app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+        app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
         let handle = app.add_singleton_model(SkillManager::new);
 
         // 注册一个 skill,确保 manager 索引非空 — 否则 `mut app` 警告会被

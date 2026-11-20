@@ -1,11 +1,11 @@
 use super::agent_slide::AgentSlideAction;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::Appearance,
     icons::Icon,
     theme::{color::internal_colors, Fill},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Flex, Hoverable, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
@@ -97,7 +97,7 @@ pub(super) fn render_two_line_button(
         // Build title row with optional icon
         let title_el: Box<dyn Element> = if let Some(icon) = icon {
             const ICON_SIZE: f32 = 14.;
-            let icon_el = ConstrainedBox::new(Box::new(icon.to_warpui_icon(title_fill)))
+            let icon_el = ConstrainedBox::new(Box::new(icon.to_zap_ng_ui_icon(title_fill)))
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish();

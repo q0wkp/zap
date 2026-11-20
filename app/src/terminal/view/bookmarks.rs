@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     elements::{Border, ConstrainedBox, Container, CornerRadius, Flex, ParentElement, Radius},
     fonts::Weight,
     ui_components::components::{UiComponent, UiComponentStyles},

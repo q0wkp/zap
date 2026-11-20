@@ -1,8 +1,8 @@
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::{appearance::Appearance, theme::color::internal_colors};
-use warpui::prelude::Align;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_core::ui::{appearance::Appearance, theme::color::internal_colors};
+use zap_ng_ui::prelude::Align;
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
         FormattedTextElement, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,

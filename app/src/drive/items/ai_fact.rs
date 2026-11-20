@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     elements::{Container, Flex, MouseStateHandle, ParentElement},
     fonts::Weight,
     ui_components::components::{UiComponent, UiComponentStyles},
@@ -13,21 +13,21 @@ use crate::{
     themes::theme::Fill,
 };
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{ZapNGDriveItem, ZapNGDriveItemId};
 
 #[derive(Clone)]
-pub struct WarpDriveAIFact {
+pub struct ZapNGDriveAIFact {
     id: ObjectTypeAndId,
     ai_fact: AIFactObject,
 }
 
-impl WarpDriveAIFact {
+impl ZapNGDriveAIFact {
     pub fn new(id: ObjectTypeAndId, ai_fact: AIFactObject) -> Self {
         Self { id, ai_fact }
     }
 }
 
-impl WarpDriveItem for WarpDriveAIFact {
+impl ZapNGDriveItem for ZapNGDriveAIFact {
     fn display_name(&self) -> Option<String> {
         match &self.ai_fact.model().string_model {
             AIFact::Memory(AIMemory { content, name, .. }) => {
@@ -88,8 +88,8 @@ impl WarpDriveItem for WarpDriveAIFact {
         )
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::Object(self.id)
+    fn zap_ng_drive_id(&self) -> ZapNGDriveItemId {
+        ZapNGDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -109,7 +109,7 @@ impl WarpDriveItem for WarpDriveAIFact {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn ZapNGDriveItem> {
         Box::new(self.clone())
     }
 }

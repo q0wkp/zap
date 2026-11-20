@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::terminal::shared_session::protocol::SessionSourceType;
 use crate::terminal::shared_session::protocol::{ParticipantId, ParticipantList, SessionId};
-use warpui::platform::WindowStyle;
-use warpui::{App, ViewHandle};
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, ViewHandle};
 
 use crate::auth::UserUid;
 use crate::editor::ReplicaId;

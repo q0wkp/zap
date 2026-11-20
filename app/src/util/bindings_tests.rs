@@ -1,5 +1,5 @@
-use warpui::platform::OperatingSystem;
-use warpui::{
+use zap_ng_ui::platform::OperatingSystem;
+use zap_ng_ui::{
     keymap::{EditableBinding, Keystroke, Trigger},
     App,
 };

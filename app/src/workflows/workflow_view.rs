@@ -29,9 +29,9 @@ use crate::{
         ObjectType, Owner, Revision, Space, StoredObject, StoredObjectEventEntrypoint,
     },
     drive::{
-        cloud_object_styling::warp_drive_icon_color,
+        cloud_object_styling::zap_ng_drive_icon_color,
         drive_helpers::has_feature_gated_anonymous_user_reached_workflow_limit,
-        items::WarpDriveItemId,
+        items::ZapNGDriveItemId,
         sharing::{ContentEditability, SharingAccessLevel},
         workflows::{
             ai_assist::GeneratedCommandMetadataError,
@@ -78,9 +78,9 @@ use crate::{
     FeatureFlag,
 };
 
-use warp_core::{context_flag::ContextFlag, settings::Setting, ui::theme::AnsiColorIdentifier};
-use warp_editor::editor::NavigationKey;
-use warpui::{
+use zap_ng_core::{context_flag::ContextFlag, settings::Setting, ui::theme::AnsiColorIdentifier};
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{
         Align, Border, ChildAnchor, ChildView, Clipped, ClippedScrollStateHandle,
@@ -116,7 +116,7 @@ pub mod env_var_selector;
 mod syntax_highlightable;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::id;
+    use zap_ng_ui::keymap::macros::id;
     app.register_editable_bindings([EditableBinding::new(
         "workflowview:save",
         crate::t!("keybinding-desc-workflow-view-save"),
@@ -213,7 +213,7 @@ impl WorkflowEditorErrorState {
 
 #[derive(Debug, Clone)]
 pub enum WorkflowAction {
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     AddArgument,
     ToggleViewMode,
     RunWorkflow,
@@ -237,7 +237,7 @@ pub enum WorkflowViewEvent {
     Pane(PaneEvent),
     CreatedWorkflow(SyncId),
     UpdatedWorkflow(SyncId),
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     RunWorkflow {
         workflow: Arc<WorkflowType>,
         source: WorkflowSource,
@@ -842,8 +842,8 @@ impl WorkflowView {
         self.refresh_pane_overflow_menu(ctx);
 
         if let Some(focused_folder_id) = settings.focused_folder_id.map(SyncId::ServerId) {
-            self.view_in_warp_drive(
-                WarpDriveItemId::Object(ObjectTypeAndId::Folder(focused_folder_id)),
+            self.view_in_zap_ng_drive(
+                ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(focused_folder_id)),
                 ctx,
             );
         }
@@ -1963,7 +1963,7 @@ impl WorkflowView {
                         .finish()
                 });
             } else {
-                // openWarp UX: 与 notebook details_bar 一致,给 workflow 编辑
+                // ZapNG UX: 与 notebook details_bar 一致,给 workflow 编辑
                 // 切换按钮加 tooltip,避免用户不知道这个铅笔能点、
                 // 点了会发生什么。Tooltip 表达「点击后会发生的动作」。
                 let tooltip_text = match self.workflow_view_mode {
@@ -2064,8 +2064,8 @@ impl WorkflowView {
                 } else {
                     Icon::Workflow
                 }
-                .to_warpui_icon(
-                    warp_drive_icon_color(
+                .to_zap_ng_ui_icon(
+                    zap_ng_drive_icon_color(
                         appearance,
                         if self.is_for_agent_mode {
                             DriveObjectType::AgentModeWorkflow
@@ -2219,7 +2219,7 @@ impl WorkflowView {
                 let mut stack = Stack::new().with_child(
                     ConstrainedBox::new(
                         Icon::HelpCircle
-                            .to_warpui_icon(
+                            .to_zap_ng_ui_icon(
                                 appearance
                                     .theme()
                                     .sub_text_color(appearance.theme().background()),
@@ -2370,7 +2370,7 @@ impl WorkflowView {
                 let text_and_icon = TextAndIcon::new(
                     alignment,
                     label,
-                    icon.to_warpui_icon(appearance.theme().active_ui_text_color()),
+                    icon.to_zap_ng_ui_icon(appearance.theme().active_ui_text_color()),
                     MainAxisSize::Min,
                     MainAxisAlignment::Center,
                     vec2f(10., 10.),
@@ -2607,7 +2607,7 @@ impl WorkflowView {
         })
     }
 
-    fn view_in_warp_drive(&mut self, id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    fn view_in_zap_ng_drive(&mut self, id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         ctx.emit(WorkflowViewEvent::ViewInWarpDrive(id));
     }
 
@@ -2792,7 +2792,7 @@ impl WorkflowView {
                     .with_children([
                         ConstrainedBox::new(
                             Icon::Trash
-                                .to_warpui_icon(appearance.theme().foreground())
+                                .to_zap_ng_ui_icon(appearance.theme().foreground())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -3008,7 +3008,7 @@ impl View for WorkflowView {
                 SCROLLBAR_WIDTH,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                zap_ng_ui::elements::Fill::None,
             )
             .finish(),
         );
@@ -3079,7 +3079,7 @@ impl TypedActionView for WorkflowView {
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            WorkflowAction::ViewInWarpDrive(id) => self.view_in_warp_drive(*id, ctx),
+            WorkflowAction::ViewInWarpDrive(id) => self.view_in_zap_ng_drive(*id, ctx),
             WorkflowAction::AddArgument => self.add_argument(ctx),
             WorkflowAction::ToggleViewMode => self.toggle_view_mode(ctx),
             WorkflowAction::CloseUnsavedDialog => self.hide_unsaved_changes_dialog(ctx),

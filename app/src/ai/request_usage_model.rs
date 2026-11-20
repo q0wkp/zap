@@ -22,7 +22,7 @@ use crate::{server_time::ServerTimestamp, workspaces::workspace::WorkspaceUid};
 use chrono::{DateTime, Utc};
 use instant::Instant;
 use serde::{Deserialize, Serialize};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BonusGrantType {

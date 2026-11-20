@@ -1,14 +1,14 @@
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use std::{borrow::Cow, sync::Arc};
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::Appearance,
     color::{coloru_with_opacity, contrast::MinimumAllowedContrast, ContrastingColor},
     theme::{color::internal_colors, AnsiColorIdentifier, Fill},
 };
-use warpui::{elements::MainAxisAlignment, Gradient};
-use warpui::{elements::MainAxisSize, text_layout::ClipConfig};
-use warpui::{
+use zap_ng_ui::{elements::MainAxisAlignment, Gradient};
+use zap_ng_ui::{elements::MainAxisSize, text_layout::ClipConfig};
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
         Hoverable, MouseStateHandle, OffsetPositioning, Padding, ParentAnchor, ParentElement as _,
@@ -752,7 +752,7 @@ impl View for ActionButton {
                     })
                     .unwrap_or(Fill::Solid(text_color));
                 row.add_child(
-                    ConstrainedBox::new(icon.to_warpui_icon(icon_fill).finish())
+                    ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_fill).finish())
                         .with_width(icon_size)
                         .with_height(icon_size)
                         .finish(),
@@ -820,7 +820,7 @@ impl View for ActionButton {
                 row.add_child(
                     Container::new(
                         ConstrainedBox::new(
-                            Icon::ChevronDown.to_warpui_icon(text_color.into()).finish(),
+                            Icon::ChevronDown.to_zap_ng_ui_icon(text_color.into()).finish(),
                         )
                         .with_width(icon_size)
                         .with_height(icon_size)

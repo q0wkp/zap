@@ -1,4 +1,4 @@
-use warpui::{async_assert, integration::AssertionCallback};
+use zap_ng_ui::{async_assert, integration::AssertionCallback};
 
 use crate::{
     cloud_object::{

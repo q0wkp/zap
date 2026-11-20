@@ -1,6 +1,6 @@
 use crate::input_suggestions::AIQueryHistoryEntryDetails;
 use std::{borrow::Cow, ops::Sub};
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, ConstrainedBox, Container, CrossAxisAlignment, Flex, Icon, ParentElement, Shrinkable,
     },

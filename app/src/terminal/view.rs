@@ -19,7 +19,7 @@ use onboarding::callout::{FinalState, OnboardingCalloutViewEvent, OnboardingQuer
 use onboarding::{OnboardingCalloutView, OnboardingKeybindings};
 pub(crate) mod docker_sandbox;
 mod link_detection;
-mod open_in_warp;
+mod open_in_zap_ng;
 mod pane_impl;
 mod passive_suggestions;
 mod pending_user_query;
@@ -44,7 +44,7 @@ mod tooltips;
 pub mod use_agent_footer;
 mod zero_state_block;
 
-use warpui::clipboard_utils::get_image_filepaths_from_paths;
+use zap_ng_ui::clipboard_utils::get_image_filepaths_from_paths;
 
 use std::ops::Deref as _;
 
@@ -93,7 +93,7 @@ use crate::ai::blocklist::usage::conversation_usage_view::{
 };
 use crate::ai::blocklist::{block_context_from_terminal_model, SlashCommandRequest};
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentModel, AIDocumentVersion};
-use crate::ai::loading::shimmering_warp_loading_text;
+use crate::ai::loading::shimmering_zap_ng_loading_text;
 #[cfg(feature = "local_fs")]
 use crate::code_review::context::{
     convert_file_diffs_to_diffset_hunks, create_attachment_reference_and_key,
@@ -174,10 +174,10 @@ pub use inline_banner::{NotificationsDiscoveryBannerAction, NotificationsErrorBa
 use repo_metadata::repositories::{DetectedRepositories, RepoDetectionSource};
 use ssh_file_upload::{FileUpload, FileUploadEvent};
 use uuid::Uuid;
-use warp_core::channel::ChannelState;
-use warpui::elements::{shimmering_text::ShimmeringTextStateHandle, ChildView};
-use warpui::fonts::Properties;
-use warpui::{ViewHandle, WeakModelHandle};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_ui::elements::{shimmering_text::ShimmeringTextStateHandle, ChildView};
+use zap_ng_ui::fonts::Properties;
+use zap_ng_ui::{ViewHandle, WeakModelHandle};
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId, ConversationStatus};
 
@@ -229,7 +229,7 @@ use crate::code::editor_management::CodeSource;
 use crate::context_chips::prompt::Prompt;
 use crate::context_chips::prompt_type::PromptType;
 use crate::context_chips::ContextChipKind;
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 use crate::drive::ObjectTypeAndId;
 use crate::env_vars::{
     env_var_collection_block::{EnvVarCollectionBlock, EnvVarCollectionBlockEvent},
@@ -290,8 +290,8 @@ use crate::terminal::shared_session::{
 };
 use crate::terminal::ssh::ssh_detection::SshInteractiveSessionDetected;
 use crate::terminal::view::block_onboarding::onboarding_prompt_block::OnboardingPromptBlock;
-use crate::terminal::warpify::{
-    render::render_subshell_separator, settings::WarpifySettings, SubshellSource,
+use crate::terminal::zapngify::{
+    render::render_subshell_separator, settings::ZapNGifySettings, SubshellSource,
 };
 use crate::terminal::zmx;
 use crate::terminal::ShellLaunchData;
@@ -300,7 +300,7 @@ use crate::terminal::{height_in_range_approx, heights_approx_gt, SizeUpdate};
 use crate::terminal::{heights_approx_eq, CellSizeAndWindowPadding};
 use crate::terminal::{AudibleBell, SizeUpdateReason};
 use crate::terminal::{BlockListSettings, BlockListSettingsChangedEvent};
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::ZapNGTheme;
 use crate::ui_components::icons::{self};
 use crate::util::bindings::{
     custom_tag_to_keystroke, keybinding_name_to_display_string, keybinding_name_to_keystroke,
@@ -357,35 +357,35 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use sum_tree::SeekBias;
 use vec1::vec1;
-use warp_core::context_flag::ContextFlag;
-use warp_core::user_preferences::GetUserPreferences as _;
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
 #[cfg(feature = "local_fs")]
-use warp_util::path::LineAndColumnArg;
-use warp_util::path::ShellFamily;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::new_scrollable::{
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_util::path::ShellFamily;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::new_scrollable::{
     AxisConfiguration, ClippedAxisConfiguration, DualAxisConfig, NewScrollableElement,
     ScrollableAppearance, SingleAxisConfig,
 };
-use warpui::elements::{
+use zap_ng_ui::elements::{
     get_rich_content_position_id, Border, ChildAnchor, ClippedScrollStateHandle, Container,
     CrossAxisAlignment, DispatchEventResult, DropTarget, DropTargetData, Empty, EventHandler, Flex,
     NewScrollable, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, ScrollableElement,
     ScrollbarWidth, Shrinkable, Text,
 };
-use warpui::event::ModifiersState;
-use warpui::keymap::Keystroke;
-use warpui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
-use warpui::platform::{Cursor, OperatingSystem};
-use warpui::r#async::Timer;
-use warpui::windowing::WindowManager;
+use zap_ng_ui::event::ModifiersState;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::notification::{NotificationSendError, RequestPermissionsOutcome, UserNotification};
+use zap_ng_ui::platform::{Cursor, OperatingSystem};
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::windowing::WindowManager;
 
-use warpui::assets::asset_cache::{AssetCache, AssetCacheEvent};
-use warpui::image_cache::ImageType;
-use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use warpui::{
-    accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole},
+use zap_ng_ui::assets::asset_cache::{AssetCache, AssetCacheEvent};
+use zap_ng_ui::image_cache::ImageType;
+use zap_ng_ui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ActionAccessibilityContent, ZapNGA11yRole},
     elements::SavePosition,
     elements::{
         Align, Clipped, ConstrainedBox, CornerRadius, Fill, Hoverable, Icon, MouseStateHandle,
@@ -396,14 +396,14 @@ use warpui::{
     AccessibilityData, AppContext, BlurContext, Element, Entity, FocusContext, ModelHandle,
     TypedActionView, UpdateView, View, ViewAsRef, ViewContext, WeakViewHandle,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::Stack,
     end_trace_after_next,
     geometry::vector::{vec2f, Vector2F},
     record_trace_event, WindowId,
 };
 
-use warpui::{windowing, CursorInfo, EntityId, EventContext, ModelAsRef, SingletonEntity, Tracked};
+use zap_ng_ui::{windowing, CursorInfo, EntityId, EventContext, ModelAsRef, SingletonEntity, Tracked};
 
 use crate::ai_assistant::{AskAIType, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::{Appearance, AppearanceEvent};
@@ -489,9 +489,9 @@ use crate::terminal::{
 use crate::view_components::find::{Event as FindEvent, Find, FindDirection, FindWithinBlockState};
 use fuzzy_match::match_indices_case_insensitive;
 use settings::{Setting, ToggleableSetting};
-use warp_core::semantic_selection::SemanticSelection;
-use warp_editor::editor::NavigationKey;
-use warpui::text::SelectionType;
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::text::SelectionType;
 
 use crate::menu::{Event as MenuEvent, Menu, MenuItem, MenuItemFields, MenuVariant};
 use crate::server::telemetry::{BlockLatencyInfo, BootstrappingInfo};
@@ -508,7 +508,7 @@ use super::available_shells::AvailableShell;
 use super::block_list_viewport::FindMatchScrollLocation;
 use super::event::SshLoginStatus;
 use super::find::FindOptions;
-use super::model::ansi::{SystemDetails, WarpificationUnavailableReason};
+use super::model::ansi::{SystemDetails, ZapNGificationUnavailableReason};
 use super::model::block::{
     BlockSection, BlocklistEnvVarMetadata, LONG_RUNNING_COMMAND_DURATION_MS,
 };
@@ -525,24 +525,24 @@ use super::ssh::install_tmux::{
     SshKeyEvent, TmuxInstallMethod,
 };
 use super::ssh::root_access::RootAccess;
-use super::ssh::ssh_detection::evaluate_warpify_ssh_host;
+use super::ssh::ssh_detection::evaluate_zapngify_ssh_host;
 use super::ssh::util::{
     convert_script_to_one_line, parse_interactive_ssh_command, replayable_ssh_command,
-    InteractiveSshCommand, SshWarpifyCommand,
+    InteractiveSshCommand, SshZapNGifyCommand,
 };
-use super::ssh::warpify::{
-    begin_warpify_ssh_session_command, warpify_ssh_session_command, SshWarpifyBlock,
-    SshWarpifyBlockEvent,
+use super::ssh::zapngify::{
+    begin_zapngify_ssh_session_command, zapngify_ssh_session_command, SshZapNGifyBlock,
+    SshZapNGifyBlockEvent,
 };
 use super::ssh::SSH_WARPIFY_TIMEOUT_DURATION;
-use super::warpify::success_block::{WarpifySuccessBlock, WarpifySuccessBlockEvent};
-use super::warpify::trigger_state::{SshBlockState, WarpifyState};
-use super::warpify::WarpificationSource;
+use super::zapngify::success_block::{ZapNGifySuccessBlock, ZapNGifySuccessBlockEvent};
+use super::zapngify::trigger_state::{SshBlockState, ZapNGifyState};
+use super::zapngify::ZapNGificationSource;
 use super::{GridType, HistoryEvent};
 use crate::terminal::links::should_directly_open_link;
 use crate::terminal::model_events::{AnsiHandlerEvent, ModelEvent, ModelEventDispatcher};
-use action::RememberForWarpification;
-use block_banner::{render_warpification_banner, WarpificationMode, WarpifyBannerState};
+use action::RememberForZapNGification;
+use block_banner::{render_zapngification_banner, ZapNGificationMode, ZapNGifyBannerState};
 use bookmarks::render_floating_block_snapshot;
 use command_corrections::rules::generic::history::History as CommandCorrectionsHistoryRule;
 use init::{INPUT_BOX_VISIBLE_KEY, TOGGLE_BLOCK_FILTER_KEYBINDING};
@@ -551,13 +551,13 @@ use inline_banner::{
     render_aws_cli_not_installed_banner, render_inline_notifications_discovery_banner,
     render_inline_notifications_error_banner, render_inline_shared_session_ended_banner,
     render_inline_shared_session_started_banner, render_inline_ssh_wrapper_banner,
-    render_open_in_warp_banner, render_shell_process_terminated_banner, render_vim_mode_banner,
+    render_open_in_zap_ng_banner, render_shell_process_terminated_banner, render_vim_mode_banner,
     AliasExpansionBanner, AliasExpansionBannerAction, AwsBedrockLoginBannerAction,
     AwsBedrockLoginBannerState, AwsCliNotInstalledBannerAction, AwsCliNotInstalledBannerState,
-    ByoLlmAuthBannerSessionState, OpenInWarpBannerState, SSHBannerAction, SSHBannerState,
+    ByoLlmAuthBannerSessionState, OpenInZapNGBannerState, SSHBannerAction, SSHBannerState,
     VimModeBannerAction,
 };
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 
 lazy_static! {
     // A set of commands that perform minimal work that we use as a baseline to measure the latency of blocks.
@@ -704,7 +704,7 @@ enum Osc52ClipboardBlockedType {
 /// Key used in user defaults to save whether the user has seen the banner.
 pub const ALIAS_EXPANSION_BANNER_SEEN_KEY: &str = "AliasExpansionBannerSeen";
 
-/// Delay between receiving preexec hook for a command we want to auto-warpify
+/// Delay between receiving preexec hook for a command we want to auto-zapngify
 /// and triggering the warpification (subshell bootstrapping).
 /// Reached this number after experimenting with different values to find a reliable delay.
 const AUTO_WARPIFY_DELAY: u64 = 1000;
@@ -1024,7 +1024,7 @@ pub enum InlineBannerType {
     SharedSessionStart,
     SharedSessionEnd,
     ShellProcessTerminated,
-    OpenInWarp,
+    OpenInZapNG,
     VimMode,
     AgentModeSetup,
     AwsBedrockLogin,
@@ -1049,7 +1049,7 @@ impl InlineBannerType {
             | Self::SharedSessionStart
             | Self::SharedSessionEnd
             | Self::ShellProcessTerminated
-            | Self::OpenInWarp
+            | Self::OpenInZapNG
             | Self::VimMode => false,
         }
     }
@@ -1095,7 +1095,7 @@ struct InlineBannersState {
     /// banner to display.
     shell_process_terminated_banner: Option<ShellProcessTerminatedBanner>,
 
-    open_in_warp_banner: Option<OpenInWarpBannerState>,
+    open_in_zap_ng_banner: Option<OpenInZapNGBannerState>,
 
     vim_banner_state: Option<VimModeBannerState>,
 
@@ -1439,7 +1439,7 @@ pub enum InputContextMenuAction {
     Paste,
     ShowCommandSearch,
     ShowAICommandSearch,
-    AskWarpAI,
+    AskZapNGAI,
     SaveAsWorkflow,
     ToggleInputHintText,
 }
@@ -1517,7 +1517,7 @@ impl fmt::Debug for InputContextMenuAction {
             Paste => f.write_str("Paste"),
             ShowCommandSearch => f.write_str("CommandSearch"),
             ShowAICommandSearch => f.write_str("AICommandSearch"),
-            AskWarpAI => f.write_str("AskWarpAI"),
+            AskZapNGAI => f.write_str("AskWarpAI"),
             SaveAsWorkflow => f.write_str("SaveAsWorkflow"),
             ToggleInputHintText => f.write_str("ToggleInputHintText"),
         }
@@ -1697,18 +1697,18 @@ pub enum Event {
         is_for_in_band_command: bool,
     },
     /// Tell the pane group to open a file within Zap.
-    OpenFileInWarp {
+    OpenFileInZapNG {
         path: PathBuf,
         /// The session that the file belongs to.
         session: Arc<Session>,
     },
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
         layout: EditorLayout,
     },
     #[cfg(feature = "local_fs")]
-    PreviewCodeInWarp {
+    PreviewCodeInZapNG {
         source: CodeSource,
     },
     OpenCodeDiff {
@@ -2124,7 +2124,7 @@ impl BlocklistAIRenderContext {
     }
 
     /// Returns the AI context stripe color to use for a block, if any.
-    pub fn context_color_for_block(&self, block: &Block, theme: &WarpTheme) -> Option<ColorU> {
+    pub fn context_color_for_block(&self, block: &Block, theme: &ZapNGTheme) -> Option<ColorU> {
         match self.context_inclusion_state_for_block(block) {
             Some(AIContextInclusionState::Active) => self.context_color(theme),
             _ => None,
@@ -2135,7 +2135,7 @@ impl BlocklistAIRenderContext {
     pub fn context_color_for_rich_content(
         &self,
         rich_content: &RichContentMetadata,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
     ) -> Option<ColorU> {
         match rich_content {
             RichContentMetadata::AIBlock(ai_metadata)
@@ -2154,7 +2154,7 @@ impl BlocklistAIRenderContext {
 
     /// The context color to use for a block, given its conversation phase.
     /// This assumes the block is part of the active conversation.
-    fn context_color(&self, theme: &WarpTheme) -> Option<ColorU> {
+    fn context_color(&self, theme: &ZapNGTheme) -> Option<ColorU> {
         (self.is_ai_input_enabled && self.should_highlight_context).then(|| ai_brand_color(theme))
     }
 }
@@ -2201,7 +2201,7 @@ struct TerminalViewMouseStates {
     copy_secrets_tooltip: MouseStateHandle,
 
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
-    open_in_warp_tooltip: MouseStateHandle,
+    open_in_zap_ng_tooltip: MouseStateHandle,
     #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
     show_in_file_explorer_tooltip: MouseStateHandle,
     jump_to_bottom_of_block_button: MouseStateHandle,
@@ -2526,7 +2526,7 @@ pub struct TerminalView {
         not(target_family = "wasm")
     ))]
     remote_dir_listing_cache: indexmap::IndexMap<
-        (warp_core::SessionId, PathBuf),
+        (zap_ng_core::SessionId, PathBuf),
         Option<std::sync::Arc<crate::util::file::RemoteDirListing>>,
     >,
 
@@ -2550,14 +2550,14 @@ pub struct TerminalView {
     ///   2. Whether this View's window is the active window.
     ///
     /// We need to derive and cache this state on this View in order to correctly implement focus
-    /// reporting. Because focus is window-scoped, i.e. warpui does not consider activating a
+    /// reporting. Because focus is window-scoped, i.e. zap_ng_ui does not consider activating a
     /// different window as blurring the focused View in the previously active window, we cannot
-    /// simply rely on the warpui::View::on_blur and on_focus methods to report focus-in/out to the
+    /// simply rely on the zap_ng_ui::View::on_blur and on_focus methods to report focus-in/out to the
     /// PTY, as those methods will not trigger when changing active windows. The singleton model
-    /// [`warpui::windowing::State`] will allow us to subscribe to active window change. So, we can
+    /// [`zap_ng_ui::windowing::State`] will allow us to subscribe to active window change. So, we can
     /// subscribe to that and have that callback also report focus-in/out. However, that will still
     /// leave cases for potential double-reporting, as a single click can trigger both
-    /// [`warpui::View::on_focus`] and emit a [`warpui::windowing::StateEvent`]. This field will
+    /// [`zap_ng_ui::View::on_focus`] and emit a [`zap_ng_ui::windowing::StateEvent`]. This field will
     /// guard against that double- reporting case, though it needs to be kept in sync with the
     /// focused view and active window.
     is_focused_and_active: bool,
@@ -2586,7 +2586,7 @@ pub struct TerminalView {
     // If the agentic suggestions onboarding block is pending, mark it here.
     pending_onboarding_agentic_suggestions_block: bool,
 
-    /// The type of the subshell that we will bootstrap/"warpify"" on the next [`AfterBlockStarted`]
+    /// The type of the subshell that we will bootstrap/"zapngify"" on the next [`AfterBlockStarted`]
     /// terminal model event. Will only be `Some` with a [`ShellType`] we can bootstrap.
     pending_auto_bootstrap_shell_type: Option<ShellType>,
     env_vars: Vec<EnvVar>,
@@ -2647,7 +2647,7 @@ pub struct TerminalView {
 
     find_model: ModelHandle<TerminalFindModel>,
 
-    warpify_state: WarpifyState,
+    zapngify_state: ZapNGifyState,
 
     /// The keystroke bound to canceling a command.
     ///
@@ -2719,7 +2719,7 @@ pub struct TerminalView {
     ambient_agent_view_model: ModelHandle<ambient_agent::AmbientAgentViewModel>,
 
     /// Mouse state handle for the ambient agent cancel button in the pane header.
-    ambient_agent_cancel_mouse_state: warpui::elements::MouseStateHandle,
+    ambient_agent_cancel_mouse_state: zap_ng_ui::elements::MouseStateHandle,
 
     /// Weak handle to the [`PaneStack`] this view is part of, allowing push/pop operations.
     pane_stack: Option<WeakModelHandle<crate::pane_group::pane::PaneStack<Self>>>,
@@ -3650,7 +3650,7 @@ impl TerminalView {
                 )),
                 FormattedTextFragment::hyperlink_action(
                     crate::t!("terminal-banner-settings"),
-                    TerminalAction::ShowWarpifySettings,
+                    TerminalAction::ShowZapNGifySettings,
                 ),
                 FormattedTextFragment::plain_text(crate::t!(
                     "terminal-banner-completions-not-working-suffix"
@@ -4064,7 +4064,7 @@ impl TerminalView {
             input_position_id,
             input_hoverable_handle: Default::default(),
             find_model,
-            warpify_state: Default::default(),
+            zapngify_state: Default::default(),
             cancel_command_keystroke: keybinding_name_to_keystroke(CANCEL_COMMAND_KEYBINDING, ctx),
             is_file_drop_target: false,
             is_ssh_file_uploader: false,
@@ -4391,7 +4391,7 @@ impl TerminalView {
     }
 
     fn can_pop_nested_ambient_agent_view(&self, _ctx: &AppContext) -> bool {
-        // openWarp:ambient_agent 已删除,nested agent view 永远不存在。
+        // ZapNG:ambient_agent 已删除,nested agent view 永远不存在。
         false
     }
 
@@ -4498,9 +4498,9 @@ impl TerminalView {
         // Terminal prompt path: the Zap prompt is active when honor_ps1 is
         // off, or when UDI overrides PS1. GitDiffStats must also be in the
         // configured chip list.
-        let is_using_warp_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
+        let is_using_zap_ng_prompt = !*SessionSettings::as_ref(ctx).honor_ps1
             || InputSettings::as_ref(ctx).is_universal_developer_input_enabled(ctx);
-        is_using_warp_prompt
+        is_using_zap_ng_prompt
             && Prompt::as_ref(ctx)
                 .chip_kinds()
                 .contains(&ContextChipKind::GitDiffStats)
@@ -6034,7 +6034,7 @@ impl TerminalView {
                     .unwrap_or(false);
 
                 if maybe_modified_files {
-                    self.refresh_warp_prompt(ctx);
+                    self.refresh_zap_ng_prompt(ctx);
                     ctx.notify();
                 }
 
@@ -6456,7 +6456,7 @@ impl TerminalView {
     }
 
     #[cfg(any(test, feature = "integration_tests"))]
-    pub fn sessions<'a, A: warpui::ModelAsRef>(&self, ctx: &'a A) -> &'a Sessions {
+    pub fn sessions<'a, A: zap_ng_ui::ModelAsRef>(&self, ctx: &'a A) -> &'a Sessions {
         self.sessions.as_ref(ctx)
     }
 
@@ -7205,7 +7205,7 @@ impl TerminalView {
     /// the workspace to derive `PendingRemoteSession` without storing
     /// mutable state on the workspace itself.
     pub fn has_pending_ssh_command(&self) -> bool {
-        self.warpify_state.get_pending_ssh_host().is_some() && self.is_long_running()
+        self.zapngify_state.get_pending_ssh_host().is_some() && self.is_long_running()
     }
 
     /// Like `is_long_running`, but also requires the user to be in control of the command
@@ -7249,7 +7249,7 @@ impl TerminalView {
 
     fn control_sequence_on_terminal(&mut self, bytes: &[u8], ctx: &mut ViewContext<Self>) {
         if self.is_long_running() {
-            self.on_ssh_warpification_key_event(Some(SshKeyEvent::from_bytes(bytes)), ctx);
+            self.on_ssh_zapngification_key_event(Some(SshKeyEvent::from_bytes(bytes)), ctx);
             self.write_user_bytes_to_pty(bytes.to_owned(), ctx);
         } else {
             safe_warn!(
@@ -7314,11 +7314,11 @@ impl TerminalView {
         });
     }
 
-    /// Receiving the warpui::Event::KeyDown event from a child element.
+    /// Receiving the zap_ng_ui::Event::KeyDown event from a child element.
     /// Generally, this should be control characters rather than printable characters.
     fn keydown_on_terminal(&mut self, characters: &str, ctx: &mut ViewContext<Self>) {
         if self.is_long_running() {
-            self.on_ssh_warpification_key_event(Some(SshKeyEvent::from_chars(characters)), ctx);
+            self.on_ssh_zapngification_key_event(Some(SshKeyEvent::from_chars(characters)), ctx);
             self.highlighted_link.invalidate();
             self.report_possible_typeahead(characters);
             self.write_user_bytes_to_pty(characters.as_bytes().to_vec(), ctx);
@@ -7358,11 +7358,11 @@ impl TerminalView {
 
         was_bootstrap_script_echoed || is_shared_session_executor
     }
-    /// Receiving a warpui::Event::TypedCharacters event from a child element.
+    /// Receiving a zap_ng_ui::Event::TypedCharacters event from a child element.
     /// We can assume `characters` consists of all printable characters, and therefore,
     /// can go into the input box.
     fn typed_characters_on_terminal(&mut self, characters: &str, ctx: &mut ViewContext<Self>) {
-        self.on_ssh_warpification_key_event(Some(SshKeyEvent::from_chars(characters)), ctx);
+        self.on_ssh_zapngification_key_event(Some(SshKeyEvent::from_chars(characters)), ctx);
 
         if self.should_write_typed_chars_to_pty(ctx) {
             self.highlighted_link.invalidate();
@@ -7440,7 +7440,7 @@ impl TerminalView {
     /// `None` 表示当前会话不是 local TTY(wasm / 远端会话)。
     pub fn inactive_pty_reads_rx(
         &self,
-        ctx: &warpui::AppContext,
+        ctx: &zap_ng_ui::AppContext,
     ) -> Option<async_broadcast::InactiveReceiver<std::sync::Arc<Vec<u8>>>> {
         self.pty_recorder
             .read(ctx, |recorder, _| recorder.inactive_pty_reads_rx())
@@ -7878,7 +7878,7 @@ impl TerminalView {
         triggered_by_rc_file_snippet: bool,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.dismiss_warpify_banner(&RememberForWarpification::DoNotRememberSubshellCommand, ctx);
+        self.dismiss_zapngify_banner(&RememberForZapNGification::DoNotRememberSubshellCommand, ctx);
 
         // Record the active long-running block so we can hide it later once the remote
         // actually confirms subshell bootstrap is in progress.
@@ -7891,7 +7891,7 @@ impl TerminalView {
                 .is_active_and_long_running()
             {
                 let block_id = model.block_list().active_block_id().clone();
-                self.warpify_state.set_block_id(block_id);
+                self.zapngify_state.set_block_id(block_id);
             }
         }
 
@@ -7914,7 +7914,7 @@ impl TerminalView {
 
     /// Util method to update the ssh block, with a lock
     fn update_long_running_ssh_block_with_lock(&self, f: impl FnOnce(&mut Block)) -> bool {
-        if let Some(block_id) = self.warpify_state.block_id() {
+        if let Some(block_id) = self.zapngify_state.block_id() {
             if let Some(block) = self
                 .model
                 .lock()
@@ -7933,7 +7933,7 @@ impl TerminalView {
         self.update_long_running_ssh_block_with_lock(|block| {
             block.unhide();
         });
-        self.warpify_state.delete_state();
+        self.zapngify_state.delete_state();
         ctx.notify();
     }
 
@@ -7945,33 +7945,33 @@ impl TerminalView {
     }
 
     fn clear_ssh_blocks(&mut self, ctx: &mut ViewContext<Self>) {
-        self.dismiss_warpify_banner(&RememberForWarpification::DoNotRememberSSHHost, ctx);
-        if let Some(ssh_block) = self.warpify_state.ssh_block_state() {
+        self.dismiss_zapngify_banner(&RememberForZapNGification::DoNotRememberSSHHost, ctx);
+        if let Some(ssh_block) = self.zapngify_state.ssh_block_state() {
             let view_id = ssh_block.get_block_view_id();
 
             self.remove_ssh_block_by_id(view_id);
 
             self.redetermine_global_focus(ctx);
 
-            self.warpify_state.clear_ssh_block_state();
+            self.zapngify_state.clear_ssh_block_state();
         }
     }
 
     /// Collapses any expanded UX within SSH blocks.
     /// To ensure we can always see what we're typing, we collapse
     /// the SSH block when typing.
-    fn on_ssh_warpification_key_event(
+    fn on_ssh_zapngification_key_event(
         &mut self,
         key_event: Option<SshKeyEvent>,
         ctx: &mut ViewContext<Self>,
     ) {
-        if self.warpify_state.ssh_block_state().is_some() {
+        if self.zapngify_state.ssh_block_state().is_some() {
             if key_event.is_some_and(|key| key.is_ctrl_c()) {
-                send_telemetry_from_ctx!(TelemetryEvent::SshTmuxWarpifyBlockDismissed, ctx);
+                send_telemetry_from_ctx!(TelemetryEvent::SshTmuxZapNGifyBlockDismissed, ctx);
                 self.cancel_bootstrap_workflow(ctx);
-            } else if self.warpify_state.should_prevent_input() {
-                self.warpify_state.focus(ctx);
-                self.warpify_state.collapse_ssh_block(ctx);
+            } else if self.zapngify_state.should_prevent_input() {
+                self.zapngify_state.focus(ctx);
+                self.zapngify_state.collapse_ssh_block(ctx);
                 self.update_scroll_position_locking(
                     ScrollPositionUpdate::AfterRichBlockUpdated,
                     ctx,
@@ -7981,15 +7981,15 @@ impl TerminalView {
         }
     }
 
-    fn handle_remote_warpification_is_unavailable(
+    fn handle_remote_zapngification_is_unavailable(
         &mut self,
-        reason: WarpificationUnavailableReason,
+        reason: ZapNGificationUnavailableReason,
         ctx: &mut ViewContext<Self>,
     ) {
         // Stop the pending timeout on warpification.
-        self.warpify_state.abort_ssh_warpify_timeout();
+        self.zapngify_state.abort_ssh_zapngify_timeout();
         match &reason {
-            WarpificationUnavailableReason::TmuxNotInstalled {
+            ZapNGificationUnavailableReason::TmuxNotInstalled {
                 system_details,
                 root_access,
             } => {
@@ -8021,7 +8021,7 @@ impl TerminalView {
                     return;
                 }
             }
-            WarpificationUnavailableReason::UnsupportedTmuxVersion { system_details } => {
+            ZapNGificationUnavailableReason::UnsupportedTmuxVersion { system_details } => {
                 if system_details.writable_home != Some(true) {
                     if let Some(shell_type) = ShellType::from_name(&system_details.shell) {
                         self.trigger_subshell_bootstrap(Some(shell_type), false, ctx);
@@ -8045,7 +8045,7 @@ impl TerminalView {
         self.add_ssh_error_block(reason, ctx);
     }
 
-    fn add_ssh_warpify_prompt(
+    fn add_ssh_zapngify_prompt(
         &mut self,
         command: &str,
         ssh_host: Option<String>,
@@ -8053,13 +8053,13 @@ impl TerminalView {
     ) {
         self.clear_ssh_blocks(ctx);
         self.handle_action(
-            &TerminalAction::ShowWarpifySshBanner(command.to_owned(), ssh_host),
+            &TerminalAction::ShowZapNGifySshBanner(command.to_owned(), ssh_host),
             ctx,
         );
     }
 
     /// This method assumes the active block in the blocklist is a long-running SSH command.
-    fn add_ssh_warpifying_block(&mut self, ctx: &mut ViewContext<Self>) {
+    fn add_ssh_zapngifying_block(&mut self, ctx: &mut ViewContext<Self>) {
         // Shared session viewers can't initiate warpification currently.
         if self.model.lock().shared_session_status().is_viewer() {
             return;
@@ -8082,17 +8082,17 @@ impl TerminalView {
             )
         };
 
-        let ssh_warpify_block_handle =
-            ctx.add_typed_action_view(|_| SshWarpifyBlock::new(full_ssh_command));
-        ctx.subscribe_to_view(&ssh_warpify_block_handle, move |me, _, event, ctx| {
-            me.handle_ssh_warpify_block_event(event, ctx);
+        let ssh_zapngify_block_handle =
+            ctx.add_typed_action_view(|_| SshZapNGifyBlock::new(full_ssh_command));
+        ctx.subscribe_to_view(&ssh_zapngify_block_handle, move |me, _, event, ctx| {
+            me.handle_ssh_zapngify_block_event(event, ctx);
         });
 
         self.insert_rich_content(
             None,
-            ssh_warpify_block_handle.clone(),
-            Some(RichContentMetadata::SshWarpifyBlock {
-                ssh_warpify_block_handle: ssh_warpify_block_handle.clone(),
+            ssh_zapngify_block_handle.clone(),
+            Some(RichContentMetadata::SshZapNGifyBlock {
+                ssh_zapngify_block_handle: ssh_zapngify_block_handle.clone(),
             }),
             RichContentInsertionPosition::Append {
                 insert_below_long_running_block: true,
@@ -8100,15 +8100,15 @@ impl TerminalView {
             ctx,
         );
 
-        ctx.focus(&ssh_warpify_block_handle);
+        ctx.focus(&ssh_zapngify_block_handle);
 
-        self.warpify_state.set_block_id(hidden_ssh_block_id);
-        self.warpify_state
-            .set_ssh_block_state(SshBlockState::Warpifying {
-                handle: ssh_warpify_block_handle,
+        self.zapngify_state.set_block_id(hidden_ssh_block_id);
+        self.zapngify_state
+            .set_ssh_block_state(SshBlockState::ZapNGifying {
+                handle: ssh_zapngify_block_handle,
             });
 
-        self.warpify_ssh_session(ctx);
+        self.zapngify_ssh_session(ctx);
     }
 
     /// This method assumes the active block in the blocklist is a long-running SSH command.
@@ -8136,7 +8136,7 @@ impl TerminalView {
             )
         };
 
-        let ssh_host = self.warpify_state.get_pending_ssh_host();
+        let ssh_host = self.zapngify_state.get_pending_ssh_host();
 
         let ssh_install_tmux_block_handle = ctx.add_typed_action_view(|_| {
             SshInstallTmuxBlock::new(
@@ -8168,8 +8168,8 @@ impl TerminalView {
 
         send_telemetry_from_ctx!(TelemetryEvent::SshInstallTmuxBlockDisplayed, ctx);
 
-        self.warpify_state.set_block_id(hidden_ssh_block_id);
-        self.warpify_state
+        self.zapngify_state.set_block_id(hidden_ssh_block_id);
+        self.zapngify_state
             .set_ssh_block_state(SshBlockState::InstallTmux {
                 handle: ssh_install_tmux_block_handle,
             });
@@ -8177,12 +8177,12 @@ impl TerminalView {
 
     fn add_ssh_error_block(
         &mut self,
-        error_reason: WarpificationUnavailableReason,
+        error_reason: ZapNGificationUnavailableReason,
         ctx: &mut ViewContext<Self>,
     ) {
         // If there's already an error block showing, don't overwrite the existing one.
         if matches!(
-            self.warpify_state.ssh_block_state(),
+            self.zapngify_state.ssh_block_state(),
             Some(SshBlockState::Error { .. })
         ) {
             return;
@@ -8193,7 +8193,7 @@ impl TerminalView {
             block.unhide();
         });
 
-        let ssh_host = self.warpify_state.take_pending_ssh_host();
+        let ssh_host = self.zapngify_state.take_pending_ssh_host();
 
         let ssh_error_block_handle =
             ctx.add_typed_action_view(|_| SshErrorBlock::new(error_reason.clone(), ssh_host));
@@ -8214,18 +8214,18 @@ impl TerminalView {
         );
 
         send_telemetry_from_ctx!(
-            TelemetryEvent::SshTmuxWarpificationErrorBlock {
+            TelemetryEvent::SshTmuxZapNGificationErrorBlock {
                 error: error_reason,
-                tmux_installation: self.warpify_state.tmux_installation(),
+                tmux_installation: self.zapngify_state.tmux_installation(),
             },
             ctx
         );
 
-        self.warpify_state
+        self.zapngify_state
             .set_ssh_block_state(SshBlockState::Error {
                 handle: ssh_error_block_handle,
             });
-        self.warpify_state.focus(ctx);
+        self.zapngify_state.focus(ctx);
     }
 
     fn add_bootstrap_success_block(
@@ -8248,16 +8248,16 @@ impl TerminalView {
             });
         }
 
-        let warpification_source = match session_type {
-            BootstrapSessionType::WarpifiedRemote => WarpificationSource::Ssh,
-            BootstrapSessionType::Local => WarpificationSource::Subshell,
+        let zapngification_source = match session_type {
+            BootstrapSessionType::ZapNGifiedRemote => ZapNGificationSource::Ssh,
+            BootstrapSessionType::Local => ZapNGificationSource::Subshell,
         };
         let disable_tmux = FeatureFlag::SSHTmuxWrapper.is_enabled()
-            && matches!(warpification_source, WarpificationSource::Ssh)
+            && matches!(zapngification_source, ZapNGificationSource::Ssh)
             && { !self.model.lock().tmux_control_mode_active() };
         let ssh_success_block_handle = ctx.add_typed_action_view(|ctx| {
-            WarpifySuccessBlock::new(
-                warpification_source,
+            ZapNGifySuccessBlock::new(
+                zapngification_source,
                 spawning_command,
                 subshell_info,
                 shell,
@@ -8271,9 +8271,9 @@ impl TerminalView {
 
         self.clear_ssh_blocks(ctx);
         self.insert_rich_content(
-            Some(RichContentType::WarpifySuccessBlock),
+            Some(RichContentType::ZapNGifySuccessBlock),
             ssh_success_block_handle.clone(),
-            Some(RichContentMetadata::WarpifySuccessBlock {
+            Some(RichContentMetadata::ZapNGifySuccessBlock {
                 bootstrap_success_block_handle: ssh_success_block_handle.clone(),
             }),
             RichContentInsertionPosition::Append {
@@ -8281,38 +8281,38 @@ impl TerminalView {
             },
             ctx,
         );
-        self.warpify_state
-            .set_ssh_block_state(SshBlockState::WarpifySuccess {
+        self.zapngify_state
+            .set_ssh_block_state(SshBlockState::ZapNGifySuccess {
                 handle: ssh_success_block_handle,
             });
         let active_session_id = self.active_block_session_id();
-        self.warpify_state.on_warpify_start(active_session_id);
-        self.refresh_warp_prompt(ctx);
+        self.zapngify_state.on_zapngify_start(active_session_id);
+        self.refresh_zap_ng_prompt(ctx);
     }
 
-    fn handle_ssh_warpify_block_event(
+    fn handle_ssh_zapngify_block_event(
         &mut self,
-        event: &SshWarpifyBlockEvent,
+        event: &SshZapNGifyBlockEvent,
         ctx: &mut ViewContext<Self>,
     ) {
-        fn dismiss_ssh_warpify_block(me: &mut TerminalView, ctx: &mut ViewContext<TerminalView>) {
-            send_telemetry_from_ctx!(TelemetryEvent::SshTmuxWarpifyBlockDismissed, ctx);
+        fn dismiss_ssh_zapngify_block(me: &mut TerminalView, ctx: &mut ViewContext<TerminalView>) {
+            send_telemetry_from_ctx!(TelemetryEvent::SshTmuxZapNGifyBlockDismissed, ctx);
             me.cancel_bootstrap_workflow(ctx);
         }
 
         match event {
-            SshWarpifyBlockEvent::Cancel => {
-                self.warpify_state.replace_timeout_id();
-                dismiss_ssh_warpify_block(self, ctx);
+            SshZapNGifyBlockEvent::Cancel => {
+                self.zapngify_state.replace_timeout_id();
+                dismiss_ssh_zapngify_block(self, ctx);
             }
-            SshWarpifyBlockEvent::Interrupt => {
-                dismiss_ssh_warpify_block(self, ctx);
-                self.warpify_state.abort_ssh_warpify_timeout();
+            SshZapNGifyBlockEvent::Interrupt => {
+                dismiss_ssh_zapngify_block(self, ctx);
+                self.zapngify_state.abort_ssh_zapngify_timeout();
                 self.user_write_ctrl_c_to_pty(ctx);
             }
-            SshWarpifyBlockEvent::WarpifySession => {
-                send_telemetry_from_ctx!(TelemetryEvent::SshTmuxWarpifyBlockAccepted, ctx);
-                self.add_ssh_warpifying_block(ctx);
+            SshZapNGifyBlockEvent::ZapNGifySession => {
+                send_telemetry_from_ctx!(TelemetryEvent::SshTmuxZapNGifyBlockAccepted, ctx);
+                self.add_ssh_zapngifying_block(ctx);
                 self.update_scroll_position_locking(
                     ScrollPositionUpdate::AfterRichBlockUpdated,
                     ctx,
@@ -8338,13 +8338,13 @@ impl TerminalView {
             }
             SshInstallTmuxBlockEvent::Interrupt => {
                 cancel_tmux_install(self, ctx);
-                self.warpify_state.abort_ssh_warpify_timeout();
+                self.zapngify_state.abort_ssh_zapngify_timeout();
                 self.user_write_ctrl_c_to_pty(ctx);
             }
-            SshInstallTmuxBlockEvent::InstallTmuxAndWarpify(install_method) => {
+            SshInstallTmuxBlockEvent::InstallTmuxAndZapNGify(install_method) => {
                 send_telemetry_from_ctx!(TelemetryEvent::SshInstallTmuxBlockAccepted, ctx);
                 self.clear_ssh_blocks(ctx);
-                self.install_tmux_and_warpify(ctx, install_method);
+                self.install_tmux_and_zapngify(ctx, install_method);
                 self.update_scroll_position_locking(
                     ScrollPositionUpdate::AfterRichBlockUpdated,
                     ctx,
@@ -8359,7 +8359,7 @@ impl TerminalView {
                 ctx.notify();
             }
             SshInstallTmuxBlockEvent::ToggleTmuxInstallVisibility => {
-                if let Some(ssh_block_id) = self.warpify_state.block_id() {
+                if let Some(ssh_block_id) = self.zapngify_state.block_id() {
                     if let Some(is_visible) = self
                         .model
                         .lock()
@@ -8374,7 +8374,7 @@ impl TerminalView {
                 }
             }
             SshInstallTmuxBlockEvent::UnhideTmuxInstall => {
-                if let Some(ssh_block_id) = self.warpify_state.block_id() {
+                if let Some(ssh_block_id) = self.zapngify_state.block_id() {
                     self.model
                         .lock()
                         .block_list_mut()
@@ -8392,12 +8392,12 @@ impl TerminalView {
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
-            SshErrorBlockEvent::WarpifyWithoutTmux => {
-                let shell_type = self.warpify_state.get_shell_type();
+            SshErrorBlockEvent::ZapNGifyWithoutTmux => {
+                let shell_type = self.zapngify_state.get_shell_type();
                 self.clear_ssh_blocks(ctx);
                 self.trigger_subshell_bootstrap(shell_type, false, ctx);
             }
-            SshErrorBlockEvent::ContinueWithoutWarpification => {
+            SshErrorBlockEvent::ContinueWithoutZapNGification => {
                 self.cancel_bootstrap_workflow(ctx);
             }
         }
@@ -8405,19 +8405,19 @@ impl TerminalView {
 
     fn handle_ssh_success_block_events(
         &mut self,
-        event: &WarpifySuccessBlockEvent,
+        event: &ZapNGifySuccessBlockEvent,
         ctx: &mut ViewContext<Self>,
     ) {
         match event {
-            WarpifySuccessBlockEvent::ZapifySettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
+            ZapNGifySuccessBlockEvent::ZapifySettings => {
+                ctx.emit(Event::OpenSettings(SettingsSection::ZapNGify));
             }
         }
     }
 
-    fn dismiss_warpify_banner(
+    fn dismiss_zapngify_banner(
         &mut self,
-        remember_command: &RememberForWarpification,
+        remember_command: &RememberForZapNGification,
         ctx: &mut ViewContext<Self>,
     ) {
         {
@@ -8425,36 +8425,36 @@ impl TerminalView {
             model.block_list_mut().set_active_block_banner(None);
         }
 
-        // Also clear the warpify footer so it doesn't linger after warpification
+        // Also clear the zapngify footer so it doesn't linger after warpification
         // starts, fails, or is cancelled.
         if FeatureFlag::WarpifyFooter.is_enabled() {
             self.use_agent_footer.update(ctx, |footer, ctx| {
-                footer.clear_warpify_mode(ctx);
+                footer.clear_zapngify_mode(ctx);
             });
         }
 
         match remember_command {
-            RememberForWarpification::RememberSubshellCommand(command) => {
-                WarpifySettings::handle(ctx).update(ctx, |warpify, ctx| {
-                    warpify.denylist_subshell_command(command, ctx);
+            RememberForZapNGification::RememberSubshellCommand(command) => {
+                ZapNGifySettings::handle(ctx).update(ctx, |zapngify, ctx| {
+                    zapngify.denylist_subshell_command(command, ctx);
                 });
             }
-            RememberForWarpification::RememberSSHHost(host) => {
-                WarpifySettings::handle(ctx).update(ctx, |warpify, ctx| {
-                    warpify.denylist_ssh_host(host, ctx);
+            RememberForZapNGification::RememberSSHHost(host) => {
+                ZapNGifySettings::handle(ctx).update(ctx, |zapngify, ctx| {
+                    zapngify.denylist_ssh_host(host, ctx);
                 });
             }
-            RememberForWarpification::DoNotRememberSubshellCommand
-            | RememberForWarpification::DoNotRememberSSHHost => {}
+            RememberForZapNGification::DoNotRememberSubshellCommand
+            | RememberForZapNGification::DoNotRememberSSHHost => {}
         }
     }
 
-    fn show_warpify_banner(
+    fn show_zapngify_banner(
         &mut self,
-        input: WarpificationMode,
+        input: ZapNGificationMode,
         title: &str,
         lowercase_title: &str,
-        warpify_keybinding: Option<Keystroke>,
+        zapngify_keybinding: Option<Keystroke>,
         telemetry_event: TelemetryEvent,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -8465,14 +8465,14 @@ impl TerminalView {
         let mut model = self.model.lock();
 
         // Shared session viewers can't initiate warpification currently.
-        // Don't show the warpify banner when an agent is monitoring the command either.
+        // Don't show the zapngify banner when an agent is monitoring the command either.
         if model.shared_session_status().is_viewer()
             || model.block_list().active_block().is_agent_monitoring()
         {
             return;
         }
 
-        let a11y_message = match &warpify_keybinding {
+        let a11y_message = match &zapngify_keybinding {
             Some(keystroke) => format!(
                 "You can press {} to Warpify this {} for more Zap features.",
                 keystroke.displayed(),
@@ -8483,14 +8483,14 @@ impl TerminalView {
 
         model
             .block_list_mut()
-            .set_active_block_banner(Some(WithinBlockBanner::WarpifyBanner(
-                WarpifyBannerState::new(input, warpify_keybinding),
+            .set_active_block_banner(Some(WithinBlockBanner::ZapNGifyBanner(
+                ZapNGifyBannerState::new(input, zapngify_keybinding),
             )));
 
         let a11y_content = AccessibilityContent::new(
             format!("{title} recognized."),
             a11y_message,
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -8603,7 +8603,7 @@ impl TerminalView {
         let a11y_content = AccessibilityContent::new(
             trigger.discovery_banner_copy(),
             "You can enable notifications through the command palette.",
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -8642,7 +8642,7 @@ impl TerminalView {
         let a11y_content = AccessibilityContent::new(
             banner_title,
             "Make sure you have enabled access for Zap notifications in System Preferences.",
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         );
         ctx.emit_a11y_content(a11y_content);
 
@@ -9126,7 +9126,7 @@ impl TerminalView {
     /// Checks if the current model request could be served via AWS Bedrock and the user
     /// isn't already using it. If so, inserts a banner prompting the user to log in.
     ///
-    /// The banner is shown when the user could be using AWS Bedrock to save on warp AI spend, but isn't.
+    /// The banner is shown when the user could be using AWS Bedrock to save on zap-ng AI spend, but isn't.
     fn maybe_insert_aws_bedrock_login_banner(
         &mut self,
         model_id: &LLMId,
@@ -9362,7 +9362,7 @@ impl TerminalView {
     }
 
     /// Recomputes the chip values for the Zap prompt (i.e. _not_ PS1).
-    fn refresh_warp_prompt(&mut self, ctx: &mut ViewContext<Self>) {
+    fn refresh_zap_ng_prompt(&mut self, ctx: &mut ViewContext<Self>) {
         // Ask the per-repo sub-model to re-fetch metadata so the chip values
         // reflect the latest git state (branch, diff stats, etc.).
         #[cfg(feature = "local_fs")]
@@ -9439,7 +9439,7 @@ impl TerminalView {
         {
             self.model
                 .lock()
-                .clear_pending_warp_initiated_control_mode();
+                .clear_pending_zap_ng_initiated_control_mode();
         }
         self.model.lock().end_notify_on_ssh_login_complete();
 
@@ -9516,7 +9516,7 @@ impl TerminalView {
         command: Option<&str>,
         app: &AppContext,
     ) -> bool {
-        let is_warpified_remote = session_id
+        let is_zapngified_remote = session_id
             .map(|id| {
                 self.sessions
                     .as_ref(app)
@@ -9526,7 +9526,7 @@ impl TerminalView {
             })
             .unwrap_or_default();
 
-        if is_warpified_remote {
+        if is_zapngified_remote {
             return true;
         }
 
@@ -9561,7 +9561,7 @@ impl TerminalView {
         };
         let escape_char = session.shell_family().escape_char();
         let Some(top_level_command) =
-            warp_completer::parsers::simple::top_level_command(command, escape_char)
+            zap_ng_completer::parsers::simple::top_level_command(command, escape_char)
         else {
             return false;
         };
@@ -9859,7 +9859,7 @@ impl TerminalView {
 
                 // If this block ran a possible subshell command, and it exited before the 1s timer
                 // completed, abort showing the banner.
-                if let Some(abort_handle) = self.warpify_state.take_subshell_banner_abort_handle() {
+                if let Some(abort_handle) = self.zapngify_state.take_subshell_banner_abort_handle() {
                     abort_handle.abort();
                 }
 
@@ -9893,9 +9893,9 @@ impl TerminalView {
                     self.on_user_block_completed(&block_completed_event.block_id, ctx);
                 }
 
-                // Clear any stale warpify mode so it doesn't leak into the next command's footer rendering.
+                // Clear any stale zapngify mode so it doesn't leak into the next command's footer rendering.
                 self.use_agent_footer.update(ctx, |footer, ctx| {
-                    footer.clear_warpify_mode(ctx);
+                    footer.clear_zapngify_mode(ctx);
                 });
                 self.hide_use_agent_footer_in_blocklist(ctx);
                 if matches!(block_completed_event.block_type, BlockType::User(_)) {
@@ -9990,19 +9990,19 @@ impl TerminalView {
                         let alias_value = session.alias_value(first_word)?;
                         Some(format!("{alias_value}{rest}"))
                     });
-                let warpify_command = expanded_command.as_deref().unwrap_or(command.as_str());
+                let zapngify_command = expanded_command.as_deref().unwrap_or(command.as_str());
 
-                // Check if the current running command spawns a subshell eligible for Warpification.
+                // Check if the current running command spawns a subshell eligible for ZapNGification.
                 let shell_family = self.shell_family(ctx);
-                let warpify_settings = WarpifySettings::as_ref(ctx);
-                let is_compatible_subshell_command = warpify_settings
+                let zapngify_settings = ZapNGifySettings::as_ref(ctx);
+                let is_compatible_subshell_command = zapngify_settings
                     .is_compatible_subshell_command(command, shell_family)
-                    || warpify_settings
-                        .is_compatible_subshell_command(warpify_command, shell_family);
-                let command_is_denylisted = warpify_settings
+                    || zapngify_settings
+                        .is_compatible_subshell_command(zapngify_command, shell_family);
+                let command_is_denylisted = zapngify_settings
                     .is_denylisted_subshell_command(command)
-                    || warpify_settings.is_denylisted_subshell_command(warpify_command);
-                // Never warpify or surface warpification for agent-requested commands.
+                    || zapngify_settings.is_denylisted_subshell_command(zapngify_command);
+                // Never zapngify or surface warpification for agent-requested commands.
                 let has_ai_metadata = self
                     .model
                     .lock()
@@ -10013,31 +10013,31 @@ impl TerminalView {
 
                 if is_compatible_subshell_command {
                     if command_is_denylisted || has_ai_metadata {
-                        // Don't auto-warpify or surface warpification for these commands.
+                        // Don't auto-zapngify or surface warpification for these commands.
                     } else if let Some(shell_type) = self.pending_auto_bootstrap_shell_type.take() {
                         // If there is a subshell we're waiting to bootstrap until we receive
                         // the preexec hook, now we can bootstrap it.
-                        let auto_warpify_abort_handle = ctx.spawn_abortable(
+                        let auto_zapngify_abort_handle = ctx.spawn_abortable(
                             Timer::after(Duration::from_millis(AUTO_WARPIFY_DELAY)),
                             move |me, _, ctx| {
                                 me.trigger_subshell_bootstrap(Some(shell_type), false, ctx);
                             },
                             |_, _| (),
                         );
-                        self.warpify_state
-                            .add_auto_warpify_abort_handle(auto_warpify_abort_handle);
+                        self.zapngify_state
+                            .add_auto_zapngify_abort_handle(auto_zapngify_abort_handle);
                     } else {
                         // Wait 1 second before showing the banner, just to make sure the
                         // command stays running for a bit. If the command fails instantly,
                         // we don't want to flicker the banner away so quickly.
                         let command = command.clone();
-                        self.warpify_state
+                        self.zapngify_state
                             .add_subshell_banner_abort_handle(ctx.spawn_abortable(
                                 Timer::after(*SUBSHELL_BANNER_DELAY_DURATION),
                                 |view, _, ctx| {
                                     if FeatureFlag::WarpifyFooter.is_enabled() {
-                                        view.show_warpify_footer(
-                                            WarpificationMode::subshell(command),
+                                        view.show_zapngify_footer(
+                                            ZapNGificationMode::subshell(command),
                                             ctx,
                                         );
                                     } else {
@@ -10053,16 +10053,16 @@ impl TerminalView {
                 } else {
                     if !has_ai_metadata {
                         if let Some(ssh_host) =
-                            parse_interactive_ssh_command(warpify_command).map(|cmd| cmd.host)
+                            parse_interactive_ssh_command(zapngify_command).map(|cmd| cmd.host)
                         {
                             if !self.model.lock().tmux_control_mode_active() {
-                                self.warpify_state
-                                    .set_pending_ssh_host(warpify_command.to_string(), ssh_host);
+                                self.zapngify_state
+                                    .set_pending_ssh_host(zapngify_command.to_string(), ssh_host);
                                 self.model.lock().start_notify_on_end_of_ssh_login();
                                 ctx.emit(Event::TerminalViewStateChanged);
                             }
                         } else {
-                            self.warpify_state.clear_pending_ssh_host();
+                            self.zapngify_state.clear_pending_ssh_host();
 
                             ctx.spawn(
                                 Timer::after(Duration::from_millis(
@@ -10086,14 +10086,14 @@ impl TerminalView {
                 cloud_workflow_id,
                 cloud_env_var_collection_id,
             }) => {
-                // To automatically warpify a subshell, we run the relevant command to open the
+                // To automatically zapngify a subshell, we run the relevant command to open the
                 // subshell and create a future to delay bootstrapping the subshell long enough for
                 // the command to complete. We receive AfterBlockCompleted if the subshell command
                 // returns an error or the user exits the subshell. Here we abort the future to
                 // avoid an attempt to trigger bootstrapping if the subshell command failed. If the
                 // future already resolved, abort has no effect. We handle this as early as possible
                 // because the abort is time sensitive.
-                self.warpify_state.abort_auto_warpify();
+                self.zapngify_state.abort_auto_zapngify();
 
                 let active_session = self
                     .active_block_session_id()
@@ -10168,14 +10168,14 @@ impl TerminalView {
                 }
                 let active_session_id = self.active_block_session_id();
                 if let Some(block_id) = self
-                    .warpify_state
-                    .get_completed_warpify_session_id(active_session_id, ctx)
+                    .zapngify_state
+                    .get_completed_zapngify_session_id(active_session_id, ctx)
                 {
                     self.remove_ssh_block_by_id(block_id);
                 }
 
-                self.dismiss_warpify_banner(
-                    &RememberForWarpification::DoNotRememberSubshellCommand,
+                self.dismiss_zapngify_banner(
+                    &RememberForZapNGification::DoNotRememberSubshellCommand,
                     ctx,
                 );
 
@@ -10206,12 +10206,12 @@ impl TerminalView {
                 // command list, we execute the command after a delay.
                 // The delay is necessary because the shell needs a tiny bit of
                 // extra time after the last precmd function is finished.
-                // Additionally, it's possible for hooks to install themselves after the warp
+                // Additionally, it's possible for hooks to install themselves after the zap-ng
                 // precmd. For example, `fig_precmd` does this.
                 if self.is_login_shell_bootstrapped {
                     let _ = ctx.spawn(
                         async move {
-                            warpui::r#async::Timer::after(EXECUTE_PENDING_COMMAND_DELAY).await;
+                            zap_ng_ui::r#async::Timer::after(EXECUTE_PENDING_COMMAND_DELAY).await;
                         },
                         Self::execute_pending_command,
                     );
@@ -10231,7 +10231,7 @@ impl TerminalView {
                         .block_list()
                         .is_bootstrapping_precmd_done()
                 {
-                    self.refresh_warp_prompt(ctx);
+                    self.refresh_zap_ng_prompt(ctx);
                 }
 
                 if let BlockType::User(block_completed) = block_type {
@@ -10253,7 +10253,7 @@ impl TerminalView {
                             self.maybe_suggest_alias_expansion(block_completed, ctx);
                         }
 
-                        self.maybe_suggest_open_in_warp(block_completed, ctx);
+                        self.maybe_suggest_open_in_zap_ng(block_completed, ctx);
                     }
 
                     // Check if the user tried to run an AWS login command but AWS CLI wasn't installed.
@@ -10689,20 +10689,20 @@ impl TerminalView {
                 self.handle_detected_end_of_ssh_login(check_type, ctx);
             }
             ModelEvent::RemoteWarpificationIsUnavailable(reason) => {
-                self.handle_remote_warpification_is_unavailable(reason.clone(), ctx);
+                self.handle_remote_zapngification_is_unavailable(reason.clone(), ctx);
             }
             ModelEvent::SshTmuxInstaller(tmux_installation) => {
-                self.warpify_state
+                self.zapngify_state
                     .set_tmux_installation_state(*tmux_installation);
             }
             ModelEvent::TmuxInstallFailed { line, command } => {
                 let system_details = self
-                    .warpify_state
+                    .zapngify_state
                     .ssh_block_state()
                     .and_then(|s| s.get_system_details(ctx));
-                self.warpify_state.abort_ssh_warpify_timeout();
+                self.zapngify_state.abort_ssh_zapngify_timeout();
                 self.add_ssh_error_block(
-                    WarpificationUnavailableReason::TmuxInstallFailed {
+                    ZapNGificationUnavailableReason::TmuxInstallFailed {
                         system_details,
                         line: Some(line.to_string()),
                         command: Some(command.to_string()),
@@ -10727,7 +10727,7 @@ impl TerminalView {
             ModelEvent::InitSsh(event) => {
                 let shell_type = event.shell_type;
                 let uname = event.uname.as_ref().unwrap_or(&String::default()).clone();
-                self.continue_warpify_ssh_session(&uname, shell_type, ctx);
+                self.continue_zapngify_ssh_session(&uname, shell_type, ctx);
             }
             ModelEvent::SourcedRcFileInSubshell(event) => {
                 send_telemetry_from_ctx!(TelemetryEvent::ReceivedSubshellRcFileDcs, ctx);
@@ -10737,7 +10737,7 @@ impl TerminalView {
 
                 ctx.spawn(
                     async {
-                        warpui::r#async::Timer::after(*TRIGGER_RC_FILE_SUBSHELL_BOOTSTRAP_DELAY)
+                        zap_ng_ui::r#async::Timer::after(*TRIGGER_RC_FILE_SUBSHELL_BOOTSTRAP_DELAY)
                             .await
                     },
                     move |me, _, ctx| {
@@ -10755,16 +10755,16 @@ impl TerminalView {
                                 has_ai_metadata,
                             )
                         };
-                        // Never warpify for agent-requested commands.
+                        // Never zapngify for agent-requested commands.
                         if has_ai_metadata {
                             return;
                         }
-                        // To simplify the implementation, we do not support warpifying while SSH-warpified.
+                        // To simplify the implementation, we do not support zapngifying while SSH-warpified.
                         if is_tmux_control_mode_active {
                             return;
                         }
                         if is_ssh && !disable_tmux {
-                            me.continue_warpify_ssh_session(&uname, shell_type, ctx);
+                            me.continue_zapngify_ssh_session(&uname, shell_type, ctx);
                         } else {
                             me.trigger_subshell_bootstrap(Some(shell_type), true, ctx);
                         }
@@ -10974,7 +10974,7 @@ impl TerminalView {
                 ctx.emit(Event::RemoteServerSkipRequested { session_id });
             }
             SshRemoteServerChoiceViewEvent::ZapifySettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
+                ctx.emit(Event::OpenSettings(SettingsSection::ZapNGify));
             }
         });
 
@@ -11072,7 +11072,7 @@ impl TerminalView {
             })
             .unwrap_or_else(|| crate::t!("terminal-starting-shell"));
 
-        let shimmer_element = shimmering_warp_loading_text(
+        let shimmer_element = shimmering_zap_ng_loading_text(
             message,
             appearance.monospace_font_size() - 2.,
             self.remote_server_shimmer_handle.clone(),
@@ -11560,7 +11560,7 @@ impl TerminalView {
         self.update_incompatible_configuration_banner(session.shell().plugins(), ctx);
 
         if let Some(subshell_info) = session.subshell_info() {
-            self.warpify_state
+            self.zapngify_state
                 .add_subshell_separator(subshell_info, self.model.clone(), ctx);
         }
 
@@ -11608,7 +11608,7 @@ impl TerminalView {
         }
 
         let is_subshell_or_ssh = session.is_subshell_or_ssh();
-        let is_ssh_session = matches!(session.session_type(), SessionType::WarpifiedRemote { .. })
+        let is_ssh_session = matches!(session.session_type(), SessionType::ZapNGifiedRemote { .. })
             || session.is_legacy_ssh_session();
 
         // Make sure we decorate any text that is already in the input.  We
@@ -11625,12 +11625,12 @@ impl TerminalView {
                         ctx,
                     );
                 });
-                me.refresh_warp_prompt(ctx);
+                me.refresh_zap_ng_prompt(ctx);
             },
         );
 
         // If we were waiting for a successful warpification, it's come. Stop the timeout.
-        self.warpify_state.abort_ssh_warpify_timeout();
+        self.zapngify_state.abort_ssh_zapngify_timeout();
 
         if bootstrap_event.subshell_info.is_some() {
             self.add_bootstrap_success_block(bootstrap_event, ctx);
@@ -11718,7 +11718,7 @@ impl TerminalView {
             }
         }
 
-        self.refresh_warp_prompt(ctx);
+        self.refresh_zap_ng_prompt(ctx);
         ctx.emit(Event::SessionBootstrapped);
     }
 
@@ -12551,7 +12551,7 @@ impl TerminalView {
         // https://github.com/warpdotdev/command-corrections/blob/df7848d4fb3da7883623e959889a296a07d88053/src/rules/cd/mod.rs#L31-L36
         // We don't currently support dynamic rules over SSH, so we should not attempt to correct commands if
         // inside ssh session.
-        let is_ssh_command = SshWarpifyCommand::matches(input).is_some();
+        let is_ssh_command = SshZapNGifyCommand::matches(input).is_some();
         if is_ssh_command {
             return vec![];
         }
@@ -12611,7 +12611,7 @@ impl TerminalView {
             let a11y_content = AccessibilityContent::new(
                 format!("Suggested corrected command: {}", correction.command),
                 "Press right arrow to insert or keep editing to ignore",
-                WarpA11yRole::HelpRole,
+                ZapNGA11yRole::HelpRole,
             );
             ctx.emit_a11y_content(a11y_content);
 
@@ -13616,7 +13616,7 @@ impl TerminalView {
     fn start_bootstrap_timer(&self, duration: Duration, ctx: &mut ViewContext<Self>) {
         let _ = ctx.spawn(
             async move {
-                warpui::r#async::Timer::after(duration).await;
+                zap_ng_ui::r#async::Timer::after(duration).await;
             },
             Self::on_bootstrap_failed_timer_complete,
         );
@@ -14200,7 +14200,7 @@ impl TerminalView {
                             if is_markdown_file(&path) {
                                 items.push(
                                     MenuItemFields::new(crate::t!("menu-block-open-in-warp"))
-                                        .with_on_select_action(TerminalAction::OpenFileInWarp(path))
+                                        .with_on_select_action(TerminalAction::OpenFileInZapNG(path))
                                         .into_item(),
                                 );
                                 // Because the default for cmd-click is to open in Zap, we also
@@ -14350,7 +14350,7 @@ impl TerminalView {
                         .into_item(),
                 ];
 
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+                if ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
                     items.push(MenuItem::Separator);
                     items.push(
                         MenuItemFields::new(crate::t!("menu-block-save-as-workflow"))
@@ -15047,7 +15047,7 @@ impl TerminalView {
                 items.push(
                     MenuItemFields::new(crate::t!("menu-input-ask-warp-ai"))
                         .with_on_select_action(TerminalAction::InputContextMenuItem(
-                            InputContextMenuAction::AskWarpAI,
+                            InputContextMenuAction::AskZapNGAI,
                         ))
                         .into_item(),
                 );
@@ -15055,7 +15055,7 @@ impl TerminalView {
         }
 
         // Section 3: Teams related
-        if !all_current_input_text.is_empty() && WarpDriveSettings::is_warp_drive_enabled(ctx) {
+        if !all_current_input_text.is_empty() && ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
             items.extend([
                 MenuItem::Separator,
                 MenuItemFields::new(crate::t!("menu-input-save-as-workflow"))
@@ -16576,7 +16576,7 @@ impl TerminalView {
         &self,
         session_id: Option<SessionId>,
         ctx: &AppContext,
-    ) -> Option<warp_core::HostId> {
+    ) -> Option<zap_ng_core::HostId> {
         #[cfg(not(target_family = "wasm"))]
         {
             if !FeatureFlag::SshRemoteServer.is_enabled() {
@@ -16596,11 +16596,11 @@ impl TerminalView {
     /// 远端 SSH 主机均为 Unix,路径字符串由 shell-integration 上报的远端 cwd 拼接而来。
     #[cfg(all(feature = "local_tty", feature = "local_fs"))]
     fn remote_path_from_terminal_path(
-        host_id: warp_core::HostId,
+        host_id: zap_ng_core::HostId,
         path: &std::path::Path,
     ) -> Option<crate::code::buffer_location::RemotePath> {
         let path_str = path.to_str()?;
-        let standardized = warp_util::standardized_path::StandardizedPath::try_new(path_str)
+        let standardized = zap_ng_util::standardized_path::StandardizedPath::try_new(path_str)
             .map_err(|e| {
                 log::warn!("无法将终端文件路径转换为远端路径 {path_str:?}: {e}");
             })
@@ -16622,7 +16622,7 @@ impl TerminalView {
     ))]
     fn remote_clicked_path_is_dir(
         &self,
-        session_id: warp_core::SessionId,
+        session_id: zap_ng_core::SessionId,
         path: &std::path::Path,
     ) -> bool {
         path.parent().is_some_and(|parent| {
@@ -16802,23 +16802,23 @@ impl TerminalView {
     }
 
     /// Tell the pane group to open a file within Zap.
-    fn open_file_in_warp(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
+    fn open_file_in_zap_ng(&mut self, path: PathBuf, ctx: &mut ViewContext<Self>) {
         if let Some(session) = self
             .active_block_session_id()
             .and_then(|session_id| self.sessions.as_ref(ctx).get(session_id))
         {
-            ctx.emit(Event::OpenFileInWarp { path, session })
+            ctx.emit(Event::OpenFileInZapNG { path, session })
         }
     }
 
     #[cfg(feature = "local_fs")]
-    fn open_code_in_warp(
+    fn open_code_in_zap_ng(
         &mut self,
         source: CodeSource,
         layout: EditorLayout,
         ctx: &mut ViewContext<Self>,
     ) {
-        ctx.emit(Event::OpenCodeInWarp { source, layout })
+        ctx.emit(Event::OpenCodeInZapNG { source, layout })
     }
 
     fn open_code_diff(&self, view: ViewHandle<CodeDiffView>, ctx: &mut ViewContext<Self>) {
@@ -17268,7 +17268,7 @@ impl TerminalView {
             .and_then(|id| self.sessions.as_ref(ctx).get(id))
         {
             if let Some(info) = session.subshell_info() {
-                self.warpify_state
+                self.zapngify_state
                     .add_subshell_separator(info, self.model.clone(), ctx);
             }
         }
@@ -17691,7 +17691,7 @@ impl TerminalView {
                     return;
                 }
 
-                send_telemetry_from_ctx!(TelemetryEvent::InputAskWarpAI, ctx);
+                send_telemetry_from_ctx!(TelemetryEvent::InputAskZapNGAI, ctx);
                 AskAIType::FromTextSelection {
                     text: Arc::new(selected_input_text),
                     populate_input_box: true,
@@ -18297,9 +18297,9 @@ impl TerminalView {
                         env_var_collection_block.clear_selection(ctx);
                     });
                 }
-                Some(RichContentMetadata::WarpifySuccessBlock { .. }) => {
-                    // TODO(Simon): We should be checking for WarpifySuccessBlocks here as well.
-                    // The `WarpifySuccessBlock` implements a `SelectableArea`.
+                Some(RichContentMetadata::ZapNGifySuccessBlock { .. }) => {
+                    // TODO(Simon): We should be checking for ZapNGifySuccessBlocks here as well.
+                    // The `ZapNGifySuccessBlock` implements a `SelectableArea`.
                 }
                 _ => {}
             }
@@ -18559,7 +18559,7 @@ impl TerminalView {
                 AIAgentCitation::WarpDriveObject { uid } => {
                     ctx.emit(Event::ZapDriveObjectInPane(uid.clone()));
                 }
-                AIAgentCitation::WarpDocumentation { path: _ } => {
+                AIAgentCitation::ZapNGDocumentation { path: _ } => {
                     // Zap fork 不继承上游 docs.warp.dev 文档站,
                     // 点击该类型引用暂不跳转。
                 }
@@ -18642,11 +18642,11 @@ impl TerminalView {
                 self.handle_usage_footer_toggled(block.id(), *conversation_id, *is_expanded, ctx);
             }
             AIBlockEvent::OpenSettings => {
-                ctx.emit(Event::OpenSettings(SettingsSection::WarpAgent));
+                ctx.emit(Event::OpenSettings(SettingsSection::ZapNGAgent));
             }
             #[cfg(feature = "local_fs")]
-            AIBlockEvent::OpenCodeInWarp { source, layout } => {
-                ctx.emit(Event::OpenCodeInWarp {
+            AIBlockEvent::OpenCodeInZapNG { source, layout } => {
+                ctx.emit(Event::OpenCodeInZapNG {
                     source: source.clone(),
                     layout: *layout,
                 });
@@ -19655,8 +19655,8 @@ impl TerminalView {
                 ctx.emit(Event::OpenSettings(*section));
             }
             #[cfg(feature = "local_fs")]
-            InputEvent::OpenCodeInWarp { source, layout } => {
-                ctx.emit(Event::OpenCodeInWarp {
+            InputEvent::OpenCodeInZapNG { source, layout } => {
+                ctx.emit(Event::OpenCodeInZapNG {
                     source: source.clone(),
                     layout: *layout,
                 });
@@ -19786,7 +19786,7 @@ impl TerminalView {
 
         // When we insert rich content (including agent view blocks) we insert it immediately before
         // the active block (unless explicitly inserting below a long-running block). The active
-        // block is a special "warp input" block that often exists even when it isn't user-visible.
+        // block is a special "zap-ng input" block that often exists even when it isn't user-visible.
         //
         // So, for dedupe we check the first visible (non-zero height) item *immediately before the
         // active block*. This avoids false negatives caused by the active block itself.
@@ -20290,7 +20290,7 @@ impl TerminalView {
                 }
             }
         } else if self.is_long_running() {
-            self.on_ssh_warpification_key_event(None, ctx);
+            self.on_ssh_zapngification_key_event(None, ctx);
             let sequence =
                 EscCodes::build_escape_sequence(self.model.lock().deref(), &[EscCodes::ARROW_UP]);
             self.write_user_bytes_to_pty(sequence, ctx);
@@ -21169,11 +21169,11 @@ impl TerminalView {
         let icon = Container::new(
             ConstrainedBox::new(if has_active_filter {
                 icons::Icon::FilterFunnelFilled
-                    .to_warpui_icon(appearance.theme().accent())
+                    .to_zap_ng_ui_icon(appearance.theme().accent())
                     .finish()
             } else {
                 icons::Icon::FilterFunnel
-                    .to_warpui_icon(
+                    .to_zap_ng_ui_icon(
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_2()),
@@ -21568,10 +21568,10 @@ impl TerminalView {
             }
         }
 
-        if let Some(open_in_warp_banner) = &self.inline_banners_state.open_in_warp_banner {
+        if let Some(open_in_zap_ng_banner) = &self.inline_banners_state.open_in_zap_ng_banner {
             inline_banners.insert(
-                open_in_warp_banner.id,
-                render_open_in_warp_banner(open_in_warp_banner, self.view_id, appearance),
+                open_in_zap_ng_banner.id,
+                render_open_in_zap_ng_banner(open_in_zap_ng_banner, self.view_id, appearance),
             );
         }
 
@@ -21797,7 +21797,7 @@ impl TerminalView {
 
         let mut subshell_separators = HashMap::new();
 
-        for (id, command) in self.warpify_state.get_subshell_separators() {
+        for (id, command) in self.zapngify_state.get_subshell_separators() {
             subshell_separators.insert(*id, render_subshell_separator(command.clone(), appearance));
         }
 
@@ -21809,8 +21809,8 @@ impl TerminalView {
             .active_block()
             .block_banner()
             .map(|banner| match banner {
-                WithinBlockBanner::WarpifyBanner(state) => {
-                    render_warpification_banner(state, appearance, app)
+                WithinBlockBanner::ZapNGifyBanner(state) => {
+                    render_zapngification_banner(state, appearance, app)
                 }
             });
 
@@ -22751,7 +22751,7 @@ impl TerminalView {
             SelectAll => self.select_all_text_from_input(ctx),
             Paste => self.paste_in_input(ctx),
             ShowCommandSearch => self.command_search_from_input(ctx),
-            AskWarpAI => self.ask_ai(&AskAISource::SelectedInputText, ctx),
+            AskZapNGAI => self.ask_ai(&AskAISource::SelectedInputText, ctx),
             ShowAICommandSearch => self.ai_command_search_from_input(ctx),
             SaveAsWorkflow => self.save_as_workflow_from_input(ctx),
             ToggleInputHintText => self.toggle_input_hint_text(ctx),
@@ -22779,7 +22779,7 @@ impl TerminalView {
                 // TODO (a11y) Keybindings should be taken from the actual user's
                 // configuration
                 "Press cmd-C to read and copy both command and output, and cmd-option-shift-C to read and copy output only. Press cmd-B to bookmark the block: you could navigate between bookmarked blocks quickly using option-up and option-down.",
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )
         })
     }
@@ -22939,7 +22939,7 @@ impl TerminalView {
             }
             Settings => {
                 if FeatureFlag::SSHTmuxWrapper.is_enabled() {
-                    ctx.emit(Event::OpenSettings(SettingsSection::Warpify));
+                    ctx.emit(Event::OpenSettings(SettingsSection::ZapNGify));
                 } else {
                     ctx.emit(Event::OpenSettings(SettingsSection::Features));
                 }
@@ -23049,7 +23049,7 @@ impl TerminalView {
     }
 
     /// Replace the terminal input buffer with the given command that is meant to open a subshell.
-    /// Set a flag that we should automatically bootstrap AKA "warpify" the subshell when we
+    /// Set a flag that we should automatically bootstrap AKA "zapngify" the subshell when we
     /// receive the [`AfterBlockStarted`] event.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -23281,7 +23281,7 @@ impl TerminalView {
         shell_type: ShellType,
         ctx: &mut ViewContext<Self>,
     ) {
-        // Attempt to auto warpify the subshell when bootstrapped
+        // Attempt to auto zapngify the subshell when bootstrapped
         self.pending_auto_bootstrap_shell_type = Some(shell_type);
 
         self.input.update(ctx, |input, ctx| {
@@ -23403,12 +23403,12 @@ impl TerminalView {
             return;
         };
 
-        let sshed = self.model.lock().is_warpified_ssh() || session.is_legacy_ssh_session();
+        let sshed = self.model.lock().is_zapngified_ssh() || session.is_legacy_ssh_session();
         if sshed && !paths.is_empty() && FeatureFlag::SshDragAndDrop.is_enabled() {
             self.initiate_ssh_file_upload(paths, ctx);
         } else {
             let input =
-                warpui::clipboard_utils::escaped_paths_str(paths, Some(self.shell_family(ctx)));
+                zap_ng_ui::clipboard_utils::escaped_paths_str(paths, Some(self.shell_family(ctx)));
             self.typed_characters_on_terminal(&input, ctx);
         }
     }
@@ -23454,31 +23454,31 @@ impl TerminalView {
             .and_then(|info| info.ssh_connection_info.clone())
     }
 
-    fn warpify_ssh_session(&mut self, ctx: &mut ViewContext<Self>) {
-        self.warpify_state.set_shell_detection_in_progress();
-        self.begin_ssh_warpify_timeout(SSH_WARPIFY_TIMEOUT_DURATION, ctx);
+    fn zapngify_ssh_session(&mut self, ctx: &mut ViewContext<Self>) {
+        self.zapngify_state.set_shell_detection_in_progress();
+        self.begin_ssh_zapngify_timeout(SSH_WARPIFY_TIMEOUT_DURATION, ctx);
         self.clear_line_editor_and_write_to_pty(
-            convert_script_to_one_line(&begin_warpify_ssh_session_command(ctx)).into_bytes(),
+            convert_script_to_one_line(&begin_zapngify_ssh_session_command(ctx)).into_bytes(),
             ctx,
         );
     }
 
-    fn continue_warpify_ssh_session(
+    fn continue_zapngify_ssh_session(
         &mut self,
         uname: &str,
         shell_type: ShellType,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.warpify_state.set_shell_type(&shell_type);
-        self.model.lock().set_pending_warp_initiated_control_mode();
-        if let Some(script) = warpify_ssh_session_command(uname, shell_type, ctx) {
+        self.zapngify_state.set_shell_type(&shell_type);
+        self.model.lock().set_pending_zap_ng_initiated_control_mode();
+        if let Some(script) = zapngify_ssh_session_command(uname, shell_type, ctx) {
             self.clear_line_editor_and_write_to_pty_with_mac_workaround_hack(
                 convert_script_to_one_line(&script).into_bytes(),
                 ctx,
             );
         } else {
             self.add_ssh_error_block(
-                WarpificationUnavailableReason::UnsupportedShell {
+                ZapNGificationUnavailableReason::UnsupportedShell {
                     shell_name: shell_type.name().to_string(),
                 },
                 ctx,
@@ -23486,7 +23486,7 @@ impl TerminalView {
         }
     }
 
-    fn install_tmux_and_warpify(
+    fn install_tmux_and_zapngify(
         &mut self,
         ctx: &mut ViewContext<Self>,
         install_method: &TmuxInstallMethod,
@@ -23495,34 +23495,34 @@ impl TerminalView {
         let install_script = &install_method.script;
         self.model
             .lock()
-            .set_pending_warp_initiated_control_mode_with_install_tmux(install_with_root_method);
+            .set_pending_zap_ng_initiated_control_mode_with_install_tmux(install_with_root_method);
         self.clear_line_editor_and_write_to_pty(
             convert_script_to_one_line(install_script).into_bytes(),
             ctx,
         );
     }
 
-    fn begin_ssh_warpify_timeout(&mut self, duration: Duration, ctx: &mut ViewContext<Self>) {
-        let timeout_id = self.warpify_state.replace_timeout_id();
+    fn begin_ssh_zapngify_timeout(&mut self, duration: Duration, ctx: &mut ViewContext<Self>) {
+        let timeout_id = self.zapngify_state.replace_timeout_id();
         let active_block_id = self.model.lock().block_list().active_block_id().clone();
         let system_details = self
-            .warpify_state
+            .zapngify_state
             .ssh_block_state()
             .and_then(|s| s.get_system_details(ctx))
             .to_owned();
-        self.warpify_state.add_ssh_warpify_timeout_handle(ctx.spawn(
+        self.zapngify_state.add_ssh_zapngify_timeout_handle(ctx.spawn(
             async move {
                 Timer::after(duration).await;
                 (timeout_id, active_block_id, system_details)
             },
             |terminal_view, (timeout_id, active_block_id, system_details), ctx| {
                 let is_shell_detection =
-                    terminal_view.warpify_state.is_shell_detection_in_progress();
-                if timeout_id == terminal_view.warpify_state.timeout_id()
+                    terminal_view.zapngify_state.is_shell_detection_in_progress();
+                if timeout_id == terminal_view.zapngify_state.timeout_id()
                     && terminal_view.model.lock().block_list().active_block_id() == &active_block_id
                 {
                     terminal_view.add_ssh_error_block(
-                        WarpificationUnavailableReason::Timeout {
+                        ZapNGificationUnavailableReason::Timeout {
                             is_tmux_install: false,
                             is_shell_detection,
                             system_details,
@@ -23540,7 +23540,7 @@ impl TerminalView {
         ctx: &mut ViewContext<TerminalView>,
     ) {
         match check_type {
-            SshLoginStatus::RecheckBeforeWarpifying => {
+            SshLoginStatus::RecheckBeforeZapNGifying => {
                 // After we receive a line of output from ssh that is NOT prompting for user input (unlike "Enter passphrase: "),
                 // we wait and repeat the check after a small delay in case the state returned to something that's user-input bound.
                 // For example, say the output that kicked off this event was "Permission denied, please try again." and
@@ -23551,7 +23551,7 @@ impl TerminalView {
                 let active_block_id = self.model.lock().block_list().active_block_id().clone();
                 ctx.spawn(
                     async {
-                        warpui::r#async::Timer::after(Duration::from_secs(3)).await;
+                        zap_ng_ui::r#async::Timer::after(Duration::from_secs(3)).await;
                         active_block_id
                     },
                     move |terminal_view, active_block_id, _| {
@@ -23562,21 +23562,21 @@ impl TerminalView {
                     },
                 );
             }
-            SshLoginStatus::ReadyToWarpify => {
-                // After the confirmation check, we are confident enough to auto-warpify or offer warpification.
-                let Some(command) = &self.warpify_state.get_pending_ssh_command() else {
+            SshLoginStatus::ReadyToZapNGify => {
+                // After the confirmation check, we are confident enough to auto-zapngify or offer warpification.
+                let Some(command) = &self.zapngify_state.get_pending_ssh_command() else {
                     return;
                 };
-                let ssh_host = &self.warpify_state.get_pending_ssh_host();
+                let ssh_host = &self.zapngify_state.get_pending_ssh_host();
 
                 let shell_family = self.shell_family(ctx);
-                let warpify_settings = WarpifySettings::as_ref(ctx);
+                let zapngify_settings = ZapNGifySettings::as_ref(ctx);
 
-                let ssh_interactive_session_event = evaluate_warpify_ssh_host(
+                let ssh_interactive_session_event = evaluate_zapngify_ssh_host(
                     command,
                     ssh_host.as_deref(),
                     shell_family,
-                    warpify_settings,
+                    zapngify_settings,
                 );
 
                 if let SshInteractiveSessionDetected::ShouldPromptWarpification {
@@ -23585,12 +23585,12 @@ impl TerminalView {
                 } = ssh_interactive_session_event
                 {
                     if FeatureFlag::WarpifyFooter.is_enabled() {
-                        self.show_warpify_footer(
-                            WarpificationMode::ssh(command.clone(), host.to_owned()),
+                        self.show_zapngify_footer(
+                            ZapNGificationMode::ssh(command.clone(), host.to_owned()),
                             ctx,
                         );
                     } else {
-                        self.add_ssh_warpify_prompt(command, host.to_owned(), ctx)
+                        self.add_ssh_zapngify_prompt(command, host.to_owned(), ctx)
                     }
                 }
 
@@ -23602,12 +23602,12 @@ impl TerminalView {
         }
     }
 
-    /// Shows the warpify footer for a detected subshell/SSH command.
-    fn show_warpify_footer(&mut self, mode: WarpificationMode, ctx: &mut ViewContext<Self>) {
+    /// Shows the zapngify footer for a detected subshell/SSH command.
+    fn show_zapngify_footer(&mut self, mode: ZapNGificationMode, ctx: &mut ViewContext<Self>) {
         let model = self.model.lock();
 
         // Shared session viewers can't initiate warpification currently.
-        // Don't show the warpify footer when an agent is monitoring the command either.
+        // Don't show the zapngify footer when an agent is monitoring the command either.
         if model.shared_session_status().is_viewer()
             || model.block_list().active_block().is_agent_monitoring()
         {
@@ -23617,11 +23617,11 @@ impl TerminalView {
 
         let is_ssh = mode.is_ssh();
         self.use_agent_footer.update(ctx, |footer, ctx| {
-            footer.set_warpify_mode(mode, ctx);
+            footer.set_zapngify_mode(mode, ctx);
         });
         self.maybe_show_use_agent_footer_in_blocklist(ctx);
 
-        send_telemetry_from_ctx!(TelemetryEvent::WarpifyFooterShown { is_ssh }, ctx);
+        send_telemetry_from_ctx!(TelemetryEvent::ZapNGifyFooterShown { is_ssh }, ctx);
     }
 
     fn show_initialization_block(&mut self) {
@@ -23678,7 +23678,7 @@ impl TypedActionView for TerminalView {
                     .map_or(Empty, |selected| {
                         Custom(AccessibilityContent::new_without_help(
                             selected,
-                            WarpA11yRole::TextRole,
+                            ZapNGA11yRole::TextRole,
                         ))
                     })
             }
@@ -23704,7 +23704,7 @@ impl TypedActionView for TerminalView {
             BookmarkBlock(_) | BookmarkSelectedBlock => {
                 Custom(AccessibilityContent::new_without_help(
                     "Toggle Bookmark block",
-                    WarpA11yRole::TextRole,
+                    ZapNGA11yRole::TextRole,
                 ))
             }
             ExpandBlockSelectionAbove | ExpandBlockSelectionBelow => {
@@ -23726,19 +23726,19 @@ impl TypedActionView for TerminalView {
                     "Selected all {} blocks.",
                     self.num_non_hidden_selected_blocks()
                 ),
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )),
             ScrollToBottomOfSelectedBlocks => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to bottom of selected block".to_string(),
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )),
             ScrollToTopOfSelectedBlocks => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to top of selected block".to_string(),
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )),
             ScrollToBottomOfOverhangingBlock(_) => Custom(AccessibilityContent::new_without_help(
                 "Scrolled to bottom of bottommost visible block".to_string(),
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )),
             CopyOutputs => {
                 let mut outputs = vec![];
@@ -23759,7 +23759,7 @@ impl TypedActionView for TerminalView {
                 );
                 Custom(AccessibilityContent::new_without_help(
                     text,
-                    WarpA11yRole::TextRole,
+                    ZapNGA11yRole::TextRole,
                 ))
             }
             Copy => {
@@ -23778,7 +23778,7 @@ impl TypedActionView for TerminalView {
                 let text = format!("Copied {} blocks.\n{}", blocks.len(), blocks.join("\n"));
                 Custom(AccessibilityContent::new_without_help(
                     text,
-                    WarpA11yRole::TextRole,
+                    ZapNGA11yRole::TextRole,
                 ))
             }
             FocusInputAndClearSelection => {
@@ -23786,7 +23786,7 @@ impl TypedActionView for TerminalView {
                     crate::i18n::t_or(INPUT_A11Y_LABEL_KEY, INPUT_A11Y_LABEL_KEY),
                     // TODO (a11y) use bindings from user settings
                     crate::i18n::t_or(INPUT_A11Y_HELPER_KEY, INPUT_A11Y_HELPER_KEY),
-                    WarpA11yRole::TextareaRole,
+                    ZapNGA11yRole::TextareaRole,
                 ))
             }
             KeyDown(key) => {
@@ -23797,24 +23797,24 @@ impl TypedActionView for TerminalView {
                 };
                 Custom(AccessibilityContent::new_without_help(
                     label,
-                    WarpA11yRole::TextareaRole,
+                    ZapNGA11yRole::TextareaRole,
                 ))
             }
             OpenBlockFilterEditor(block_index) => Custom(AccessibilityContent::new_without_help(
                 format!("Open block filter editor for block {block_index}"),
-                WarpA11yRole::TextRole,
+                ZapNGA11yRole::TextRole,
             )),
             ShowInitializationBlock => Custom(AccessibilityContent::new_without_help(
                 "Showed initialization block",
-                WarpA11yRole::TextareaRole,
+                ZapNGA11yRole::TextareaRole,
             )),
-            ShowWarpifySettings => Custom(AccessibilityContent::new_without_help(
+            ShowZapNGifySettings => Custom(AccessibilityContent::new_without_help(
                 "Opened Warpify Settings",
-                WarpA11yRole::ButtonRole,
+                ZapNGA11yRole::ButtonRole,
             )),
             OpenFilesPalette { .. } => Custom(AccessibilityContent::new_without_help(
                 "Opened file search palette",
-                WarpA11yRole::ButtonRole,
+                ZapNGA11yRole::ButtonRole,
             )),
             InsertCommandCorrection { .. }
             | BlockListContextMenu(_)
@@ -23850,7 +23850,7 @@ impl TypedActionView for TerminalView {
             | CopyGridSecret(_)
             | CopyRichContentSecret(_)
             | ShowInFileExplorer(_)
-            | OpenFileInWarp(_)
+            | OpenFileInZapNG(_)
             | CtrlD
             | CtrlC
             | ClearSelectionsWhenShellMode
@@ -23860,7 +23860,7 @@ impl TypedActionView for TerminalView {
             | ControlSequence(_)
             | TriggerSubshellBootstrap
             | ShowSubshellBanner(_)
-            | DismissWarpifyBanner(_)
+            | DismissZapNGifyBanner(_)
             | OpenBlockListContextMenu
             | AliasExpansionBanner(_)
             | VimModeBanner(_)
@@ -23869,8 +23869,8 @@ impl TypedActionView for TerminalView {
             | OnboardingFlow(_)
             | ImportSettings
             | DragAndDropFiles(_)
-            | WarpifySSHSession
-            | ShowWarpifySshBanner(_, _)
+            | ZapNGifySSHSession
+            | ShowZapNGifySshBanner(_, _)
             | NotifySshErrorBlock(_)
             | ToggleBlockFilterOnSelectedOrLastBlock(_)
             | SetMarkedText { .. }
@@ -23879,32 +23879,32 @@ impl TypedActionView for TerminalView {
             | ToggleAIDocumentPane
             | ClearMarkedText => ActionAccessibilityContent::from_debug(),
             #[cfg(feature = "local_fs")]
-            OpenCodeInWarp { .. } => ActionAccessibilityContent::from_debug(),
-            OpenInWarpBanner(action) => self.open_in_warp_banner_accessibility_content(*action),
+            OpenCodeInZapNG { .. } => ActionAccessibilityContent::from_debug(),
+            OpenInZapNGBanner(action) => self.open_in_zap_ng_banner_accessibility_content(*action),
             OpenAIBlockAttachedBlocksMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open list of blocks attached as context to this AI query.".to_owned(),
-                WarpA11yRole::PopoverRole,
+                ZapNGA11yRole::PopoverRole,
             )),
             OpenAIBlockOverflowMenu { .. } => Custom(AccessibilityContent::new_without_help(
                 "Open overflow menu with copy options for this AI block.".to_owned(),
-                WarpA11yRole::PopoverRole,
+                ZapNGA11yRole::PopoverRole,
             )),
             RewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Show confirmation dialog to rewind to before this point in the AI conversation."
                     .to_owned(),
-                WarpA11yRole::ButtonRole,
+                ZapNGA11yRole::ButtonRole,
             )),
             ExecuteRewindAIConversation { .. } => Custom(AccessibilityContent::new_without_help(
                 "Execute rewind to before this point in the AI conversation.".to_owned(),
-                WarpA11yRole::ButtonRole,
+                ZapNGA11yRole::ButtonRole,
             )),
             SelectAIAttachedBlock(_) => Custom(AccessibilityContent::new_without_help(
                 "Click on a block attached as context to this AI query.".to_owned(),
-                WarpA11yRole::ButtonRole,
+                ZapNGA11yRole::ButtonRole,
             )),
             PickRepoToOpen => Custom(AccessibilityContent::new_without_help(
                 "Use file picker to select a git repository".to_owned(),
-                WarpA11yRole::PopoverRole,
+                ZapNGA11yRole::PopoverRole,
             )),
             #[cfg(feature = "voice_input")]
             ToggleCLIAgentVoiceInput(_) => Empty,
@@ -24280,16 +24280,16 @@ impl TypedActionView for TerminalView {
 
                 ctx.open_file_path_in_explorer(path);
             }
-            OpenFileInWarp(path) => {
-                self.open_file_in_warp(path.clone(), ctx);
+            OpenFileInZapNG(path) => {
+                self.open_file_in_zap_ng(path.clone(), ctx);
             }
             #[cfg(feature = "local_fs")]
-            OpenCodeInWarp {
+            OpenCodeInZapNG {
                 path,
                 layout,
                 line_col,
             } => {
-                self.open_code_in_warp(
+                self.open_code_in_zap_ng(
                     CodeSource::Link {
                         path: path.clone(),
                         range_start: *line_col,
@@ -24325,35 +24325,35 @@ impl TypedActionView for TerminalView {
             TriggerSubshellBootstrap => self.trigger_subshell_bootstrap(None, false, ctx),
             ShowSubshellBanner(command) => {
                 // Abort handle is no longer needed since we've waited the 1s already.
-                self.warpify_state.take_subshell_banner_abort_handle();
+                self.zapngify_state.take_subshell_banner_abort_handle();
 
-                let warpify_keybinding =
+                let zapngify_keybinding =
                     keybinding_name_to_keystroke("terminal:warpify_subshell", ctx);
-                self.show_warpify_banner(
-                    WarpificationMode::subshell(command.to_owned()),
+                self.show_zapngify_banner(
+                    ZapNGificationMode::subshell(command.to_owned()),
                     "Subshell",
                     "subshell",
-                    warpify_keybinding,
+                    zapngify_keybinding,
                     TelemetryEvent::ShowSubshellBanner,
                     ctx,
                 );
             }
-            ShowWarpifySshBanner(command, host) => {
-                let warpify_keybinding =
+            ShowZapNGifySshBanner(command, host) => {
+                let zapngify_keybinding =
                     keybinding_name_to_keystroke("terminal:warpify_ssh_session", ctx);
-                self.show_warpify_banner(
-                    WarpificationMode::ssh(command.to_string(), host.to_owned()),
+                self.show_zapngify_banner(
+                    ZapNGificationMode::ssh(command.to_string(), host.to_owned()),
                     "SSH Session",
                     "SSH session",
-                    warpify_keybinding,
-                    TelemetryEvent::SshTmuxWarpifyBannerDisplayed,
+                    zapngify_keybinding,
+                    TelemetryEvent::SshTmuxZapNGifyBannerDisplayed,
                     ctx,
                 );
             }
-            DismissWarpifyBanner(remember) => {
-                self.dismiss_warpify_banner(remember, ctx);
+            DismissZapNGifyBanner(remember) => {
+                self.dismiss_zapngify_banner(remember, ctx);
                 if remember.is_ssh() {
-                    send_telemetry_from_ctx!(TelemetryEvent::SshTmuxWarpifyBlockDismissed, ctx);
+                    send_telemetry_from_ctx!(TelemetryEvent::SshTmuxZapNGifyBlockDismissed, ctx);
                 } else {
                     send_telemetry_from_ctx!(
                         TelemetryEvent::DeclineSubshellBootstrap {
@@ -24365,7 +24365,7 @@ impl TypedActionView for TerminalView {
             }
             InsertMostRecentCommandCorrection => self.insert_most_recent_command_correction(ctx),
             AliasExpansionBanner(action) => self.alias_expansion_banner_action(*action, ctx),
-            OpenInWarpBanner(action) => self.handle_open_in_warp_banner_action(*action, ctx),
+            OpenInZapNGBanner(action) => self.handle_open_in_zap_ng_banner_action(*action, ctx),
             OpenBlockFilterEditor(block_index) => {
                 self.open_block_filter_editor(*block_index, OpenedFromClick::Yes, ctx)
             }
@@ -24423,11 +24423,11 @@ impl TypedActionView for TerminalView {
             DragAndDropFiles(paths) => {
                 self.drag_and_drop_files(paths, ctx);
             }
-            WarpifySSHSession => self.add_ssh_warpifying_block(ctx),
+            ZapNGifySSHSession => self.add_ssh_zapngifying_block(ctx),
             NotifySshErrorBlock(action) => {
                 if let Some(SshBlockState::Error {
                     handle: ssh_error_block_handle,
-                }) = self.warpify_state.ssh_block_state()
+                }) = self.zapngify_state.ssh_block_state()
                 {
                     ssh_error_block_handle.update(ctx, |error_block, ctx| {
                         error_block.handle_action(action, ctx);
@@ -24564,7 +24564,7 @@ impl TypedActionView for TerminalView {
                 else {
                     return;
                 };
-                let sshed = self.model.lock().is_warpified_ssh() || session.is_legacy_ssh_session();
+                let sshed = self.model.lock().is_zapngified_ssh() || session.is_legacy_ssh_session();
                 if sshed && !self.is_file_drop_target {
                     self.is_file_drop_target = true;
                     ctx.notify();
@@ -24601,7 +24601,7 @@ impl TypedActionView for TerminalView {
             LoadAgentModeConversation => {
                 self.load_agent_mode_conversation(ctx);
             }
-            ShowWarpifySettings => ctx.emit(Event::OpenSettings(SettingsSection::Warpify)),
+            ShowZapNGifySettings => ctx.emit(Event::OpenSettings(SettingsSection::ZapNGify)),
             DeleteAttachment { index } => {
                 self.ai_context_model.update(ctx, |context_model, ctx| {
                     context_model.remove_pending_attachment(*index, ctx);
@@ -24753,11 +24753,11 @@ impl TypedActionView for TerminalView {
             }
             OpenProjectRulesPane => {
                 if let Some(current_dir) = self.pwd() {
-                    let mut warp_md_path = PathBuf::from(&current_dir);
-                    warp_md_path.push(WARP_MD_PATH);
+                    let mut zap_ng_md_path = PathBuf::from(&current_dir);
+                    zap_ng_md_path.push(WARP_MD_PATH);
                     #[cfg(feature = "local_fs")]
-                    ctx.emit(Event::OpenCodeInWarp {
-                        source: CodeSource::ProjectRules { path: warp_md_path },
+                    ctx.emit(Event::OpenCodeInZapNG {
+                        source: CodeSource::ProjectRules { path: zap_ng_md_path },
                         layout: *crate::util::file::external_editor::EditorSettings::as_ref(ctx)
                             .open_file_layout
                             .value(),
@@ -24787,7 +24787,7 @@ impl TypedActionView for TerminalView {
 
                     match skill_reference {
                         SkillReference::Path(path) => {
-                            ctx.emit(Event::OpenCodeInWarp {
+                            ctx.emit(Event::OpenCodeInZapNG {
                                 source: CodeSource::Skill {
                                     reference: skill_reference.clone(),
                                     path: path.clone(),
@@ -25421,7 +25421,7 @@ impl View for TerminalView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
         context.map.insert(
             "TerminalView_BlockSelectionCardinality",
@@ -25514,7 +25514,7 @@ impl View for TerminalView {
             context.set.insert(init::ROOT_AMBIENT_AGENT_PANE_KEY);
         }
 
-        if let Some(WithinBlockBanner::WarpifyBanner(state)) =
+        if let Some(WithinBlockBanner::ZapNGifyBanner(state)) =
             model_lock.block_list().active_block().block_banner()
         {
             if state.is_ssh() {
@@ -25524,17 +25524,17 @@ impl View for TerminalView {
             }
         }
 
-        // Also set the warpify context when the footer (flag-gated replacement
+        // Also set the zapngify context when the footer (flag-gated replacement
         // for the in-block banner) is active, so the ctrl-i keybinding works.
-        if let Some(warpify_mode) = self.use_agent_footer.as_ref(app).warpify_mode(app) {
-            if warpify_mode.is_ssh() {
+        if let Some(zapngify_mode) = self.use_agent_footer.as_ref(app).zapngify_mode(app) {
+            if zapngify_mode.is_ssh() {
                 context.set.insert("SshWarpificationBanner");
             } else {
                 context.set.insert("SubshellBanner");
             }
         }
 
-        if let Some(SshBlockState::Error { .. }) = self.warpify_state.ssh_block_state() {
+        if let Some(SshBlockState::Error { .. }) = self.zapngify_state.ssh_block_state() {
             context.set.insert(SSH_ERROR_BLOCK_VISIBLE_KEY);
         }
 
@@ -25982,7 +25982,7 @@ fn render_onekey_search_header(
     let theme = appearance.theme();
     let search_icon = ConstrainedBox::new(
         icons::Icon::SearchSmall
-            .to_warpui_icon(theme.sub_text_color(theme.surface_2()))
+            .to_zap_ng_ui_icon(theme.sub_text_color(theme.surface_2()))
             .finish(),
     )
     .with_width(16.)
@@ -26011,7 +26011,7 @@ fn maybe_wrap_terminal_element_in_scrollable(
     vertical_scroll_handle: ScrollStateHandle,
     horizontal_scroll_handle: ClippedScrollStateHandle,
     required_terminal_width: f32,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     element: impl NewScrollableElement + 'static,
 ) -> Box<dyn Element> {
     let nonactive_thumb_background = theme.disabled_text_color(theme.background()).into();

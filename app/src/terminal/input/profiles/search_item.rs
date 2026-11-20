@@ -1,12 +1,12 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::Icon;
-use warpui::elements::{ConstrainedBox, Container, Flex, Highlight, ParentElement as _, Text};
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::prelude::CrossAxisAlignment;
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, SingletonEntity as _};
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::elements::{ConstrainedBox, Container, Flex, Highlight, ParentElement as _, Text};
+use zap_ng_ui::fonts::{Properties, Style, Weight};
+use zap_ng_ui::prelude::CrossAxisAlignment;
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::{AppContext, Element, SingletonEntity as _};
 
 use crate::ai::execution_profiles::profiles::ClientProfileId;
 use crate::appearance::Appearance;
@@ -79,7 +79,7 @@ impl SearchItem for ProfileSearchItem {
             ProfileSearchItemKind::Profile { .. } => Icon::Psychology,
             ProfileSearchItemKind::ManageProfiles => Icon::Gear,
         }
-        .to_warpui_icon(inline_styles::icon_color(appearance));
+        .to_zap_ng_ui_icon(inline_styles::icon_color(appearance));
 
         Container::new(
             ConstrainedBox::new(icon.finish())

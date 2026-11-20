@@ -11,8 +11,8 @@ use crate::terminal::shared_session::protocol::{
     ParticipantId, ParticipantInfo, ParticipantList, ProfileData, Role, Selection, Sharer, Viewer,
 };
 use itertools::Itertools;
-use warp_core::command::ExitCode;
-use warpui::App;
+use zap_ng_core::command::ExitCode;
+use zap_ng_ui::App;
 
 #[test]
 fn test_choosing_preset_colors() {

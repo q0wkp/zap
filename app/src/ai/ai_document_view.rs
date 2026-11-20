@@ -6,7 +6,7 @@ use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
 use crate::ai::document::ai_document_model::{AIDocumentSaveStatus, AIDocumentUserEditStatus};
 use crate::appearance::Appearance;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::ZapNGDriveItemId;
 use crate::notebooks::editor::view::RichTextEditorConfig;
 use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::pane::view::header::components::{
@@ -47,19 +47,19 @@ use crate::{
     view_components::action_button::{ActionButton, PrimaryTheme},
 };
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::icons;
-use warp_core::ui::icons::ICON_DIMENSIONS;
-use warp_core::ui::theme::Fill as ThemeFill;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::CrossAxisAlignment;
-use warpui::elements::MainAxisAlignment;
-use warpui::elements::MainAxisSize;
-use warpui::elements::{ChildAnchor, PositionedElementAnchor, PositionedElementOffsetBounds};
-use warpui::keymap::EditableBinding;
-use warpui::keymap::FixedBinding;
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::components::UiComponent;
-use warpui::{
+use zap_ng_core::ui::icons;
+use zap_ng_core::ui::icons::ICON_DIMENSIONS;
+use zap_ng_core::ui::theme::Fill as ThemeFill;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::CrossAxisAlignment;
+use zap_ng_ui::elements::MainAxisAlignment;
+use zap_ng_ui::elements::MainAxisSize;
+use zap_ng_ui::elements::{ChildAnchor, PositionedElementAnchor, PositionedElementOffsetBounds};
+use zap_ng_ui::keymap::EditableBinding;
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::{
     elements::{
         ChildView, ConstrainedBox, Container, Empty, Flex, Hoverable, MouseStateHandle,
         OffsetPositioning, ParentElement, SavePosition, Stack,
@@ -67,7 +67,7 @@ use warpui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
-use warpui::{id, EntityId};
+use zap_ng_ui::{id, EntityId};
 
 pub fn init(app: &mut AppContext) {
     app.register_editable_bindings([EditableBinding::new(
@@ -95,7 +95,7 @@ use crate::util::file::external_editor::settings::EditorLayout;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
 #[cfg(feature = "local_fs")]
-use warp_util::path::LineAndColumnArg;
+use zap_ng_util::path::LineAndColumnArg;
 
 // Import keybinding constants from code view to ensure consistency
 use crate::code::view::SAVE_FILE_BINDING_NAME;
@@ -106,12 +106,12 @@ pub enum AIDocumentAction {
     SelectVersion(AIDocumentVersion),
     Export,
     OpenVersionMenu,
-    CreateWarpDriveNotebook,
+    CreateZapNGDriveNotebook,
     RevertToDocumentVersion,
     SendUpdatedPlan,
     CopyLink(String),
     CopyPlanId,
-    ShowInWarpDrive,
+    ShowInZapNGDrive,
     AttachToActiveSession,
 }
 
@@ -119,9 +119,9 @@ pub enum AIDocumentAction {
 pub enum AIDocumentEvent {
     Pane(PaneEvent),
     CloseRequested,
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
         layout: EditorLayout,
         line_col: Option<LineAndColumnArg>,
@@ -542,7 +542,7 @@ impl AIDocumentView {
     }
 
     fn update_header_buttons(&mut self, ctx: &mut ViewContext<Self>) {
-        // openWarp 本地化:plan 不再同步到云 notebook,原本这里从 sync_id
+        // ZapNG 本地化:plan 不再同步到云 notebook,原本这里从 sync_id
         // 取 server_id 传给 sharing UI;sync_id 已删,这里仅重发 header overflow menu。
         self.pane_configuration.update(ctx, |pc, ctx| {
             pc.refresh_pane_header_overflow_menu_items(ctx);
@@ -600,7 +600,7 @@ impl AIDocumentView {
         app: &AppContext,
     ) -> Box<dyn Element> {
         match save_status {
-            // openWarp 不使用云端同步，Plan 已自动保存到本地 SQLite，
+            // ZapNG 不使用云端同步，Plan 已自动保存到本地 SQLite，
             // 文档存在时始终为 Saved；此处显示"已本地保存"静态图标。
             AIDocumentSaveStatus::Saved => {
                 let appearance = Appearance::as_ref(app);
@@ -615,7 +615,7 @@ impl AIDocumentView {
                             Hoverable::new(synced_status_mouse_state, move |state| {
                                 let icon = {
                                     let icon_elem = Icon::RefreshCw04
-                                        .to_warpui_icon(ThemeFill::Solid(color))
+                                        .to_zap_ng_ui_icon(ThemeFill::Solid(color))
                                         .finish();
                                     ConstrainedBox::new(icon_elem)
                                         .with_width(16.)
@@ -631,8 +631,8 @@ impl AIDocumentView {
                                         tooltip,
                                         OffsetPositioning::offset_from_parent(
                                             vec2f(0., 4.),
-                                            warpui::elements::ParentOffsetBounds::WindowByPosition,
-                                            warpui::elements::ParentAnchor::BottomRight,
+                                            zap_ng_ui::elements::ParentOffsetBounds::WindowByPosition,
+                                            zap_ng_ui::elements::ParentAnchor::BottomRight,
                                             ChildAnchor::TopRight,
                                         ),
                                     );
@@ -652,7 +652,7 @@ impl AIDocumentView {
                 )
                 .finish()
             }
-            // openWarp 中 NotSaved 仅表示文档不存在(调用侧占位),不画任何 UI。
+            // ZapNG 中 NotSaved 仅表示文档不存在(调用侧占位),不画任何 UI。
             AIDocumentSaveStatus::NotSaved => Empty::new().finish(),
         }
     }
@@ -840,21 +840,21 @@ impl AIDocumentView {
             EditorViewEvent::OpenFile {
                 path,
                 line_and_column_num,
-                force_open_in_warp,
+                force_open_in_zap_ng,
             } => {
                 use crate::util::file::external_editor::EditorSettings;
                 use crate::util::openable_file_type::{
                     is_supported_image_file, resolve_file_target,
                 };
 
-                if *force_open_in_warp {
+                if *force_open_in_zap_ng {
                     let layout = *EditorSettings::as_ref(ctx).open_file_layout;
                     let source = CodeSource::Link {
                         path: path.clone(),
                         range_start: *line_and_column_num,
                         range_end: None,
                     };
-                    ctx.emit(AIDocumentEvent::OpenCodeInWarp {
+                    ctx.emit(AIDocumentEvent::OpenCodeInZapNG {
                         source,
                         layout,
                         line_col: *line_and_column_num,
@@ -883,7 +883,7 @@ impl AIDocumentView {
     }
 
     /// Bind the underlying editor model to the given window, enabling render/event processing.
-    pub fn bind_window(&self, window_id: warpui::WindowId, ctx: &mut ViewContext<Self>) {
+    pub fn bind_window(&self, window_id: zap_ng_ui::WindowId, ctx: &mut ViewContext<Self>) {
         self.editor.update(ctx, |editor_view, ctx| {
             editor_view
                 .model()
@@ -891,8 +891,8 @@ impl AIDocumentView {
         });
     }
 
-    fn create_warp_drive_notebook(&self, _ctx: &mut ViewContext<Self>) {
-        // openWarp 本地化:plan 不再推送到云 notebook,菜单中这条入口已下架,
+    fn create_zap_ng_drive_notebook(&self, _ctx: &mut ViewContext<Self>) {
+        // ZapNG 本地化:plan 不再推送到云 notebook,菜单中这条入口已下架,
         // 仅保留 enum 变体以防旧 keybinding 配置恶性反序列化;这里 no-op。
         log::debug!("AIDocumentAction::CreateWarpDriveNotebook is a no-op in openWarp");
     }
@@ -901,7 +901,7 @@ impl AIDocumentView {
     #[cfg(feature = "local_fs")]
     fn export(&self, ctx: &mut ViewContext<Self>) {
         use crate::drive::export::safe_filename;
-        use warpui::platform::SaveFilePickerConfiguration;
+        use zap_ng_ui::platform::SaveFilePickerConfiguration;
         let markdown = self.editor.as_ref(ctx).markdown_unescaped(ctx);
 
         // Get the document title from the model
@@ -957,7 +957,7 @@ impl View for AIDocumentView {
         "AIDocumentView"
     }
 
-    fn render(&self, _app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, _app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let editor = Container::new(ChildView::new(&self.editor).finish())
             .with_padding_left(8.)
             .with_padding_right(8.)
@@ -994,7 +994,7 @@ impl TypedActionView for AIDocumentView {
                 self.refresh(ctx);
             }
             AIDocumentAction::Export => self.export(ctx),
-            AIDocumentAction::CreateWarpDriveNotebook => self.create_warp_drive_notebook(ctx),
+            AIDocumentAction::CreateZapNGDriveNotebook => self.create_zap_ng_drive_notebook(ctx),
             AIDocumentAction::CopyLink(link) => {
                 send_telemetry_from_ctx!(
                     TelemetryEvent::ObjectLinkCopied { link: link.clone() },
@@ -1111,8 +1111,8 @@ impl TypedActionView for AIDocumentView {
                 // Update UI to reflect the new query
                 self.update_header_buttons(ctx);
             }
-            AIDocumentAction::ShowInWarpDrive => {
-                // openWarp 本地化:plan 不再同步到云 Drive,原本发 ViewInWarpDrive
+            AIDocumentAction::ShowInZapNGDrive => {
+                // ZapNG 本地化:plan 不再同步到云 Drive,原本发 ViewInWarpDrive
                 // 事件跳到云 notebook 步路已完全不可达。仅保留 enum 变体防旧
                 // keybinding 反序列化崩,这里 no-op。
                 log::debug!("AIDocumentAction::ShowInWarpDrive is a no-op in openWarp");
@@ -1159,7 +1159,7 @@ impl BackingView for AIDocumentView {
     ) -> Vec<MenuItem<Self::PaneHeaderOverflowMenuAction>> {
         let mut menu_items = vec![];
 
-        // openWarp 本地化:云菜单项 "Copy Link" / "Show in Zap Drive"
+        // ZapNG 本地化:云菜单项 "Copy Link" / "Show in Zap Drive"
         // 原本仅在云同步成功后才显示,本地路径完全不可达,直接删除。
 
         #[cfg(feature = "local_fs")]

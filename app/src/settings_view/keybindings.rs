@@ -27,10 +27,10 @@ use crate::{
 };
 use itertools::Itertools;
 
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::{elements::Wrap, units::Pixels};
-use warpui::{
+use zap_ng_core::ui::color::blend::Blend;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::{elements::Wrap, units::Pixels};
+use zap_ng_ui::{
     elements::{
         Align, Border, ClippedScrollStateHandle, ClippedScrollable, Container, CornerRadius, Empty,
         EventHandler, Fill, Flex, Hoverable, MouseState, MouseStateHandle, ParentElement, Radius,
@@ -41,11 +41,11 @@ use warpui::{
     ui_components::components::{Coords, UiComponent, UiComponentStyles},
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{ConstrainedBox, DispatchEventResult},
     presenter::ChildView,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{CrossAxisAlignment, Text},
     keymap::DescriptionContext,
 };
@@ -281,7 +281,7 @@ impl KeybindingRow {
         background: Option<Fill>,
         has_conflicting_binding: bool,
         appearance: &Appearance,
-        text_color_override: Option<warpui::prelude::ColorU>,
+        text_color_override: Option<zap_ng_ui::prelude::ColorU>,
     ) -> Box<dyn Element> {
         let binding = &self.binding;
         let keystroke = match binding.trigger.clone() {
@@ -412,7 +412,7 @@ impl KeybindingRow {
                                 .with_margin_right(CLEAR_CANCEL_BUTTONS_SPACING)
                                 .finish(),
                         )
-                        .with_cross_axis_alignment(warpui::elements::CrossAxisAlignment::Center)
+                        .with_cross_axis_alignment(zap_ng_ui::elements::CrossAxisAlignment::Center)
                         .finish(),
                 )
                 .finish(),

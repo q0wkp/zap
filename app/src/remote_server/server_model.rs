@@ -5,16 +5,16 @@ use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use warp_core::channel::ChannelState;
-use warp_core::SessionId;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::platform::TerminationMode;
-use warpui::r#async::{Spawnable, SpawnableOutput, SpawnedFutureHandle};
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::SessionId;
+use zap_ng_util::standardized_path::StandardizedPath;
+use zap_ng_ui::platform::TerminationMode;
+use zap_ng_ui::r#async::{Spawnable, SpawnableOutput, SpawnedFutureHandle};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
-use warp_files::{FileModel, FileModelEvent};
-use warp_util::content_version::ContentVersion;
-use warp_util::file::FileId;
+use zap_ng_files::{FileModel, FileModelEvent};
+use zap_ng_util::content_version::ContentVersion;
+use zap_ng_util::file::FileId;
 
 use super::proto::{
     client_message, delete_file_response, run_command_response, server_message,

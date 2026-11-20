@@ -1,6 +1,6 @@
 use std::time::Duration;
 use thiserror::Error;
-use warpui::RetryOption;
+use zap_ng_ui::RetryOption;
 
 /// Common duration for a periodic poll. In our app, we generally have the following to update the same data:
 /// - RTC messages

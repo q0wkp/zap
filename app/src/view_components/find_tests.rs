@@ -1,5 +1,5 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::{platform::WindowStyle, App};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{platform::WindowStyle, App};
 
 use crate::auth::AuthStateProvider;
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
@@ -12,7 +12,7 @@ use super::{Find, FindDirection, FindEvent, FindModel};
 
 struct MockFindModel;
 
-impl warpui::Entity for MockFindModel {
+impl zap_ng_ui::Entity for MockFindModel {
     type Event = FindEvent;
 }
 
@@ -23,7 +23,7 @@ impl FindModel for MockFindModel {
     fn match_count(&self) -> usize {
         0
     }
-    fn default_find_direction(&self, _app: &warpui::AppContext) -> FindDirection {
+    fn default_find_direction(&self, _app: &zap_ng_ui::AppContext) -> FindDirection {
         FindDirection::Down
     }
 }

@@ -1,6 +1,6 @@
 use hex;
-use warp_core::command::ExitCode;
-use warpui::color::ColorU;
+use zap_ng_core::command::ExitCode;
+use zap_ng_ui::color::ColorU;
 
 use super::*;
 use crate::terminal::model::index::VisibleRow;
@@ -214,7 +214,7 @@ impl Handler for MockHandler {
         self.d_proto_hooks.push(DProtoHook::InitSsh { value: data })
     }
 
-    fn sourced_rc_file(&mut self, data: SourcedRcFileForWarpValue) {
+    fn sourced_rc_file(&mut self, data: SourcedRcFileForZapNGValue) {
         self.d_proto_hooks
             .push(DProtoHook::SourcedRcFileForWarp { value: data })
     }
@@ -738,7 +738,7 @@ fn parse_sourced_rc_file_hook() {
     match handler.d_proto_hooks.first().unwrap() {
         DProtoHook::SourcedRcFileForWarp { value } => assert_eq!(
             *value,
-            SourcedRcFileForWarpValue {
+            SourcedRcFileForZapNGValue {
                 shell: "zsh".to_owned(),
                 uname: None,
                 tmux: None,
@@ -765,7 +765,7 @@ fn parse_sourced_rc_file_hook_with_uname() {
     match handler.d_proto_hooks.first().unwrap() {
         DProtoHook::SourcedRcFileForWarp { value } => assert_eq!(
             *value,
-            SourcedRcFileForWarpValue {
+            SourcedRcFileForZapNGValue {
                 shell: "zsh".to_owned(),
                 uname: Some("Darwin".to_owned()),
                 tmux: None,

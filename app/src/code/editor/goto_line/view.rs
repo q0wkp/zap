@@ -6,7 +6,7 @@ use crate::editor::{
     EditorView, Event as EditorEvent, InteractionState, PropagateAndNoOpNavigationKeys,
     SingleLineEditorOptions, TextOptions,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, DropShadow, Flex,
         ParentElement, Radius, Text,

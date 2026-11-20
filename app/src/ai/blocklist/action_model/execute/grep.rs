@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use warp_util::standardized_path::StandardizedPath;
+use zap_ng_util::standardized_path::StandardizedPath;
 
 use futures::future::BoxFuture;
 use futures::FutureExt;
-use warpui::r#async::FutureExt as AsyncFutureExt;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::r#async::FutureExt as AsyncFutureExt;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::redaction::redact_secrets;
 use crate::ai::agent::{
@@ -413,7 +413,7 @@ async fn run_grep(
 #[cfg(not(target_family = "wasm"))]
 async fn run_ripgrep(queries: &[String], absolute_path: String) -> Result<GrepResult, GrepError> {
     let path = PathBuf::from(absolute_path);
-    let result = warp_ripgrep::search::search(queries, &[path], false, false).await;
+    let result = zap_ng_ripgrep::search::search(queries, &[path], false, false).await;
 
     match result {
         Ok(matches) => {

@@ -1,18 +1,18 @@
 mod items;
 pub use items::Items;
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::appearance::Appearance;
 use crate::search::command_palette::FilterChipRenderer;
 
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 use crate::search::QueryFilter;
 use crate::settings::AISettings;
 use crate::workspace::Workspace;
 use std::collections::HashMap;
-use warpui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
-use warpui::{
+use zap_ng_ui::elements::{Container, Flex, MouseStateHandle, ParentElement, Shrinkable, Wrap};
+use zap_ng_ui::{
     AppContext, Element, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     WindowId,
 };
@@ -81,10 +81,10 @@ impl ZeroState {
         app: &AppContext,
         window_id: WindowId,
     ) -> impl Iterator<Item = QueryFilter> {
-        let show_warp_drive = WarpDriveSettings::is_warp_drive_enabled(app);
+        let show_zap_ng_drive = ZapNGDriveSettings::is_zap_ng_drive_enabled(app);
 
         let mut valid_filters = vec![];
-        if show_warp_drive {
+        if show_zap_ng_drive {
             valid_filters.push(QueryFilter::Workflows);
             if FeatureFlag::AgentModeWorkflows.is_enabled()
                 && AISettings::as_ref(app).is_any_ai_enabled(app)
@@ -109,7 +109,7 @@ impl ZeroState {
             }
         }
 
-        if show_warp_drive {
+        if show_zap_ng_drive {
             valid_filters.push(QueryFilter::Drive);
         }
         valid_filters.extend([QueryFilter::Actions, QueryFilter::Sessions]);

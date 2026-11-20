@@ -14,8 +14,8 @@ use crate::themes::default_themes::dark_theme;
 use serde_json::Value;
 use std::sync::Arc;
 use url::Url;
-use warpui::r#async::executor::Background;
-use warpui::units::Lines;
+use zap_ng_ui::r#async::executor::Background;
+use zap_ng_ui::units::Lines;
 
 pub const MAX_BYTES_SHAREABLE: usize = 5000;
 

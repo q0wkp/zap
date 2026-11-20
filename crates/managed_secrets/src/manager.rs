@@ -1,6 +1,6 @@
 use std::{collections::HashMap, future::Future, sync::Arc};
 
-use warpui::{Entity, SingletonEntity};
+use zap_ng_ui::{Entity, SingletonEntity};
 
 use crate::{
     ManagedSecret, ManagedSecretValue,

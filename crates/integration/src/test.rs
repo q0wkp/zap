@@ -77,7 +77,7 @@ use pathfinder_geometry::{rect::RectF, vector::Vector2F};
 use rust_embed::RustEmbed;
 use settings::Setting as _;
 use shell::ShellType;
-use warpui::{
+use zap_ng_ui::{
     async_assert, async_assert_eq,
     integration::{AssertionOutcome, StepData, TestStep},
     keymap::{Keystroke, Trigger},
@@ -86,11 +86,11 @@ use warpui::{
     AssetProvider, Event, SingletonEntity, UpdateView, ViewHandle,
 };
 
-use warp::{terminal::find::TerminalFindModel, util::bindings::CustomAction, AgentModeEntrypoint};
+use zap_ng::{terminal::find::TerminalFindModel, util::bindings::CustomAction, AgentModeEntrypoint};
 
 use sysinfo::{Pid, ProcessesToUpdate, System};
 use version_compare::Cmp;
-use warpui::units::Lines;
+use zap_ng_ui::units::Lines;
 
 use crate::util::{skip_if_powershell_core_2303, ShellRcType};
 
@@ -98,19 +98,19 @@ use crate::builder::cargo_target_tmpdir;
 use crate::user_defaults;
 use crate::Builder;
 use sum_tree::SeekBias;
-use warp::integration_testing::terminal::assert_focused_editor_in_tab;
-use warp::integration_testing::{
+use zap_ng::integration_testing::terminal::assert_focused_editor_in_tab;
+use zap_ng::integration_testing::{
     settings::assert_theme_chooser_contains,
     tab::{assert_pane_title, assert_tab_title},
 };
-use warp::settings::CtrlTabBehavior;
-use warp::terminal::keys_settings::KeysSettings;
-use warp::terminal::{
+use zap_ng::settings::CtrlTabBehavior;
+use zap_ng::terminal::keys_settings::KeysSettings;
+use zap_ng::terminal::{
     model::{blocks::BlockHeightSummary, terminal_model::BlockIndex},
     view::TerminalViewState,
 };
-use warp::workflows::categories::CategoriesView;
-use warp::{
+use zap_ng::workflows::categories::CategoriesView;
+use zap_ng::{
     appearance::Appearance,
     cmd_or_ctrl_shift,
     integration_testing::{
@@ -170,9 +170,9 @@ use warp::{
     },
 };
 
-use warp::integration_testing::{terminal::util::ExactLine, workspace::assert_tab_count};
-use warp::terminal::view::ALIAS_EXPANSION_BANNER_SEEN_KEY;
-use warp::{
+use zap_ng::integration_testing::{terminal::util::ExactLine, workspace::assert_tab_count};
+use zap_ng::terminal::view::ALIAS_EXPANSION_BANNER_SEEN_KEY;
+use zap_ng::{
     features::FeatureFlag,
     integration_testing::{
         find::{Find, FindWithinBlockState},
@@ -183,13 +183,13 @@ use warp::{
         window::add_and_save_window,
     },
 };
-use warp::{
-    integration_testing::warp_drive::{
-        assert_is_left_panel_open, assert_warp_drive_is_closed, assert_warp_drive_is_open,
+use zap_ng::{
+    integration_testing::zap_ng_drive::{
+        assert_is_left_panel_open, assert_zap_ng_drive_is_closed, assert_zap_ng_drive_is_open,
     },
     settings::CompletionsOpenWhileTyping,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{
         self,
         input::{input_contains_string, input_is_empty},
@@ -199,11 +199,11 @@ use warp::{
     },
     settings::MonospaceFontSize,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{assertions::join_a_workspace, view_getters::single_terminal_view},
     terminal::view::TerminalAction,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{
         command_palette::{
             close_command_palette, open_command_palette, open_command_palette_and_run_action,
@@ -213,7 +213,7 @@ use warp::{
     },
     pane_group::AGENT_MODE_PANE_DEFAULT_MINIMUM_WIDTH,
 };
-use warp::{
+use zap_ng::{
     integration_testing::{
         terminal::{
             assert_active_block_output, assert_alt_grid_active, assert_alt_screen_output,
@@ -224,8 +224,8 @@ use warp::{
     },
     workspace::WorkspaceAction,
 };
-use warp::{settings_view::SettingsAction, terminal::block_list_viewport::ScrollLines};
-use warp::{
+use zap_ng::{settings_view::SettingsAction, terminal::block_list_viewport::ScrollLines};
+use zap_ng::{
     settings_view::{keybindings::KeybindingsView, SettingsSection, SettingsView},
     terminal::{
         input::{Input, InputSuggestionsMode},
@@ -238,9 +238,9 @@ use warp::{
     },
     workspace::{Workspace, NEW_TAB_BUTTON_POSITION_ID},
 };
-use warpui::event::KeyState;
-use warpui::keymap::PerPlatformKeystroke;
-use warpui::platform::keyboard::KeyCode;
+use zap_ng_ui::event::KeyState;
+use zap_ng_ui::keymap::PerPlatformKeystroke;
+use zap_ng_ui::platform::keyboard::KeyCode;
 
 const ADD_NEXT_OCCURRENCE_KEYBINDING: &str = "ctrl-g";
 
@@ -264,9 +264,9 @@ fn new_builder() -> Builder {
     Builder::new()
 }
 
-/// Adds a workflow file, containing two workflows, to the mocked out warp
+/// Adds a workflow file, containing two workflows, to the mocked out zap-ng
 /// config directory and verifies that the workflows appear in the workflow menu.
-pub fn test_add_workflows_to_warp_config() -> Builder {
+pub fn test_add_workflows_to_zap_ng_config() -> Builder {
     new_builder()
         .with_setup(move |utils| {
             utils.set_env("WARP_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
@@ -283,7 +283,7 @@ pub fn test_add_workflows_to_warp_config() -> Builder {
 
                     workflows.read(app, |workflows, _| {
                         // Note that this can be a synchronous assertion because unlike the next test step,
-                        // we don't have concurrency with a WarpConfig watcher thread
+                        // we don't have concurrency with a ZapNGConfig watcher thread
                         assert_eq!(
                             workflows.local_workflows().count(),
                             0,
@@ -320,7 +320,7 @@ pub fn test_add_workflows_to_warp_config() -> Builder {
         )
 }
 
-pub fn test_launch_warp_with_theme_in_warp_config() -> Builder {
+pub fn test_launch_zap_ng_with_theme_in_zap_ng_config() -> Builder {
     new_builder()
         .with_setup(move |utils| {
             utils.set_env("WARP_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
@@ -334,9 +334,9 @@ pub fn test_launch_warp_with_theme_in_warp_config() -> Builder {
         .with_step(assert_theme_chooser_contains("Test Theme", 1))
 }
 
-/// Adds a theme to the mocked out warp config directory and verifies that
+/// Adds a theme to the mocked out zap-ng config directory and verifies that
 /// the theme appears in the theme picker.
-pub fn test_add_theme_to_warp_config() -> Builder {
+pub fn test_add_theme_to_zap_ng_config() -> Builder {
     new_builder()
         .with_setup(move |utils| {
             utils.set_env("WARP_CONFIG_WATCHER_DELAY_MS", Some((10).to_string()));
@@ -2052,7 +2052,7 @@ pub fn test_add_and_close_session() -> Builder {
                                     .expect("pane at index 0 is a terminal pane")
                                     .as_ref(ctx)
                                     .as_any()
-                                    .downcast_ref::<warp::terminal::local_tty::TerminalManager>()
+                                    .downcast_ref::<zap_ng::terminal::local_tty::TerminalManager>()
                                     .expect("terminal pane at index 0 contains a local session")
                                     .pid()
                                     .expect("shell should be spawned")
@@ -3403,7 +3403,7 @@ pub fn test_auto_title() -> Builder {
 }
 
 /// Validate that disabling Zap's auto title feature will not mess with oh-my-zsh settings.
-pub fn test_warp_auto_title_disabled() -> Builder {
+pub fn test_zap_ng_auto_title_disabled() -> Builder {
     new_builder()
         .set_should_run_test(|| {
             // Only run this one on bash and zsh
@@ -3445,7 +3445,7 @@ WARP_DISABLE_AUTO_TITLE="true"
 
 /// Checks that the tab title set by the user takes precedence over the Zap's default title and
 /// doesn't require any additional setting from the user's POV. This is bash-specific test.
-pub fn test_warp_honors_user_title_bash() -> Builder {
+pub fn test_zap_ng_honors_user_title_bash() -> Builder {
     new_builder()
         .set_should_run_test(|| {
             // Only run this one on bash
@@ -3477,7 +3477,7 @@ PROMPT_COMMAND='echo -en "\033]0;TEST_TAB_TITLE\a"'
 
 /// Checks that the tab title set by the user takes precedence over the Zap's default title and
 /// doesn't require any additional setting from the user's POV. This is zsh-specific test.
-pub fn test_warp_honors_user_title_zsh() -> Builder {
+pub fn test_zap_ng_honors_user_title_zsh() -> Builder {
     new_builder()
         .set_should_run_test(|| {
             // Only run this one on bash
@@ -5440,7 +5440,7 @@ pub fn test_preferred_shell() -> Builder {
 pub fn test_git_prompt() -> Builder {
     let (starter, _) = current_shell_starter_and_version();
     // Note that we can't use the OUT_DIR for the temp directory
-    // here because that would put us in the warp repo. We need to
+    // here because that would put us in the zap-ng repo. We need to
     // be in a place in the filesystem that's not already a git repo.
     new_builder()
         // TODO(CORE-2734): Unknown failure for Powershell
@@ -5514,7 +5514,7 @@ pub fn test_terminal_announces_capabilities_to_shell() -> Builder {
     };
 
     // Note that we can't use the OUT_DIR for the temp directory
-    // here because that would put us in the warp repo. We need to
+    // here because that would put us in the zap-ng repo. We need to
     // be in a place in the filesystem that's not already a git repo.
     new_builder()
         .with_step(wait_until_bootstrapped_single_pane_for_tab(0))
@@ -5891,7 +5891,7 @@ pub fn test_copy_prompt_from_input_honor_ps1_disabled() -> Builder {
                 .add_assertion(assert_clipboard_contains_string("~".into())),
         )
 }
-pub fn test_warp_prompt_unsets_zsh_rprompt() -> Builder {
+pub fn test_zap_ng_prompt_unsets_zsh_rprompt() -> Builder {
     new_builder()
         .set_should_run_test(|| {
             let (starter, _) = current_shell_starter_and_version();
@@ -6738,20 +6738,20 @@ pub fn test_create_folder_from_command_palette() -> Builder {
         .with_step(go_offline())
         .with_steps(
             open_command_palette_and_run_action("Create a New Team Folder")
-                .add_assertion(assert_warp_drive_is_closed()),
+                .add_assertion(assert_zap_ng_drive_is_closed()),
         )
         .with_steps(
             open_command_palette_and_run_action("Create a New Personal Folder")
-                .add_assertion(assert_warp_drive_is_closed()),
+                .add_assertion(assert_zap_ng_drive_is_closed()),
         )
         .with_step(go_online())
         .with_steps(
             open_command_palette_and_run_action("Create a New Team Folder")
-                .add_assertion(assert_warp_drive_is_open()),
+                .add_assertion(assert_zap_ng_drive_is_open()),
         )
         .with_steps(
             open_command_palette_and_run_action("Create a New Personal Folder")
-                .add_assertion(assert_warp_drive_is_open()),
+                .add_assertion(assert_zap_ng_drive_is_open()),
         )
 }
 

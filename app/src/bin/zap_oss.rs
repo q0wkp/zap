@@ -1,11 +1,11 @@
 use anyhow::Result;
-use warp_core::{
+use zap_ng_core::{
     channel::{Channel, ChannelConfig, ChannelState},
     features::DEBUG_FLAGS,
     AppId,
 };
 
-// Zap OSS 构建的入口,简单包一层 warp::run()。
+// Zap OSS 构建的入口,简单包一层 zap_ng::run()。
 fn main() -> Result<()> {
     let mut state = ChannelState::new(
         Channel::Oss,
@@ -23,12 +23,12 @@ fn main() -> Result<()> {
     // 整体丢弃,只剩 OS 的候选窗可见。
     #[cfg(target_os = "macos")]
     {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
         state = state.with_additional_features(&[FeatureFlag::ImeMarkedText]);
     }
     ChannelState::set(state);
 
-    warp::run()
+    zap_ng::run()
 }
 
 // If we're not using an external plist, embed the following as the Info.plist.

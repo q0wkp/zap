@@ -117,7 +117,7 @@ pub fn prune_now(conversation: &mut AIConversation, cfg: &CompactionConfig) -> u
     let views = project(&all_msgs, &state_snapshot, &tool_names);
     // 用 trait 引用避免泛型推导歧义
     let views_ref: &[_] = &views;
-    let decisions = prune_decisions::<super::message_view::WarpMessageView<'_>>(views_ref);
+    let decisions = prune_decisions::<super::message_view::ZapNGMessageView<'_>>(views_ref);
     if decisions.is_empty() {
         return 0;
     }

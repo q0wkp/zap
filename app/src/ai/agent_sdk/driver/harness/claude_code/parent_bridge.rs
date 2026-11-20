@@ -21,8 +21,8 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex as AsyncMutex;
 use uuid::Uuid;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::ModelSpawner;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::ModelSpawner;
 
 use crate::ai::agent_events::{
     run_agent_event_driver, AgentEventConsumer, AgentEventConsumerControlFlow,

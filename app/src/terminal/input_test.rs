@@ -25,7 +25,7 @@ use crate::server::ids::ClientId;
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
 use crate::terminal::input::slash_command_model::SlashCommandEntryState;
 use crate::terminal::input::slash_commands::SlashCommandsEvent;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
+use crate::zap_ng_managed_paths_watcher::ZapNGManagedPathsWatcher;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
@@ -58,7 +58,7 @@ use crate::terminal::model::session::{BootstrapSessionType, SessionInfo};
 use crate::terminal::model::terminal_model::BlockIndex;
 
 use chrono::Local;
-use warpui::text::SelectionType;
+use zap_ng_ui::text::SelectionType;
 
 use crate::experiments;
 use crate::terminal::shared_session::protocol::Role;
@@ -72,22 +72,22 @@ use crate::{
 };
 use fuzzy_match::FuzzyMatchResult;
 use smol_str::SmolStr;
-use warp_completer::completer::{
+use zap_ng_completer::completer::{
     EngineFileType, Match, MatchStrategy, MatchedSuggestion, Priority, Suggestion,
     SuggestionResults, SuggestionType,
 };
-use warp_completer::meta::Span;
+use zap_ng_completer::meta::Span;
 
 use unindent::Unindent;
 
 #[cfg(feature = "voice_input")]
 use voice_input::VoiceInputToggledFrom;
-use warpui::platform::WindowStyle;
-use warpui::{App, ReadModel, UpdateView, WindowId};
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, ReadModel, UpdateView, WindowId};
 
 use crate::terminal::universal_developer_input::UniversalDeveloperInputButtonBarEvent;
 
-use warp_util::user_input::UserInput;
+use zap_ng_util::user_input::UserInput;
 use workflows::{
     workflow::{Argument, ArgumentType, Workflow},
     WorkflowObject, WorkflowObjectModel,
@@ -158,7 +158,7 @@ pub fn initialize_app(app: &mut App) {
         crate::ai::document::ai_document_model::AIDocumentModel::new_for_test()
     });
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 
     // Add GlobalResourceHandlesProvider for persistence
@@ -1141,7 +1141,7 @@ fn test_history_up_for_shared_session_executor() {
 }
 
 fn selected_inline_history_command(
-    history_menu: &warpui::ViewHandle<super::inline_history::InlineHistoryMenuView>,
+    history_menu: &zap_ng_ui::ViewHandle<super::inline_history::InlineHistoryMenuView>,
     app: &App,
 ) -> Option<String> {
     history_menu.read(app, |view, ctx| {
@@ -7196,7 +7196,7 @@ fn test_custom_terminal_page_scroll_binding_applies_when_prompt_is_focused() {
         app.update(|ctx| {
             ctx.set_custom_trigger(
                 "terminal:scroll_up_one_page".to_owned(),
-                warpui::keymap::Trigger::Keystrokes(
+                zap_ng_ui::keymap::Trigger::Keystrokes(
                     vec![Keystroke::parse("shift-pageup").unwrap()],
                 ),
             );

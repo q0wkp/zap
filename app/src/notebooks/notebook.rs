@@ -6,17 +6,17 @@ use regex::Regex;
 use settings::Setting as _;
 use std::{sync::Arc, time::Duration};
 use url::Url;
-use warp_core::context_flag::ContextFlag;
+use zap_ng_core::context_flag::ContextFlag;
 
 #[cfg(target_family = "wasm")]
 use crate::uri::web_intent_parser::open_url_on_desktop;
 
-use warp_editor::{
+use zap_ng_editor::{
     editor::NavigationKey,
     model::{CoreEditorModel, RichTextEditorModel},
 };
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     clipboard::ClipboardContent,
     elements::{
         Align, Clipped, ConstrainedBox, Container, CrossAxisAlignment, DispatchEventResult, Empty,
@@ -52,7 +52,7 @@ use crate::{
     cmd_or_ctrl_shift,
     drive::{
         drive_helpers::has_feature_gated_anonymous_user_reached_notebook_limit,
-        export::ExportManager, items::WarpDriveItemId, ObjectTypeAndId,
+        export::ExportManager, items::ZapNGDriveItemId, ObjectTypeAndId,
         ZapDriveObjectSettings,
     },
     editor::{
@@ -150,7 +150,7 @@ lazy_static! {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -266,7 +266,7 @@ pub enum NotebookEvent {
         source: WorkflowSource,
     },
     EditWorkflow(SyncId),
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     Pane(PaneEvent),
     MoveToSpace {
         object_type_and_id: ObjectTypeAndId,
@@ -291,7 +291,7 @@ pub enum NotebookAction {
     ResetFontSize,
     ConflictResolutionBannerRefreshClicked,
     FocusTerminalInput,
-    ViewInWarpDrive(WarpDriveItemId),
+    ViewInWarpDrive(ZapNGDriveItemId),
     ContextMenu(ContextMenuAction), // right click context menu
     MoveToSpace {
         object_type_and_id: ObjectTypeAndId,
@@ -1203,7 +1203,7 @@ impl NotebookView {
         });
     }
 
-    fn view_in_warp_drive(&mut self, id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    fn view_in_zap_ng_drive(&mut self, id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         ctx.emit(NotebookEvent::ViewInWarpDrive(id));
     }
 
@@ -1436,7 +1436,7 @@ impl NotebookView {
             );
         }
 
-        if !warpui::platform::is_mobile_device()
+        if !zap_ng_ui::platform::is_mobile_device()
             && !ContextFlag::HideOpenOnDesktopButton.is_enabled()
             && *UserAppInstallDetectionSettings::as_ref(ctx)
                 .user_app_installation_detected
@@ -1681,8 +1681,8 @@ impl NotebookView {
         self.update_breadcrumbs(ctx);
         // Zap Phase 2a: invitee-driven sharing dialog removed.
         if let Some(focused_folder_id) = settings.focused_folder_id.map(SyncId::ServerId) {
-            self.view_in_warp_drive(
-                WarpDriveItemId::Object(ObjectTypeAndId::Folder(focused_folder_id)),
+            self.view_in_zap_ng_drive(
+                ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(focused_folder_id)),
                 ctx,
             );
         }
@@ -1930,7 +1930,7 @@ impl NotebookView {
                     .with_children([
                         ConstrainedBox::new(
                             icons::Icon::Trash
-                                .to_warpui_icon(appearance.theme().foreground())
+                                .to_zap_ng_ui_icon(appearance.theme().foreground())
                                 .finish(),
                         )
                         .with_width(16.)
@@ -2173,7 +2173,7 @@ impl View for NotebookView {
     fn accessibility_contents(&self, ctx: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new_without_help(
             format!("{} notebook", self.title(ctx)),
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         ))
     }
 
@@ -2191,7 +2191,7 @@ impl View for NotebookView {
         }
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let mut content = Flex::column();
         content.extend(self.render_trash_banner(app));
         content.add_child(self.render_title(app));
@@ -2244,7 +2244,7 @@ impl View for NotebookView {
         SavePosition::new(stack.finish(), &self.view_position_id).finish()
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         match self.mode_app_ctx(app) {
@@ -2295,7 +2295,7 @@ impl TypedActionView for NotebookView {
             NotebookAction::ResetFontSize => {
                 self.apply_font_size_to_setting(NotebookFontSize::default_value(), ctx)
             }
-            NotebookAction::ViewInWarpDrive(id) => self.view_in_warp_drive(*id, ctx),
+            NotebookAction::ViewInWarpDrive(id) => self.view_in_zap_ng_drive(*id, ctx),
             NotebookAction::FocusTerminalInput => {
                 ctx.emit(NotebookEvent::Pane(PaneEvent::FocusActiveSession))
             }

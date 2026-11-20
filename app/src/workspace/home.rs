@@ -3,7 +3,7 @@
 //! This is the landing page for new tabs if session creation isn't supported (e.g. on the web).
 //! It's intentionally small and local-only.
 
-use warpui::ViewContext;
+use zap_ng_ui::ViewContext;
 
 use super::view::Workspace;
 use crate::pane_group::{AnyPaneContent, FilePane};

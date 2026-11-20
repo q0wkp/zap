@@ -4,8 +4,8 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 use thiserror::Error;
-use warpui::r#async::executor::Background;
-use warpui::{Entity, SingletonEntity};
+use zap_ng_ui::r#async::executor::Background;
+use zap_ng_ui::{Entity, SingletonEntity};
 
 #[derive(Error, Debug)]
 pub enum LogManagerError {
@@ -36,7 +36,7 @@ pub fn resolve_log_path(namespace: &str, relative_path: impl AsRef<Path>) -> Pat
 
 /// Returns the base log directory for a given namespace name.
 fn log_directory_path(namespace: &str) -> PathBuf {
-    let base_dir = warp_core::paths::secure_state_dir().unwrap_or_else(warp_core::paths::state_dir);
+    let base_dir = zap_ng_core::paths::secure_state_dir().unwrap_or_else(zap_ng_core::paths::state_dir);
     base_dir.join(namespace)
 }
 

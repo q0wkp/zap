@@ -14,19 +14,19 @@ use crate::view_components::action_button::{ActionButton, DisabledSecondaryTheme
 use crate::view_components::find::FindDirection;
 use crate::{features::FeatureFlag, settings::AppEditorSettings};
 use pathfinder_color::ColorU;
-use warp_editor::editor::NavigationKey;
-use warp_editor::search::{SearchEvent, Searcher};
-use warpui::elements::MainAxisAlignment;
-use warpui::elements::{ChildAnchor, OffsetPositioning, Radius, SavePosition, Shrinkable};
-use warpui::keymap::EditableBinding;
-use warpui::ui_components::components::UiComponent;
-pub use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_editor::search::{SearchEvent, Searcher};
+use zap_ng_ui::elements::MainAxisAlignment;
+use zap_ng_ui::elements::{ChildAnchor, OffsetPositioning, Radius, SavePosition, Shrinkable};
+use zap_ng_ui::keymap::EditableBinding;
+use zap_ng_ui::ui_components::components::UiComponent;
+pub use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{ParentElement as _, Stack},
     geometry::vector::vec2f,
     AppContext,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         DropShadow, Element, Flex, Hoverable, MouseStateHandle, ParentAnchor, ParentOffsetBounds,
@@ -34,8 +34,8 @@ use warpui::{
     },
     Entity, SingletonEntity, TypedActionView, View,
 };
-use warpui::{presenter::ChildView, ViewContext, ViewHandle};
-use warpui::{FocusContext, ModelHandle};
+use zap_ng_ui::{presenter::ChildView, ViewContext, ViewHandle};
+use zap_ng_ui::{FocusContext, ModelHandle};
 
 pub const FIND_BAR_WIDTH: f32 = 500.;
 const ICON_PADDING: f32 = 4.;
@@ -108,7 +108,7 @@ pub enum FindAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
     app.register_editable_bindings([
         EditableBinding::new(
             "find:find_next_occurrence",
@@ -395,10 +395,10 @@ impl CodeEditorFind {
                     self.searcher.as_ref(ctx).match_count()
                 ),
                 "Use enter and shift-enter to navigate between matches. Escape to quit.",
-                WarpA11yRole::UserAction,
+                ZapNGA11yRole::UserAction,
             )
         } else {
-            AccessibilityContent::new_without_help("No results.", WarpA11yRole::UserAction)
+            AccessibilityContent::new_without_help("No results.", ZapNGA11yRole::UserAction)
         };
         ctx.emit_a11y_content(content);
     }
@@ -413,12 +413,12 @@ impl CodeEditorFind {
                     "Successfully replaced match. Selected match is {match_index} of {remaining_matches}"
                 ),
                 "Continue pressing Enter to replace more matches, or use up/down arrows to navigate.",
-                WarpA11yRole::UserAction,
+                ZapNGA11yRole::UserAction,
             )
         } else {
             AccessibilityContent::new_without_help(
                 "Successfully replaced the last match.",
-                WarpA11yRole::UserAction,
+                ZapNGA11yRole::UserAction,
             )
         };
         ctx.emit_a11y_content(content);
@@ -507,7 +507,7 @@ impl CodeEditorFind {
             };
             let icon = Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(appearance.theme().active_ui_text_color())
+                    icon.to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                         .finish(),
                 )
                 .with_height(size)
@@ -571,7 +571,7 @@ impl CodeEditorFind {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(match_icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(match_icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -598,7 +598,7 @@ impl CodeEditorFind {
             appearance.theme().active_ui_text_color()
         };
         Container::new(
-            ConstrainedBox::new(Icon::Search.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(Icon::Search.to_zap_ng_ui_icon(icon_color).finish())
                 .with_height(height)
                 .with_width(height)
                 .finish(),
@@ -625,7 +625,7 @@ impl CodeEditorFind {
         };
         Container::new(
             ConstrainedBox::new(
-                icon.to_warpui_icon(appearance.theme().active_ui_text_color())
+                icon.to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_height(height)
@@ -989,7 +989,7 @@ impl View for CodeEditorFind {
         Some(AccessibilityContent::new(
             description,
             help_text,
-            WarpA11yRole::TextareaRole,
+            ZapNGA11yRole::TextareaRole,
         ))
     }
 
@@ -1002,7 +1002,7 @@ impl View for CodeEditorFind {
         }
     }
 
-    fn on_blur(&mut self, _blur_ctx: &warpui::BlurContext, ctx: &mut ViewContext<Self>) {
+    fn on_blur(&mut self, _blur_ctx: &zap_ng_ui::BlurContext, ctx: &mut ViewContext<Self>) {
         // Check if the currently focused view is one of our child components
         let focused_view_id = ctx.focused_view_id(ctx.window_id());
         let is_focus_within_find_bar = [

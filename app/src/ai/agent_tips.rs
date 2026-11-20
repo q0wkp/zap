@@ -17,9 +17,9 @@ use markdown_parser::FormattedTextFragment;
 
 use std::sync::LazyLock;
 use std::time::Duration;
-use warpui::keymap::Keystroke;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 /// Trait for tip implementations that can be displayed to users.
 /// Tips provide helpful information with optional links and keybindings.
@@ -497,7 +497,7 @@ impl AITipModel<AgentTip> {
         // Start 60-second cooldown
         let handle = ctx.spawn(
             async {
-                warpui::r#async::Timer::after(Duration::from_secs(60)).await;
+                zap_ng_ui::r#async::Timer::after(Duration::from_secs(60)).await;
             },
             |me, _, _| {
                 me.cooldown_handle = None;
@@ -529,7 +529,7 @@ impl AITipModel<crate::terminal::view::ambient_agent::AmbientAgentTip> {
         // Start 60-second cooldown
         let handle = ctx.spawn(
             async {
-                warpui::r#async::Timer::after(Duration::from_secs(60)).await;
+                zap_ng_ui::r#async::Timer::after(Duration::from_secs(60)).await;
             },
             |me, _, _| {
                 me.cooldown_handle = None;
@@ -550,7 +550,7 @@ impl AITipModel<crate::terminal::view::ambient_agent::AmbientAgentTip> {
         // Start a new 60-second cooldown
         let handle = ctx.spawn(
             async {
-                warpui::r#async::Timer::after(Duration::from_secs(60)).await;
+                zap_ng_ui::r#async::Timer::after(Duration::from_secs(60)).await;
             },
             |me, _, _| {
                 me.cooldown_handle = None;

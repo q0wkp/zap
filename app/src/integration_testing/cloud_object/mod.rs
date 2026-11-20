@@ -5,7 +5,7 @@ use futures::{future::join_all, FutureExt};
 use itertools::Itertools;
 use std::future::Future;
 use std::pin::Pin;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 use crate::{
     cloud_object::update_manager::UpdateManager,

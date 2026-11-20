@@ -1,5 +1,5 @@
 use settings::Setting as _;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use super::{
     alt_screen_reporting::AltScreenReporting, model::grid::grid_handler::TermMode, TerminalModel,

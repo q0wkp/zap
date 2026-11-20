@@ -2,7 +2,7 @@
 
 use ai::LLMId;
 use onboarding::slides::OnboardingModelInfo;
-use warp_core::ui::icons::Icon;
+use zap_ng_core::ui::icons::Icon;
 
 use super::llms::{LLMInfo, LLMPreferences};
 

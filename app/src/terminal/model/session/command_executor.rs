@@ -15,8 +15,8 @@ use std::{any::Any, fmt::Debug, sync::Arc};
 use anyhow::Result;
 use async_channel::{Receiver, Sender};
 use async_trait::async_trait;
-use warp_completer::completer::CommandOutput;
-use warpui::ModelContext;
+use zap_ng_completer::completer::CommandOutput;
+use zap_ng_ui::ModelContext;
 
 use crate::terminal::{
     event::ExecutedExecutorCommandEvent, model::session::Sessions, shell::Shell,
@@ -124,7 +124,7 @@ fn new_command_executor_for_local_tty_session(
     use remote_server_executor::RemoteServerCommandExecutor;
     use settings::Setting as _;
     use tmux_executor::TmuxCommandExecutor;
-    use warpui::SingletonEntity as _;
+    use zap_ng_ui::SingletonEntity as _;
 
     use crate::{
         features::FeatureFlag,
@@ -250,7 +250,7 @@ fn new_command_executor_for_local_tty_session(
                 None => Arc::new(LocalCommandExecutor::new(None, shell_type)),
             }
         }
-        BootstrapSessionType::WarpifiedRemote
+        BootstrapSessionType::ZapNGifiedRemote
             if is_legacy_ssh_session
                 && !FeatureFlag::InBandGeneratorsForSSH.is_enabled()
                 && !force_use_in_band_generators =>
@@ -307,7 +307,7 @@ pub mod testing {
 
     use anyhow::anyhow;
     use command::r#async::Command;
-    use warp_completer::completer::CommandOutput;
+    use zap_ng_completer::completer::CommandOutput;
 
     use super::*;
 

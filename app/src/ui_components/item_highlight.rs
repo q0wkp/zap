@@ -1,10 +1,10 @@
 use crate::ui_components::blended_colors;
 use crate::{appearance::Appearance, ui_components::icons::Icon};
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{CornerRadius, MouseState, Radius};
-use warpui::Element;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{CornerRadius, MouseState, Radius};
+use zap_ng_ui::Element;
 
 /// Shared item highlight state for left-panel style lists (file tree, global search results,
 /// zap drive rows, etc.).

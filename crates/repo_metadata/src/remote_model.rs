@@ -7,8 +7,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use warp_core::HostId;
-use warpui::ModelContext;
+use zap_ng_core::HostId;
+use zap_ng_ui::ModelContext;
 
 use crate::file_tree_store::{FileTreeEntry, FileTreeState};
 use crate::file_tree_update::RepoMetadataUpdate;
@@ -203,7 +203,7 @@ impl RemoteRepoMetadataModel {
     }
 }
 
-impl warpui::Entity for RemoteRepoMetadataModel {
+impl zap_ng_ui::Entity for RemoteRepoMetadataModel {
     type Event = RemoteRepositoryMetadataEvent;
 }
 

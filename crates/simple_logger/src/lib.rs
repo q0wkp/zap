@@ -7,7 +7,7 @@ use async_channel::Sender;
 use async_fs::OpenOptions;
 use futures::channel::oneshot;
 use futures::AsyncWriteExt as _;
-use warpui::r#async::executor::{Background, BackgroundTask};
+use zap_ng_ui::r#async::executor::{Background, BackgroundTask};
 
 pub mod manager;
 

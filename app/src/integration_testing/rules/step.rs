@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use warpui::{
+use zap_ng_ui::{
     async_assert, integration::TestStep, windowing::WindowManager, SingletonEntity, WindowId,
 };
 

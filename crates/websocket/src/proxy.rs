@@ -23,7 +23,7 @@ use tokio::time::timeout;
 use url::Url;
 
 /// 代理模式镜像。与 `http_client::ProxyMode` 一一对应,只是为了避免
-/// `websocket -> http_client -> warp_core -> websocket` 的循环依赖,这里本地镜像一份。
+/// `websocket -> http_client -> zap_ng_core -> websocket` 的循环依赖,这里本地镜像一份。
 /// `app` 启动 / 设置变更时同时调用 `http_client::set_global_proxy_config` 和
 /// `websocket::set_global_proxy_config` 保证两路保持一致。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

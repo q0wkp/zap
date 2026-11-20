@@ -28,7 +28,7 @@ use crate::ai::agent::{
 use crate::ai::block_context::BlockContext;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
 use crate::ai::llms::LLMId;
-use crate::ai_assistant::execution_context::{WarpAiExecutionContext, WarpAiOsContext};
+use crate::ai_assistant::execution_context::{ZapNGAiExecutionContext, WarpAiOsContext};
 use crate::terminal::model::block::BlockId;
 use crate::terminal::model::terminal_model::BlockIndex;
 use ai::agent::action_result::{AskUserQuestionAnswerItem, AskUserQuestionResult, ReadSkillResult};
@@ -36,7 +36,7 @@ use ai::skills::ParsedSkill;
 use chrono::{DateTime, Local, TimeZone};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 use warp_multi_agent_api as api;
 use warp_multi_agent_api::ask_user_question_result::answer_item::Answer as AskUserQuestionAnswer;
 
@@ -101,7 +101,7 @@ pub(crate) fn convert_input_context(context: Option<&api::InputContext>) -> Arc<
     // Convert operating system and shell to execution environment
     if let (Some(os), Some(shell)) = (&context.operating_system, &context.shell) {
         result.push(AIAgentContext::ExecutionEnvironment(
-            WarpAiExecutionContext {
+            ZapNGAiExecutionContext {
                 os: WarpAiOsContext {
                     category: if os.platform.is_empty() {
                         None

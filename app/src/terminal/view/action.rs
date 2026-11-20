@@ -6,11 +6,11 @@ use std::path::PathBuf;
 use ai::skills::SkillReference;
 use command_corrections::Correction;
 use pathfinder_geometry::vector::Vector2F;
-use warp_util::user_input::UserInput;
-use warpui::EntityId;
-use warpui::elements::HyperlinkUrl;
-use warpui::event::ModifiersState;
-use warpui::units::Lines;
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::EntityId;
+use zap_ng_ui::elements::HyperlinkUrl;
+use zap_ng_ui::event::ModifiersState;
+use zap_ng_ui::units::Lines;
 
 use crate::ai::agent::AIAgentExchangeId;
 use crate::ai::agent::conversation::AIConversationId;
@@ -42,7 +42,7 @@ use crate::{
 };
 
 use super::inline_banner::{
-    AwsBedrockLoginBannerAction, AwsCliNotInstalledBannerAction, OpenInWarpBannerAction,
+    AwsBedrockLoginBannerAction, AwsCliNotInstalledBannerAction, OpenInZapNGBannerAction,
     VimModeBannerAction,
 };
 use super::{
@@ -74,7 +74,7 @@ pub enum OnboardingVersion {
 /// This represents whether entering a subshell for a particular command should become automatic in
 /// the future, or to ask again.
 #[derive(Clone, Debug)]
-pub enum RememberForWarpification {
+pub enum RememberForZapNGification {
     /// If yes, need to transmit the command itself so it can be persisted to user-defaults
     RememberSubshellCommand(String),
     RememberSSHHost(String),
@@ -82,22 +82,22 @@ pub enum RememberForWarpification {
     DoNotRememberSSHHost,
 }
 
-impl RememberForWarpification {
+impl RememberForZapNGification {
     pub fn as_bool(&self) -> bool {
         match self {
-            RememberForWarpification::RememberSubshellCommand(_) => true,
-            RememberForWarpification::RememberSSHHost(_) => true,
-            RememberForWarpification::DoNotRememberSubshellCommand => false,
-            RememberForWarpification::DoNotRememberSSHHost => false,
+            RememberForZapNGification::RememberSubshellCommand(_) => true,
+            RememberForZapNGification::RememberSSHHost(_) => true,
+            RememberForZapNGification::DoNotRememberSubshellCommand => false,
+            RememberForZapNGification::DoNotRememberSSHHost => false,
         }
     }
 
     pub fn is_ssh(&self) -> bool {
         match self {
-            RememberForWarpification::RememberSSHHost(_) => true,
-            RememberForWarpification::DoNotRememberSSHHost => true,
-            RememberForWarpification::RememberSubshellCommand(_) => false,
-            RememberForWarpification::DoNotRememberSubshellCommand => false,
+            RememberForZapNGification::RememberSSHHost(_) => true,
+            RememberForZapNGification::DoNotRememberSSHHost => true,
+            RememberForZapNGification::RememberSubshellCommand(_) => false,
+            RememberForZapNGification::DoNotRememberSubshellCommand => false,
         }
     }
 }
@@ -279,12 +279,12 @@ pub enum TerminalAction {
     },
     CopyRichContentSecret(RichContentSecretTooltipInfo),
     ShowInFileExplorer(PathBuf),
-    OpenFileInWarp(PathBuf),
+    OpenFileInZapNG(PathBuf),
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         path: PathBuf,
         layout: crate::util::file::external_editor::settings::EditorLayout,
-        line_col: Option<warp_util::path::LineAndColumnArg>,
+        line_col: Option<zap_ng_util::path::LineAndColumnArg>,
     },
     OpenWorkflowModal,
     OpenWorkflowModalForAIWorkflow(Workflow),
@@ -295,17 +295,17 @@ pub enum TerminalAction {
     },
     /// Starts a subshell in the active session.
     TriggerSubshellBootstrap,
-    /// If the user says "no" to Warpification, possibly requesting not to be asked again
-    DismissWarpifyBanner(RememberForWarpification),
+    /// If the user says "no" to ZapNGification, possibly requesting not to be asked again
+    DismissZapNGifyBanner(RememberForZapNGification),
     /// Triggers the banner asking to turn the running block into a subshell. The String is the
     /// command that the user entered.
     ShowSubshellBanner(String),
-    /// Triggers the banner asking to Warpify the active ssh session. The String is the
+    /// Triggers the banner asking to ZapNGify the active ssh session. The String is the
     /// command that the user entered.
-    ShowWarpifySshBanner(String, Option<String>),
+    ShowZapNGifySshBanner(String, Option<String>),
     InsertMostRecentCommandCorrection,
     AliasExpansionBanner(AliasExpansionBannerAction),
-    OpenInWarpBanner(OpenInWarpBannerAction),
+    OpenInZapNGBanner(OpenInZapNGBannerAction),
     OpenBlockFilterEditor(BlockIndex),
     OnboardingFlow(OnboardingVersion),
     ImportSettings,
@@ -319,8 +319,8 @@ pub enum TerminalAction {
     /// it if possible.
     SelectAIAttachedBlock(BlockIndex),
     DragAndDropFiles(Vec<String>),
-    /// Triggers an ssh session to warpify, even if there is no Warpify Block.
-    WarpifySSHSession,
+    /// Triggers an ssh session to zapngify, even if there is no ZapNGify Block.
+    ZapNGifySSHSession,
     NotifySshErrorBlock(SshErrorBlockAction),
     /// Sets the input mode to Agent Mode
     SetInputModeAgent,
@@ -343,7 +343,7 @@ pub enum TerminalAction {
     ShowInitializationBlock,
     /// This is for debugging, dev only for now
     LoadAgentModeConversation,
-    ShowWarpifySettings,
+    ShowZapNGifySettings,
     /// Removes a pending attachment (image or file) by index in the unified list.
     DeleteAttachment {
         index: usize,
@@ -540,9 +540,9 @@ impl fmt::Debug for TerminalAction {
             CopyGridSecret(_) => f.write_str("CopyGridSecret"),
             CopyRichContentSecret(_) => f.write_str("CopyRichContentSecret"),
             ShowInFileExplorer(_) => f.write_str("ShowInFileExplorer"),
-            OpenFileInWarp(_) => f.write_str("OpenFileInWarp"),
+            OpenFileInZapNG(_) => f.write_str("OpenFileInWarp"),
             #[cfg(feature = "local_fs")]
-            OpenCodeInWarp { .. } => f.write_str("OpenCodeInWarp"),
+            OpenCodeInZapNG { .. } => f.write_str("OpenCodeInWarp"),
             OpenWorkflowModal => f.write_str("OpenWorkflowModal"),
             OpenWorkflowModalForAIWorkflow(_) => f.write_str("OpenWorkflowModalForAIWorkflow"),
             OpenWorkflowModalForBlock(block_index) => {
@@ -554,12 +554,12 @@ impl fmt::Debug for TerminalAction {
             OpenBlockListContextMenu => f.write_str("OpenBlockListContextMenu"),
             AskAIAssistant { block_index } => write!(f, "AskAIAssistant({block_index:?})"),
             TriggerSubshellBootstrap => f.write_str("TriggerSubshellBootstrap"),
-            DismissWarpifyBanner(remember) => write!(f, "DismissWarpifyBanner({remember:?})"),
+            DismissZapNGifyBanner(remember) => write!(f, "DismissWarpifyBanner({remember:?})"),
             ShowSubshellBanner(_) => f.write_str("ShowSubshellBanner"),
-            ShowWarpifySshBanner(_, _) => f.write_str("ShowWarpifySshBanner"),
+            ShowZapNGifySshBanner(_, _) => f.write_str("ShowWarpifySshBanner"),
             InsertMostRecentCommandCorrection => f.write_str("InsertMostRecentCommandCorrection"),
             AliasExpansionBanner(action) => write!(f, "AliasExpansionBanner({action:?}"),
-            OpenInWarpBanner(action) => write!(f, "OpenInWarpBanner({action:?})"),
+            OpenInZapNGBanner(action) => write!(f, "OpenInWarpBanner({action:?})"),
             OpenBlockFilterEditor(block_index) => {
                 write!(f, "OpenBlockFilterEditor({block_index:?})")
             }
@@ -584,7 +584,7 @@ impl fmt::Debug for TerminalAction {
             ExecuteRewindFromInlineMenu { .. } => write!(f, "ExecuteRewindFromInlineMenu"),
             SelectAIAttachedBlock(_) => write!(f, "SelectAIAttachedBlock"),
             DragAndDropFiles(_) => write!(f, "DragAndDropFiles"),
-            WarpifySSHSession => write!(f, "WarpifySSHSession"),
+            ZapNGifySSHSession => write!(f, "WarpifySSHSession"),
             NotifySshErrorBlock(action) => write!(f, "NotifySshErrorBlock({action:?})"),
             SetInputModeAgent => write!(f, "SetInputModeAgent"),
             SetInputModeTerminal => write!(f, "SetInputModeTerminal"),
@@ -605,7 +605,7 @@ impl fmt::Debug for TerminalAction {
             SelectAgenticSuggestion(index) => write!(f, "SelectAgenticSuggestion({index:?})"),
             ShowInitializationBlock => write!(f, "ShowInitializationBlock"),
             LoadAgentModeConversation => write!(f, "LoadAgentModeConversation"),
-            ShowWarpifySettings => write!(f, "ShowWarpifySettings"),
+            ShowZapNGifySettings => write!(f, "ShowWarpifySettings"),
             DeleteAttachment { index } => write!(f, "DeleteAttachment({index:?})"),
             ToggleAutoexecuteMode => write!(f, "ToggleAutoexecuteMode"),
             ToggleQueueNextPrompt => write!(f, "ToggleQueueNextPrompt"),

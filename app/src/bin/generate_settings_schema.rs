@@ -1,4 +1,4 @@
-//! Generates a JSON Schema file describing Warp's user-facing settings.
+//! Generates a JSON Schema file describing ZapNG's user-facing settings.
 //!
 //! Usage:
 //! ```
@@ -12,17 +12,17 @@ use schemars::SchemaGenerator;
 use serde_json::{Map, Value};
 
 use settings::schema::SettingSchemaEntry;
-use warp_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
+use zap_ng_core::features::{FeatureFlag, DEBUG_FLAGS, DOGFOOD_FLAGS, PREVIEW_FLAGS, RELEASE_FLAGS};
 
 /// Ensures all `inventory::submit!` registrations from the app crate's
 /// dependency tree are linked into the binary.
 ///
 /// Binary targets only link crate code that is transitively referenced.
-/// Without an explicit reference to the `warp` library, the linker will
+/// Without an explicit reference to the `zap-ng` library, the linker will
 /// not include most of the app's object files and the `inventory`
 /// submissions they contain.
 fn ensure_settings_linked() {
-    let _ = std::hint::black_box(warp::settings::RESTORE_SESSION);
+    let _ = std::hint::black_box(zap_ng::settings::RESTORE_SESSION);
 }
 
 /// Recursively strips `minimum`, `maximum`, and `format` from integer and
@@ -171,7 +171,7 @@ fn main() {
     for flag in &active_flags {
         flag.set_enabled(true);
     }
-    warp_core::features::mark_initialized();
+    zap_ng_core::features::mark_initialized();
 
     let mut generator = SchemaGenerator::default();
     let mut root_properties = Map::new();

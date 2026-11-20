@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use warpui::{
+use zap_ng_ui::{
     elements::Empty, platform::WindowStyle, App, AppContext, Element, Entity, ModelHandle,
     TypedActionView, View, ViewContext,
 };
@@ -112,7 +112,7 @@ fn local_ssh_command_follows_the_session_tree() {
         ssh_connection_info: parse_interactive_ssh_command(command),
     };
     let remote = |id: u64, spawning_session_id: u64| SessionInfo {
-        session_type: BootstrapSessionType::WarpifiedRemote,
+        session_type: BootstrapSessionType::ZapNGifiedRemote,
         spawning_session_id: Some(SessionId::from(spawning_session_id)),
         ..SessionInfo::new_for_test().with_id(id)
     };

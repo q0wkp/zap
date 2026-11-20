@@ -1,5 +1,5 @@
 use futures::Future;
-use warpui::{
+use zap_ng_ui::{
     elements::{Align, Flex, Hoverable, MouseStateHandle, ParentElement, SavePosition, Shrinkable},
     presenter::ChildView,
     windowing::{StateEvent, WindowManager},
@@ -28,7 +28,7 @@ use super::{
         has_feature_gated_anonymous_user_reached_workflow_limit,
     },
     index::{DriveIndex, DriveIndexAction, DriveIndexEvent},
-    items::WarpDriveItemId,
+    items::ZapNGDriveItemId,
     DriveObjectType, ObjectTypeAndId,
 };
 
@@ -82,7 +82,7 @@ pub enum DrivePanelEvent {
     OpenNotebook(NotebookSource),
     OpenEnvVarCollection(EnvVarCollectionSource),
     OpenWorkflowInPane(WorkflowOpenSource, WorkflowViewMode),
-    FocusWarpDrive,
+    FocusZapNGDrive,
     AttachPlanAsContext(AIDocumentId),
 }
 
@@ -297,7 +297,7 @@ impl DrivePanel {
             DriveIndexEvent::OpenWorkflowModalWithWorkflowObject(workflow_id) => {
                 self.open_workflow_modal_with_existing(*workflow_id, ctx)
             }
-            DriveIndexEvent::FocusWarpDrive => ctx.emit(DrivePanelEvent::FocusWarpDrive),
+            DriveIndexEvent::FocusZapNGDrive => ctx.emit(DrivePanelEvent::FocusZapNGDrive),
             DriveIndexEvent::OpenSharedObjectsCreationDeniedModal(object_type, team_uid) => ctx
                 .emit(DrivePanelEvent::OpenSharedObjectsCreationDeniedModal(
                     *object_type,
@@ -448,7 +448,7 @@ impl DrivePanel {
 
     pub fn set_selected_object(
         &mut self,
-        id: Option<WarpDriveItemId>,
+        id: Option<ZapNGDriveItemId>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index_view, ctx| {
@@ -588,7 +588,7 @@ impl DrivePanel {
 
     pub fn expand_section_for_drive_item_id(
         &mut self,
-        item_id: WarpDriveItemId,
+        item_id: ZapNGDriveItemId,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index, ctx| {
@@ -597,7 +597,7 @@ impl DrivePanel {
     }
 
     /// This functions scrolls the relevant Zap Drive item into view.
-    pub fn scroll_item_into_view(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    pub fn scroll_item_into_view(&mut self, item_id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         self.index_view.update(ctx, |index, ctx| {
             index.scroll_item_into_view(item_id, ctx);
         })
@@ -610,27 +610,27 @@ impl DrivePanel {
         })
     }
 
-    pub fn set_focused_item(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    pub fn set_focused_item(&mut self, item_id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         self.index_view.update(ctx, |index, ctx| {
             ctx.focus(&self.index_view);
             index.set_focused_item(item_id, true, ctx);
         })
     }
 
-    pub fn has_warp_drive_initialized_sections(
+    pub fn has_zap_ng_drive_initialized_sections(
         &self,
         app: &AppContext,
     ) -> impl Future<Output = ()> {
         self.index_view.as_ref(app).has_initialized_sections()
     }
 
-    pub fn reset_focused_index_in_warp_drive(
+    pub fn reset_focused_index_in_zap_ng_drive(
         &mut self,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
     ) {
         self.index_view.update(ctx, |index, ctx| {
-            index.reset_focused_index_in_warp_drive(should_scroll, ctx);
+            index.reset_focused_index_in_zap_ng_drive(should_scroll, ctx);
         })
     }
 
@@ -662,7 +662,7 @@ impl View for DrivePanel {
         }
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, _app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         let body = Hoverable::new(
             self.mouse_state_handles.focus_panel_mouse_state.clone(),
             |_| {
@@ -684,7 +684,7 @@ impl View for DrivePanel {
 
         let mut col = Flex::column();
         col.add_child(Shrinkable::new(1., body).finish());
-        col.with_main_axis_size(warpui::elements::MainAxisSize::Max)
+        col.with_main_axis_size(zap_ng_ui::elements::MainAxisSize::Max)
             .finish()
     }
 }
@@ -702,7 +702,7 @@ impl TypedActionView for DrivePanel {
             DrivePanelAction::FocusDriveIndex => {
                 ctx.focus(&self.index_view);
                 // should_scroll is set to false here in order to not let menu clicks autoscroll WD index
-                self.reset_focused_index_in_warp_drive(false, ctx);
+                self.reset_focused_index_in_zap_ng_drive(false, ctx);
             }
         }
     }

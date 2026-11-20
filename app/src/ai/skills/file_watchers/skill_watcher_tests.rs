@@ -10,8 +10,8 @@ use repo_metadata::{
     TargetFile,
 };
 use tempfile::TempDir;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::App;
+use zap_ng_util::standardized_path::StandardizedPath;
+use zap_ng_ui::App;
 
 use super::SkillWatcher;
 

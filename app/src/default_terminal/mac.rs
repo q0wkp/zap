@@ -8,7 +8,7 @@ use core_foundation::{
     string::{CFString, CFStringRef},
 };
 use objc::{class, msg_send, sel, sel_impl};
-use warp_core::channel::{Channel, ChannelState};
+use zap_ng_core::channel::{Channel, ChannelState};
 
 // Launch Services constants
 type LSRolesMask = u32;
@@ -40,7 +40,7 @@ pub fn can_become_default_terminal() -> bool {
     }
 }
 
-pub fn is_warp_default_terminal() -> bool {
+pub fn is_zap_ng_default_terminal() -> bool {
     unsafe {
         let unix_executable_content_type = CFString::new("public.unix-executable");
         let handler = LSCopyDefaultRoleHandlerForContentType(
@@ -52,21 +52,21 @@ pub fn is_warp_default_terminal() -> bool {
             return false;
         }
 
-        let Some(warp_bundle_id) = get_warp_bundle_id() else {
+        let Some(zap_ng_bundle_id) = get_zap_ng_bundle_id() else {
             return false;
         };
 
         let handler_string = CFString::wrap_under_create_rule(handler);
         let current_handler = handler_string.to_string();
 
-        current_handler == warp_bundle_id
+        current_handler == zap_ng_bundle_id
     }
 }
 
-pub fn set_warp_as_default_terminal() -> Result<(), String> {
+pub fn set_zap_ng_as_default_terminal() -> Result<(), String> {
     log::debug!("Setting Zap as default terminal");
 
-    let bundle_id = get_warp_bundle_id().ok_or("No bundle ID".to_string())?;
+    let bundle_id = get_zap_ng_bundle_id().ok_or("No bundle ID".to_string())?;
 
     set_default_terminal(&bundle_id)
 }
@@ -96,7 +96,7 @@ fn set_default_terminal(bundle_id: &str) -> Result<(), String> {
 
 /// Gets Zap's bundle identifier. This may be `None` if not running as a bundle, i.e. through
 /// `cargo run` without `cargo bundle`.
-fn get_warp_bundle_id() -> Option<String> {
+fn get_zap_ng_bundle_id() -> Option<String> {
     unsafe {
         let bundle_class = class!(NSBundle);
         let main_bundle: id = msg_send![bundle_class, mainBundle];

@@ -109,7 +109,7 @@ fn vscode_2026_dark_ui_colors_override_works() {
 /// 验证 ThemeKind::VsCode2026Dark 已注册到默认配置中。
 #[test]
 fn vscode_2026_dark_registered_in_default_config() {
-    let config = WarpThemeConfig::default();
+    let config = ZapNGThemeConfig::default();
     let theme = config.theme_map.get(&ThemeKind::VsCode2026Dark);
     assert!(theme.is_some(), "VsCode2026Dark 应存在于默认主题配置中");
     assert_eq!(theme.unwrap().name(), Some("VS Code 2026 Dark".to_string()));
@@ -134,7 +134,7 @@ fn in_memory_theme_generation_test() {
     .iter()
     .collect();
 
-    let mut in_memory_theme = warpui::r#async::block_on(InMemoryThemeOptions::new(
+    let mut in_memory_theme = zap_ng_ui::r#async::block_on(InMemoryThemeOptions::new(
         "mountains".to_string(),
         mountains_bg_path.clone(),
     ))
@@ -143,7 +143,7 @@ fn in_memory_theme_generation_test() {
     let mountains_bg_path_string = mountains_bg_path.to_str().unwrap_or_default().to_owned();
     assert_eq!(
         in_memory_theme.theme(),
-        WarpTheme::new(
+        ZapNGTheme::new(
             // the theme defaults to the 0th bg color
             ColorU::new(35, 31, 44, OPAQUE).into(),
             // this background color makes it a "dark" theme, so the foreground is white
@@ -169,7 +169,7 @@ fn in_memory_theme_generation_test() {
 
     assert_eq!(
         in_memory_theme.theme(),
-        WarpTheme::new(
+        ZapNGTheme::new(
             // now the background is the 2nd one
             ColorU::new(229, 142, 113, OPAQUE).into(),
             // changing the background color made this a light theme

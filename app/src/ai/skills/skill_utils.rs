@@ -9,14 +9,14 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::Icon;
-use warpui::prelude::MouseStateHandle;
-use warpui::EventContext;
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::prelude::MouseStateHandle;
+use zap_ng_ui::EventContext;
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
-use crate::warp_managed_paths_watcher::warp_managed_skill_dirs;
+use crate::zap_ng_managed_paths_watcher::zap_ng_managed_skill_dirs;
 
 /// Deduplicates skills by **name and owning directory**, keeping a single best representative per
 /// skill name within each directory.
@@ -148,7 +148,7 @@ pub fn icon_override_for_skill_name(name: &str) -> Option<Icon> {
 pub fn skill_path_from_file_path(file_path: &Path) -> Option<PathBuf> {
     for definition in SKILL_PROVIDER_DEFINITIONS.iter() {
         let home_skill_dirs = if definition.provider == SkillProvider::Zap {
-            warp_managed_skill_dirs()
+            zap_ng_managed_skill_dirs()
         } else {
             home_skills_path(definition.provider).into_iter().collect()
         };

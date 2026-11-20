@@ -27,14 +27,14 @@
 //! 当前已经先在 `search_results_common.rs` 加了 `render_loading_header_animated` /
 //! `render_terminal_header_strikethrough`,本模块在其上叠加完整 spec 抽象。
 
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::shimmering_text::ShimmeringTextStateHandle;
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Flex, MainAxisAlignment,
     ParentElement, Radius, Shrinkable,
 };
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use super::inline_action_header::{
     ICON_MARGIN, INLINE_ACTION_HEADER_VERTICAL_PADDING, INLINE_ACTION_HORIZONTAL_PADDING,
@@ -105,7 +105,7 @@ impl ToolCardState {
 /// 工具卡 spec —— caller 填的所有必要信息。
 pub struct ToolCardSpec {
     /// 工具图标(终态用,Pending/Running 时根据状态自行选 spinner)。
-    pub icon: warpui::elements::Icon,
+    pub icon: zap_ng_ui::elements::Icon,
     /// 当前状态。
     pub state: ToolCardState,
 }
@@ -131,7 +131,7 @@ pub fn render_inline_tool_card(spec: ToolCardSpec, app: &AppContext) -> Box<dyn 
     // icon: Running 时换 BrailleSpinner,其它状态用传入的 icon。
     let icon_element: Box<dyn Element> = match &spec.state {
         ToolCardState::Running { spinner_handle, .. } => {
-            use warp_core::ui::theme::AnsiColorIdentifier;
+            use zap_ng_core::ui::theme::AnsiColorIdentifier;
             let color = AnsiColorIdentifier::Yellow.to_ansi_color(&theme.terminal_colors().normal);
             Box::new(crate::ui_components::spinner::BrailleSpinner::new(
                 appearance.ui_font_family(),
@@ -196,8 +196,8 @@ fn build_title_text(
     header_background: Fill,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::elements::shimmering_text::{ShimmerConfig, ShimmeringTextElement};
-    use warpui::elements::Text;
+    use zap_ng_ui::elements::shimmering_text::{ShimmerConfig, ShimmeringTextElement};
+    use zap_ng_ui::elements::Text;
 
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
@@ -271,8 +271,8 @@ fn build_title_text(
             denied,
             detail,
         } => {
-            use warpui::elements::{Highlight, HighlightedRange};
-            use warpui::text_layout::TextStyle;
+            use zap_ng_ui::elements::{Highlight, HighlightedRange};
+            use zap_ng_ui::text_layout::TextStyle;
 
             // 主文本:denied 时打 STRIKETHROUGH,error 不打但走 sub 色 + detail 副行。
             let text_color = theme.sub_text_color(header_background).into_solid();

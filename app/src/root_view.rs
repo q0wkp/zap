@@ -10,7 +10,7 @@ use crate::autoupdate::{AutoupdateState, AutoupdateStateEvent};
 use crate::cloud_object::model::persistence::ObjectStoreModel;
 use crate::cloud_object::{GenericStringObjectFormat, JsonObjectType, ObjectType};
 use crate::drive::export::ExportManager;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::ZapNGDriveItemId;
 use crate::drive::{ObjectTypeAndId, ZapDriveObjectArgs, ZapDriveObjectSettings};
 use crate::experiments::{BlockOnboarding, Experiment};
 use crate::interval_timer::IntervalTimer;
@@ -39,7 +39,7 @@ use crate::terminal::keys_settings::KeysSettings;
 use crate::terminal::shell::ShellType;
 use crate::terminal::view::cell_size_and_padding;
 use crate::themes::onboarding_theme_picker_themes;
-use crate::themes::theme::{AnsiColorIdentifier, Blend, Fill, ThemeKind, WarpThemeConfig};
+use crate::themes::theme::{AnsiColorIdentifier, Blend, Fill, ThemeKind, ZapNGThemeConfig};
 use crate::uri::OpenMCPSettingsArgs;
 use crate::util::bindings::{self, is_binding_pty_compliant};
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightData, TrafficLightMouseStates};
@@ -77,25 +77,25 @@ use std::path::Path;
 use std::sync::mpsc::SyncSender;
 use std::sync::Arc;
 use std::{collections::HashMap, path::PathBuf};
-use warp_core::context_flag::ContextFlag;
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::keymap::{EditableBinding, FixedBinding};
-use warpui::windowing::WindowManager;
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::keymap::{EditableBinding, FixedBinding};
+use zap_ng_ui::windowing::WindowManager;
 
 use crate::ai::llms::{LLMPreferences, LLMPreferencesEvent};
 use crate::ai::onboarding::build_onboarding_models;
 
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Border, ChildAnchor, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Stack,
 };
-use warpui::rendering::OnGPUDeviceSelected;
-use warpui::{id, AddWindowOptions, DisplayId, SingletonEntity};
-use warpui::{
+use zap_ng_ui::rendering::OnGPUDeviceSelected;
+use zap_ng_ui::{id, AddWindowOptions, DisplayId, SingletonEntity};
+use zap_ng_ui::{
     platform::{WindowBounds, WindowStyle},
     presenter::ChildView,
     AppContext, Element, Entity, TypedActionView, View, ViewContext, ViewHandle, WindowId,
 };
-use warpui::{FocusContext, NextNewWindowsHasThisWindowsBoundsUponClose};
+use zap_ng_ui::{FocusContext, NextNewWindowsHasThisWindowsBoundsUponClose};
 
 #[cfg(target_family = "wasm")]
 use crate::auth::{WebHandoffEvent, WebHandoffView};
@@ -292,11 +292,11 @@ pub fn init(app: &mut AppContext) {
 
     app.add_global_action(
         "root_view:open_drive_object_new_window",
-        open_warp_drive_object,
+        open_zap_ng_drive_object,
     );
     app.add_action(
         "root_view:open_drive_object_existing_window",
-        RootView::open_warp_drive_object_in_existing_window,
+        RootView::open_zap_ng_drive_object_in_existing_window,
     );
 
     app.add_global_action(
@@ -846,7 +846,7 @@ fn open_linear_issue_work_in_new_window(args: &LinearIssueWork, ctx: &mut AppCon
     });
 }
 
-fn open_warp_drive_object(arg: &ZapDriveObjectArgs, ctx: &mut AppContext) {
+fn open_zap_ng_drive_object(arg: &ZapDriveObjectArgs, ctx: &mut AppContext) {
     match arg.object_type {
         ObjectType::Notebook => open_new_workspace_with_notebook_open(
             SyncId::ServerId(arg.server_id),
@@ -1165,7 +1165,7 @@ fn toggle_quake_mode_window(global_resource_handles: &GlobalResourceHandles, ctx
                     background_blur_radius_pixels: Some(*window_settings.background_blur_radius),
                     // Ignore the quake window for positioning the next window
                     anchor_new_windows_from_closed_position:
-                        warpui::NextNewWindowsHasThisWindowsBoundsUponClose::No,
+                        zap_ng_ui::NextNewWindowsHasThisWindowsBoundsUponClose::No,
                     on_gpu_driver_selected: on_gpu_driver_selected_callback(),
                     window_instance: Some(ChannelState::app_id().to_string() + "-hotkey"),
                     ..Default::default()
@@ -1524,7 +1524,7 @@ impl RootView {
                 // the default if it's not already set and the user is logging in.
                 #[cfg(target_os = "macos")]
                 {
-                    use warpui_extras::user_preferences::UserPreferences;
+                    use zap_ng_ui_extras::user_preferences::UserPreferences;
 
                     // Make sure we're interacting with user defaults instead
                     // of some other preferences store.  Apple implements some
@@ -1532,7 +1532,7 @@ impl RootView {
                     // defaults (like press-and-hold being either accented
                     // characters or key repeat), so we need to make sure we're
                     // interacting with the user defaults system.
-                    let user_defaults = warpui_extras::user_preferences::user_defaults::UserDefaultsPreferencesStorage::new(None);
+                    let user_defaults = zap_ng_ui_extras::user_preferences::user_defaults::UserDefaultsPreferencesStorage::new(None);
                     if user_defaults
                         .read_value("ApplePressAndHoldEnabled")
                         .unwrap_or_default()
@@ -1775,7 +1775,7 @@ impl RootView {
     }
 
     fn onboarding_theme_kind(theme_name: &str) -> Option<ThemeKind> {
-        WarpThemeConfig::new()
+        ZapNGThemeConfig::new()
             .theme_items()
             .find_map(|(kind, theme)| {
                 (theme.name().as_deref() == Some(theme_name)).then(|| kind.clone())
@@ -1934,7 +1934,7 @@ impl RootView {
         true
     }
 
-    pub fn open_warp_drive_object_in_existing_window(
+    pub fn open_zap_ng_drive_object_in_existing_window(
         &mut self,
         arg: &ZapDriveObjectArgs,
         ctx: &mut ViewContext<Self>,
@@ -1946,7 +1946,7 @@ impl RootView {
                 ObjectType::Notebook => {
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_warp_drive_initialized_sections(ctx);
+                            workspace.has_zap_ng_drive_initialized_sections(ctx);
                         let notebook_id = SyncId::ServerId(arg.server_id);
                         let settings = arg.settings.clone();
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
@@ -1962,7 +1962,7 @@ impl RootView {
                 ObjectType::Workflow => {
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_warp_drive_initialized_sections(ctx);
+                            workspace.has_zap_ng_drive_initialized_sections(ctx);
                         let workflow_id = SyncId::ServerId(arg.server_id);
                         let settings = arg.settings.clone();
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
@@ -1982,16 +1982,16 @@ impl RootView {
                     }
 
                     let item_id =
-                        WarpDriveItemId::Object(ObjectTypeAndId::from_generic_string_object(
+                        ZapNGDriveItemId::Object(ObjectTypeAndId::from_generic_string_object(
                             GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                             SyncId::ServerId(arg.server_id),
                         ));
 
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_warp_drive_initialized_sections(ctx);
+                            workspace.has_zap_ng_drive_initialized_sections(ctx);
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
-                            workspace.view_in_and_focus_warp_drive(item_id, ctx);
+                            workspace.view_in_and_focus_zap_ng_drive(item_id, ctx);
                         });
                     });
                 }
@@ -2004,14 +2004,14 @@ impl RootView {
                         return false;
                     }
 
-                    let item_id = WarpDriveItemId::Object(ObjectTypeAndId::Folder(
+                    let item_id = ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(
                         SyncId::ServerId(arg.server_id),
                     ));
                     handle.update(ctx, |workspace, ctx| {
                         let initialized_section_states =
-                            workspace.has_warp_drive_initialized_sections(ctx);
+                            workspace.has_zap_ng_drive_initialized_sections(ctx);
                         let _ = ctx.spawn(initialized_section_states, move |workspace, _, ctx| {
-                            workspace.view_in_and_focus_warp_drive(item_id, ctx);
+                            workspace.view_in_and_focus_zap_ng_drive(item_id, ctx);
                         });
                     });
                 }
@@ -2069,7 +2069,7 @@ impl RootView {
     }
 
     /// Insert a command that should create a subshell. If we support bootstrapping AKA
-    /// "warpifying" its [`ShellType`], set a flag to automatically bootstrap it when the command's
+    /// "zapngifying" its [`ShellType`], set a flag to automatically bootstrap it when the command's
     /// block receives the [`AfterBlockStarted`] event.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -2286,12 +2286,12 @@ impl RootView {
                 // Zap 已移除 log_out 入口,关闭时不再触发登出。
             }
             AuthOverrideWarningModalEvent::BulkExport => {
-                self.export_all_warp_drive_objects(ctx);
+                self.export_all_zap_ng_drive_objects(ctx);
             }
         }
     }
 
-    fn export_all_warp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
+    fn export_all_zap_ng_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let object_store_model = ObjectStoreModel::as_ref(ctx);
         let exportable_objects = object_store_model.get_all_exportable_object_ids();
@@ -2367,12 +2367,12 @@ impl RootView {
     #[cfg(feature = "voice_input")]
     fn maybe_stop_active_voice_input(
         &mut self,
-        key_code: &warpui::platform::keyboard::KeyCode,
+        key_code: &zap_ng_ui::platform::keyboard::KeyCode,
         ctx: &mut ViewContext<Self>,
     ) -> bool {
         use crate::settings::AISettings;
         use voice_input::{VoiceInput, VoiceInputState, VoiceInputToggledFrom};
-        use warpui::event::KeyState;
+        use zap_ng_ui::event::KeyState;
 
         // Check that the released key matches the configured voice input toggle key.
         let ai_settings = AISettings::as_ref(ctx);
@@ -2520,10 +2520,10 @@ impl View for RootView {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "voice_input")] {
-                use warpui::elements::{EventHandler, DispatchEventResult};
+                use zap_ng_ui::elements::{EventHandler, DispatchEventResult};
                 EventHandler::new(stack.finish())
                     .on_modifier_state_changed(|ctx, _app, key_code, key_state| {
-                        if matches!(key_state, warpui::event::KeyState::Released) {
+                        if matches!(key_state, zap_ng_ui::event::KeyState::Released) {
                             ctx.dispatch_action("root_view:maybe_stop_active_voice_input", *key_code);
                         }
                         DispatchEventResult::PropagateToParent
@@ -2535,7 +2535,7 @@ impl View for RootView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
         if quake_mode_window_is_open() {
             context.set.insert(flags::QUAKE_WINDOW_OPEN_FLAG);

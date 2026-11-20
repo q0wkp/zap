@@ -2,9 +2,9 @@
 //!
 //! 仿 `get_started_pane.rs` 的极简结构,不含 cloud sync / sharing。pane 不
 //! 持久化(`LeafContents::SshServer { .. }` 在 `is_persisted()` 返回 false),
-//! 业务数据(host/user/port/...)走 `warp_ssh_manager::SshRepository` 操作 SQLite。
+//! 业务数据(host/user/port/...)走 `zap_ng_ssh_manager::SshRepository` 操作 SQLite。
 
-use warpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::{
     app_state::LeafContents,

@@ -32,10 +32,10 @@ use parking_lot::Mutex;
 use pathfinder_color::ColorU;
 use std::sync::Arc;
 use vec1::Vec1;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use warpui::text::SelectionType;
-use warpui::units::Lines;
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use zap_ng_ui::text::SelectionType;
+use zap_ng_ui::units::Lines;
 
 pub struct AltScreen {
     grid_handler: GridHandler,

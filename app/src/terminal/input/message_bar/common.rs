@@ -1,16 +1,16 @@
 use crate::ai::blocklist::agent_view::agent_view_bg_color;
 use pathfinder_color::ColorU;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::Icon;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::elements::{
     Border, CacheOption, Clipped, Container, CornerRadius, Element, Hoverable, Image,
     ParentElement, Radius,
 };
-use warpui::platform::Cursor;
-use warpui::prelude::{Align, ConstrainedBox, CrossAxisAlignment, Flex, Text};
-use warpui::ui_components::keyboard_shortcut::keystroke_to_keys;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::prelude::{Align, ConstrainedBox, CrossAxisAlignment, Flex, Text};
+use zap_ng_ui::ui_components::keyboard_shortcut::keystroke_to_keys;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::ai::blocklist::agent_view::shortcuts::render_keystroke_with_color_overrides;
 use crate::terminal;
@@ -29,7 +29,7 @@ pub fn render_standard_message_bar(
     right_element: Option<Box<dyn Element>>,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::prelude::{MainAxisAlignment, MainAxisSize};
+    use zap_ng_ui::prelude::{MainAxisAlignment, MainAxisSize};
 
     let (left_items, right_chips): (Vec<_>, Vec<_>) = message.items.into_iter().partition(|item| {
         !matches!(
@@ -145,7 +145,7 @@ fn render_message_bar_items(items: &[MessageItem], app: &AppContext) -> Box<dyn 
             }
             MessageItem::Icon { icon, color } => {
                 let icon_color = color.unwrap_or(default_font_color);
-                ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(icon_color)).finish())
+                ConstrainedBox::new(icon.to_zap_ng_ui_icon(Fill::Solid(icon_color)).finish())
                     .with_height(styles::font_size(app))
                     .with_width(styles::font_size(app))
                     .finish()
@@ -284,7 +284,7 @@ fn render_terminal_message_items(items: &[MessageItem], app: &AppContext) -> Box
                     let rendered_key = if key_text == "⏎" {
                         ConstrainedBox::new(
                             Icon::CornerDownLeft
-                                .to_warpui_icon(Fill::Solid(keystroke_color))
+                                .to_zap_ng_ui_icon(Fill::Solid(keystroke_color))
                                 .finish(),
                         )
                         .with_height(icon_size)
@@ -293,7 +293,7 @@ fn render_terminal_message_items(items: &[MessageItem], app: &AppContext) -> Box
                     } else if key_text == "⇧" {
                         ConstrainedBox::new(
                             Icon::ArrowBlockUp
-                                .to_warpui_icon(Fill::Solid(keystroke_color))
+                                .to_zap_ng_ui_icon(Fill::Solid(keystroke_color))
                                 .finish(),
                         )
                         .with_height(icon_size)
@@ -349,7 +349,7 @@ fn render_terminal_message_items(items: &[MessageItem], app: &AppContext) -> Box
             }
             MessageItem::Icon { icon, color } => {
                 let icon_color = color.unwrap_or(default_text_color);
-                ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(icon_color)).finish())
+                ConstrainedBox::new(icon.to_zap_ng_ui_icon(Fill::Solid(icon_color)).finish())
                     .with_height(icon_size)
                     .with_width(icon_size)
                     .finish()
@@ -469,8 +469,8 @@ pub fn disableable_message_item_color_overrides(
 
 pub mod styles {
     use pathfinder_color::ColorU;
-    use warp_core::ui::appearance::Appearance;
-    use warpui::{AppContext, SingletonEntity};
+    use zap_ng_core::ui::appearance::Appearance;
+    use zap_ng_ui::{AppContext, SingletonEntity};
 
     use crate::ui_components::blended_colors;
 

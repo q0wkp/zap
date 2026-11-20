@@ -10,10 +10,10 @@ use pathfinder_geometry::vector::{vec2f, Vector2F, Vector2I};
 use std::any::Any;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use warpui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Metrics, Properties};
-use warpui::platform::{self, LoadedSystemFonts, TextLayoutSystem};
-use warpui::text_layout::{ClipConfig, Line, TextAlignment, TextFrame};
-use warpui::units::{IntoLines, Lines, Pixels};
+use zap_ng_ui::fonts::{Cache as FontCache, FamilyId, FontId, GlyphId, Metrics, Properties};
+use zap_ng_ui::platform::{self, LoadedSystemFonts, TextLayoutSystem};
+use zap_ng_ui::text_layout::{ClipConfig, Line, TextAlignment, TextFrame};
+use zap_ng_ui::units::{IntoLines, Lines, Pixels};
 
 fn rect_from_points(min_x: f32, min_y: f32, max_x: f32, max_y: f32) -> RectF {
     RectF::from_points(vec2f(min_x, min_y), vec2f(max_x, max_y))
@@ -58,7 +58,7 @@ impl platform::FontDB for CountingFontDb {
     fn process_loaded_system_fonts(
         &mut self,
         _loaded_system_fonts: Box<dyn LoadedSystemFonts>,
-    ) -> Vec<(Option<FamilyId>, warpui::fonts::FontInfo)> {
+    ) -> Vec<(Option<FamilyId>, zap_ng_ui::fonts::FontInfo)> {
         Vec::new()
     }
 
@@ -98,7 +98,7 @@ impl platform::FontDB for CountingFontDb {
         _size: f32,
         _glyph_id: GlyphId,
         _scale: Vector2F,
-        _glyph_config: &warpui::rendering::GlyphConfig,
+        _glyph_config: &zap_ng_ui::rendering::GlyphConfig,
     ) -> Result<pathfinder_geometry::rect::RectI> {
         Ok(pathfinder_geometry::rect::RectI::default())
     }
@@ -117,16 +117,16 @@ impl platform::FontDB for CountingFontDb {
         _size: f32,
         _glyph_id: GlyphId,
         _scale: Vector2F,
-        _subpixel_alignment: warpui::fonts::SubpixelAlignment,
-        _glyph_config: &warpui::rendering::GlyphConfig,
-        _format: warpui::fonts::canvas::RasterFormat,
-    ) -> Result<warpui::fonts::RasterizedGlyph> {
-        Ok(warpui::fonts::RasterizedGlyph {
-            canvas: warpui::fonts::canvas::Canvas {
+        _subpixel_alignment: zap_ng_ui::fonts::SubpixelAlignment,
+        _glyph_config: &zap_ng_ui::rendering::GlyphConfig,
+        _format: zap_ng_ui::fonts::canvas::RasterFormat,
+    ) -> Result<zap_ng_ui::fonts::RasterizedGlyph> {
+        Ok(zap_ng_ui::fonts::RasterizedGlyph {
+            canvas: zap_ng_ui::fonts::canvas::Canvas {
                 pixels: Vec::new(),
                 size: pathfinder_geometry::vector::vec2i(0, 0),
                 row_stride: 0,
-                format: warpui::fonts::canvas::RasterFormat::Rgba32,
+                format: zap_ng_ui::fonts::canvas::RasterFormat::Rgba32,
             },
             is_emoji: false,
         })
@@ -147,7 +147,7 @@ impl TextLayoutSystem for CountingFontDb {
         &self,
         _text: &str,
         line_style: platform::LineStyle,
-        _style_runs: &[(std::ops::Range<usize>, warpui::text_layout::StyleAndFont)],
+        _style_runs: &[(std::ops::Range<usize>, zap_ng_ui::text_layout::StyleAndFont)],
         _max_width: f32,
         _clip_config: ClipConfig,
     ) -> Line {
@@ -158,7 +158,7 @@ impl TextLayoutSystem for CountingFontDb {
         &self,
         _text: &str,
         line_style: platform::LineStyle,
-        _style_runs: &[(std::ops::Range<usize>, warpui::text_layout::StyleAndFont)],
+        _style_runs: &[(std::ops::Range<usize>, zap_ng_ui::text_layout::StyleAndFont)],
         _max_width: f32,
         _max_height: f32,
         _alignment: TextAlignment,
@@ -189,7 +189,7 @@ fn fallback_font_family_for_char_skips_font_lookup_when_unconfigured() {
     ignore = "Assumes existence of Arial font, which is only guaranteed on macOS"
 )]
 fn test_calculate_grid_baseline_position() {
-    let font_db = warpui::platform::test::FontDB::new();
+    let font_db = zap_ng_ui::platform::test::FontDB::new();
     let mut font_cache = FontCache::new(Box::new(font_db));
     // Note we've restricted this unit test to Mac, so we expect Arial to exist.
     let arial = font_cache

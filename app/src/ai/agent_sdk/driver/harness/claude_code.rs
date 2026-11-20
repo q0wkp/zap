@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
-use warp_cli::agent::Harness;
-use warpui::{ModelHandle, ModelSpawner};
+use zap_ng_cli::agent::Harness;
+use zap_ng_ui::{ModelHandle, ModelSpawner};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_events::AgentEventStreamClient;

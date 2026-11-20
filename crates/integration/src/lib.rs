@@ -6,5 +6,5 @@ pub mod user_defaults;
 pub mod util;
 
 pub use builder::Builder;
-pub use warp::integration_testing::view_getters;
-pub use warpui::integration::TestStep;
+pub use zap_ng::integration_testing::view_getters;
+pub use zap_ng_ui::integration::TestStep;

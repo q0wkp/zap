@@ -8,7 +8,7 @@ pub use view::{InlineReposMenuEvent, InlineReposMenuView};
 
 use std::path::PathBuf;
 
-use warpui::keymap::Keystroke;
+use zap_ng_ui::keymap::Keystroke;
 
 use crate::terminal::input::inline_menu::{
     default_navigation_message_items, InlineMenuAction, InlineMenuMessageArgs, InlineMenuRowAction,

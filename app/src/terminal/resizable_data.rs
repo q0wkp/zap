@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use warpui::elements::resizable_state_handle;
-use warpui::elements::ResizableStateHandle;
-use warpui::Entity;
-use warpui::SingletonEntity;
-use warpui::WindowId;
+use zap_ng_ui::elements::resizable_state_handle;
+use zap_ng_ui::elements::ResizableStateHandle;
+use zap_ng_ui::Entity;
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::WindowId;
 
 use crate::app_state::WindowSnapshot;
 
@@ -20,9 +20,9 @@ pub const DEFAULT_CLI_SUBAGENT_HEIGHT: f32 = 320.;
 /// A naming system for the ResizableStateHandles
 pub enum ModalType {
     UniversalSearchWidth,
-    WarpAIWidth,
+    ZapNGAIWidth,
     VoltronWidth,
-    WarpDriveIndexWidth,
+    ZapNGDriveIndexWidth,
     SettingsPanelWidth,
     LeftPanelWidth,
     RightPanelWidth,
@@ -106,9 +106,9 @@ impl ModalSizes {
     pub fn get_resizable_state_handle(&self, modal: ModalType) -> ResizableStateHandle {
         match modal {
             ModalType::UniversalSearchWidth => self.universal_search_width.clone(),
-            ModalType::WarpAIWidth => self.warp_ai_width.clone(),
+            ModalType::ZapNGAIWidth => self.warp_ai_width.clone(),
             ModalType::VoltronWidth => self.voltron_width.clone(),
-            ModalType::WarpDriveIndexWidth => self.warp_drive_index_width.clone(),
+            ModalType::ZapNGDriveIndexWidth => self.warp_drive_index_width.clone(),
             ModalType::SettingsPanelWidth => self.settings_panel_width.clone(),
             ModalType::LeftPanelWidth => self.left_panel_width.clone(),
             ModalType::RightPanelWidth => self.right_panel_width.clone(),

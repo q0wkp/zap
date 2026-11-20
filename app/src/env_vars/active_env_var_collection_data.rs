@@ -10,7 +10,7 @@ use crate::{
     AppContext, ObjectStoreModel,
 };
 
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use super::EnvVarCollectionObjectModel;
 

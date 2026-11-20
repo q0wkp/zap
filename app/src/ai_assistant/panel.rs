@@ -4,24 +4,24 @@ use std::time::Duration;
 use chrono::Local;
 
 use pathfinder_geometry::vector::{vec2f, Vector2F};
-use warp_editor::editor::NavigationKey;
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::{
     resizable_state_handle, Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, DispatchEventResult, DragBarSide, Empty, EventHandler, Fill, Flex,
     HyperlinkUrl, Icon, MainAxisAlignment, MainAxisSize, OffsetPositioning, ParentAnchor,
     PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Shrinkable,
     Stack, Text,
 };
-use warpui::fonts::Properties;
-use warpui::keymap::{EditableBinding, FixedBinding};
-use warpui::platform::Cursor;
-use warpui::presenter::ChildView;
-use warpui::r#async::Timer;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{elements::Element, AppContext, Entity, TypedActionView, View, ViewContext};
-use warpui::{FocusContext, ModelHandle, SingletonEntity, ViewHandle};
+use zap_ng_ui::fonts::Properties;
+use zap_ng_ui::keymap::{EditableBinding, FixedBinding};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::presenter::ChildView;
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{elements::Element, AppContext, Entity, TypedActionView, View, ViewContext};
+use zap_ng_ui::{FocusContext, ModelHandle, SingletonEntity, ViewHandle};
 
 use crate::appearance::Appearance;
 use crate::editor::{
@@ -30,7 +30,7 @@ use crate::editor::{
 use crate::input_suggestions::{Event as InputSuggestionsEvent, InputSuggestions};
 
 use crate::send_telemetry_from_ctx;
-use crate::server::telemetry::{TelemetryEvent, WarpAIActionType};
+use crate::server::telemetry::{TelemetryEvent, ZapNGAIActionType};
 use crate::terminal::resizable_data::{ModalType, ResizableData, DEFAULT_WARP_AI_WIDTH};
 use crate::ui_components::blended_colors;
 use crate::workspaces::user_workspaces::UserWorkspaces;
@@ -39,12 +39,12 @@ use crate::ui_components::buttons::icon_button;
 use crate::workspace::{ActiveSession, TAB_BAR_HEIGHT};
 
 use crate::util::bindings::{cmd_or_ctrl_shift, CustomAction};
-use warpui::elements::MouseStateHandle;
-use warpui::elements::ParentElement;
-use warpui::elements::Resizable;
-use warpui::elements::ResizableStateHandle;
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::elements::ParentElement;
+use zap_ng_ui::elements::Resizable;
+use zap_ng_ui::elements::ResizableStateHandle;
 
-use super::execution_context::WarpAiExecutionContext;
+use super::execution_context::ZapNGAiExecutionContext;
 use super::requests::{Event as RequestsEvent, RequestStatus, Requests};
 use super::transcript::{Transcript, TranscriptEvent};
 use super::utils::{render_prepared_response_button, render_request_limit_info, TranscriptPart};
@@ -141,7 +141,7 @@ pub enum AIAssistantAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::custom(
         CustomAction::CloseCurrentSession,
@@ -223,7 +223,7 @@ impl AIAssistantPanelView {
         let resizable_data_handle = ResizableData::handle(ctx);
         let resizable_state_handle = match resizable_data_handle
             .as_ref(ctx)
-            .get_handle(ctx.window_id(), ModalType::WarpAIWidth)
+            .get_handle(ctx.window_id(), ModalType::ZapNGAIWidth)
         {
             Some(handle) => handle,
             None => {
@@ -259,7 +259,7 @@ impl AIAssistantPanelView {
             .as_ref(ctx)
             .session(window_id)
             .as_ref()
-            .map(WarpAiExecutionContext::new);
+            .map(ZapNGAiExecutionContext::new);
         self.requests_model.update(ctx, |requests, _| {
             requests.update_ai_execution_context(ai_execution_context);
         });
@@ -414,7 +414,7 @@ impl AIAssistantPanelView {
         }
 
         send_telemetry_from_ctx!(
-            TelemetryEvent::OpenedWarpAI {
+            TelemetryEvent::OpenedZapNGAI {
                 source: ask_type.into()
             },
             ctx
@@ -440,7 +440,7 @@ impl AIAssistantPanelView {
                     self.issue_request(buffer_text, ctx);
                 } else {
                     // Only send this event if the user tried to execute with a longer than permitted prompt.
-                    send_telemetry_from_ctx!(TelemetryEvent::WarpAICharacterLimitExceeded, ctx);
+                    send_telemetry_from_ctx!(TelemetryEvent::ZapNGAICharacterLimitExceeded, ctx);
                 }
                 ctx.notify();
             }
@@ -715,7 +715,7 @@ impl AIAssistantPanelView {
                         .with_style(UiComponentStyles {
                             font_family_id: Some(appearance.ui_font_family()),
                             font_size: Some(appearance.ui_font_heading_3()),
-                            font_weight: Some(warpui::fonts::Weight::Semibold),
+                            font_weight: Some(zap_ng_ui::fonts::Weight::Semibold),
                             font_color: Some(appearance.theme().active_ui_text_color().into()),
                             ..Default::default()
                         })
@@ -841,7 +841,7 @@ impl AIAssistantPanelView {
                         appearance.ui_font_body_large(),
                     )
                     .with_style(Properties {
-                        weight: warpui::fonts::Weight::Bold,
+                        weight: zap_ng_ui::fonts::Weight::Bold,
                         ..Default::default()
                     })
                     .with_color(appearance.theme().ui_error_color())
@@ -1019,8 +1019,8 @@ impl TypedActionView for AIAssistantPanelView {
             ResetContext => {
                 self.reset_context(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::WarpAIAction {
-                        action_type: WarpAIActionType::Restart
+                    TelemetryEvent::ZapNGAIAction {
+                        action_type: ZapNGAIActionType::Restart
                     },
                     ctx
                 );
@@ -1028,8 +1028,8 @@ impl TypedActionView for AIAssistantPanelView {
             CopyTranscript => {
                 self.copy_transcript(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::WarpAIAction {
-                        action_type: WarpAIActionType::CopyTranscript
+                    TelemetryEvent::ZapNGAIAction {
+                        action_type: ZapNGAIActionType::CopyTranscript
                     },
                     ctx
                 );
@@ -1039,7 +1039,7 @@ impl TypedActionView for AIAssistantPanelView {
             }
             PreparedPrompt(prompt) => {
                 self.issue_request(prompt.to_string(), ctx);
-                send_telemetry_from_ctx!(TelemetryEvent::UsedWarpAIPreparedPrompt { prompt }, ctx);
+                send_telemetry_from_ctx!(TelemetryEvent::UsedZapNGAIPreparedPrompt { prompt }, ctx);
             }
             ClickedUrl(url) => {
                 ctx.open_url(&url.url);
@@ -1048,8 +1048,8 @@ impl TypedActionView for AIAssistantPanelView {
                 ctx.clipboard()
                     .write(ClipboardContent::plain_text(content.to_string()));
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::WarpAIAction {
-                        action_type: WarpAIActionType::CopyAnswer
+                    TelemetryEvent::ZapNGAIAction {
+                        action_type: ZapNGAIActionType::CopyAnswer
                     },
                     ctx
                 );
@@ -1133,7 +1133,7 @@ impl View for AIAssistantPanelView {
             .finish(),
             OffsetPositioning::offset_from_parent(
                 vec2f(0., HEADER_HEIGHT),
-                warpui::elements::ParentOffsetBounds::Unbounded,
+                zap_ng_ui::elements::ParentOffsetBounds::Unbounded,
                 ParentAnchor::TopLeft,
                 ChildAnchor::BottomLeft,
             ),

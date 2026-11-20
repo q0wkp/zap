@@ -18,7 +18,7 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::server_time::ServerTimestamp;
 
@@ -439,7 +439,7 @@ impl AuthState {
     }
 }
 
-impl warp_managed_secrets::ActorProvider for AuthState {
+impl zap_ng_managed_secrets::ActorProvider for AuthState {
     fn actor_uid(&self) -> Option<String> {
         self.user_id().map(|uid| uid.as_string())
     }
@@ -510,8 +510,8 @@ pub enum AuthViewVariant {
 // 运行时这些 view 代码路径仍会被创建但不渲染(`View::render` 返回 `Empty`)、
 // 事件不被触发(原 UI 交互点已不存在)。
 
-use warpui::elements::Empty;
-use warpui::{Element, View, ViewContext};
+use zap_ng_ui::elements::Empty;
+use zap_ng_ui::{Element, View, ViewContext};
 
 /// AuthView facade。原 UI 包含《登录 / 注册》表单,本地化后已物理删除。
 pub struct AuthView {
@@ -550,7 +550,7 @@ impl View for AuthView {
     }
 }
 
-impl warpui::TypedActionView for AuthView {
+impl zap_ng_ui::TypedActionView for AuthView {
     type Action = ();
     fn handle_action(&mut self, _action: &(), _ctx: &mut ViewContext<Self>) {}
 }
@@ -583,7 +583,7 @@ impl View for AuthOverrideWarningModal {
     }
 }
 
-impl warpui::TypedActionView for AuthOverrideWarningModal {
+impl zap_ng_ui::TypedActionView for AuthOverrideWarningModal {
     type Action = ();
     fn handle_action(&mut self, _action: &(), _ctx: &mut ViewContext<Self>) {}
 }
@@ -631,7 +631,7 @@ impl View for NeedsSsoLinkView {
     }
 }
 
-impl warpui::TypedActionView for NeedsSsoLinkView {
+impl zap_ng_ui::TypedActionView for NeedsSsoLinkView {
     type Action = ();
     fn handle_action(&mut self, _action: &(), _ctx: &mut ViewContext<Self>) {}
 }

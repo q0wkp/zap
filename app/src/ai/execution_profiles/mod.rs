@@ -17,9 +17,9 @@ use crate::{
     },
 };
 use serde::{Deserialize, Serialize};
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use super::llms::{LLMContextWindow, LLMId, LLMPreferences};
 use prompt_overrides::PromptOverrides;
@@ -134,7 +134,7 @@ impl ComputerUsePermission {
 pub enum AskUserQuestionPermission {
     /// Never pause; skip questions and continue with best judgment.
     Never,
-    /// 在 openWarp 中等同于 `AlwaysAsk`:auto-approve 模式不再静默跳过用户问题,
+    /// 在 ZapNG 中等同于 `AlwaysAsk`:auto-approve 模式不再静默跳过用户问题,
     /// 只对 shell/编辑等执行类工具自动通过。变体名保留以兼容已序列化的 profile。
     #[default]
     AskExceptInAutoApprove,
@@ -443,7 +443,7 @@ impl StringModel for AIExecutionProfile {
             })
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         false
     }
 }

@@ -1,5 +1,5 @@
 use settings::{RespectUserSyncSetting, SyncToCloud};
-use warp::{
+use zap_ng::{
     features::FeatureFlag,
     integration_testing::{
         self,
@@ -23,7 +23,7 @@ use warp::{
     },
     workspace::Workspace,
 };
-use warpui::{
+use zap_ng_ui::{
     async_assert_eq,
     integration::{AssertionOutcome, TestStep},
     SingletonEntity, ViewHandle,

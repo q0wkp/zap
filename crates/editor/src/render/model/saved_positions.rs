@@ -1,4 +1,4 @@
-use warpui::EntityId;
+use zap_ng_ui::EntityId;
 
 /// Utility for consistently creating and referencing saved position IDs for
 /// rich text.

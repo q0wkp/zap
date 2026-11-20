@@ -6,7 +6,7 @@
 //! author: logic
 //! date: 2026-05-26
 
-use warpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::pane_group::{
     BackingView, PaneConfiguration, PaneContent, PaneGroup, PaneView,

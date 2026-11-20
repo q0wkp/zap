@@ -3,8 +3,8 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 use chrono::Local;
 use lazy_static::lazy_static;
 use regex::Regex;
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::{
     ai::{

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::ai::llms::LLMId;
 use crate::ObjectStoreModel;
@@ -33,7 +33,7 @@ impl ForTelemetry for AIAgentCitation {
                     }
                 })
             }
-            Self::WarpDocumentation { path } => {
+            Self::ZapNGDocumentation { path } => {
                 Some(CitationForTelemetry::WarpDocs { page: path.clone() })
             }
             Self::WebPage { url } => Some(CitationForTelemetry::WebPage { url: url.clone() }),

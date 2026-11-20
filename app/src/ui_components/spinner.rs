@@ -21,10 +21,10 @@ use std::time::Duration;
 use instant::Instant;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::Vector2F;
-use warpui::elements::{Element, Point, Text};
-use warpui::event::DispatchedEvent;
-use warpui::fonts::FamilyId;
-use warpui::{
+use zap_ng_ui::elements::{Element, Point, Text};
+use zap_ng_ui::event::DispatchedEvent;
+use zap_ng_ui::fonts::FamilyId;
+use zap_ng_ui::{
     AfterLayoutContext, AppContext, EventContext, LayoutContext, PaintContext, SizeConstraint,
 };
 

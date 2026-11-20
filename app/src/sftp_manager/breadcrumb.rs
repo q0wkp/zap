@@ -6,12 +6,12 @@
 
 use std::path::{Component, PathBuf};
 
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, Hoverable, MouseStateHandle, SavePosition, Text,
 };
-use warpui::platform::Cursor;
-use warpui::Element;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::Element;
 
 use crate::sftp_manager::browser::SftpBrowserAction;
 use crate::ui_components::icons::Icon;
@@ -59,7 +59,7 @@ pub fn render_breadcrumb(
         if i > 0 {
             let sep_icon = ConstrainedBox::new(
                 Icon::ChevronRight
-                    .to_warpui_icon(sub_color.into())
+                    .to_zap_ng_ui_icon(sub_color.into())
                     .finish(),
             )
             .with_width(12.0)

@@ -161,7 +161,7 @@ fn render_lrc_request_context(params: &RequestParams) -> Option<String> {
 /// 不主动告知模型这一点,LLM 会按 system prompt 里的本地 OS 推断"目标在远端,
 /// 我得先 ssh 过去",于是输出 `ssh xx@xx uname -a` 这种二次嵌套命令。
 ///
-/// 注:warpified SSH(`SessionType::WarpifiedRemote`)不在这里处理 — 那条路径
+/// 注:warpified SSH(`SessionType::ZapNGifiedRemote`)不在这里处理 — 那条路径
 /// 远端 shell hook 已重新 bootstrap,host_info / shell 都是远端真值,prompt 本身就对。
 fn render_ssh_session_block(
     session_context: &crate::ai::blocklist::SessionContext,
@@ -1294,7 +1294,7 @@ fn build_chat_request(
 
     // 摘要请求路径:用 byop_compaction::algorithm::select 切 head;tail 不送上游
     let summarize_head_end: Option<usize> = if is_summarization_request {
-        // 临时投影成 WarpMessageView 算 select
+        // 临时投影成 ZapNGMessageView 算 select
         let state_for_select = params.compaction_state.clone().unwrap_or_default();
         let tool_names =
             byop_compaction::message_view::build_tool_name_lookup(all_msgs.iter().copied());
@@ -3050,10 +3050,10 @@ pub(super) fn build_client(
 /// 注册的 `AppId` 一致(`bin/oss.rs` 注册 "Zap")。
 fn build_user_agent_header(
 ) -> Result<reqwest::header::HeaderValue, reqwest::header::InvalidHeaderValue> {
-    let app_name = warp_core::channel::ChannelState::app_id()
+    let app_name = zap_ng_core::channel::ChannelState::app_id()
         .application_name()
         .to_owned();
-    let ua = match warp_core::channel::ChannelState::app_version() {
+    let ua = match zap_ng_core::channel::ChannelState::app_version() {
         Some(v) if !v.is_empty() => format!("{app_name}/{v}"),
         _ => app_name,
     };
@@ -4469,7 +4469,7 @@ pub async fn generate_byop_output(
             }
 
             match parse_incoming_tool_call(&call, mcp_context.as_ref()) {
-                Ok(warp_tool) => {
+                Ok(zap_ng_tool) => {
                     // 如果 ToolCallChunk 阶段已经 emit 过占位卡(同 call_id),
                     // 改用 update_message 原地刷新为最终 args(覆盖 chunk 中可能后到
                     // 的 args delta)。占位与终帧共用同一 message.id,
@@ -4480,7 +4480,7 @@ pub async fn generate_byop_output(
                             &current_task_id,
                             &request_id,
                             &call.call_id,
-                            warp_tool,
+                            zap_ng_tool,
                         );
                         updated.id = msg_id;
                         yield Ok(make_update_message_event(
@@ -4493,7 +4493,7 @@ pub async fn generate_byop_output(
                             &current_task_id,
                             &request_id,
                             &call.call_id,
-                            warp_tool,
+                            zap_ng_tool,
                         ));
                     }
                 }

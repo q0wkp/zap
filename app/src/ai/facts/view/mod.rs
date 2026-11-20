@@ -5,8 +5,8 @@ use crate::pane_group::focus_state::PaneFocusHandle;
 use crate::pane_group::{pane::view, BackingView, PaneConfiguration, PaneEvent};
 use crate::server::ids::SyncId;
 use std::path::PathBuf;
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         Align, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container, Flex,
         MainAxisSize, ParentElement, ScrollbarWidth,
@@ -14,8 +14,8 @@ use warpui::{
     AppContext, Element, Entity, FocusContext, ModelHandle, TypedActionView, View, ViewContext,
 };
 
-use warpui::elements::ChildView;
-use warpui::{SingletonEntity, ViewHandle};
+use zap_ng_ui::elements::ChildView;
+use zap_ng_ui::{SingletonEntity, ViewHandle};
 
 pub mod rule;
 pub mod rule_editor;
@@ -221,7 +221,7 @@ impl View for AIFactView {
             ScrollbarWidth::Auto,
             appearance.theme().nonactive_ui_detail().into(),
             appearance.theme().active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            zap_ng_ui::elements::Fill::None,
         )
         .finish()
     }
@@ -251,16 +251,16 @@ impl BackingView for AIFactView {
     fn handle_pane_header_overflow_menu_action(
         &mut self,
         _action: &Self::PaneHeaderOverflowMenuAction,
-        _ctx: &mut warpui::ViewContext<Self>,
+        _ctx: &mut zap_ng_ui::ViewContext<Self>,
     ) {
         self.handle_action(_action, _ctx)
     }
 
-    fn close(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn close(&mut self, ctx: &mut zap_ng_ui::ViewContext<Self>) {
         ctx.emit(AIFactViewEvent::Pane(PaneEvent::Close));
     }
 
-    fn focus_contents(&mut self, ctx: &mut warpui::ViewContext<Self>) {
+    fn focus_contents(&mut self, ctx: &mut zap_ng_ui::ViewContext<Self>) {
         self.focus(ctx);
     }
 

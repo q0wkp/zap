@@ -14,14 +14,14 @@ schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 settings_value = { workspace = true, features = ["derive"] }
-warp_features.workspace = true
-warpui = { workspace = true, features = ["settings_value"] }
-warpui_extras = { workspace = true, features = ["default"] }
+zap_ng_features.workspace = true
+zap_ng_ui = { workspace = true, features = ["settings_value"] }
+zap_ng_ui_extras = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 serial_test = "0.8.0"
 tempfile.workspace = true
-warpui_extras = { workspace = true, features = ["user_preferences-toml"] }
+zap_ng_ui_extras = { workspace = true, features = ["user_preferences-toml"] }
 
 [features]
 integration_tests = []

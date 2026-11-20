@@ -1,30 +1,30 @@
 use crate::appearance::Appearance;
-use crate::terminal::model::ansi::WarpificationUnavailableReason;
-use crate::terminal::warpify;
-use crate::terminal::warpify::render::apply_spacing_styles;
-use crate::terminal::warpify::render::build_description_row;
-use crate::terminal::warpify::settings::WarpifySettings;
+use crate::terminal::model::ansi::ZapNGificationUnavailableReason;
+use crate::terminal::zapngify;
+use crate::terminal::zapngify::render::apply_spacing_styles;
+use crate::terminal::zapngify::render::build_description_row;
+use crate::terminal::zapngify::settings::ZapNGifySettings;
 use crate::ui_components::icons::Icon as UiIcon;
 use markdown_parser::FormattedText;
 use markdown_parser::FormattedTextFragment;
 use markdown_parser::FormattedTextLine;
-use warp_core::channel::ChannelState;
-use warp_core::ui::theme::WarpTheme;
-use warpui::elements::HighlightedHyperlink;
-use warpui::elements::Hoverable;
-use warpui::elements::Icon;
-use warpui::elements::MainAxisAlignment;
-use warpui::elements::MainAxisSize;
-use warpui::elements::MouseStateHandle;
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::UiComponent;
-use warpui::ui_components::components::UiComponentStyles;
-use warpui::AppContext;
-use warpui::BlurContext;
-use warpui::FocusContext;
-use warpui::{
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::ui::theme::ZapNGTheme;
+use zap_ng_ui::elements::HighlightedHyperlink;
+use zap_ng_ui::elements::Hoverable;
+use zap_ng_ui::elements::Icon;
+use zap_ng_ui::elements::MainAxisAlignment;
+use zap_ng_ui::elements::MainAxisSize;
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::ui_components::components::UiComponentStyles;
+use zap_ng_ui::AppContext;
+use zap_ng_ui::BlurContext;
+use zap_ng_ui::FocusContext;
+use zap_ng_ui::{
     elements::{Border, Container, CrossAxisAlignment, Flex, ParentElement},
     Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
 };
@@ -55,28 +55,28 @@ fn get_ssh_github_issue_url(title: &str) -> String {
     format!("{url}&title={title}")
 }
 
-impl WarpificationUnavailableReason {
+impl ZapNGificationUnavailableReason {
     fn error_message(&self) -> &'static str {
         match self {
-            WarpificationUnavailableReason::TmuxNotInstalled { .. } => TMUX_NOT_INSTALLED_ERROR,
-            WarpificationUnavailableReason::UnsupportedTmuxVersion { .. } => {
+            ZapNGificationUnavailableReason::TmuxNotInstalled { .. } => TMUX_NOT_INSTALLED_ERROR,
+            ZapNGificationUnavailableReason::UnsupportedTmuxVersion { .. } => {
                 UNSUPPORTED_TMUX_VERSION_ERROR
             }
-            WarpificationUnavailableReason::TmuxFailed => TMUX_FAILED_ERROR,
-            WarpificationUnavailableReason::Timeout { .. } => WARPIFY_TIMEOUT_ERROR,
-            WarpificationUnavailableReason::UnsupportedShell { .. } => UNSUPPORTED_SHELL_ERROR,
-            WarpificationUnavailableReason::TmuxInstallFailed { .. } => TMUX_INSTALL_FAILED_ERROR,
+            ZapNGificationUnavailableReason::TmuxFailed => TMUX_FAILED_ERROR,
+            ZapNGificationUnavailableReason::Timeout { .. } => WARPIFY_TIMEOUT_ERROR,
+            ZapNGificationUnavailableReason::UnsupportedShell { .. } => UNSUPPORTED_SHELL_ERROR,
+            ZapNGificationUnavailableReason::TmuxInstallFailed { .. } => TMUX_INSTALL_FAILED_ERROR,
         }
     }
 
     fn error_title(&self) -> &'static str {
         match self {
-            WarpificationUnavailableReason::TmuxNotInstalled { .. } => "tmux Not Installed",
-            WarpificationUnavailableReason::UnsupportedTmuxVersion { .. } => {
+            ZapNGificationUnavailableReason::TmuxNotInstalled { .. } => "tmux Not Installed",
+            ZapNGificationUnavailableReason::UnsupportedTmuxVersion { .. } => {
                 "Unsupported Tmux Version"
             }
-            WarpificationUnavailableReason::TmuxFailed => "tmux Failed",
-            WarpificationUnavailableReason::Timeout {
+            ZapNGificationUnavailableReason::TmuxFailed => "tmux Failed",
+            ZapNGificationUnavailableReason::Timeout {
                 is_tmux_install, ..
             } => {
                 if *is_tmux_install {
@@ -85,55 +85,55 @@ impl WarpificationUnavailableReason {
                     "SSH Warpify Timeout"
                 }
             }
-            WarpificationUnavailableReason::UnsupportedShell { .. } => "Unsupported Shell",
-            WarpificationUnavailableReason::TmuxInstallFailed { .. } => "tmux Install Failed",
+            ZapNGificationUnavailableReason::UnsupportedShell { .. } => "Unsupported Shell",
+            ZapNGificationUnavailableReason::TmuxInstallFailed { .. } => "tmux Install Failed",
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum SshErrorBlockEvent {
-    ContinueWithoutWarpification,
-    WarpifyWithoutTmux,
+    ContinueWithoutZapNGification,
+    ZapNGifyWithoutTmux,
 }
 
 #[derive(Debug, Clone)]
 pub enum SshErrorBlockAction {
-    ContinueWithoutWarpification,
-    WarpifyWithoutTmux,
+    ContinueWithoutZapNGification,
+    ZapNGifyWithoutTmux,
     OpenUrl(String),
     AddSshHostToDenylist(String),
     Focus,
 }
 
 pub struct SshErrorBlock {
-    error_reason: WarpificationUnavailableReason,
+    error_reason: ZapNGificationUnavailableReason,
     ssh_host: Option<String>,
-    warpify_without_tmux_button_mouse_state: MouseStateHandle,
+    zapngify_without_tmux_button_mouse_state: MouseStateHandle,
     continue_button_mouse_state: MouseStateHandle,
     report_link_highlight_index: HighlightedHyperlink,
-    never_warpify_mouse_state_handle: MouseStateHandle,
+    never_zapngify_mouse_state_handle: MouseStateHandle,
     block_mouse_state: MouseStateHandle,
     is_focused: bool,
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
             "enter",
-            SshErrorBlockAction::WarpifyWithoutTmux,
+            SshErrorBlockAction::ZapNGifyWithoutTmux,
             id!(SshErrorBlock::ui_name()),
         ),
         FixedBinding::new(
             "escape",
-            SshErrorBlockAction::ContinueWithoutWarpification,
+            SshErrorBlockAction::ContinueWithoutZapNGification,
             id!(SshErrorBlock::ui_name()),
         ),
         FixedBinding::new(
             "ctrl-c",
-            SshErrorBlockAction::ContinueWithoutWarpification,
+            SshErrorBlockAction::ContinueWithoutZapNGification,
             id!(SshErrorBlock::ui_name()),
         ),
     ]);
@@ -141,14 +141,14 @@ pub fn init(app: &mut AppContext) {
 
 impl SshErrorBlock {
     #[allow(clippy::new_without_default)]
-    pub fn new(error_reason: WarpificationUnavailableReason, ssh_host: Option<String>) -> Self {
+    pub fn new(error_reason: ZapNGificationUnavailableReason, ssh_host: Option<String>) -> Self {
         Self {
             error_reason,
             ssh_host,
-            warpify_without_tmux_button_mouse_state: Default::default(),
+            zapngify_without_tmux_button_mouse_state: Default::default(),
             continue_button_mouse_state: Default::default(),
             report_link_highlight_index: Default::default(),
-            never_warpify_mouse_state_handle: Default::default(),
+            never_zapngify_mouse_state_handle: Default::default(),
             block_mouse_state: Default::default(),
             is_focused: false,
         }
@@ -159,21 +159,21 @@ impl SshErrorBlock {
         ctx.notify();
     }
 
-    fn should_show_report_to_warp_button(&self) -> bool {
+    fn should_show_report_to_zap_ng_button(&self) -> bool {
         matches!(
             self.error_reason,
-            WarpificationUnavailableReason::Timeout { .. }
-                | WarpificationUnavailableReason::TmuxInstallFailed { .. }
+            ZapNGificationUnavailableReason::Timeout { .. }
+                | ZapNGificationUnavailableReason::TmuxInstallFailed { .. }
         )
     }
 
     fn render_title_ui(
         &self,
         app: &AppContext,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
-        let header_contents = warpify::render::build_header_row(
+        let header_contents = zapngify::render::build_header_row(
             "Error Warpifying session",
             Icon::new(UiIcon::AlertTriangle.into(), theme.ui_error_color()),
             theme,
@@ -182,11 +182,11 @@ impl SshErrorBlock {
         .with_margin_right(8.)
         .finish();
 
-        let right_hand_size = warpify::render::render_never_warpify_ssh_link(
+        let right_hand_size = zapngify::render::render_never_zapngify_ssh_link(
             &self.ssh_host,
             app,
             appearance,
-            self.never_warpify_mouse_state_handle.clone(),
+            self.never_zapngify_mouse_state_handle.clone(),
             move |ctx, ssh_host| {
                 ctx.dispatch_typed_action(SshErrorBlockAction::AddSshHostToDenylist(
                     ssh_host.to_owned(),
@@ -204,7 +204,7 @@ impl SshErrorBlock {
             row.add_child(right_hand_size);
         }
 
-        warpify::render::apply_spacing_styles(Container::new(row.finish())).finish()
+        zapngify::render::apply_spacing_styles(Container::new(row.finish())).finish()
     }
 }
 
@@ -227,7 +227,7 @@ impl View for SshErrorBlock {
 
         content.add_child(self.render_title_ui(app, theme, appearance));
 
-        content.add_child(warpify::render::description_row(
+        content.add_child(zapngify::render::description_row(
             self.error_reason.error_message(),
             theme,
             appearance,
@@ -235,7 +235,7 @@ impl View for SshErrorBlock {
 
         let ui_builder = appearance.ui_builder();
 
-        if self.should_show_report_to_warp_button() {
+        if self.should_show_report_to_zap_ng_button() {
             let report_issue_text = build_description_row(
                 FormattedText::new([FormattedTextLine::Line(vec![
                     FormattedTextFragment::plain_text(crate::t!(
@@ -268,7 +268,7 @@ impl View for SshErrorBlock {
                     ui_builder
                         .button(
                             ButtonVariant::Accent,
-                            self.warpify_without_tmux_button_mouse_state.clone(),
+                            self.zapngify_without_tmux_button_mouse_state.clone(),
                         )
                         .with_centered_text_label(crate::t!("terminal-warpify-without-tmux"))
                         .with_style(UiComponentStyles {
@@ -278,7 +278,7 @@ impl View for SshErrorBlock {
                         .build()
                         .with_cursor(Cursor::PointingHand)
                         .on_click(move |ctx, _, _| {
-                            ctx.dispatch_typed_action(SshErrorBlockAction::WarpifyWithoutTmux)
+                            ctx.dispatch_typed_action(SshErrorBlockAction::ZapNGifyWithoutTmux)
                         })
                         .finish(),
                 )
@@ -299,7 +299,7 @@ impl View for SshErrorBlock {
                     .build()
                     .with_cursor(Cursor::PointingHand)
                     .on_click(move |ctx, _, _| {
-                        ctx.dispatch_typed_action(SshErrorBlockAction::ContinueWithoutWarpification)
+                        ctx.dispatch_typed_action(SshErrorBlockAction::ContinueWithoutZapNGification)
                     })
                     .finish(),
             );
@@ -343,21 +343,21 @@ impl TypedActionView for SshErrorBlock {
 
     fn handle_action(&mut self, action: &Self::Action, ctx: &mut ViewContext<Self>) {
         match action {
-            SshErrorBlockAction::WarpifyWithoutTmux => {
-                ctx.emit(SshErrorBlockEvent::WarpifyWithoutTmux)
+            SshErrorBlockAction::ZapNGifyWithoutTmux => {
+                ctx.emit(SshErrorBlockEvent::ZapNGifyWithoutTmux)
             }
-            SshErrorBlockAction::ContinueWithoutWarpification => {
-                ctx.emit(SshErrorBlockEvent::ContinueWithoutWarpification)
+            SshErrorBlockAction::ContinueWithoutZapNGification => {
+                ctx.emit(SshErrorBlockEvent::ContinueWithoutZapNGification)
             }
             SshErrorBlockAction::OpenUrl(url) => {
                 ctx.open_url(url);
             }
             SshErrorBlockAction::AddSshHostToDenylist(ssh_host) => {
-                let settings = WarpifySettings::handle(ctx);
-                settings.update(ctx, |warpify, ctx| {
-                    warpify.denylist_ssh_host(ssh_host, ctx);
+                let settings = ZapNGifySettings::handle(ctx);
+                settings.update(ctx, |zapngify, ctx| {
+                    zapngify.denylist_ssh_host(ssh_host, ctx);
                 });
-                ctx.emit(SshErrorBlockEvent::ContinueWithoutWarpification);
+                ctx.emit(SshErrorBlockEvent::ContinueWithoutZapNGification);
                 ctx.notify()
             }
             SshErrorBlockAction::Focus => {

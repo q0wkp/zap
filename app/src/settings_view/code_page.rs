@@ -22,8 +22,8 @@ use crate::{
 use ai::project_context::model::{ProjectContextModel, ProjectContextModelEvent};
 
 use std::path::PathBuf;
-use warp_core::{features::FeatureFlag, report_if_error, settings::ToggleableSetting as _};
-use warpui::{
+use zap_ng_core::{features::FeatureFlag, report_if_error, settings::ToggleableSetting as _};
+use zap_ng_ui::{
     elements::{ChildView, Element, Empty},
     keymap::ContextPredicate,
     ui_components::{components::UiComponent, switch::SwitchStateHandle},

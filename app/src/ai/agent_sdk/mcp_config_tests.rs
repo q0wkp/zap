@@ -1,5 +1,5 @@
 use serde_json::{json, Map, Value};
-use warp_cli::mcp::MCPSpec;
+use zap_ng_cli::mcp::MCPSpec;
 
 use super::build_mcp_servers_from_specs;
 
@@ -15,7 +15,7 @@ fn empty_specs_returns_none() {
 }
 
 #[test]
-fn uuid_spec_is_coerced_to_warp_id() {
+fn uuid_spec_is_coerced_to_zap_ng_id() {
     let uuid = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
     let servers = build(vec![MCPSpec::Uuid(uuid)]);
 
@@ -221,7 +221,7 @@ fn validation_rejects_invalid_entries() {
         .to_string()
         .contains("must have exactly one of: 'warp_id', 'command', or 'url'"));
 
-    // warp_id must be a UUID string.
+    // zap_ng_id must be a UUID string.
     let spec = json!({ "mcpServers": { "bad": { "warp_id": "not-a-uuid" } } }).to_string();
     let err = build_mcp_servers_from_specs(&[MCPSpec::Json(spec)]).unwrap_err();
     assert!(err.to_string().contains("field 'warp_id' must be a UUID"));

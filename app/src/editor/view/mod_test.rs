@@ -14,11 +14,11 @@ use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
 use settings::ToggleableSetting;
 use unindent::Unindent;
-use warpui::color::ColorU;
-use warpui::platform::WindowStyle;
-use warpui::text_layout::TextFrame;
-use warpui::windowing::WindowManager;
-use warpui::{AddSingletonModel, App, UpdateModel, UpdateView};
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::text_layout::TextFrame;
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::{AddSingletonModel, App, UpdateModel, UpdateView};
 
 impl EditorView {
     fn selected_ranges(&self, app: &AppContext) -> Vec<Range<DisplayPoint>> {
@@ -2027,7 +2027,7 @@ fn test_delete_and_cut_all_right() -> Result<()> {
 
 #[test]
 fn test_autosuggestions() -> Result<()> {
-    use warpui::text_layout::LayoutCache;
+    use zap_ng_ui::text_layout::LayoutCache;
 
     App::test((), |mut app| async move {
         initialize_app(&mut app);
@@ -2305,7 +2305,7 @@ fn test_partial_autosuggestion() -> Result<()> {
 
 #[test]
 fn test_placeholder_text() {
-    use warpui::text_layout::LayoutCache;
+    use zap_ng_ui::text_layout::LayoutCache;
 
     App::test((), |mut app| async move {
         initialize_app(&mut app);
@@ -4158,7 +4158,7 @@ fn test_paste_clipboard_with_text_only_should_paste_text_normally() {
 
         // Text-only clipboard - should paste text normally
         app.update(|ctx| {
-            let clipboard_content = warpui::clipboard::ClipboardContent {
+            let clipboard_content = zap_ng_ui::clipboard::ClipboardContent {
                 plain_text: "hello world".to_string(),
                 paths: None,
                 html: None,
@@ -4174,7 +4174,7 @@ fn test_paste_clipboard_with_text_only_should_paste_text_normally() {
 
         // Empty images array should also fall back to text paste
         app.update(|ctx| {
-            let clipboard_content = warpui::clipboard::ClipboardContent {
+            let clipboard_content = zap_ng_ui::clipboard::ClipboardContent {
                 plain_text: "fallback text".to_string(),
                 paths: None,
                 html: None,
@@ -4212,12 +4212,12 @@ fn test_paste_clipboard_with_image_only_should_switch_to_agent_mode() {
 
         // Image-only clipboard - should switch to Agent Mode and attach image
         app.update(|ctx| {
-            let png_image = warpui::clipboard::ImageData {
+            let png_image = zap_ng_ui::clipboard::ImageData {
                 data: vec![137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13], // PNG header + minimal data
                 mime_type: "image/png".to_string(),
                 filename: None,
             };
-            let clipboard_content = warpui::clipboard::ClipboardContent {
+            let clipboard_content = zap_ng_ui::clipboard::ClipboardContent {
                 plain_text: "".to_string(), // No text
                 paths: None,
                 html: None,
@@ -4255,12 +4255,12 @@ fn test_paste_clipboard_with_supported_image_and_text_should_handle_both() {
 
         // PNG (supported) image and text clipboard - should switch to Agent Mode, attach image, and paste text
         app.update(|ctx| {
-            let png_image = warpui::clipboard::ImageData {
+            let png_image = zap_ng_ui::clipboard::ImageData {
                 data: vec![137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13], // PNG header + minimal data
                 mime_type: "image/png".to_string(),
                 filename: Some("test.png".to_string()),
             };
-            let clipboard_content = warpui::clipboard::ClipboardContent {
+            let clipboard_content = zap_ng_ui::clipboard::ClipboardContent {
                 plain_text: "some descriptive text".to_string(),
                 paths: None,
                 html: None,
@@ -4299,12 +4299,12 @@ fn test_paste_clipboard_with_unsupported_image_and_text_should_show_error() {
 
         // BMP (unsupported) image and text clipboard - should show error and paste text only
         app.update(|ctx| {
-            let bmp_image = warpui::clipboard::ImageData {
+            let bmp_image = zap_ng_ui::clipboard::ImageData {
                 data: vec![66, 77, 54, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0], // BMP header + minimal data
                 mime_type: "image/bmp".to_string(),
                 filename: Some("test.bmp".to_string()),
             };
-            let clipboard_content = warpui::clipboard::ClipboardContent {
+            let clipboard_content = zap_ng_ui::clipboard::ClipboardContent {
                 plain_text: "text with unsupported image".to_string(),
                 paths: None,
                 html: None,

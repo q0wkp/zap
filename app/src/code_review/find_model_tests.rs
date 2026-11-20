@@ -17,22 +17,22 @@ use crate::NotebookKeybindings;
 use repo_metadata::repositories::DetectedRepositories;
 use std::path::PathBuf;
 use string_offset::CharOffset;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::elements::Empty;
-use warpui::platform::WindowStyle;
-use warpui::{App, Element as _, ModelHandle, ViewHandle};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::content::buffer::InitialBufferState;
+use zap_ng_editor::render::element::VerticalExpansionBehavior;
+use zap_ng_ui::elements::Empty;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, Element as _, ModelHandle, ViewHandle};
 
 #[derive(Default)]
 struct TestView;
 
-impl warpui::Entity for TestView {
+impl zap_ng_ui::Entity for TestView {
     type Event = ();
 }
 
-impl warpui::View for TestView {
-    fn render(&self, _: &warpui::AppContext) -> Box<dyn warpui::Element> {
+impl zap_ng_ui::View for TestView {
+    fn render(&self, _: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         Empty::new().finish()
     }
 
@@ -41,7 +41,7 @@ impl warpui::View for TestView {
     }
 }
 
-impl warpui::TypedActionView for TestView {
+impl zap_ng_ui::TypedActionView for TestView {
     type Action = ();
 }
 

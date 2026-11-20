@@ -7,12 +7,12 @@ use crate::settings::{NativePreferenceSettings, UserNativePreference};
 use crate::ui_components::dialog::{dialog_styles, Dialog};
 use crate::uri::web_intent_parser::{self, WebIntent};
 use settings::Setting as _;
-use warpui::elements::{Align, CrossAxisAlignment, Flex};
-use warpui::ui_components::{
+use zap_ng_ui::elements::{Align, CrossAxisAlignment, Flex};
+use zap_ng_ui::ui_components::{
     button::ButtonVariant,
     components::{Coords, UiComponent, UiComponentStyles},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{MainAxisSize, MouseStateHandle, ParentElement as _},
     fonts::Weight,
     platform::Cursor,
@@ -49,7 +49,7 @@ pub enum WasmNUXDialogEvent {
 pub struct WasmNUXDialog {
     close_mouse_state: MouseStateHandle,
     confirm_mouse_state: MouseStateHandle,
-    download_warp_mouse_state: MouseStateHandle,
+    download_zap_ng_mouse_state: MouseStateHandle,
     learn_more_mouse_state: MouseStateHandle,
     requested_download: bool,
 }
@@ -63,7 +63,7 @@ impl WasmNUXDialog {
         Self {
             close_mouse_state: Default::default(),
             confirm_mouse_state: Default::default(),
-            download_warp_mouse_state: Default::default(),
+            download_zap_ng_mouse_state: Default::default(),
             learn_more_mouse_state: Default::default(),
             requested_download: false,
         }
@@ -80,7 +80,7 @@ impl WasmNUXDialog {
     /// behavior: if Zap is installed, redirect to it; otherwise stay on the web.
     pub fn should_display(app: &AppContext) -> bool {
         // Don't show on mobile devices - they can't use the desktop app
-        if warpui::platform::wasm::is_mobile_device() {
+        if zap_ng_ui::platform::wasm::is_mobile_device() {
             return false;
         }
 
@@ -213,7 +213,7 @@ impl View for WasmNUXDialog {
                 .with_bottom_row_child(Self::render_dialog_button(
                     crate::t!("wasm-nux-download-confirm"),
                     WasmNUXDialogAction::OpenDownloadDesktopAppLink,
-                    &self.download_warp_mouse_state,
+                    &self.download_zap_ng_mouse_state,
                     appearance,
                 ))
         } else {
@@ -271,7 +271,7 @@ impl TypedActionView for WasmNUXDialog {
                 if let Some(url) = web_intent_parser::parse_web_intent_from_current_url() {
                     // Signals to the react app to open the native app.
                     crate::platform::wasm::emit_event(
-                        crate::platform::wasm::WarpEvent::OpenOnNative {
+                        crate::platform::wasm::ZapNGEvent::OpenOnNative {
                             url: String::from(url.as_str()),
                         },
                     );

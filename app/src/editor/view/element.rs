@@ -23,16 +23,16 @@ use pathfinder_geometry::{
     vector::{vec2f, Vector2F},
 };
 use vim::vim::{MotionType, VimMode};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
-use warp_util::user_input::UserInput;
-use warpui::event::KeyState;
-use warpui::text_selection_utils::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::appearance::DEFAULT_UI_FONT_SIZE;
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::event::KeyState;
+use zap_ng_ui::text_selection_utils::{
     calculate_tick_width, create_newline_tick_rect, selection_crosses_newline_row_based,
     NewlineTickParams,
 };
-use warpui::ViewHandle;
-use warpui::{event::ModifiersState, text_layout::ComputeBaselinePositionArgs};
+use zap_ng_ui::ViewHandle;
+use zap_ng_ui::{event::ModifiersState, text_layout::ComputeBaselinePositionArgs};
 
 use crate::editor::view::AutosuggestionLocation;
 use crate::themes::theme::Fill;
@@ -44,7 +44,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         AfterLayoutContext, CornerRadius, Element, Event, EventContext, LayoutContext,
         PaintContext, Point, SizeConstraint,
@@ -56,13 +56,13 @@ use warpui::{
     AppContext, SingletonEntity, TaskId,
 };
 
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, ParentElement, Text,
 };
-use warpui::platform::keyboard::KeyCode;
+use zap_ng_ui::platform::keyboard::KeyCode;
 
 use instant::Instant;
-use warpui::elements::{Radius, DEFAULT_UI_LINE_HEIGHT_RATIO};
+use zap_ng_ui::elements::{Radius, DEFAULT_UI_LINE_HEIGHT_RATIO};
 
 // Similar to the terminal::model::ansi::CursorShape, this Editor Element has different cursor
 // shapes. However, this element doesn't implement all the same variants, so we don't share that
@@ -880,7 +880,7 @@ impl EditorElement {
                         cursor.origin.y() - cursor_height,
                     );
                     // New layer is started so avatars are rendered over text and prompt
-                    ctx.scene.start_layer(warpui::ClipBounds::None);
+                    ctx.scene.start_layer(zap_ng_ui::ClipBounds::None);
                     drawable_selections_data
                         .avatar
                         .paint(avatar_origin, ctx, app);
@@ -896,7 +896,7 @@ impl EditorElement {
                     cursor.origin.y() - icon_size.y() - VOICE_INPUT_ICON_CURSOR_GAP,
                 );
                 // New layer is started so voice icon is rendered over text and prompt
-                ctx.scene.start_layer(warpui::ClipBounds::None);
+                ctx.scene.start_layer(zap_ng_ui::ClipBounds::None);
                 element.paint(icon_origin, ctx, app);
                 ctx.scene.stop_layer();
             }
@@ -1491,7 +1491,7 @@ impl EditorElement {
         let cycle_next_command_hint = if self.should_show_cycle_next_command_hint(is_cycling, ctx) {
             let appearance = Appearance::as_ref(ctx);
             Some(
-                self.render_cycle_next_command_hint(warp_core::ui::theme::Fill::Solid(
+                self.render_cycle_next_command_hint(zap_ng_core::ui::theme::Fill::Solid(
                     blended_colors::semantic_text_disabled(appearance.theme()),
                 )),
             )
@@ -1511,7 +1511,7 @@ impl EditorElement {
             .with_cross_axis_alignment(CrossAxisAlignment::End)
             .with_children([
                 Container::new(
-                    ConstrainedBox::new(Icon::ArrowDown.to_warpui_icon(color).finish())
+                    ConstrainedBox::new(Icon::ArrowDown.to_zap_ng_ui_icon(color).finish())
                         .with_max_height(icon_height)
                         .with_max_width(icon_height)
                         .finish(),

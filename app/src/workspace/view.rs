@@ -50,7 +50,7 @@ use crate::ai::{
     },
     facts::{view::AIFactPage, AIFactManager, AIFactView, AIFactViewEvent},
 };
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::ZapNGAiExecutionContext;
 use crate::app_state::{
     LeafContents, LeafSnapshot, LeftPanelDisplayedTab, LeftPanelSnapshot, NotebookPaneSnapshot,
     PaneNodeSnapshot, PaneUuid, RightPanelSnapshot, SettingsPaneSnapshot, TabSnapshot,
@@ -115,7 +115,7 @@ use crate::workspace::{ForkFromExchange, ForkedConversationDestination};
 use crate::BlocklistAIHistoryModel;
 
 use serde_json;
-use warpui::notification::NotificationSendError;
+use zap_ng_ui::notification::NotificationSendError;
 
 use super::hoa_onboarding::{
     mark_hoa_onboarding_completed, HoaOnboardingFlow, HoaOnboardingFlowEvent, HoaOnboardingStep,
@@ -136,7 +136,7 @@ use crate::code::editor_management::CodeManager;
 use crate::code::editor_management::CodeSource;
 use crate::code_review::telemetry_event::CodeReviewPaneEntrypoint;
 use crate::drive::export::ExportManager;
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 use crate::launch_configs::launch_config::WindowTemplate;
 use crate::pane_group::{
     AIFactPane, CodeReviewPanelArg, Direction as PaneGroupDirection, ExecutionProfileEditorPane,
@@ -157,7 +157,7 @@ use crate::settings_view::{SettingsSection, SettingsView, SettingsViewEvent};
 use crate::terminal::available_shells::AvailableShell;
 use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::ligature_settings::should_use_ligature_rendering;
-use crate::terminal::warpify::settings::WarpifySettings;
+use crate::terminal::zapngify::settings::ZapNGifySettings;
 use crate::ui_components::avatar::{Avatar, AvatarContent, StatusElementTypes};
 
 #[cfg(target_family = "wasm")]
@@ -178,8 +178,8 @@ use url::Url;
 #[cfg(target_family = "wasm")]
 use crate::wasm_nux_dialog::WasmNUXDialog;
 
-use crate::drive::items::WarpDriveItemId;
-use crate::drive::settings::WarpDriveSettingsChangedEvent;
+use crate::drive::items::ZapNGDriveItemId;
+use crate::drive::settings::ZapNGDriveSettingsChangedEvent;
 use crate::env_vars::{
     manager::{EnvVarCollectionManager, EnvVarCollectionSource},
     EnvVarCollectionObject,
@@ -247,7 +247,7 @@ use crate::server::ids::{ObjectUid, SyncId};
 use crate::server::telemetry::{
     AddTabWithShellSource, CloseTarget, EnvVarTelemetryMetadata, FileTreeSource,
     KnowledgePaneEntrypoint, LaunchConfigUiLocation, MCPServerCollectionPaneEntrypoint,
-    OpenedWarpAISource, WarpDriveSource,
+    OpenedZapNGAISource, ZapNGDriveSource,
 };
 use crate::server_time::ServerTime;
 use crate::session_management::{SessionNavigationData, SessionSource};
@@ -285,7 +285,7 @@ use crate::terminal::{self, SizeInfo, TerminalView};
 use crate::workspace::cli_install;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use ::settings::{Setting, ToggleableSetting};
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::search::{self, QueryFilter};
 use crate::terminal::view::{
@@ -305,7 +305,7 @@ use crate::user_config::{
     find_unused_worktree_config_path, materialize_default_worktree_config, sanitize_toml_base_name,
     tab_configs_dir,
 };
-use crate::user_config::{WarpConfig, WarpConfigUpdateEvent};
+use crate::user_config::{ZapNGConfig, ZapNGConfigUpdateEvent};
 use crate::util::bindings::{keybinding_name_to_display_string, keybinding_name_to_keystroke};
 use crate::util::links;
 use crate::util::traffic_lights::{traffic_light_data, TrafficLightMouseStates, TrafficLightSide};
@@ -349,24 +349,24 @@ use std::convert::TryFrom;
 use std::time::Duration;
 #[cfg(target_os = "macos")]
 use std::time::{SystemTime, UNIX_EPOCH};
-use warp_core::context_flag::ContextFlag;
-use warp_core::HostId;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_util::path::{user_friendly_path, LineAndColumnArg};
-use warpui::fonts::Weight;
-use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::HostId;
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_util::path::{user_friendly_path, LineAndColumnArg};
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::modals::{AlertDialogWithCallbacks, AppModalCallback};
 
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::clipboard::ClipboardContent;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::clipboard::ClipboardContent;
 #[cfg(target_family = "wasm")]
-use warpui::elements::Percentage;
-use warpui::elements::{
+use zap_ng_ui::elements::Percentage;
+use zap_ng_ui::elements::{
     CacheOption, DispatchEventResult, DraggableState, DropTarget, EventHandler, Image,
     MouseInBehavior, Rect,
 };
-use warpui::ui_components::button::Button;
-use warpui::windowing::{StateEvent, WindowManager};
-use warpui::{elements::MouseStateHandle, fonts::Properties};
+use zap_ng_ui::ui_components::button::Button;
+use zap_ng_ui::windowing::{StateEvent, WindowManager};
+use zap_ng_ui::{elements::MouseStateHandle, fonts::Properties};
 
 use crate::{autoupdate, channel::ChannelState};
 
@@ -450,24 +450,24 @@ use std::path::PathBuf;
 use std::process;
 use std::sync::{mpsc, Mutex};
 use std::{cmp::Ordering, sync::Arc};
-use warp_core::ui::theme::{color::internal_colors, phenomenon::PhenomenonStyle, Fill};
-use warp_core::ui::{color::coloru_with_opacity, Icon};
-use warp_editor::editor::NavigationKey;
-use warpui::keymap::Context;
-use warpui::notification::{RequestPermissionsOutcome, UserNotification};
-use warpui::platform::{
+use zap_ng_core::ui::theme::{color::internal_colors, phenomenon::PhenomenonStyle, Fill};
+use zap_ng_core::ui::{color::coloru_with_opacity, Icon};
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::keymap::Context;
+use zap_ng_ui::notification::{RequestPermissionsOutcome, UserNotification};
+use zap_ng_ui::platform::{
     Cursor, FilePickerConfiguration, FullscreenState, SystemTheme, TerminationMode,
 };
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     accessibility::{
-        AccessibilityContent, AccessibilityVerbosity, ActionAccessibilityContent, WarpA11yRole,
+        AccessibilityContent, AccessibilityVerbosity, ActionAccessibilityContent, ZapNGA11yRole,
     },
     elements::{
         Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
         CrossAxisAlignment, Dismiss, Element, Empty, Expanded, Fill as ElementFill, Flex,
-        Highlight, Hoverable, Icon as WarpUiIcon, MainAxisAlignment, MainAxisSize,
+        Highlight, Hoverable, Icon as ZapNGUiIcon, MainAxisAlignment, MainAxisSize,
         OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
         PositionedElementAnchor, PositionedElementOffsetBounds, Radius, SavePosition, Shrinkable,
         Stack, Text,
@@ -475,7 +475,7 @@ use warpui::{
     geometry::vector::{vec2f, Vector2F},
     AppContext, Entity, TypedActionView, UpdateView, View, ViewContext, ViewHandle,
 };
-use warpui::{
+use zap_ng_ui::{
     EntityId, FocusContext, ModelHandle, SingletonEntity, UpdateModel, ViewAsRef, WeakViewHandle,
     WindowId,
 };
@@ -976,7 +976,7 @@ pub struct Workspace {
     #[cfg(target_family = "wasm")]
     wasm_nux_dialog: ViewHandle<WasmNUXDialog>,
     #[cfg(target_family = "wasm")]
-    open_in_warp_button: ViewHandle<ActionButton>,
+    open_in_zap_ng_button: ViewHandle<ActionButton>,
     #[cfg(target_family = "wasm")]
     transcript_info_button: ViewHandle<ActionButton>,
     #[cfg(target_family = "wasm")]
@@ -1536,7 +1536,7 @@ impl Workspace {
                 ctx.notify();
             }
             AuthOverrideWarningModalEvent::BulkExport => {
-                self.export_all_warp_drive_objects(ctx);
+                self.export_all_zap_ng_drive_objects(ctx);
             }
         }
     }
@@ -1897,8 +1897,8 @@ impl Workspace {
                         );
                     });
                 } else {
-                    WarpConfig::handle(ctx).update(ctx, |warp_config, ctx| {
-                        warp_config.remove_tab_config_by_path(path, ctx);
+                    ZapNGConfig::handle(ctx).update(ctx, |zap_ng_config, ctx| {
+                        zap_ng_config.remove_tab_config_by_path(path, ctx);
                     });
                 }
                 self.current_workspace_state
@@ -2239,7 +2239,7 @@ impl Workspace {
             |hover_state| {
                 let icon = ConstrainedBox::new(
                     icons::Icon::X
-                        .to_warpui_icon(Fill::Solid(PhenomenonStyle::modal_close_button_text()))
+                        .to_zap_ng_ui_icon(Fill::Solid(PhenomenonStyle::modal_close_button_text()))
                         .finish(),
                 )
                 .with_width(16.)
@@ -2336,7 +2336,7 @@ impl Workspace {
         );
     }
 
-    /// Subscribes to `WarpConfigUpdateEvent::TabConfigErrors` and shows a persistent
+    /// Subscribes to `ZapNGConfigUpdateEvent::TabConfigErrors` and shows a persistent
     /// error toast for each tab config file that failed to parse.  Uses `object_id`
     /// keyed by file path so that re-saving the same file auto-dismisses the stale
     /// toast.
@@ -2344,9 +2344,9 @@ impl Workspace {
         toast_stack: ViewHandle<DismissibleToastStack<WorkspaceAction>>,
         ctx: &mut ViewContext<Self>,
     ) {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), move |_me, _, event, ctx| {
+        ctx.subscribe_to_model(&ZapNGConfig::handle(ctx), move |_me, _, event, ctx| {
             match event {
-                WarpConfigUpdateEvent::TabConfigs => {
+                ZapNGConfigUpdateEvent::TabConfigs => {
                     // On every tab config reload, dismiss error toasts for
                     // files that now parse successfully.  The model has already
                     // been updated with the current error set before this event
@@ -2361,7 +2361,7 @@ impl Workspace {
                         toast_stack.dismiss_toasts_by_prefix("tab_config_error:", ctx);
                     });
                 }
-                WarpConfigUpdateEvent::TabConfigErrors(errors) => {
+                ZapNGConfigUpdateEvent::TabConfigErrors(errors) => {
                     let home_dir = dirs::home_dir();
                     for error in errors {
                         let object_id = format!("tab_config_error:{}", error.file_path.display());
@@ -2395,17 +2395,17 @@ impl Workspace {
         });
     }
 
-    /// Subscribes to `WarpConfigUpdateEvent::SettingsErrors` and
+    /// Subscribes to `ZapNGConfigUpdateEvent::SettingsErrors` and
     /// `SettingsErrorsCleared` to update the workspace settings-error banner
     /// and mirror the state into the settings pane for its nav-rail footer.
     fn subscribe_to_settings_errors(ctx: &mut ViewContext<Self>) {
-        ctx.subscribe_to_model(&WarpConfig::handle(ctx), |me, _, event, ctx| match event {
-            WarpConfigUpdateEvent::SettingsErrors(error) => {
+        ctx.subscribe_to_model(&ZapNGConfig::handle(ctx), |me, _, event, ctx| match event {
+            ZapNGConfigUpdateEvent::SettingsErrors(error) => {
                 me.settings_file_error = Some(error.clone());
                 me.sync_settings_error_state_into_settings_pane(ctx);
                 ctx.notify();
             }
-            WarpConfigUpdateEvent::SettingsErrorsCleared => {
+            ZapNGConfigUpdateEvent::SettingsErrorsCleared => {
                 me.settings_file_error = None;
                 me.sync_settings_error_state_into_settings_pane(ctx);
                 ctx.notify();
@@ -2704,8 +2704,8 @@ impl Workspace {
             }
         });
 
-        ctx.subscribe_to_model(&WarpDriveSettings::handle(ctx), |me, _, event, ctx| {
-            if let WarpDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
+        ctx.subscribe_to_model(&ZapNGDriveSettings::handle(ctx), |me, _, event, ctx| {
+            if let ZapNGDriveSettingsChangedEvent::EnableWarpDrive { .. } = event {
                 me.update_left_panel_available_views(ctx);
                 ctx.notify();
             }
@@ -2772,7 +2772,7 @@ impl Workspace {
         let wasm_nux_dialog = Self::build_wasm_nux_dialog(ctx);
 
         #[cfg(target_family = "wasm")]
-        let open_in_warp_button = Self::build_open_in_warp_button(ctx);
+        let open_in_zap_ng_button = Self::build_open_in_zap_ng_button(ctx);
 
         #[cfg(target_family = "wasm")]
         let transcript_info_button = Self::build_transcript_info_button(ctx);
@@ -2980,7 +2980,7 @@ impl Workspace {
             #[cfg(target_family = "wasm")]
             wasm_nux_dialog,
             #[cfg(target_family = "wasm")]
-            open_in_warp_button,
+            open_in_zap_ng_button,
             #[cfg(target_family = "wasm")]
             transcript_info_button,
             #[cfg(target_family = "wasm")]
@@ -3624,9 +3624,9 @@ impl Workspace {
         shell: Option<AvailableShell>,
         ctx: &mut ViewContext<Self>,
     ) {
-        let show_warp_home = !ContextFlag::CreateNewSession.is_enabled();
+        let show_zap_ng_home = !ContextFlag::CreateNewSession.is_enabled();
         let mut placeholder_pane = None;
-        let open_warp_drive = if !show_warp_home {
+        let open_zap_ng_drive = if !show_zap_ng_home {
             if self.should_trigger_get_started_onboarding(ctx) {
                 self.trigger_get_started_onboarding(ctx);
             } else if FeatureFlag::WelcomeTab.is_enabled() {
@@ -3654,7 +3654,7 @@ impl Workspace {
         };
         let initial_tab = self.active_tab_pane_group().clone();
 
-        if open_warp_drive {
+        if open_zap_ng_drive {
             // We open Zap Drive automatically in two cases:
             // * The user is new to Zap, and went through the overall onboarding flow
             // * The user is on the web, so we can't open a terminal session.
@@ -3665,17 +3665,17 @@ impl Workspace {
                 // New Zap users can have non-welcome objects if they were directly invited OR if
                 // linked objects were copied over from an anonymous user.
                 if ObjectStoreModel::as_ref(ctx).has_non_welcome_objects() {
-                    me.open_or_toggle_warp_drive(false, false, ctx);
+                    me.open_or_toggle_zap_ng_drive(false, false, ctx);
 
                     // After opening Zap Drive, if we rendered the Zap Home placeholder panel, replace it with one of
                     // the user's own objects.
-                    if show_warp_home {
+                    if show_zap_ng_home {
                         let object_store_model = ObjectStoreModel::as_ref(ctx);
                         let candidate_objects = object_store_model
                             .cloud_objects()
                             .filter(|object| {
                                 !object.is_trashed(object_store_model)
-                                    && object.renders_in_warp_drive()
+                                    && object.renders_in_zap_ng_drive()
                                     && !object.metadata().is_welcome_object
                             })
                             .map(|object| object.object_type_and_id())
@@ -3829,7 +3829,7 @@ impl Workspace {
 
         // Check if focused pane is a Zap Drive object
         let focused_pane_id = pane_group.focused_pane_id(ctx);
-        if focused_pane_id.is_warp_drive_object_pane() {
+        if focused_pane_id.is_zap_ng_drive_object_pane() {
             return Some(SimplifiedWasmTabBarContent::WarpDriveObject);
         }
 
@@ -3992,32 +3992,32 @@ impl Workspace {
     }
 
     /// Sets focused to the index of either the selected object or the first item in WD
-    fn reset_focused_index_in_warp_drive(
+    fn reset_focused_index_in_zap_ng_drive(
         &mut self,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
     ) {
         ctx.focus(&self.left_panel_view);
 
-        self.update_warp_drive_view(ctx, |drive_panel, ctx| {
-            drive_panel.reset_focused_index_in_warp_drive(should_scroll, ctx);
+        self.update_zap_ng_drive_view(ctx, |drive_panel, ctx| {
+            drive_panel.reset_focused_index_in_zap_ng_drive(should_scroll, ctx);
         });
     }
 
-    pub fn has_warp_drive_initialized_sections(
+    pub fn has_zap_ng_drive_initialized_sections(
         &self,
         app: &AppContext,
     ) -> impl Future<Output = ()> {
         self.left_panel_view
             .as_ref(app)
-            .warp_drive_view()
+            .zap_ng_drive_view()
             .as_ref(app)
-            .has_warp_drive_initialized_sections(app)
+            .has_zap_ng_drive_initialized_sections(app)
     }
 
     /// Check if Zap Drive view is focused within.
     /// Routes to the appropriate Zap Drive panel.
-    fn is_warp_drive_view_focused(&self, ctx: &mut ViewContext<Self>) -> bool {
+    fn is_zap_ng_drive_view_focused(&self, ctx: &mut ViewContext<Self>) -> bool {
         let app = ctx;
         self.left_panel_view.is_self_or_child_focused(app)
     }
@@ -4222,8 +4222,8 @@ impl Workspace {
     fn focus_left_panel(&mut self, ctx: &mut ViewContext<Self>) {
         // Starts from terminal
         if self.active_tab_pane_group().is_self_or_child_focused(ctx) {
-            if self.current_workspace_state.is_warp_drive_open {
-                self.reset_focused_index_in_warp_drive(true, ctx);
+            if self.current_workspace_state.is_zap_ng_drive_open {
+                self.reset_focused_index_in_zap_ng_drive(true, ctx);
             } else if self.is_theme_chooser_open() {
                 ctx.focus(&self.theme_chooser_view);
             } else if self.current_workspace_state.is_ai_assistant_panel_open {
@@ -4239,7 +4239,7 @@ impl Workspace {
             self.focus_active_tab(ctx);
         }
         // Starts from a left panel: Zap Drive
-        else if self.is_warp_drive_view_focused(ctx) {
+        else if self.is_zap_ng_drive_view_focused(ctx) {
             if self.current_workspace_state.is_right_panel_open() {
                 self.set_selected_object(None, ctx);
                 if self.current_workspace_state.is_ai_assistant_panel_open {
@@ -4277,14 +4277,14 @@ impl Workspace {
                 ctx.focus(&self.ai_assistant_panel);
             } else if self.current_workspace_state.is_resource_center_open {
                 ctx.focus(&self.resource_center_view);
-            } else if self.current_workspace_state.is_warp_drive_open {
-                self.reset_focused_index_in_warp_drive(true, ctx);
+            } else if self.current_workspace_state.is_zap_ng_drive_open {
+                self.reset_focused_index_in_zap_ng_drive(true, ctx);
             } else if self.is_theme_chooser_open() {
                 ctx.focus(&self.theme_chooser_view);
             }
         }
         // Starts from a left panel: Zap Drive, theme chooser
-        else if self.is_warp_drive_view_focused(ctx)
+        else if self.is_zap_ng_drive_view_focused(ctx)
             || self.theme_chooser_view.is_self_or_child_focused(ctx)
         {
             self.focus_active_tab(ctx);
@@ -4294,8 +4294,8 @@ impl Workspace {
             || self.resource_center_view.is_self_or_child_focused(ctx)
         {
             if self.current_workspace_state.is_left_panel_open() {
-                if self.current_workspace_state.is_warp_drive_open {
-                    self.reset_focused_index_in_warp_drive(true, ctx);
+                if self.current_workspace_state.is_zap_ng_drive_open {
+                    self.reset_focused_index_in_zap_ng_drive(true, ctx);
                 } else if self.is_theme_chooser_open() {
                     ctx.focus(&self.theme_chooser_view);
                 }
@@ -5118,7 +5118,7 @@ impl Workspace {
     fn handle_ai_fact_view_event(&mut self, event: &AIFactViewEvent, ctx: &mut ViewContext<Self>) {
         match event {
             AIFactViewEvent::OpenSettings => {
-                self.show_settings_with_section(Some(SettingsSection::WarpAgent), ctx);
+                self.show_settings_with_section(Some(SettingsSection::ZapNGAgent), ctx);
             }
             #[allow(unused_variables)]
             AIFactViewEvent::OpenFile(path) => {
@@ -5296,7 +5296,7 @@ impl Workspace {
                 self.handle_file_tree_event(pane_group, pane_group_event, ctx);
             }
             LeftPanelEvent::ZapDrive(drive_event) => {
-                self.handle_warp_drive_event(drive_event, ctx);
+                self.handle_zap_ng_drive_event(drive_event, ctx);
             }
             LeftPanelEvent::ServerFileBrowser(event) => match event {
                 crate::workspace::view::server_file_browser::ServerFileBrowserEvent::OpenRemoteFile {
@@ -5507,18 +5507,18 @@ impl Workspace {
     pub fn open_ssh_terminal(
         &mut self,
         node_id: String,
-        server: warp_ssh_manager::SshServerInfo,
+        server: zap_ng_ssh_manager::SshServerInfo,
         ctx: &mut ViewContext<Self>,
     ) {
         // Refuse a host or port `ssh` would misread before opening a tab for it. A OneKey
         // server's user name comes from its credential and is checked once that is resolved.
         let username = match server.auth_type {
-            warp_ssh_manager::AuthType::OneKey => "",
-            warp_ssh_manager::AuthType::Password | warp_ssh_manager::AuthType::Key => {
+            zap_ng_ssh_manager::AuthType::OneKey => "",
+            zap_ng_ssh_manager::AuthType::Password | zap_ng_ssh_manager::AuthType::Key => {
                 server.username.as_str()
             }
         };
-        if let Err(e) = warp_ssh_manager::validate_ssh_endpoint(&server.host, username, server.port)
+        if let Err(e) = zap_ng_ssh_manager::validate_ssh_endpoint(&server.host, username, server.port)
         {
             self.toast_stack.update(ctx, |toast_stack, ctx| {
                 toast_stack.add_ephemeral_toast(DismissibleToast::error(e.to_string()), ctx);
@@ -5673,7 +5673,7 @@ impl Workspace {
         let extras = Self::collect_log_bundle_extras(ctx);
         ctx.spawn(
             async move {
-                tokio::task::spawn_blocking(move || warp_logging::create_log_bundle_zip(extras))
+                tokio::task::spawn_blocking(move || zap_ng_logging::create_log_bundle_zip(extras))
                     .await
             },
             |me, result, ctx| match result {
@@ -5707,12 +5707,12 @@ impl Workspace {
     /// 区域的视图也能看到结果。
     #[cfg(not(target_family = "wasm"))]
     fn export_logs_to_path(&mut self, ctx: &mut ViewContext<Self>) {
-        use warpui::platform::SaveFilePickerConfiguration;
+        use zap_ng_ui::platform::SaveFilePickerConfiguration;
 
         // 在调用线程同步采集 extras(读取 AppContext 全局状态),保存对话框
         // 与实际写盘都在后续异步流程中。
         let extras = Self::collect_log_bundle_extras(ctx);
-        let default_filename = warp_logging::default_log_bundle_filename();
+        let default_filename = zap_ng_logging::default_log_bundle_filename();
         let default_directory = dirs::download_dir().or_else(dirs::home_dir);
 
         let mut config = SaveFilePickerConfiguration::new().with_default_filename(default_filename);
@@ -5730,7 +5730,7 @@ impl Workspace {
                 ctx.spawn(
                     async move {
                         tokio::task::spawn_blocking(move || {
-                            warp_logging::write_log_bundle_zip_to(&output_path, extras)
+                            zap_ng_logging::write_log_bundle_zip_to(&output_path, extras)
                                 .map(|()| output_path)
                         })
                         .await
@@ -5791,13 +5791,13 @@ impl Workspace {
     /// - `zap.prompt_chips.log`(含命令 stdout/stderr,仅在 debug channel 生成,默认隐私风险);
     /// - profiling 产物(`dhat-heap.json` / `profile.pb`,仅特殊 cargo feature 启用)。
     #[cfg(not(target_family = "wasm"))]
-    fn collect_log_bundle_extras(ctx: &AppContext) -> warp_logging::LogBundleExtras {
+    fn collect_log_bundle_extras(ctx: &AppContext) -> zap_ng_logging::LogBundleExtras {
         use std::path::{Path, PathBuf};
-        use warp_core::channel::ChannelState;
-        use warp_core::execution_mode::AppExecutionMode;
-        use warp_logging::{ExtraFile, InlineFile, LogBundleExtras};
+        use zap_ng_core::channel::ChannelState;
+        use zap_ng_core::execution_mode::AppExecutionMode;
+        use zap_ng_logging::{ExtraFile, InlineFile, LogBundleExtras};
 
-        let log_dir = warp_logging::log_directory().ok();
+        let log_dir = zap_ng_logging::log_directory().ok();
 
         // 1) manifest.txt:可读的诊断摘要,排查问题时第一眼看的内容。
         // 日志目录用 `home_relative_path` 脱敏(在 Unix 下把 `$HOME` 替换为 `~`),
@@ -5809,7 +5809,7 @@ impl Workspace {
             let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S %z");
             let log_dir_str = log_dir
                 .as_ref()
-                .map(|p| warp_core::paths::home_relative_path(p))
+                .map(|p| zap_ng_core::paths::home_relative_path(p))
                 .unwrap_or_else(|| "<unknown>".to_string());
 
             format!(
@@ -5894,7 +5894,7 @@ impl Workspace {
             .write(ClipboardContent::plain_text(version.to_string()));
     }
 
-    fn export_all_warp_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
+    fn export_all_zap_ng_drive_objects(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let object_store_model = ObjectStoreModel::as_ref(ctx);
         let exportable_objects = object_store_model.get_all_exportable_object_ids();
@@ -5938,7 +5938,7 @@ impl Workspace {
 
         // 2. User tab configs
         if FeatureFlag::TabConfigs.is_enabled() {
-            let tab_configs = WarpConfig::as_ref(ctx).tab_configs().to_vec();
+            let tab_configs = ZapNGConfig::as_ref(ctx).tab_configs().to_vec();
 
             let mut name_totals: HashMap<String, usize> = HashMap::new();
             for config in &tab_configs {
@@ -6595,7 +6595,7 @@ impl Workspace {
 
     /// Opens the Zap Drive object identified by `uid` in a new pane
     /// if it has a pane representation.
-    fn open_warp_drive_object_in_new_pane(&mut self, uid: &ObjectUid, ctx: &mut ViewContext<Self>) {
+    fn open_zap_ng_drive_object_in_new_pane(&mut self, uid: &ObjectUid, ctx: &mut ViewContext<Self>) {
         let Some(object) = ObjectStoreModel::as_ref(ctx).get_by_uid(uid) else {
             return;
         };
@@ -6695,9 +6695,9 @@ impl Workspace {
 
             if let Some(focused_folder_id) = focused_folder_id {
                 // Only focus the notebook if we don't want to focus a parent folder instead
-                self.open_or_toggle_warp_drive(false, false, ctx);
+                self.open_or_toggle_zap_ng_drive(false, false, ctx);
                 self.set_selected_object(
-                    Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                    Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                         focused_folder_id,
                         ObjectType::Folder,
                     ))),
@@ -6705,7 +6705,7 @@ impl Workspace {
                 );
             } else {
                 self.set_selected_object(
-                    Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                    Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                         *notebook_id,
                         ObjectType::Notebook,
                     ))),
@@ -6732,7 +6732,7 @@ impl Workspace {
                 .cloned()
             {
                 Some(workflow) => {
-                    self.open_or_toggle_warp_drive(false, false, ctx);
+                    self.open_or_toggle_zap_ng_drive(false, false, ctx);
                     self.run_cloud_workflow_in_active_input(
                         workflow,
                         WorkflowSelectionSource::Undefined,
@@ -6744,7 +6744,7 @@ impl Workspace {
                     // that will focus the workflow instead.
                     if let Some(focused_folder) = settings.focused_folder_id.map(SyncId::ServerId) {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                            Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                                 focused_folder,
                                 ObjectType::Folder,
                             ))),
@@ -6840,7 +6840,7 @@ impl Workspace {
 
         if let EnvVarCollectionSource::Existing(env_var_collection_id) = source {
             self.set_selected_object(
-                Some(WarpDriveItemId::Object(
+                Some(ZapNGDriveItemId::Object(
                     ObjectTypeAndId::from_generic_string_object(
                         GenericStringObjectFormat::Json(
                             crate::cloud_object::JsonObjectType::EnvVarCollection,
@@ -7360,7 +7360,7 @@ impl Workspace {
         });
 
         // Focus WD index item
-        self.set_selected_object(Some(WarpDriveItemId::AIFactCollection), ctx);
+        self.set_selected_object(Some(ZapNGDriveItemId::AIFactCollection), ctx);
     }
 
     /// Open the Execution Profile Editor pane
@@ -7416,13 +7416,13 @@ impl Workspace {
     }
 
     /// Find an active session and pre-fill the input editor the Zap executable with the
-    /// [`warp_cli::Command::DumpDebugInfo`] subcommand.
+    /// [`zap_ng_cli::Command::DumpDebugInfo`] subcommand.
     fn dump_debug_info(&mut self, ctx: &mut ViewContext<Self>) {
         if let Some(exec) = std::env::current_exe()
             .ok()
             .map(|path| path.to_string_lossy().into_owned())
         {
-            let command = format!("{exec} {}", warp_cli::dump_debug_info_flag());
+            let command = format!("{exec} {}", zap_ng_cli::dump_debug_info_flag());
             // Get the active session for this tab if it exists.
             let mut active_session_handle = self
                 .active_tab_pane_group()
@@ -7569,7 +7569,7 @@ impl Workspace {
         ctx.notify();
     }
 
-    pub fn open_or_toggle_warp_drive(
+    pub fn open_or_toggle_zap_ng_drive(
         &mut self,
         toggle: bool,
         explicit_user_action: bool,
@@ -7577,20 +7577,20 @@ impl Workspace {
     ) {
         // Closing all left panels will also close zap drive so we need to retrieve
         // whether zap drive was open first, and toggle based on the initial value.
-        let was_warp_drive_open = self.current_workspace_state.is_warp_drive_open;
+        let was_zap_ng_drive_open = self.current_workspace_state.is_zap_ng_drive_open;
         self.current_workspace_state.close_all_left_panels();
-        self.current_workspace_state.is_warp_drive_open =
-            if toggle { !was_warp_drive_open } else { true };
+        self.current_workspace_state.is_zap_ng_drive_open =
+            if toggle { !was_zap_ng_drive_open } else { true };
 
         // Set selected object to None upon toggle close of Zap Drive
-        if !self.current_workspace_state.is_warp_drive_open {
+        if !self.current_workspace_state.is_zap_ng_drive_open {
             self.set_selected_object(None, ctx);
             self.focus_active_tab(ctx);
         }
 
         // Reset focused index when opening/toggling Zap Drive open
-        if self.current_workspace_state.is_warp_drive_open {
-            self.reset_focused_index_in_warp_drive(true, ctx);
+        if self.current_workspace_state.is_zap_ng_drive_open {
+            self.reset_focused_index_in_zap_ng_drive(true, ctx);
         }
 
         ctx.notify();
@@ -7599,12 +7599,12 @@ impl Workspace {
         // AND zap drive wasn't open before. There are other scenarios where we open Zap Drive like:
         // new user onboarding, user joins a team, etc so we want to avoid counting those.
         if explicit_user_action
-            && !was_warp_drive_open
-            && self.current_workspace_state.is_warp_drive_open
+            && !was_zap_ng_drive_open
+            && self.current_workspace_state.is_zap_ng_drive_open
         {
             send_telemetry_from_ctx!(
-                TelemetryEvent::WarpDriveOpened {
-                    source: WarpDriveSource::Legacy,
+                TelemetryEvent::ZapNGDriveOpened {
+                    source: ZapNGDriveSource::Legacy,
                     is_code_mode_v2: false
                 },
                 ctx
@@ -8355,7 +8355,7 @@ impl Workspace {
                 let theme = appearance.theme();
                 let search_icon = ConstrainedBox::new(
                     icons::Icon::SearchSmall
-                        .to_warpui_icon(theme.sub_text_color(theme.surface_2()))
+                        .to_zap_ng_ui_icon(theme.sub_text_color(theme.surface_2()))
                         .finish(),
                 )
                 .with_width(16.)
@@ -8458,7 +8458,7 @@ impl Workspace {
                     .finish()
                 })
                 .with_cursor(Cursor::PointingHand)
-                .on_click(|ctx: &mut warpui::elements::EventContext, _, _| {
+                .on_click(|ctx: &mut zap_ng_ui::elements::EventContext, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::OpenNewWorktreeModal);
                 })
                 .finish()
@@ -8697,8 +8697,8 @@ impl Workspace {
                 ctx.notify();
             }
             LaunchConfigModalEvent::SuccessfullySavedConfig(launch_config) => {
-                ctx.update_model(&WarpConfig::handle(ctx), move |warp_config, ctx| {
-                    warp_config.append_launch_config(launch_config, ctx);
+                ctx.update_model(&ZapNGConfig::handle(ctx), move |zap_ng_config, ctx| {
+                    zap_ng_config.append_launch_config(launch_config, ctx);
                 });
                 ctx.notify();
             }
@@ -8853,7 +8853,7 @@ impl Workspace {
                     });
                 });
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            zap_ng_ui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -8927,7 +8927,7 @@ impl Workspace {
             .map(crate::util::git::list_local_branches_sync)
             .unwrap_or_default();
         let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-        Some(warp_util::worktree_names::generate_worktree_branch_name(
+        Some(zap_ng_util::worktree_names::generate_worktree_branch_name(
             &branch_refs,
         ))
     }
@@ -8967,7 +8967,7 @@ impl Workspace {
         } else {
             let branches = crate::util::git::list_local_branches_sync(Path::new(repo));
             let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-            warp_util::worktree_names::generate_worktree_branch_name(&branch_refs)
+            zap_ng_util::worktree_names::generate_worktree_branch_name(&branch_refs)
         };
 
         let toml_content = crate::tab_configs::build_worktree_config_toml(
@@ -9051,7 +9051,7 @@ impl Workspace {
                     });
                 });
             },
-            warpui::platform::FilePickerConfiguration::new().folders_only(),
+            zap_ng_ui::platform::FilePickerConfiguration::new().folders_only(),
         );
     }
 
@@ -9072,7 +9072,7 @@ impl Workspace {
         };
         let branches = crate::util::git::list_local_branches_sync(Path::new(&repo_path));
         let branch_refs: HashSet<&str> = branches.iter().map(|s| s.as_str()).collect();
-        let branch_name = warp_util::worktree_names::generate_worktree_branch_name(&branch_refs);
+        let branch_name = zap_ng_util::worktree_names::generate_worktree_branch_name(&branch_refs);
         let repo_display_name = Path::new(&repo_path)
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
@@ -9176,7 +9176,7 @@ impl Workspace {
                 self.maybe_refresh_workflow_info_box_and_input(workflow_id, ctx);
             }
             WorkflowModalEvent::ViewInWarpDrive(id) => {
-                self.view_in_and_focus_warp_drive(*id, ctx);
+                self.view_in_and_focus_zap_ng_drive(*id, ctx);
             }
             WorkflowModalEvent::AiAssistUpgradeError(_, _) => {
                 self.toast_stack.update(ctx, |view, ctx| {
@@ -11716,7 +11716,7 @@ impl Workspace {
 
     #[cfg(target_os = "macos")]
     pub fn sync_window_button_visibility(&self, ctx: &mut ViewContext<Self>) {
-        use warpui::platform::mac::WindowExt;
+        use zap_ng_ui::platform::mac::WindowExt;
         let show = if FeatureFlag::FullScreenZenMode.is_enabled()
             && TabSettings::as_ref(ctx)
                 .workspace_decoration_visibility
@@ -11907,7 +11907,7 @@ impl Workspace {
         ctx.notify();
     }
 
-    fn open_warp_drive_palette(&mut self, ctx: &mut ViewContext<Self>) {
+    fn open_zap_ng_drive_palette(&mut self, ctx: &mut ViewContext<Self>) {
         self.palette.update(ctx, |view, ctx| {
             view.reset(ctx);
             view.set_active_query_filter(QueryFilter::Drive, ctx);
@@ -12062,7 +12062,7 @@ impl Workspace {
                 _ => self.open_navigation_palette(ctx),
             },
             PaletteMode::LaunchConfig => self.open_launch_config_palette(ctx),
-            PaletteMode::ZapDrive => self.open_warp_drive_palette(ctx),
+            PaletteMode::ZapDrive => self.open_zap_ng_drive_palette(ctx),
             PaletteMode::Files => self.open_files_palette(ctx),
             PaletteMode::Conversations => self.open_conversations_palette(ctx),
         }
@@ -12160,7 +12160,7 @@ impl Workspace {
                 true,
             ),
             CommandPaletteEvent::ViewInWarpDrive { id } => {
-                self.view_in_and_focus_warp_drive(WarpDriveItemId::Object(*id), ctx);
+                self.view_in_and_focus_zap_ng_drive(ZapNGDriveItemId::Object(*id), ctx);
             }
             #[allow(unused_variables)]
             CommandPaletteEvent::OpenFile {
@@ -12198,47 +12198,47 @@ impl Workspace {
 
     /// This function is used when we set a selected object, which is an object open in an active pane.
     /// We do not want to focus Zap Drive, instead we want to focus the editor of the open object.
-    fn view_in_warp_drive(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    fn view_in_zap_ng_drive(&mut self, item_id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         self.open_left_panel(ctx);
         self.left_panel_view.update(ctx, |left_panel, ctx| {
             left_panel.handle_action(&LeftPanelAction::ZapDrive, ctx);
         });
 
-        if let WarpDriveItemId::Object(object_id) = item_id {
+        if let ZapNGDriveItemId::Object(object_id) = item_id {
             ObjectStoreModel::handle(ctx).update(ctx, |model, ctx| {
                 model.force_expand_object_and_ancestors_cloud_id(object_id, ctx);
             });
         }
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.scroll_item_into_view(item_id, ctx);
-            warp_drive.expand_section_for_drive_item_id(item_id, ctx);
-            warp_drive.initialize_drive_section_states(ctx);
+        self.update_zap_ng_drive_view(ctx, |zap_ng_drive, ctx| {
+            zap_ng_drive.scroll_item_into_view(item_id, ctx);
+            zap_ng_drive.expand_section_for_drive_item_id(item_id, ctx);
+            zap_ng_drive.initialize_drive_section_states(ctx);
         });
     }
 
     /// This function is used when we want to view an item in Zap Drive AND focus Zap Drive.
-    pub fn view_in_and_focus_warp_drive(
+    pub fn view_in_and_focus_zap_ng_drive(
         &mut self,
-        item_id: WarpDriveItemId,
+        item_id: ZapNGDriveItemId,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.view_in_warp_drive(item_id, ctx);
+        self.view_in_zap_ng_drive(item_id, ctx);
 
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.reset_and_open_to_main_index(ctx);
-            warp_drive.set_focused_item(item_id, ctx);
+        self.update_zap_ng_drive_view(ctx, |zap_ng_drive, ctx| {
+            zap_ng_drive.reset_and_open_to_main_index(ctx);
+            zap_ng_drive.set_focused_item(item_id, ctx);
         });
         ctx.notify();
     }
 
     /// Updates the left panel's zap drive view.
-    fn update_warp_drive_view<F>(&mut self, ctx: &mut ViewContext<Self>, update_fn: F)
+    fn update_zap_ng_drive_view<F>(&mut self, ctx: &mut ViewContext<Self>, update_fn: F)
     where
         F: FnOnce(&mut DrivePanel, &mut ViewContext<DrivePanel>),
     {
         self.left_panel_view.update(ctx, |left_panel, ctx| {
-            left_panel.warp_drive_view().update(ctx, |warp_drive, ctx| {
-                update_fn(warp_drive, ctx);
+            left_panel.zap_ng_drive_view().update(ctx, |zap_ng_drive, ctx| {
+                update_fn(zap_ng_drive, ctx);
             });
         });
     }
@@ -12249,14 +12249,14 @@ impl Workspace {
         space: Space,
         ctx: &mut ViewContext<Self>,
     ) {
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.move_object_to_team_owner(object_type_and_id, space, ctx);
+        self.update_zap_ng_drive_view(ctx, |zap_ng_drive, ctx| {
+            zap_ng_drive.move_object_to_team_owner(object_type_and_id, space, ctx);
         });
     }
 
     fn set_focused_index(&mut self, index: Option<usize>, ctx: &mut ViewContext<Self>) {
-        self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-            warp_drive.set_focused_index(index, ctx);
+        self.update_zap_ng_drive_view(ctx, |zap_ng_drive, ctx| {
+            zap_ng_drive.set_focused_index(index, ctx);
         });
         ctx.notify();
     }
@@ -12288,8 +12288,8 @@ impl Workspace {
         self.current_workspace_state.is_workflow_modal_open
     }
 
-    pub fn is_warp_drive_open(&self) -> bool {
-        self.current_workspace_state.is_warp_drive_open
+    pub fn is_zap_ng_drive_open(&self) -> bool {
+        self.current_workspace_state.is_zap_ng_drive_open
     }
 
     pub fn is_left_panel_open(&self, ctx: &AppContext) -> bool {
@@ -12610,7 +12610,7 @@ impl Workspace {
                 );
             }
             #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
-            pane_group::Event::OpenFileInWarp { path, session } => {
+            pane_group::Event::OpenFileInZapNG { path, session } => {
                 #[cfg(feature = "local_fs")]
                 {
                     let layout = *EditorSettings::as_ref(ctx).open_file_layout.value();
@@ -12624,10 +12624,10 @@ impl Workspace {
                 self.move_to_drive_space(*object_type_and_id, *space, ctx);
             }
             pane_group::Event::ZapDriveLink {
-                open_warp_drive_args,
+                open_zap_ng_drive_args,
             } => {
                 let object_found = ObjectStoreModel::as_ref(ctx)
-                    .get_by_uid(&open_warp_drive_args.server_id.uid())
+                    .get_by_uid(&open_zap_ng_drive_args.server_id.uid())
                     .is_some();
 
                 if !object_found {
@@ -12641,31 +12641,31 @@ impl Workspace {
                     return;
                 }
 
-                let server_id = open_warp_drive_args.server_id;
-                match open_warp_drive_args.object_type {
+                let server_id = open_zap_ng_drive_args.server_id;
+                match open_zap_ng_drive_args.object_type {
                     ObjectType::Notebook => self.open_notebook(
                         &NotebookSource::Existing(SyncId::ServerId(server_id)),
-                        &open_warp_drive_args.settings,
+                        &open_zap_ng_drive_args.settings,
                         ctx,
                         true,
                     ),
-                    ObjectType::Workflow => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(ObjectTypeAndId::Workflow(SyncId::ServerId(
+                    ObjectType::Workflow => self.view_in_and_focus_zap_ng_drive(
+                        ZapNGDriveItemId::Object(ObjectTypeAndId::Workflow(SyncId::ServerId(
                             server_id,
                         ))),
                         ctx,
                     ),
                     ObjectType::GenericStringObject(GenericStringObjectFormat::Json(
                         JsonObjectType::EnvVarCollection,
-                    )) => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(ObjectTypeAndId::from_generic_string_object(
+                    )) => self.view_in_and_focus_zap_ng_drive(
+                        ZapNGDriveItemId::Object(ObjectTypeAndId::from_generic_string_object(
                             GenericStringObjectFormat::Json(JsonObjectType::EnvVarCollection),
                             SyncId::ServerId(server_id),
                         )),
                         ctx,
                     ),
-                    ObjectType::Folder => self.view_in_and_focus_warp_drive(
-                        WarpDriveItemId::Object(ObjectTypeAndId::Folder(SyncId::ServerId(
+                    ObjectType::Folder => self.view_in_and_focus_zap_ng_drive(
+                        ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(SyncId::ServerId(
                             server_id,
                         ))),
                         ctx,
@@ -12676,7 +12676,7 @@ impl Workspace {
                 }
             }
             #[cfg(feature = "local_fs")]
-            pane_group::Event::OpenCodeInWarp {
+            pane_group::Event::OpenCodeInZapNG {
                 source,
                 layout,
                 line_col,
@@ -12684,7 +12684,7 @@ impl Workspace {
                 self.open_code(source.clone(), *layout, *line_col, false, &[], ctx);
             }
             #[cfg(feature = "local_fs")]
-            pane_group::Event::PreviewCodeInWarp { source } => {
+            pane_group::Event::PreviewCodeInZapNG { source } => {
                 self.open_code(
                     source.clone(),
                     EditorLayout::SplitPane, // preview always uses split pane
@@ -12791,7 +12791,7 @@ impl Workspace {
                 self.focus_pane(*locator, ctx);
             }
             pane_group::Event::ViewInWarpDrive(id) => {
-                self.view_in_and_focus_warp_drive(*id, ctx);
+                self.view_in_and_focus_zap_ng_drive(*id, ctx);
             }
             // If focused pane contains an object, then set selected state in WD to that object
             pane_group::Event::PaneFocused => {
@@ -12820,7 +12820,7 @@ impl Workspace {
 
                     if let Some(workflow_id) = active_workflow_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                            Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                                 workflow_id,
                                 ObjectType::Workflow,
                             ))),
@@ -12841,7 +12841,7 @@ impl Workspace {
 
                     if let Some(notebook_id) = notebook_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                            Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                                 notebook_id,
                                 ObjectType::Notebook,
                             ))),
@@ -12861,7 +12861,7 @@ impl Workspace {
 
                     if let Some(env_var_collection_id) = env_var_collection_id {
                         self.set_selected_object(
-                            Some(WarpDriveItemId::Object(
+                            Some(ZapNGDriveItemId::Object(
                                 ObjectTypeAndId::from_generic_string_object(
                                     GenericStringObjectFormat::Json(
                                         crate::cloud_object::JsonObjectType::EnvVarCollection,
@@ -12881,7 +12881,7 @@ impl Workspace {
                     let workflow_id = workflow_pane.get_view(ctx).as_ref(ctx).workflow_id();
 
                     self.set_selected_object(
-                        Some(WarpDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
+                        Some(ZapNGDriveItemId::Object(ObjectTypeAndId::from_id_and_type(
                             workflow_id,
                             ObjectType::Workflow,
                         ))),
@@ -12893,7 +12893,7 @@ impl Workspace {
                 else if let Some(_ai_fact_pane) =
                     pane_group.ai_fact_pane_by_pane_id(focused_pane_id)
                 {
-                    self.set_selected_object(Some(WarpDriveItemId::AIFactCollection), ctx);
+                    self.set_selected_object(Some(ZapNGDriveItemId::AIFactCollection), ctx);
                     active_object_open_in_pane = true;
                 }
 
@@ -12939,7 +12939,7 @@ impl Workspace {
                 host_id,
                 indexed_path,
             } => {
-                use warp_util::standardized_path::StandardizedPath;
+                use zap_ng_util::standardized_path::StandardizedPath;
 
                 if let Ok(std_path) = StandardizedPath::try_new(indexed_path) {
                     let remote_id = RemoteRepositoryIdentifier::new(host_id.clone(), std_path);
@@ -13201,7 +13201,7 @@ impl Workspace {
             }
             pane_group::Event::ClearHoveredTabIndex => self.hovered_tab_index = None,
             pane_group::Event::ZapDriveObjectInPane(uid) => {
-                self.open_warp_drive_object_in_new_pane(uid, ctx);
+                self.open_zap_ng_drive_object_in_new_pane(uid, ctx);
             }
             pane_group::Event::OpenSuggestedAgentModeWorkflowModal { workflow_and_id } => {
                 self.open_suggested_agent_mode_workflow_modal(workflow_and_id, ctx);
@@ -13372,7 +13372,7 @@ impl Workspace {
             }
             pane_group::Event::OpenAddPromptPane { initial_content } => {
                 if UserWorkspaces::as_ref(ctx).personal_drive(ctx).is_some() {
-                    self.update_warp_drive_view(ctx, |drive_view, ctx| {
+                    self.update_zap_ng_drive_view(ctx, |drive_view, ctx| {
                         if let Some(initial_content) = initial_content {
                             drive_view.create_workflow_with_content(
                                 Space::Personal,
@@ -13403,7 +13403,7 @@ impl Workspace {
                     self.left_panel_view
                         .read(ctx, |left_panel, _| match target_view {
                             LeftPanelTargetView::FileTree => left_panel.is_file_tree_active(),
-                            LeftPanelTargetView::ZapDrive => left_panel.is_warp_drive_active(),
+                            LeftPanelTargetView::ZapDrive => left_panel.is_zap_ng_drive_active(),
                         });
 
                 if self.active_tab_pane_group().as_ref(ctx).left_panel_open && is_target_active {
@@ -13640,7 +13640,7 @@ impl Workspace {
 
             let ai_execution_context = session_context
                 .as_ref()
-                .map(|session_context| WarpAiExecutionContext::new(&session_context.session));
+                .map(|session_context| ZapNGAiExecutionContext::new(&session_context.session));
 
             let menu_positioning = active_input_handle
                 .as_ref()
@@ -13732,7 +13732,7 @@ impl Workspace {
     }
 
     /// Insert the given command that should open a subshell. And set a flag that we should
-    /// automatically bootstrap AKA "warpify" that subshell if we support it. No-op if there is
+    /// automatically bootstrap AKA "zapngify" that subshell if we support it. No-op if there is
     /// no active terminal session.
     pub fn insert_subshell_command_and_bootstrap_if_supported(
         &mut self,
@@ -13818,7 +13818,7 @@ impl Workspace {
 
             // Check whether this remote session has an active remote server
             // connection (or is in the process of connecting). This is only
-            // true for Auto SSH Warpification (mode 1) sessions where
+            // true for Auto SSH ZapNGification (mode 1) sessions where
             // `connect_session` was called at `InitShell` time.
             let has_remote_server = is_remote
                 && FeatureFlag::SshRemoteServer.is_enabled()
@@ -13919,7 +13919,7 @@ impl Workspace {
         }
     }
 
-    fn handle_warp_drive_event(&mut self, event: &DrivePanelEvent, ctx: &mut ViewContext<Self>) {
+    fn handle_zap_ng_drive_event(&mut self, event: &DrivePanelEvent, ctx: &mut ViewContext<Self>) {
         match event {
             DrivePanelEvent::RunWorkflow(workflow) => {
                 self.run_cloud_workflow_in_active_input(
@@ -13995,7 +13995,7 @@ impl Workspace {
                     ctx
                 );
             }
-            DrivePanelEvent::FocusWarpDrive => {
+            DrivePanelEvent::FocusZapNGDrive => {
                 ctx.focus(&self.left_panel_view);
             }
             DrivePanelEvent::OpenSharedObjectsCreationDeniedModal(_, _) => {
@@ -14065,7 +14065,7 @@ impl Workspace {
         ctx.focus_self();
         ctx.notify();
         self.set_selected_object(
-            Some(WarpDriveItemId::Object(workflow.object_type_and_id())),
+            Some(ZapNGDriveItemId::Object(workflow.object_type_and_id())),
             ctx,
         );
     }
@@ -14547,8 +14547,8 @@ impl Workspace {
                                             .with_link(
                                                 ToastLink::new(crate::t!("common-view"))
                                                     .with_onclick_action(
-                                                        WorkspaceAction::ViewObjectInWarpDrive(
-                                                            WarpDriveItemId::Object(
+                                                        WorkspaceAction::ViewObjectInZapNGDrive(
+                                                            ZapNGDriveItemId::Object(
                                                                 ObjectTypeAndId::Notebook(
                                                                     notebook.id,
                                                                 ),
@@ -14569,8 +14569,8 @@ impl Workspace {
                                         new_toast = new_toast.with_link(
                                             ToastLink::new(crate::t!("common-view"))
                                                 .with_onclick_action(
-                                                    WorkspaceAction::ViewObjectInWarpDrive(
-                                                        WarpDriveItemId::Object(
+                                                    WorkspaceAction::ViewObjectInZapNGDrive(
+                                                        ZapNGDriveItemId::Object(
                                                             ObjectTypeAndId::Workflow(workflow.id),
                                                         ),
                                                     ),
@@ -15141,15 +15141,15 @@ impl Workspace {
         });
     }
 
-    fn set_selected_object(&mut self, id: Option<WarpDriveItemId>, ctx: &mut ViewContext<Self>) {
+    fn set_selected_object(&mut self, id: Option<ZapNGDriveItemId>, ctx: &mut ViewContext<Self>) {
         // Set Zap drive index selected state
-        self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+        self.update_zap_ng_drive_view(ctx, |drive_panel, ctx| {
             drive_panel.set_selected_object(id, ctx);
         });
         // If WD open, show the highlighted object (force expand necessary ancestors)
-        if self.current_workspace_state.is_warp_drive_open {
+        if self.current_workspace_state.is_zap_ng_drive_open {
             if let Some(id) = id {
-                self.view_in_warp_drive(id, ctx);
+                self.view_in_zap_ng_drive(id, ctx);
                 ctx.notify();
             }
         }
@@ -15262,7 +15262,7 @@ impl Workspace {
                 self.run_workflow_in_active_input(
                     &WorkflowType::AIGenerated {
                         workflow,
-                        origin: AIWorkflowOrigin::LegacyWarpAI,
+                        origin: AIWorkflowOrigin::LegacyZapNGAI,
                     },
                     WorkflowSource::WarpAI,
                     WorkflowSelectionSource::WarpAI,
@@ -15725,7 +15725,7 @@ impl Workspace {
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        WarpUiIcon::new(icons::Icon::AiAssistant.into(), *AI_ASSISTANT_LOGO_COLOR)
+                        ZapNGUiIcon::new(icons::Icon::AiAssistant.into(), *AI_ASSISTANT_LOGO_COLOR)
                             .finish(),
                     )
                     .with_width(16.)
@@ -15738,7 +15738,7 @@ impl Workspace {
             .with_child(
                 Text::new_inline(AI_ASSISTANT_FEATURE_NAME, appearance.ui_font_family(), 14.)
                     .with_style(Properties {
-                        weight: warpui::fonts::Weight::Bold,
+                        weight: zap_ng_ui::fonts::Weight::Bold,
                         ..Default::default()
                     })
                     .finish(),
@@ -15898,7 +15898,7 @@ impl Workspace {
         _appearance: &Appearance,
         _ctx: &AppContext,
     ) -> Box<dyn Element> {
-        warpui::elements::Empty::new().finish()
+        zap_ng_ui::elements::Empty::new().finish()
     }
 
     fn render_left_toggle_button(
@@ -16075,7 +16075,7 @@ impl Workspace {
         };
 
         // Build the button content: Diff icon + optional diff stats
-        let icon = ConstrainedBox::new(icons::Icon::Diff.to_warpui_icon(font_color).finish())
+        let icon = ConstrainedBox::new(icons::Icon::Diff.to_zap_ng_ui_icon(font_color).finish())
             .with_width(16.)
             .with_height(16.)
             .finish();
@@ -16256,7 +16256,7 @@ impl Workspace {
                     .with_spacing(10.)
                     .with_child(
                         ConstrainedBox::new(
-                            icons::Icon::Search.to_warpui_icon(text_color).finish(),
+                            icons::Icon::Search.to_zap_ng_ui_icon(text_color).finish(),
                         )
                         .with_width(16.)
                         .with_height(16.)
@@ -16329,10 +16329,10 @@ impl Workspace {
             let bg_color = blended_colors::neutral_1(appearance.theme());
 
             // Left: Zap logo - clickable to link to warp.dev
-            let warp_logo = Hoverable::new(self.mouse_states.warp_logo.clone(), |_state| {
+            let zap_ng_logo = Hoverable::new(self.mouse_states.zap_ng_logo.clone(), |_state| {
                 ConstrainedBox::new(
-                    warp_core::ui::Icon::Zap
-                        .to_warpui_icon(appearance.theme().foreground())
+                    zap_ng_core::ui::Icon::Zap
+                        .to_zap_ng_ui_icon(appearance.theme().foreground())
                         .finish(),
                 )
                 .with_height(24.)
@@ -16344,7 +16344,7 @@ impl Workspace {
             })
             .with_cursor(Cursor::PointingHand)
             .finish();
-            tab_bar.add_child(warp_logo);
+            tab_bar.add_child(zap_ng_logo);
 
             // Right: Info button + run history button (for agent sessions) + "Open in Zap" button
             let mut right_row = Flex::row()
@@ -16371,8 +16371,8 @@ impl Workspace {
             }
 
             // Hide "Open in Zap" button on mobile devices
-            if !warpui::platform::wasm::is_mobile_device() {
-                right_row.add_child(ChildView::new(&self.open_in_warp_button).finish());
+            if !zap_ng_ui::platform::wasm::is_mobile_device() {
+                right_row.add_child(ChildView::new(&self.open_in_zap_ng_button).finish());
             }
             tab_bar.add_child(right_row.finish());
 
@@ -16829,7 +16829,7 @@ impl Workspace {
             target.add_child(
                 Container::new(
                     SavePosition::new(
-                        self.render_legacy_warp_ai_entrypoint_button(appearance),
+                        self.render_legacy_zap_ng_ai_entrypoint_button(appearance),
                         AI_ASSISTANT_BUTTON_ID,
                     )
                     .finish(),
@@ -17246,7 +17246,7 @@ impl Workspace {
         let icon = ConstrainedBox::new(
             Container::new(
                 icons::Icon::CloudOffline
-                    .to_warpui_icon(appearance.theme().foreground())
+                    .to_zap_ng_ui_icon(appearance.theme().foreground())
                     .finish(),
             )
             .with_uniform_padding(3.)
@@ -17276,7 +17276,7 @@ impl Workspace {
         Align::new(hoverable.finish()).finish()
     }
 
-    fn render_legacy_warp_ai_entrypoint_button(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_legacy_zap_ng_ai_entrypoint_button(&self, appearance: &Appearance) -> Box<dyn Element> {
         let (icon, action, label) = (
             icons::Icon::AiAssistant,
             WorkspaceAction::ClickedAIAssistantIcon,
@@ -17793,7 +17793,7 @@ impl Workspace {
 
         // Left side: alert icon + bold heading + regular description, all inline.
         let icon =
-            ConstrainedBox::new(Icon::AlertCircle.to_warpui_icon(text_color.into()).finish())
+            ConstrainedBox::new(Icon::AlertCircle.to_zap_ng_ui_icon(text_color.into()).finish())
                 .with_width(16.)
                 .with_height(16.)
                 .finish();
@@ -17894,7 +17894,7 @@ impl Workspace {
                                     // `x-close.svg`), matching the Figma
                                     // design. `Icon::XCircle` wraps the x in
                                     // a circle which is not what we want.
-                                    Icon::X.to_warpui_icon(text_color.into()).finish(),
+                                    Icon::X.to_zap_ng_ui_icon(text_color.into()).finish(),
                                 )
                                 .with_width(16.)
                                 .with_height(16.)
@@ -17957,7 +17957,7 @@ impl Workspace {
             if let Some(icon) = icon {
                 row.add_child(
                     Container::new(
-                        ConstrainedBox::new(icon.to_warpui_icon(text_color.into()).finish())
+                        ConstrainedBox::new(icon.to_zap_ng_ui_icon(text_color.into()).finish())
                             .with_width(14.)
                             .with_height(14.)
                             .finish(),
@@ -18189,7 +18189,7 @@ impl Workspace {
         }
 
         #[cfg(target_family = "wasm")]
-        if !warpui::platform::wasm::is_mobile_device()
+        if !zap_ng_ui::platform::wasm::is_mobile_device()
             && self
                 .current_workspace_state
                 .is_transcript_details_panel_open
@@ -18270,7 +18270,7 @@ impl Workspace {
                 )
             }
             HeaderToolbarItemKind::ToolsPanel => {
-                if !pane_group.left_panel_open || warpui::platform::is_mobile_device() {
+                if !pane_group.left_panel_open || zap_ng_ui::platform::is_mobile_device() {
                     return None;
                 }
                 Some(ChildView::new(&self.left_panel_view).finish())
@@ -18377,7 +18377,7 @@ impl Workspace {
         let general_settings = GeneralSettings::as_ref(app);
         let theme_settings = ThemeSettings::as_ref(app);
         let ssh_settings = SshSettings::as_ref(app);
-        let warpify_settings = WarpifySettings::as_ref(app);
+        let zapngify_settings = ZapNGifySettings::as_ref(app);
         let terminal_settings = TerminalSettings::as_ref(app);
         let pane_settings = PaneSettings::as_ref(app);
         let keys_settings = KeysSettings::as_ref(app);
@@ -18442,7 +18442,7 @@ impl Workspace {
                 .insert(flags::SPLIT_PANE_ON_SAME_SSH_HOST_CONTEXT_FLAG);
         }
 
-        if *warpify_settings.use_ssh_tmux_wrapper.value() {
+        if *zapngify_settings.use_ssh_tmux_wrapper.value() {
             context.set.insert(flags::SSH_TMUX_WRAPPER_CONTEXT_FLAG);
         }
 
@@ -18845,15 +18845,15 @@ impl Workspace {
                 entry_focus: GlobalSearchEntryFocus::Results,
             });
         }
-        if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+        if ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
             views.push(ToolPanelView::ZapDrive);
         }
-        // openWarp 独有:SSH 管理器,无 feature flag,默认始终显示。
+        // ZapNG 独有:SSH 管理器,无 feature flag,默认始终显示。
         views.push(ToolPanelView::SshManager);
         if FeatureFlag::ServerFileBrowser.is_enabled() && FeatureFlag::SshRemoteServer.is_enabled() {
             views.push(ToolPanelView::ServerFileBrowser);
         }
-        // openWarp 独有:Skill 管理器,无 feature flag,local_fs 构建下默认显示。
+        // ZapNG 独有:Skill 管理器,无 feature flag,local_fs 构建下默认显示。
         if cfg!(feature = "local_fs") {
             views.push(ToolPanelView::SkillManager);
         }
@@ -18922,7 +18922,7 @@ impl TypedActionView for Workspace {
             WorkspaceAction::SetA11yVerbosityLevel(verbosity) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("{verbosity:?} accessibility announcements set"),
-                    WarpA11yRole::UserAction,
+                    ZapNGA11yRole::UserAction,
                 ))
             }
             _ => ActionAccessibilityContent::from_debug(),
@@ -19236,8 +19236,8 @@ impl TypedActionView for Workspace {
             AutoupdateFailureLink => self.open_autoupdate_failure_link(ctx),
             ApplyUpdate => self.apply_update(ctx),
             // 去中心化分支:`LogOut` 已删除。
-            ExportAllWarpDriveObjects => {
-                self.export_all_warp_drive_objects(ctx);
+            ExportAllZapNGDriveObjects => {
+                self.export_all_zap_ng_drive_objects(ctx);
             }
             CopyVersion(version) => self.copy_version(version, ctx),
             DownloadNewVersion => self.download_new_version(ctx),
@@ -19366,7 +19366,7 @@ impl TypedActionView for Workspace {
                 }
             }
             CreatePersonalFolder => {
-                self.update_warp_drive_view(ctx, |drive_panel, ctx| {
+                self.update_zap_ng_drive_view(ctx, |drive_panel, ctx| {
                     drive_panel.open_cloud_object_dialog(
                         DriveObjectType::Folder,
                         Space::Personal,
@@ -19374,7 +19374,7 @@ impl TypedActionView for Workspace {
                         ctx,
                     );
                 });
-                self.current_workspace_state.is_warp_drive_open = true;
+                self.current_workspace_state.is_zap_ng_drive_open = true;
                 ctx.notify();
             }
             ToggleMouseReporting => self.toggle_mouse_reporting(ctx),
@@ -19386,7 +19386,7 @@ impl TypedActionView for Workspace {
                 self.current_workspace_state.is_tab_being_dragged = true;
             }
             ZapDrive => {
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+                if ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
                     self.open_left_panel_view(&LeftPanelAction::ZapDrive, ctx);
                 }
             }
@@ -19402,9 +19402,9 @@ impl TypedActionView for Workspace {
                 let file_tree_active = self
                     .left_panel_view
                     .read(ctx, |lp, _| lp.is_file_tree_active());
-                let warp_drive_active = self
+                let zap_ng_drive_active = self
                     .left_panel_view
-                    .read(ctx, |lp, _| lp.is_warp_drive_active());
+                    .read(ctx, |lp, _| lp.is_zap_ng_drive_active());
 
                 self.toggle_left_panel(ctx);
 
@@ -19424,11 +19424,11 @@ impl TypedActionView for Workspace {
                             },
                             ctx
                         );
-                    } else if warp_drive_active {
+                    } else if zap_ng_drive_active {
                         // Tools panel opened with Zap Drive as the active view
                         send_telemetry_from_ctx!(
-                            TelemetryEvent::WarpDriveOpened {
-                                source: WarpDriveSource::LeftPanelToolbelt,
+                            TelemetryEvent::ZapNGDriveOpened {
+                                source: ZapNGDriveSource::LeftPanelToolbelt,
                                 is_code_mode_v2: true
                             },
                             ctx
@@ -19684,7 +19684,7 @@ impl TypedActionView for Workspace {
             ToggleAIAssistant => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::ToggleWarpAI {
+                    TelemetryEvent::ToggleZapNGAI {
                         opened: self.current_workspace_state.is_ai_assistant_panel_open
                     },
                     ctx
@@ -19695,8 +19695,8 @@ impl TypedActionView for Workspace {
                     self.toggle_ai_assistant_panel(ctx);
                     if self.current_workspace_state.is_ai_assistant_panel_open {
                         send_telemetry_from_ctx!(
-                            TelemetryEvent::OpenedWarpAI {
-                                source: OpenedWarpAISource::GlobalEntryButton
+                            TelemetryEvent::OpenedZapNGAI {
+                                source: OpenedZapNGAISource::GlobalEntryButton
                             },
                             ctx
                         );
@@ -19710,8 +19710,8 @@ impl TypedActionView for Workspace {
             ClickedAIAssistantWarmWelcome => {
                 self.toggle_ai_assistant_panel(ctx);
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::OpenedWarpAI {
-                        source: OpenedWarpAISource::WarmWelcome
+                    TelemetryEvent::OpenedZapNGAI {
+                        source: OpenedZapNGAISource::WarmWelcome
                     },
                     ctx
                 );
@@ -19915,13 +19915,13 @@ impl TypedActionView for Workspace {
             }
             FocusLeftPanel => self.focus_left_panel(ctx),
             FocusRightPanel => self.focus_right_panel(ctx),
-            ViewObjectInWarpDrive(item_id) => {
+            ViewObjectInZapNGDrive(item_id) => {
                 // Focus newly created object in WD
-                self.view_in_and_focus_warp_drive(*item_id, ctx);
+                self.view_in_and_focus_zap_ng_drive(*item_id, ctx);
             }
             UndoTrash(object_type_and_id) => {
-                self.update_warp_drive_view(ctx, |warp_drive, ctx| {
-                    warp_drive.undo_trash(object_type_and_id, ctx);
+                self.update_zap_ng_drive_view(ctx, |zap_ng_drive, ctx| {
+                    zap_ng_drive.undo_trash(object_type_and_id, ctx);
                 });
             }
             TerminateApp => {
@@ -20357,19 +20357,19 @@ impl TypedActionView for Workspace {
                 );
             }
             #[cfg(debug_assertions)]
-            InstallOpenCodeWarpPlugin => {
-                let message = set_opencode_warp_plugin("github:warpdotdev/opencode-warp-internal");
+            InstallOpenCodeZapNGPlugin => {
+                let message = set_opencode_zap_ng_plugin("github:warpdotdev/opencode-warp-internal");
                 self.toast_stack.update(ctx, |view, ctx| {
                     view.add_ephemeral_toast(DismissibleToast::default(message), ctx);
                 });
             }
             #[cfg(debug_assertions)]
-            UseLocalOpenCodeWarpPlugin => {
+            UseLocalOpenCodeZapNGPlugin => {
                 let message = match dirs::home_dir() {
                     Some(home) => {
                         let plugin_path = home.join("opencode-warp/src/index.ts");
                         let entry = format!("file://{}", plugin_path.display());
-                        set_opencode_warp_plugin(&entry)
+                        set_opencode_zap_ng_plugin(&entry)
                     }
                     None => "Failed to determine home directory".to_string(),
                 };
@@ -20458,7 +20458,7 @@ impl TypedActionView for Workspace {
                 }
             }
             ToggleWarpDrive => {
-                if WarpDriveSettings::is_warp_drive_enabled(ctx) {
+                if ZapNGDriveSettings::is_zap_ng_drive_enabled(ctx) {
                     let is_showing =
                         self.left_panel_view.as_ref(ctx).active_view() == ToolPanelView::ZapDrive;
                     self.toggle_left_panel_view(&LeftPanelAction::ZapDrive, is_showing, ctx);
@@ -20688,7 +20688,7 @@ impl View for Workspace {
         self.sync_window_button_visibility(ctx);
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         if NetworkStatus::as_ref(app).is_online() {
@@ -20764,7 +20764,7 @@ impl View for Workspace {
             }
         };
 
-        if WarpDriveSettings::is_warp_drive_enabled(app) {
+        if ZapNGDriveSettings::is_zap_ng_drive_enabled(app) {
             context.set.insert(flags::ENABLE_WARP_DRIVE);
         }
 
@@ -20808,7 +20808,7 @@ impl View for Workspace {
         }
 
         let default_terminal = DefaultTerminal::as_ref(app);
-        if default_terminal.is_warp_default() {
+        if default_terminal.is_zap_ng_default() {
             context.set.insert(flags::WARP_IS_DEFAULT_TERMINAL);
         }
 
@@ -20924,7 +20924,7 @@ impl View for Workspace {
         #[cfg(target_family = "wasm")]
         {
             let pane_group = self.active_tab_pane_group().as_ref(app);
-            if warpui::platform::wasm::is_mobile_device() && pane_group.left_panel_open {
+            if zap_ng_ui::platform::wasm::is_mobile_device() && pane_group.left_panel_open {
                 let scrim = Rect::new()
                     .with_background(Fill::Solid(ColorU::new(
                         0,
@@ -21028,7 +21028,7 @@ impl View for Workspace {
 
         // Transcript details panel overlay (right side, mobile only)
         #[cfg(target_family = "wasm")]
-        if warpui::platform::wasm::is_mobile_device()
+        if zap_ng_ui::platform::wasm::is_mobile_device()
             && self
                 .current_workspace_state
                 .is_transcript_details_panel_open
@@ -22745,7 +22745,7 @@ fn render_cross_window_ghost_chip(
     appearance: &Appearance,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::elements::DropShadow;
+    use zap_ng_ui::elements::DropShadow;
 
     let theme = appearance.theme();
 
@@ -22805,7 +22805,7 @@ fn compute_default_panel_widths(
 /// Removes any existing opencode-warp plugin entries (both local file:// and github:) and adds
 /// the given `new_entry`. Creates the config file with a default structure if it doesn't exist.
 #[cfg(debug_assertions)]
-fn set_opencode_warp_plugin(new_entry: &str) -> String {
+fn set_opencode_zap_ng_plugin(new_entry: &str) -> String {
     let Some(home) = dirs::home_dir() else {
         return "Failed to determine home directory".to_string();
     };

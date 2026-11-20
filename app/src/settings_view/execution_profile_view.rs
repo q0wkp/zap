@@ -14,10 +14,10 @@ use crate::view_components::action_button::{ActionButton, ButtonSize, SecondaryT
 use crate::TemplatableMCPServerManager;
 use std::path::PathBuf;
 use uuid::Uuid;
-use warp_core::features::FeatureFlag;
-use warpui::elements::ParentElement;
-use warpui::SingletonEntity;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::elements::ParentElement;
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
         Shrinkable, Text, Wrap,
@@ -446,10 +446,10 @@ impl View for ExecutionProfileView {
         )
         .with_background(appearance.theme().surface_2())
         .with_border(
-            warpui::elements::Border::new(1.).with_border_fill(appearance.theme().outline()),
+            zap_ng_ui::elements::Border::new(1.).with_border_fill(appearance.theme().outline()),
         )
-        .with_corner_radius(warpui::elements::CornerRadius::with_all(
-            warpui::elements::Radius::Pixels(4.),
+        .with_corner_radius(zap_ng_ui::elements::CornerRadius::with_all(
+            zap_ng_ui::elements::Radius::Pixels(4.),
         ))
         .with_horizontal_padding(16.)
         .with_vertical_padding(12.)
@@ -509,11 +509,11 @@ where
                         )
                         .with_background(appearance.theme().surface_2())
                         .with_border(
-                            warpui::elements::Border::all(1.)
+                            zap_ng_ui::elements::Border::all(1.)
                                 .with_border_fill(appearance.theme().outline()),
                         )
-                        .with_corner_radius(warpui::elements::CornerRadius::with_all(
-                            warpui::elements::Radius::Pixels(3.),
+                        .with_corner_radius(zap_ng_ui::elements::CornerRadius::with_all(
+                            zap_ng_ui::elements::Radius::Pixels(3.),
                         ))
                         .with_horizontal_padding(6.)
                         .with_vertical_padding(2.)
@@ -540,7 +540,7 @@ fn render_allowlist_denylist_row(
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        icon.to_warpui_icon(if is_ai_enabled {
+                        icon.to_zap_ng_ui_icon(if is_ai_enabled {
                             appearance
                                 .theme()
                                 .sub_text_color(appearance.theme().surface_1())
@@ -578,7 +578,7 @@ fn render_allowlist_denylist_row(
             .finish(),
     )
     .with_margin_left(8.)
-    .with_border(warpui::elements::Border::left(1.).with_border_fill(appearance.theme().outline()))
+    .with_border(zap_ng_ui::elements::Border::left(1.).with_border_fill(appearance.theme().outline()))
     .with_padding_left(8.)
     .finish()
 }
@@ -643,7 +643,7 @@ fn render_model_line_with_icon(
             .with_child(
                 Container::new(
                     ConstrainedBox::new(
-                        icon.to_warpui_icon(if is_ai_enabled {
+                        icon.to_zap_ng_ui_icon(if is_ai_enabled {
                             appearance
                                 .theme()
                                 .sub_text_color(appearance.theme().surface_1())
@@ -704,7 +704,7 @@ fn render_permission_line_with_icon(
         .with_child(
             Container::new(
                 ConstrainedBox::new(
-                    icon.to_warpui_icon(if is_ai_enabled {
+                    icon.to_zap_ng_ui_icon(if is_ai_enabled {
                         appearance
                             .theme()
                             .sub_text_color(appearance.theme().surface_1())

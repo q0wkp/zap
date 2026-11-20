@@ -9,7 +9,7 @@ use crate::{
     PaneViewLocator, WindowId,
 };
 use std::collections::{hash_map::Entry, HashMap};
-use warpui::{Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, EntityId, ModelContext, SingletonEntity};
 
 pub struct WorkflowManager {
     panes_by_hashed_id: HashMap<String, WorkflowPaneData>,

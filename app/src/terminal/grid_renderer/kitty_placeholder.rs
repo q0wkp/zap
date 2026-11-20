@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 
-use warpui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use warpui::elements::CornerRadius;
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
-use warpui::{AppContext, ClipBounds, PaintContext, SingletonEntity};
+use zap_ng_ui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use zap_ng_ui::elements::CornerRadius;
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::{vec2f, Vector2F};
+use zap_ng_ui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
+use zap_ng_ui::{AppContext, ClipBounds, PaintContext, SingletonEntity};
 
 use crate::terminal::model::cell::Cell;
 use crate::terminal::model::image_map::StoredImageMetadata;

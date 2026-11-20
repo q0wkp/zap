@@ -1,13 +1,13 @@
 use std::{borrow::Cow, mem, ops::Range, sync::Arc};
 
 use string_offset::{ByteOffset, CharOffset};
-use warp_completer::signatures::CommandRegistry;
-use warp_editor::{
+use zap_ng_completer::signatures::CommandRegistry;
+use zap_ng_editor::{
     content::{anchor::Anchor, buffer::Buffer, selection_model::BufferSelectionModel},
     editor::EmbeddedItemModel,
 };
-use warp_util::user_input::UserInput;
-use warpui::{
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::{
     elements::{
         Align, Border, Container, CrossAxisAlignment, Empty, Flex, MainAxisAlignment,
         MouseStateHandle, ParentElement, Shrinkable,

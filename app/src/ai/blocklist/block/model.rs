@@ -3,7 +3,7 @@ mod model_impl;
 
 pub use helper::AIBlockModelHelper;
 pub use model_impl::*;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::terminal::shared_session::ParticipantId;
 
@@ -16,7 +16,7 @@ use crate::ai::{
     llms::LLMId,
 };
 use chrono::TimeDelta;
-use warpui::{AppContext, ViewContext};
+use zap_ng_ui::{AppContext, ViewContext};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PassiveRequestType {
@@ -221,7 +221,7 @@ pub trait AIBlockModel {
 
 #[cfg(any(test, feature = "integration_tests"))]
 pub mod testing {
-    use warpui::{AppContext, ViewContext};
+    use zap_ng_ui::{AppContext, ViewContext};
 
     use crate::ai::{
         agent::{

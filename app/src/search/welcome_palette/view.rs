@@ -6,17 +6,17 @@ use std::sync::Arc;
 use chrono::Utc;
 use itertools::Itertools as _;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
-use warpui::elements::{
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::elements::{
     Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
     Container, CornerRadius, Fill, Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, SavePosition, Shrinkable,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::UiComponent as _;
-use warpui::{
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use zap_ng_ui::ui_components::components::UiComponent as _;
+use zap_ng_ui::{
     units::{IntoPixels, Pixels},
     AppContext, Element, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView,
     ViewContext, ViewHandle,
@@ -34,7 +34,7 @@ use crate::search::binding_source::BindingSource;
 use crate::search::command_palette::conversations::{self};
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
 use crate::search::command_palette::new_session::{AllowedSessionKinds, NewSessionDataSource};
-use crate::search::command_palette::{launch_config, warp_drive, CommandPaletteMixer};
+use crate::search::command_palette::{launch_config, zap_ng_drive, CommandPaletteMixer};
 use crate::search::command_search::projects::project_data_source::ProjectDataSource;
 use crate::search::command_search::projects::{ProjectSearchItem, SuggestedProjectsDataSource};
 use crate::search::data_source::QueryResult;
@@ -48,7 +48,7 @@ use crate::send_telemetry_from_ctx;
 use crate::server::{ids::SyncId, telemetry::TelemetryEvent};
 use crate::settings::AISettings;
 use crate::terminal::History;
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::ZapNGTheme;
 use crate::ui_components::icons::Icon;
 use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
 use crate::workspace::WorkspaceAction;
@@ -161,7 +161,7 @@ impl TypedActionView for WelcomePalette {
     }
 }
 
-impl warpui::View for WelcomePalette {
+impl zap_ng_ui::View for WelcomePalette {
     fn ui_name() -> &'static str {
         "WelcomePalette"
     }
@@ -238,14 +238,14 @@ impl WelcomePalette {
             NewSessionDataSource::new(binding_source.clone(), ctx)
                 .with_allowed_kinds(AllowedSessionKinds::tabs_only())
         });
-        let warp_drive_data_source = ctx.add_model(warp_drive::DataSource::new);
+        let zap_ng_drive_data_source = ctx.add_model(zap_ng_drive::DataSource::new);
 
         let mixer = ctx.add_model(|ctx| {
             let mut mixer = CommandPaletteMixer::new();
             mixer.add_sync_source(actions_data_source.clone(), HashSet::new());
             mixer.add_sync_source(project_data_source.clone(), HashSet::new());
             mixer.add_sync_source(suggested_projects_data_source.clone(), HashSet::new());
-            mixer.add_sync_source(warp_drive_data_source.clone(), HashSet::new());
+            mixer.add_sync_source(zap_ng_drive_data_source.clone(), HashSet::new());
 
             if AISettings::as_ref(ctx).is_any_ai_enabled(ctx) {
                 mixer.add_sync_source(conversations_data_source.clone(), HashSet::new());
@@ -625,7 +625,7 @@ impl WelcomePalette {
         })
     }
 
-    fn render_palette_list(&self, theme: &WarpTheme, app: &AppContext) -> Box<dyn Element> {
+    fn render_palette_list(&self, theme: &ZapNGTheme, app: &AppContext) -> Box<dyn Element> {
         match self.search_bar_state.as_ref(app).query_result_renderers() {
             None => {
                 self.placeholder_query_renderer
@@ -651,7 +651,7 @@ impl WelcomePalette {
         &self,
         renderers: &[QueryResultRenderer<CommandPaletteItemAction>],
         selected_item: SelectedItem,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let selected_index = match selected_item {
@@ -704,7 +704,7 @@ impl WelcomePalette {
                     Some(keystroke) => format!("Add repository {keystroke}"),
                     None => "Add repository".to_string(),
                 },
-                Icon::Plus.to_warpui_icon(theme.foreground()),
+                Icon::Plus.to_zap_ng_ui_icon(theme.foreground()),
                 MainAxisSize::Max,
                 MainAxisAlignment::Center,
                 vec2f(16., 16.),
@@ -727,7 +727,7 @@ impl WelcomePalette {
                     Some(keystroke) => format!("Terminal session {keystroke}"),
                     None => "Terminal session".to_string(),
                 },
-                Icon::Terminal.to_warpui_icon(theme.foreground()),
+                Icon::Terminal.to_zap_ng_ui_icon(theme.foreground()),
                 MainAxisSize::Max,
                 MainAxisAlignment::Center,
                 vec2f(16., 16.),
@@ -832,11 +832,11 @@ impl WelcomePalette {
         }
     }
 
-    /// Dispatches `action` to the correct window and [`warpui::View`] by using the current state of
+    /// Dispatches `action` to the correct window and [`zap_ng_ui::View`] by using the current state of
     /// the [`BindingSource`] model.
     fn dispatch_typed_action_on_view(
         &self,
-        action: &dyn warpui::Action,
+        action: &dyn zap_ng_ui::Action,
         ctx: &mut ViewContext<Self>,
     ) {
         send_telemetry_from_ctx!(

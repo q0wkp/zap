@@ -1,5 +1,5 @@
 use pathfinder_geometry::rect::RectF;
-use warpui::{
+use zap_ng_ui::{
     async_assert_eq, integration::TestStep, platform::TerminationMode, windowing::WindowManager,
     SingletonEntity,
 };

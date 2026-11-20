@@ -1,7 +1,7 @@
 use crate::ui_components::blended_colors;
 use crate::{appearance::Appearance, themes::theme::Fill, ui_components::icons};
 use pathfinder_geometry::vector::vec2f;
-use warpui::{
+use zap_ng_ui::{
     color::ColorU,
     elements::{
         Align, Border, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
@@ -92,7 +92,7 @@ pub enum ModalAction {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
@@ -262,7 +262,7 @@ impl<T: View> Modal<T> {
             Some(
                 Align::new(
                     Container::new(
-                        ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+                        ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                             .with_width(icon_size)
                             .with_height(icon_size)
                             .finish(),

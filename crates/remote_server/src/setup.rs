@@ -5,7 +5,7 @@ pub use glibc::{GlibcVersion, RemoteLibc};
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
-use warp_core::channel::{Channel, ChannelState};
+use zap_ng_core::channel::{Channel, ChannelState};
 
 /// State machine for the remote server install → launch → initialize flow.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -263,14 +263,14 @@ pub fn parse_uname_output(output: &str) -> Result<RemotePlatform> {
 /// - integration: `~/.warp-dev/remote-server`
 /// - warp-oss:    `~/.zap/remote-server`
 pub fn remote_server_dir() -> String {
-    let warp_dir = match ChannelState::channel() {
+    let zap_ng_dir = match ChannelState::channel() {
         Channel::Stable => ".warp",
         Channel::Preview => ".warp-preview",
         Channel::Dev | Channel::Integration => ".warp-dev",
         Channel::Local => ".warp-local",
         Channel::Oss => ".zap",
     };
-    format!("~/{warp_dir}/remote-server")
+    format!("~/{zap_ng_dir}/remote-server")
 }
 
 /// 返回可安全放入路径的 remote-server identity key 目录名。

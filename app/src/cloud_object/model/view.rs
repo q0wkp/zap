@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap};
 
 use chrono::{Duration, Utc};
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::{
     auth::{AuthStateProvider, UserUid},

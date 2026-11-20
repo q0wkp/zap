@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use warpui::Entity;
+use zap_ng_ui::Entity;
 
 #[derive(
     Debug,

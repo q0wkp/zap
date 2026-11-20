@@ -5,7 +5,7 @@ use crate::content::{
     },
 };
 use sum_tree::SumTree;
-use warpui::elements::ListIndentLevel;
+use zap_ng_ui::elements::ListIndentLevel;
 
 #[test]
 #[should_panic(

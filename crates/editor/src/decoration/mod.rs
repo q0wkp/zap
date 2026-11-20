@@ -1,4 +1,4 @@
-use warpui::ModelContext;
+use zap_ng_ui::ModelContext;
 
 use crate::content::{buffer::BufferSnapshot, edit::PreciseDelta, version::BufferVersion};
 

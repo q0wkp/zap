@@ -1,6 +1,6 @@
 //! Skill resolution for agent runs.
 //!
-//! This module exists primarily for `warp agent run --skill ...` (and related flows) where we need to
+//! This module exists primarily for `zap-ng agent run --skill ...` (and related flows) where we need to
 //! resolve a CLI-provided `--skill` specifier (`SkillSpec`) into a concrete `SKILL.md` file and its
 //! parsed instruction body.
 //!
@@ -18,12 +18,12 @@ use ai::skills::{
 };
 use command::blocking::Command;
 use command::r#async::Command as AsyncCommand;
-use warp_cli::skill::SkillSpec;
-use warpui::AppContext;
-use warpui::SingletonEntity as _;
+use zap_ng_cli::skill::SkillSpec;
+use zap_ng_ui::AppContext;
+use zap_ng_ui::SingletonEntity as _;
 
 use super::SkillManager;
-use crate::warp_managed_paths_watcher::warp_managed_skill_dirs;
+use crate::zap_ng_managed_paths_watcher::zap_ng_managed_skill_dirs;
 
 const SKILL_FILE_NAME: &str = "SKILL.md";
 
@@ -64,7 +64,7 @@ fn home_skill_dirs_for_resolution() -> Vec<PathBuf> {
     let mut skill_dirs = Vec::new();
     for provider in SKILL_PROVIDER_DEFINITIONS.iter() {
         if provider.provider == SkillProvider::Zap {
-            for dir in warp_managed_skill_dirs() {
+            for dir in zap_ng_managed_skill_dirs() {
                 push_unique_path(&mut skill_dirs, dir);
             }
         } else if let Some(dir) = home_skills_path(provider.provider) {

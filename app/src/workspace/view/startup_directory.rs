@@ -3,8 +3,8 @@
 use super::Workspace;
 use crate::terminal::session_settings::{NewSessionSource, SessionSettings};
 use std::path::PathBuf;
-use warpui::SingletonEntity;
-use warpui::{AppContext, ViewContext, WindowId};
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{AppContext, ViewContext, WindowId};
 
 impl Workspace {
     /// Helper function to compute the initial directory for a new session

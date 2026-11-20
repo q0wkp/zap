@@ -17,17 +17,17 @@ use crate::cloud_object::model::persistence::ObjectStoreModel;
 use crate::workflows::workflow::Workflow;
 use ai::api_keys::{ApiKeyManager, AwsCredentialsRefreshStrategy};
 use anyhow::Context;
-use warp_cli::{
+use zap_ng_cli::{
     agent::{AgentCommand, AgentProfileCommand, OutputFormat},
     mcp::MCPCommand,
     model::ModelCommand,
     CliCommand, GlobalOptions,
 };
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 #[cfg(not(target_family = "wasm"))]
-use warp_logging::log_file_path;
-use warpui::ModelSpawner;
-use warpui::{platform::TerminationMode, AppContext, SingletonEntity};
+use zap_ng_logging::log_file_path;
+use zap_ng_ui::ModelSpawner;
+use zap_ng_ui::{platform::TerminationMode, AppContext, SingletonEntity};
 
 use crate::{
     ai::ambient_agents::task::HarnessConfig, ai::ambient_agents::AgentConfigSnapshot,
@@ -43,7 +43,7 @@ pub(crate) use driver::harness::{
     task_env_vars, validate_cli_installed, ClaudeHarness, ThirdPartyHarness,
 };
 pub use driver::AgentDriver;
-use warp_cli::agent::{Harness, Prompt, RunAgentArgs};
+use zap_ng_cli::agent::{Harness, Prompt, RunAgentArgs};
 
 mod admin;
 mod common;
@@ -293,11 +293,11 @@ fn resolve_prompt(prompt: &Prompt, ctx: &AppContext) -> Result<String, AgentDriv
 /// requires spawning an async task, which requires a ModelContext.
 struct AgentDriverRunner;
 
-impl warpui::Entity for AgentDriverRunner {
+impl zap_ng_ui::Entity for AgentDriverRunner {
     type Event = ();
 }
 
-impl warpui::SingletonEntity for AgentDriverRunner {}
+impl zap_ng_ui::SingletonEntity for AgentDriverRunner {}
 
 impl AgentDriverRunner {
     async fn setup_and_run_driver(
@@ -311,12 +311,12 @@ impl AgentDriverRunner {
         // Wait for Zap Drive to sync before building the task config, since
         // prompt resolution (SavedPrompt -> workflow lookup) depends on it.
         if foreground
-            .spawn(|_, ctx| common::refresh_warp_drive(ctx))
+            .spawn(|_, ctx| common::refresh_zap_ng_drive(ctx))
             .await?
             .await
             .is_err()
         {
-            return Err(AgentDriverError::WarpDriveSyncFailed);
+            return Err(AgentDriverError::ZapNGDriveSyncFailed);
         }
 
         let result: Result<(), AgentDriverError> = async {
@@ -588,7 +588,7 @@ fn launch_command(
 
 /// Check if we're running within Zap (for example, if this is an invocation of the Zap CLI
 /// within a Zap terminal session).
-pub fn is_running_in_warp() -> bool {
+pub fn is_running_in_zap_ng() -> bool {
     std::env::var("TERM_PROGRAM")
         .map(|v| v == "WarpTerminal")
         .unwrap_or(false)

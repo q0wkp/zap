@@ -7,7 +7,7 @@ use futures::channel::oneshot;
 use futures_util::StreamExt;
 use uuid::Uuid;
 use warp_multi_agent_api::response_event;
-use warpui::{Entity, ModelContext};
+use zap_ng_ui::{Entity, ModelContext};
 
 use crate::{
     ai::agent::{
@@ -20,7 +20,7 @@ use crate::{
     network::NetworkStatus,
     report_error, send_telemetry_from_ctx,
 };
-use warpui::SingletonEntity;
+use zap_ng_ui::SingletonEntity;
 
 /// BYOP 路径的请求分流参数。从 LLMId、settings、conversation 中提取后
 /// 一次性塞给 spawn closure(ctx 不能跨 await 边界)。
@@ -75,7 +75,7 @@ pub(crate) struct TitleGenParams {
 fn byop_dispatch_info(
     params: &api::RequestParams,
     ai_identifiers: &AIIdentifiers,
-    ctx: &warpui::AppContext,
+    ctx: &zap_ng_ui::AppContext,
 ) -> Option<ByopDispatch> {
     let (provider, api_key, model_id) =
         crate::ai::agent_providers::lookup_byop(ctx, &params.model)?;

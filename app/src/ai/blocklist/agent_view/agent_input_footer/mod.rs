@@ -56,7 +56,7 @@ use crate::{
     workspaces::user_workspaces::UserWorkspaces,
 };
 use toolbar_item::AgentToolbarItemKind;
-// Zap Wave 7-3:`warp_cli::agent::Harness` import was removed with the hosted-mode footer.
+// Zap Wave 7-3:`zap_ng_cli::agent::Harness` import was removed with the hosted-mode footer.
 
 use std::sync::Arc;
 
@@ -83,7 +83,7 @@ use tokio::fs;
 #[cfg(feature = "voice_input")]
 use voice_input::{StartListeningError, VoiceSessionResult};
 
-use warp_core::{
+use zap_ng_core::{
     report_if_error,
     ui::{
         color::{blend::Blend, contrast::MinimumAllowedContrast, ContrastingColor},
@@ -91,8 +91,8 @@ use warp_core::{
     },
 };
 #[cfg(feature = "voice_input")]
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::{
     elements::{
         Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
         CrossAxisAlignment, DispatchEventResult, Element, EventHandler, Expanded, Flex,
@@ -105,7 +105,7 @@ use warpui::{
 };
 
 #[cfg(not(target_family = "wasm"))]
-use warpui::r#async::Timer;
+use zap_ng_ui::r#async::Timer;
 
 // Zap Wave 7-3:`EnvironmentSelector` / `EnvironmentSelectorEvent` re-export was removed
 // with the hosted-mode footer.
@@ -788,7 +788,7 @@ impl AgentInputFooter {
     fn select_cli_file(&mut self, ctx: &mut ViewContext<Self>) {
         let window_id = ctx.window_id();
         let view_id = ctx.view_id();
-        let file_picker_config = warpui::platform::FilePickerConfiguration::new();
+        let file_picker_config = zap_ng_ui::platform::FilePickerConfiguration::new();
 
         ctx.open_file_picker(
             move |result, ctx| match result {
@@ -1464,8 +1464,8 @@ impl AgentInputFooter {
         // For key-based toggling, validate the key state against current voice state.
         if let voice_input::VoiceInputToggledFrom::Key { state } = source {
             match (&self.cli_voice_input_state, state) {
-                (CLIVoiceInputState::Stopped, warpui::event::KeyState::Released) => return,
-                (CLIVoiceInputState::Listening, warpui::event::KeyState::Pressed) => return,
+                (CLIVoiceInputState::Stopped, zap_ng_ui::event::KeyState::Released) => return,
+                (CLIVoiceInputState::Listening, zap_ng_ui::event::KeyState::Pressed) => return,
                 _ => {}
             }
         }
@@ -1824,7 +1824,7 @@ impl View for AgentInputFooter {
         "AgentViewFooter"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         // Zap Wave 7-3: hosted-mode footer rendering was removed.
         // When a CLI agent session is active, render the CLI agent toolbar instead.
         if self.is_cli_agent_session_active(app) {
@@ -1979,7 +1979,7 @@ fn render_ftu_callout(
         .with_child(
             ConstrainedBox::new(
                 Icon::CalloutTriangleBorderDown
-                    .to_warpui_icon(Fill::Solid(theme.accent().into_solid()))
+                    .to_zap_ng_ui_icon(Fill::Solid(theme.accent().into_solid()))
                     .finish(),
             )
             .with_width(24.)
@@ -1989,7 +1989,7 @@ fn render_ftu_callout(
         .with_child(
             ConstrainedBox::new(
                 Icon::CalloutTriangleFillDown
-                    .to_warpui_icon(background)
+                    .to_zap_ng_ui_icon(background)
                     .finish(),
             )
             .with_width(24.)
@@ -2034,7 +2034,7 @@ pub enum AgentInputFooterAction {
 impl TypedActionView for AgentInputFooter {
     type Action = AgentInputFooterAction;
 
-    fn handle_action(&mut self, action: &Self::Action, ctx: &mut warpui::ViewContext<Self>) {
+    fn handle_action(&mut self, action: &Self::Action, ctx: &mut zap_ng_ui::ViewContext<Self>) {
         match action {
             #[cfg(feature = "voice_input")]
             AgentInputFooterAction::ToggleVoiceInput => {
@@ -2304,10 +2304,10 @@ impl ActionButtonTheme for AgentInputButtonTheme {
         true
     }
 
-    fn font_properties(&self) -> Option<warpui::fonts::Properties> {
+    fn font_properties(&self) -> Option<zap_ng_ui::fonts::Properties> {
         if false {
-            Some(warpui::fonts::Properties {
-                weight: warpui::fonts::Weight::Semibold,
+            Some(zap_ng_ui::fonts::Properties {
+                weight: zap_ng_ui::fonts::Weight::Semibold,
                 ..Default::default()
             })
         } else {
@@ -2349,7 +2349,7 @@ impl ActionButtonTheme for ActiveMicButtonTheme {
         true
     }
 
-    fn font_properties(&self) -> Option<warpui::fonts::Properties> {
+    fn font_properties(&self) -> Option<zap_ng_ui::fonts::Properties> {
         AgentInputButtonTheme.font_properties()
     }
 }

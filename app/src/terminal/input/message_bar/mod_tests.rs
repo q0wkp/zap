@@ -1,6 +1,6 @@
-use warp_core::ui::Icon;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::MouseStateHandle;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::elements::MouseStateHandle;
 
 use super::{ChipHorizontalAlignment, MessageItem};
 

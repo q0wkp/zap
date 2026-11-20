@@ -1,5 +1,5 @@
-﻿use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::{App, SingletonEntity};
+﻿use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::{App, SingletonEntity};
 
 use super::{has_completed_local_onboarding, RootView, HAS_COMPLETED_ONBOARDING_KEY};
 use crate::auth::AuthManager;

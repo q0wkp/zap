@@ -49,7 +49,7 @@ use std::{
 use crate::ai::agent::conversation::AIConversationId;
 use itertools::Itertools;
 use parking_lot::FairMutex;
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{
     ai::agent::{AIAgentAction, AIAgentActionId, AIAgentActionResult},
@@ -1368,7 +1368,7 @@ impl BlocklistAIActionModel {
                 let doc_model = AIDocumentModel::handle(ctx);
                 doc_model.update(ctx, |doc_model, doc_ctx| {
                     for (index, doc_context) in created_documents.iter_mut().enumerate() {
-                        // If a user is re-opening a shared session that they previously closed in the current warp session,
+                        // If a user is re-opening a shared session that they previously closed in the current zap-ng session,
                         // we should delete the previously created document so that the verseion history doesn't get messed up.
                         doc_model.delete_document(&doc_context.document_id);
 

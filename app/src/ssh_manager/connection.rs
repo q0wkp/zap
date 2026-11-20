@@ -2,10 +2,10 @@
 //! into the terminal's local shell, and answering the password prompts that follow with the
 //! credentials saved in the keychain.
 
-use warp_ssh_manager::{
+use zap_ng_ssh_manager::{
     KeychainSecretStore, SecretKind, SshRepository, SshSecretStore, SshServerInfo,
 };
-use warpui::{SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_ui::{SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::settings::{AISettings, DefaultSessionMode};
 use crate::terminal::TerminalView;
@@ -32,7 +32,7 @@ pub fn connect_terminal<O: View>(
     ctx: &mut ViewContext<O>,
 ) {
     let (server_for_connection, secret_lookup_id, secret_kind) =
-        match warp_ssh_manager::with_conn(|conn| {
+        match zap_ng_ssh_manager::with_conn(|conn| {
             let resolved_auth = SshRepository::resolve_server_auth(conn, &server)?;
             let mut server_for_connection = server.clone();
             server_for_connection.username = resolved_auth.username;
@@ -48,9 +48,9 @@ pub fn connect_terminal<O: View>(
             Err(e) => {
                 log::warn!("ssh auth resolution failed (will continue without injection): {e}");
                 let fallback_kind = match server.auth_type {
-                    warp_ssh_manager::AuthType::Password => SecretKind::Password,
-                    warp_ssh_manager::AuthType::Key => SecretKind::Passphrase,
-                    warp_ssh_manager::AuthType::OneKey => SecretKind::OneKeyPassword,
+                    zap_ng_ssh_manager::AuthType::Password => SecretKind::Password,
+                    zap_ng_ssh_manager::AuthType::Key => SecretKind::Passphrase,
+                    zap_ng_ssh_manager::AuthType::OneKey => SecretKind::OneKeyPassword,
                 };
                 (server.clone(), node_id.clone(), fallback_kind)
             }
@@ -58,7 +58,7 @@ pub fn connect_terminal<O: View>(
     // The host and user name may come from another device through sync, so they are checked here
     // too, where the command line is built: a value starting with `-` would be read by `ssh` as
     // an option.
-    if let Err(e) = warp_ssh_manager::validate_ssh_endpoint(
+    if let Err(e) = zap_ng_ssh_manager::validate_ssh_endpoint(
         &server_for_connection.host,
         &server_for_connection.username,
         server_for_connection.port,
@@ -66,7 +66,7 @@ pub fn connect_terminal<O: View>(
         log::warn!("ssh manager: not connecting to a server with an invalid endpoint: {e}");
         return;
     }
-    let cmd = warp_ssh_manager::build_ssh_command_line(&server_for_connection);
+    let cmd = zap_ng_ssh_manager::build_ssh_command_line(&server_for_connection);
 
     // A default CLI agent isn't launched on the remote host, nor replaced by agent view there.
     let ai_settings = AISettings::as_ref(ctx);
@@ -99,7 +99,7 @@ pub fn connect_terminal<O: View>(
 
     // 启动命令注入器 — 等待 shell ready 后自动执行 startup_command
     if let Some(startup_cmd) =
-        warp_ssh_manager::build_startup_command_line(&server).filter(|_| run_startup_command)
+        zap_ng_ssh_manager::build_startup_command_line(&server).filter(|_| run_startup_command)
     {
         crate::ssh_manager::startup_command_injector::spawn_startup_command_injector(
             terminal_view.read(ctx, |v, c| v.inactive_pty_reads_rx(c)),

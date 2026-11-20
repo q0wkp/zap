@@ -1,6 +1,6 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{
         Align, ChildAnchor, Container, MouseStateHandle, OffsetPositioning, ParentAnchor,
         ParentOffsetBounds, Stack,

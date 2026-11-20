@@ -4,7 +4,7 @@ use crate::ai::mcp::templatable::{GalleryData, JsonTemplate, TemplatableMCPServe
 use crate::server::datetime_ext::DateTimeExt;
 use chrono::DateTime;
 use uuid::Uuid;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 #[derive(Clone, Debug)]
 pub struct GalleryMCPServer {

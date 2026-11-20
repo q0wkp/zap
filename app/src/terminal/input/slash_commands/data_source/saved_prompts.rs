@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use futures_lite::future::yield_now;
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warpui::fonts::FamilyId;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::fonts::FamilyId;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::cloud_object::model::persistence::ObjectStoreModel;
 use crate::cloud_object::StoredObject;

@@ -10,9 +10,9 @@ use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 
 use strum_macros::{Display, EnumString, VariantNames};
-use warp_core::ui::color::CLAUDE_ORANGE;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::Fill;
+use zap_ng_core::ui::color::CLAUDE_ORANGE;
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::Fill;
 
 /// Represents a skill provider/origin (Agents, Claude, Codex, or Zap).
 #[derive(
@@ -84,7 +84,7 @@ impl SkillProvider {
             | SkillProvider::Agents
             | SkillProvider::Cursor
             | SkillProvider::Copilot
-            | SkillProvider::Github => Icon::WarpLogoLight,
+            | SkillProvider::Github => Icon::ZapNGLogoLight,
         }
     }
 
@@ -157,7 +157,7 @@ pub fn provider_rank(provider: SkillProvider) -> usize {
 
 pub fn home_skills_path(provider: SkillProvider) -> Option<PathBuf> {
     if provider == SkillProvider::Zap {
-        return warp_core::paths::warp_home_skills_dir();
+        return zap_ng_core::paths::zap_ng_home_skills_dir();
     }
     let definition = SKILL_PROVIDER_DEFINITIONS
         .iter()
@@ -198,20 +198,20 @@ mod tests {
     use super::{get_provider_for_path, home_skills_path, SkillProvider};
 
     #[test]
-    fn warp_home_skills_path_uses_warp_home_path() {
+    fn zap_ng_home_skills_path_uses_zap_ng_home_path() {
         assert_eq!(
             home_skills_path(SkillProvider::Zap),
-            warp_core::paths::warp_home_skills_dir()
+            zap_ng_core::paths::zap_ng_home_skills_dir()
         );
     }
 
     #[test]
-    fn warp_home_skill_path_uses_warp_provider() {
-        let Some(warp_home_skills_dir) = warp_core::paths::warp_home_skills_dir() else {
+    fn zap_ng_home_skill_path_uses_zap_ng_provider() {
+        let Some(zap_ng_home_skills_dir) = zap_ng_core::paths::zap_ng_home_skills_dir() else {
             eprintln!("Skipping test: home directory not available");
             return;
         };
-        let path = warp_home_skills_dir.join("my-skill").join("SKILL.md");
+        let path = zap_ng_home_skills_dir.join("my-skill").join("SKILL.md");
 
         assert_eq!(get_provider_for_path(&path), Some(SkillProvider::Zap));
     }

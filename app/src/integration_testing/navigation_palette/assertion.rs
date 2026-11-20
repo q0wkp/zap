@@ -1,5 +1,5 @@
-use warpui::integration::AssertionCallback;
-use warpui::{async_assert, integration::AssertionOutcome, App, ViewHandle, WindowId};
+use zap_ng_ui::integration::AssertionCallback;
+use zap_ng_ui::{async_assert, integration::AssertionOutcome, App, ViewHandle, WindowId};
 
 use crate::integration_testing::view_getters::workspace_view;
 use crate::palette::PaletteMode;

@@ -9,7 +9,7 @@ use super::{local_tty::shell::ShellStarter, shell::ShellType};
 use crate::terminal::available_shells::AvailableShells;
 #[cfg(feature = "local_tty")]
 use command::r#async::Command;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 #[derive(Debug)]
 pub enum LocalShellState {

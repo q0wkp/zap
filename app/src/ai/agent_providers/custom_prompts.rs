@@ -23,7 +23,7 @@ const MAX_LIST_DEPTH: usize = 4;
 
 /// The directory the custom prompt files live in, `None` without a home directory.
 pub fn custom_prompts_dir() -> Option<PathBuf> {
-    warp_core::paths::warp_home_config_dir().map(|dir| dir.join("prompts"))
+    zap_ng_core::paths::zap_ng_home_config_dir().map(|dir| dir.join("prompts"))
 }
 
 /// Resolves `relative` to a file inside `dir`, refusing any path that leaves it.

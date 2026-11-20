@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     elements::MouseStateHandle,
     fonts::Weight,
     platform::Cursor,

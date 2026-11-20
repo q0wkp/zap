@@ -156,7 +156,7 @@ fn state() -> &'static RwLock<State> {
 }
 
 fn cache_path() -> PathBuf {
-    let mut p = warp_core::paths::cache_dir();
+    let mut p = zap_ng_core::paths::cache_dir();
     p.push(CACHE_FILENAME);
     p
 }

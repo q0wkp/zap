@@ -18,7 +18,7 @@ use crate::ai::paths::host_native_absolute_path;
 use crate::ai::predict::generate_am_query_suggestions::{
     GenerateAMQuerySuggestionsRequest, GenerateAMQuerySuggestionsResponse, Suggestion,
 };
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::ZapNGAiExecutionContext;
 use crate::network::NetworkStatus;
 use crate::server::telemetry::PromptSuggestionFallbackReason;
 use crate::settings::AISettings;
@@ -32,9 +32,9 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 use chrono::Utc;
 use parking_lot::FairMutex;
 use serde_json::json;
-use warp_core::features::FeatureFlag;
-use warpui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::r#async::{FutureExt as AsyncFutureExt, SpawnedFutureHandle, Timer};
+use zap_ng_ui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 const NUM_TOP_BLOCK_LINES: usize = 100;
 const NUM_BOTTOM_BLOCK_LINES: usize = 200;
@@ -388,7 +388,7 @@ impl PassiveSuggestionsModel {
             .active_session
             .as_ref(ctx)
             .session_type(ctx)
-            .map(|session_type| matches!(session_type, SessionType::WarpifiedRemote { .. }))
+            .map(|session_type| matches!(session_type, SessionType::ZapNGifiedRemote { .. }))
             .unwrap_or(true);
         if !can_read_file || should_skip_for_remote {
             let reason = if !can_read_file {
@@ -590,7 +590,7 @@ fn fetch_static_prompt_suggestion(block: &UserBlockCompleted) -> Option<AgentMod
 #[allow(dead_code)]
 fn build_prompt_suggestions_request(
     block: &UserBlockCompleted,
-    execution_context: WarpAiExecutionContext,
+    execution_context: ZapNGAiExecutionContext,
     terminal_model: &Arc<FairMutex<TerminalModel>>,
 ) -> Option<GenerateAMQuerySuggestionsRequest> {
     let exit_code = block.serialized_block.exit_code;
@@ -631,10 +631,10 @@ fn build_prompt_suggestions_request(
 /// 返回 `None` 表示没有 BYOP 配置或 block 内容丢失,调用方静默 no-op。
 fn build_prompt_suggestions_byop_request(
     block: &UserBlockCompleted,
-    execution_context: WarpAiExecutionContext,
+    execution_context: ZapNGAiExecutionContext,
     terminal_model: &Arc<FairMutex<TerminalModel>>,
     terminal_view_id: EntityId,
-    ctx: &warpui::AppContext,
+    ctx: &zap_ng_ui::AppContext,
 ) -> Option<crate::ai::agent_providers::active_ai::RenderedRequest> {
     use crate::ai::agent_providers::active_ai::{prompt_suggestions, BlockSnippet};
 

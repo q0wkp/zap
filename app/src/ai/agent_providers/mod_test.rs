@@ -2,7 +2,7 @@
 
 use ai::LLMId;
 use settings::Setting;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 use crate::ai::agent_providers::{llm_id, lookup_byop, AgentProviderSecrets};
 use crate::ai::llms::{DisableReason, LLMPreferences};
@@ -25,7 +25,7 @@ fn sample_provider(id: &str) -> AgentProvider {
     }
 }
 
-fn init_byop_test_app(app: &mut warpui::App) {
+fn init_byop_test_app(app: &mut zap_ng_ui::App) {
     initialize_settings_for_tests(app);
     app.add_singleton_model(AgentProviderSecrets::new);
     app.add_singleton_model(|_| NetworkStatus::new());

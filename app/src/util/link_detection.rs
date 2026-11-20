@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::ops::Range;
 use string_offset::ByteOffset;
 use urlocator::{UrlLocation, UrlLocator};
-use warpui::elements::PartialClickableElement;
+use zap_ng_ui::elements::PartialClickableElement;
 
-use warpui::platform::Cursor;
+use zap_ng_ui::platform::Cursor;
 
 use crate::ai::agent::{AIAgentActionType, AIAgentOutput, AIAgentTextSection, ReadFilesRequest};
 use crate::ai::blocklist::block::view_impl::output::LinkActionConstructors;
@@ -12,16 +12,16 @@ use crate::ai::blocklist::block::TextLocation;
 use crate::terminal::links::should_directly_open_link;
 use crate::terminal::model::grid::grid_handler::is_file_link_separator;
 use crate::terminal::ShellLaunchData;
-use warpui::elements::MouseStateHandle;
-use warpui::text::char_slice;
-use warpui::Action;
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::text::char_slice;
+use zap_ng_ui::Action;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {
         use std::collections::HashSet;
         use std::path::Path;
         use std::path::PathBuf;
-        use warp_util::path::CleanPathResult;
+        use zap_ng_util::path::CleanPathResult;
     }
 }
 
@@ -114,7 +114,7 @@ pub(crate) enum DetectedLinkType {
     #[cfg(feature = "local_fs")]
     FilePath {
         absolute_path: PathBuf,
-        line_and_column_num: Option<warp_util::path::LineAndColumnArg>,
+        line_and_column_num: Option<zap_ng_util::path::LineAndColumnArg>,
     },
 }
 
@@ -394,7 +394,7 @@ pub(crate) fn detect_file_paths(
                             // Create a new DetectedLinkType with the same file path but with the line number
                             let line_range_link = DetectedLinkType::FilePath {
                                 absolute_path: absolute_path.clone(),
-                                line_and_column_num: Some(warp_util::path::LineAndColumnArg {
+                                line_and_column_num: Some(zap_ng_util::path::LineAndColumnArg {
                                     line_num: line_number as usize,
                                     column_num: None,
                                 }),
@@ -412,8 +412,8 @@ pub(crate) fn detect_file_paths(
 }
 
 use string_offset::CharOffset;
-use warp_editor::content::buffer::Buffer;
-use warpui::text::word_boundaries::WordBoundariesPolicy;
+use zap_ng_editor::content::buffer::Buffer;
+use zap_ng_ui::text::word_boundaries::WordBoundariesPolicy;
 
 /// Returns the range of the word surrounding the given offset.
 pub(crate) fn get_word_range_at_offset(
@@ -421,9 +421,9 @@ pub(crate) fn get_word_range_at_offset(
     offset: CharOffset,
     word_boundary_policy: Option<WordBoundariesPolicy>,
 ) -> Option<Range<CharOffset>> {
-    use warp_editor::content::buffer::{ToBufferCharOffset, ToBufferPoint};
-    use warpui::text::words::is_default_word_boundary;
-    use warpui::text::TextBuffer;
+    use zap_ng_editor::content::buffer::{ToBufferCharOffset, ToBufferPoint};
+    use zap_ng_ui::text::words::is_default_word_boundary;
+    use zap_ng_ui::text::TextBuffer;
 
     let word_boundary_policy = word_boundary_policy.unwrap_or(WordBoundariesPolicy::Default);
     let mut word_found_at: Option<CharOffset> = None;

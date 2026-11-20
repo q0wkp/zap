@@ -1,7 +1,7 @@
 use std::env::current_dir;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::App;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::App;
 
 use crate::{
     cloud_object::model::persistence::ObjectStoreModel,
@@ -34,6 +34,6 @@ fn test_expand_directories() {
             .join("integration");
 
         // Open a folder and verify we could expand it into the correct folder tree structure.
-        assert_eq!(warpui::r#async::block_on(expand_dirs([directory].into_iter().collect())).debug_print(), "(integration(tests(INTEGRATION_TESTING, data(test, test_launch_config, test_theme, test_theme_with_name, test_workflow))))");
+        assert_eq!(zap_ng_ui::r#async::block_on(expand_dirs([directory].into_iter().collect())).debug_print(), "(integration(tests(INTEGRATION_TESTING, data(test, test_launch_config, test_theme, test_theme_with_name, test_workflow))))");
     });
 }

@@ -2,8 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use warp_ssh_manager::SshRepository;
-use warpui::{async_assert, integration::AssertionCallback, App, ViewHandle, WindowId};
+use zap_ng_ssh_manager::SshRepository;
+use zap_ng_ui::{async_assert, integration::AssertionCallback, App, ViewHandle, WindowId};
 
 use crate::integration_testing::view_getters::workspace_view;
 use crate::ssh_manager::server_view::SshServerView;
@@ -67,7 +67,7 @@ pub fn assert_db_node_parent_id(
             .unwrap()
             .clone()
             .expect("node id should exist");
-        let actual: Option<String> = warp_ssh_manager::with_conn(|c| {
+        let actual: Option<String> = zap_ng_ssh_manager::with_conn(|c| {
             let nodes = SshRepository::list_nodes(c)?;
             Ok(nodes
                 .into_iter()

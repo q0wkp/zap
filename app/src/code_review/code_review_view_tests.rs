@@ -27,24 +27,24 @@ use chrono::Local;
 use repo_metadata::repositories::DetectedRepositories;
 use std::path::PathBuf;
 use std::sync::Arc;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warp_editor::render::model::LineCount;
-use warpui::elements::{Empty, MouseStateHandle};
-use warpui::platform::WindowStyle;
-use warpui::{App, ViewHandle};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::content::buffer::InitialBufferState;
+use zap_ng_editor::render::element::VerticalExpansionBehavior;
+use zap_ng_editor::render::model::LineCount;
+use zap_ng_ui::elements::{Empty, MouseStateHandle};
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, ViewHandle};
 
 #[derive(Default)]
 struct TestView;
 
-impl warpui::Entity for TestView {
+impl zap_ng_ui::Entity for TestView {
     type Event = ();
 }
 
-impl warpui::View for TestView {
-    fn render(&self, _: &warpui::AppContext) -> Box<dyn warpui::Element> {
+impl zap_ng_ui::View for TestView {
+    fn render(&self, _: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         Empty::new().finish()
     }
 
@@ -53,7 +53,7 @@ impl warpui::View for TestView {
     }
 }
 
-impl warpui::TypedActionView for TestView {
+impl zap_ng_ui::TypedActionView for TestView {
     type Action = ();
 }
 
@@ -264,7 +264,7 @@ use crate::view_components::action_button::{ActionButton, NakedTheme};
 struct TestContext {
     repo_path: PathBuf,
     #[allow(dead_code)]
-    window_id: warpui::WindowId,
+    window_id: zap_ng_ui::WindowId,
     state: LoadedState,
     code_review_view: ViewHandle<CodeReviewView>,
 }
@@ -311,7 +311,7 @@ impl TestContext {
 /// Must be called within an App context.
 fn create_loaded_state_with_editors(
     app: &mut App,
-    window_id: warpui::WindowId,
+    window_id: zap_ng_ui::WindowId,
     file_editors: Vec<(PathBuf, ViewHandle<LocalCodeEditorView>)>,
 ) -> LoadedState {
     let file_states = file_editors

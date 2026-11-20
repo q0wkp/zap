@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::ai::blocklist::BlocklistAIHistoryModel;
 use crate::search::ai_queries::fuzzy_match::FuzzyMatchAIQueryResults;

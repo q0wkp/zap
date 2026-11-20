@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
-use warp_core::command::ExitCode;
+use zap_ng_core::command::ExitCode;
 
 /// Indicates that the following JSON-encoded message is hex-encoded for Zap's lifecycle hooks.
 /// In DCS, it is used as the final char in the DCS start sequence.
@@ -61,7 +61,7 @@ pub(super) enum DProtoHook {
         value: InitSubshellValue,
     },
     SourcedRcFileForWarp {
-        value: SourcedRcFileForWarpValue,
+        value: SourcedRcFileForZapNGValue,
     },
     InitSsh {
         value: InitSshValue,
@@ -71,7 +71,7 @@ pub(super) enum DProtoHook {
     },
     RemoteWarpificationIsUnavailable {
         // If a value is provided, it's suggesting a way to install TMUX on the remote.
-        value: WarpificationUnavailableReason,
+        value: ZapNGificationUnavailableReason,
     },
     SshTmuxInstaller {
         value: String,
@@ -365,10 +365,10 @@ pub struct SystemDetails {
 }
 
 /// The reason that warpification was not available when the user tried
-/// to warpify.
+/// to zapngify.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all(serialize = "snake_case"))]
-pub enum WarpificationUnavailableReason {
+pub enum ZapNGificationUnavailableReason {
     TmuxFailed,
     UnsupportedTmuxVersion {
         #[serde(flatten)]
@@ -452,7 +452,7 @@ pub struct PrecmdValue {
 impl PrecmdValue {
     /// Returns `true` if this PrecmdValue was emitted after the completion of an in-band command.
     ///
-    /// This relies on the assumption that the warp_precmd shell function (responsible for writing
+    /// This relies on the assumption that the zap_ng_precmd shell function (responsible for writing
     /// this to the PTY from the shell) does not populate `pwd` or `ps1` when the previous command
     /// was an in-band command; for all other cases these fields should always be populated.
     pub fn was_sent_after_in_band_command(&self) -> bool {
@@ -640,7 +640,7 @@ pub struct InitSubshellValue {
 /// created; if the session is for a subshell, this triggers Zap's bootstrap process.
 /// Otherwise, it's ignored.
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct SourcedRcFileForWarpValue {
+pub struct SourcedRcFileForZapNGValue {
     pub shell: String,
     pub uname: Option<String>,
     pub tmux: Option<bool>,

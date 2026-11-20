@@ -4,8 +4,8 @@ use crate::ai::request_usage_model::{
 use crate::terminal::general_settings::GeneralSettings;
 use chrono::{Duration, Utc};
 use std::collections::HashSet;
-use warp_core::settings::Setting;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_core::settings::Setting;
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 pub struct BonusGrantNotificationModel {
     /// In-memory tracking of grants shown during this session. This prevents duplicate

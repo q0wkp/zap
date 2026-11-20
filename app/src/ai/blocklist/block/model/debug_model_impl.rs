@@ -1,4 +1,4 @@
-use warpui::{AppContext, ViewContext};
+use zap_ng_ui::{AppContext, ViewContext};
 
 use crate::ai::{
     agent::{

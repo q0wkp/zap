@@ -57,11 +57,11 @@ use futures::{
 };
 use oneshot::{Canceled, Receiver, Sender};
 use uuid::Uuid;
-use warp_cli::agent::{Harness, OutputFormat};
-use warp_cli::mcp::MCPSpec;
-use warp_core::{features::FeatureFlag, report_if_error, safe_debug, safe_info};
-use warp_managed_secrets::ManagedSecretValue;
-use warpui::{
+use zap_ng_cli::agent::{Harness, OutputFormat};
+use zap_ng_cli::mcp::MCPSpec;
+use zap_ng_core::{features::FeatureFlag, report_if_error, safe_debug, safe_info};
+use zap_ng_managed_secrets::ManagedSecretValue;
+use zap_ng_ui::{
     r#async::{FutureExt, TimeoutError},
     Entity, ModelContext, ModelHandle, ModelSpawner, SingletonEntity,
 };
@@ -284,7 +284,7 @@ pub enum AgentDriverError {
     #[error("Terminal bootstrap failed")]
     BootstrapFailed,
     #[error("Error syncing Zap Drive")]
-    WarpDriveSyncFailed,
+    ZapNGDriveSyncFailed,
     #[error("Requested environment not found: {0}")]
     EnvironmentNotFound(String),
     #[error("Environment setup failed: {0}")]
@@ -322,8 +322,8 @@ pub enum AgentDriverError {
     },
 }
 
-impl From<warpui::ModelDropped> for AgentDriverError {
-    fn from(_: warpui::ModelDropped) -> Self {
+impl From<zap_ng_ui::ModelDropped> for AgentDriverError {
+    fn from(_: zap_ng_ui::ModelDropped) -> Self {
         AgentDriverError::InvalidRuntimeState
     }
 }
@@ -437,7 +437,7 @@ impl AgentDriver {
 
         // Signal to third-party harnesses (e.g. Claude Code) that we're in a sandbox
         // so they allow root execution with permissive flags.
-        if warp_isolation_platform::detect().is_some() {
+        if zap_ng_isolation_platform::detect().is_some() {
             env_vars.insert(OsString::from("IS_SANDBOX"), OsString::from("1"));
         }
 
@@ -515,7 +515,7 @@ impl AgentDriver {
                 ) {
                     let timeout = idle_timeout.min(SETUP_FAILED_IDLE_TIMEOUT);
                     log::info!("Environment setup failed; keeping session alive for {timeout:?}");
-                    warpui::r#async::Timer::after(timeout).await;
+                    zap_ng_ui::r#async::Timer::after(timeout).await;
                 }
             }
 
@@ -988,7 +988,7 @@ impl AgentDriver {
                 // and then call stop_sharing_session when they're done. To know when streams are finished, we would need to modify start_ordered_terminal_events_listener
                 // to send a message when the streams are finished, flushed, and the websocket is disconnected. For now, we'll just sleep for a second, as this seems
                 // to be enough time for the streams to be finished and the events to be flushed.
-                warpui::r#async::Timer::after(Duration::from_secs(1)).await;
+                zap_ng_ui::r#async::Timer::after(Duration::from_secs(1)).await;
 
                 conversation_status.into_result()
             }
@@ -1113,7 +1113,7 @@ impl AgentDriver {
         let command_result = loop {
             futures::select! {
                 exit_code = command_handle => break exit_code,
-                _ = warpui::r#async::Timer::after(HARNESS_SAVE_INTERVAL).fuse() => {
+                _ = zap_ng_ui::r#async::Timer::after(HARNESS_SAVE_INTERVAL).fuse() => {
                     log::debug!("Triggering periodic save of harness conversation data");
                     report_if_error!(runner
                         .save_conversation(SavePoint::Periodic, foreground)
@@ -1330,7 +1330,7 @@ impl AgentDriver {
                             | SDKConversationOutputStatus::Blocked { .. }
                             | SDKConversationOutputStatus::Cancelled { .. } => {
                                 // Whether to keep the process alive after completion is controlled by
-                                // the `warp agent run --idle-on-complete[=<DURATION>]` flag.
+                                // the `zap-ng agent run --idle-on-complete[=<DURATION>]` flag.
                                 if let Some(idle_timeout) = me.idle_on_complete {
                                     run_exit.end_run_after(idle_timeout, output_status);
                                 } else {
@@ -1376,7 +1376,7 @@ impl AgentDriver {
             }
         });
 
-        // openWarp 不同步 plan 到 Zap Drive,原 "plan_artifact_created" CLI 输出依赖云 notebook_link,
+        // ZapNG 不同步 plan 到 Zap Drive,原 "plan_artifact_created" CLI 输出依赖云 notebook_link,
         // 这里不再订阅 AIDocumentModel 的 SaveStatusUpdated 事件。
 
         // Submit the AI query.

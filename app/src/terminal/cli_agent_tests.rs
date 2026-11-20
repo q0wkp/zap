@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 
 use chrono::Local;
 use smol_str::SmolStr;
-use warp_editor::render::model::LineCount;
-use warp_util::path::EscapeChar;
-use warpui::App;
+use zap_ng_editor::render::model::LineCount;
+use zap_ng_util::path::EscapeChar;
+use zap_ng_ui::App;
 
 #[cfg(unix)]
 use super::cli_agent_search_dirs;

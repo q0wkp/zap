@@ -1,5 +1,5 @@
 use serde::Serialize;
-use warpui::{elements::MouseStateHandle, notification::RequestPermissionsOutcome, Element};
+use zap_ng_ui::{elements::MouseStateHandle, notification::RequestPermissionsOutcome, Element};
 
 use crate::{
     appearance::Appearance,

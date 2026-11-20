@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use warpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::{
     app_state::LeafContents,

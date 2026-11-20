@@ -4,13 +4,13 @@
 
 use std::sync::{Arc, Mutex};
 
-use warp::integration_testing::ssh_manager::{
+use zap_ng::integration_testing::ssh_manager::{
     assert_db_node_parent_id, assert_server_group_id, assert_server_view_visible,
     assert_ssh_manager_panel_open, create_folder_via_db, create_server_via_db,
     open_ssh_manager_panel, save_server, select_group_by_id, ssh_server_view,
 };
-use warp::workspace::Workspace;
-use warpui::{
+use zap_ng::workspace::Workspace;
+use zap_ng_ui::{
     async_assert, integration::TestStep,
     windowing::WindowManager, SingletonEntity,
 };
@@ -48,7 +48,7 @@ pub fn test_ssh_server_group_dropdown() -> Builder {
             .set_timeout(std::time::Duration::from_secs(30))
             .add_named_assertion(
                 "workspace view exists",
-                Box::new(|app: &mut warpui::App, _window_id| {
+                Box::new(|app: &mut zap_ng_ui::App, _window_id| {
                     let window_id = app.read(|ctx| {
                         WindowManager::as_ref(ctx)
                             .active_window()
@@ -124,7 +124,7 @@ pub fn test_ssh_server_group_dropdown() -> Builder {
                 .add_named_assertion("server view visible", assert_server_view_visible())
                 .add_named_assertion(
                     "current_group_id equals GroupA",
-                    Box::new(move |app: &mut warpui::App, window_id| {
+                    Box::new(move |app: &mut zap_ng_ui::App, window_id| {
                         let expected = fa.lock().unwrap().clone();
                         let view = ssh_server_view(app, window_id);
                         let actual = view.read(app, |v, _| v.current_group_id().clone());
@@ -153,7 +153,7 @@ pub fn test_ssh_server_group_dropdown() -> Builder {
                 .set_timeout(std::time::Duration::from_secs(10))
                 .add_named_assertion(
                     "current_group_id equals GroupB",
-                    Box::new(move |app: &mut warpui::App, window_id| {
+                    Box::new(move |app: &mut zap_ng_ui::App, window_id| {
                         let expected = fb.lock().unwrap().clone();
                         let view = ssh_server_view(app, window_id);
                         let actual = view.read(app, |v, _| v.current_group_id().clone());

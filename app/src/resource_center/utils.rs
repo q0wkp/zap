@@ -1,6 +1,6 @@
 // Hard coded constants to divide keybindings into their respective categories/sections.
 
-use warpui::keymap::Keystroke;
+use zap_ng_ui::keymap::Keystroke;
 
 use crate::util::bindings::CommandBinding;
 

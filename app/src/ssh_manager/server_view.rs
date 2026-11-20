@@ -14,25 +14,25 @@ use crate::pane_group::{BackingView, PaneConfiguration, PaneEvent};
 use crate::ssh_manager::{SshTreeChangedEvent, SshTreeChangedNotifier};
 use crate::view_components::dropdown::{Dropdown, DropdownItem};
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill as ThemeFill;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::Fill as ThemeFill;
+use zap_ng_ui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element, Fill, Flex,
     Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, ScrollbarWidth, Shrinkable, Stack, Text, Wrap,
 };
-use warpui::fonts::Weight;
-use warpui::platform::{Cursor, FilePickerConfiguration};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::platform::{Cursor, FilePickerConfiguration};
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
 
-use warp_ssh_manager::{
+use zap_ng_ssh_manager::{
     AuthType, ConnectionStatus, KeychainSecretStore, NodeKind, OneKeyCredentialKind, SecretKind,
     SshEndpointError, SshNode, SshOneKeyCredential, SshRepository, SshSecretStore,
     SshSecretStoreError, SshServerInfo, UnknownHostKey, ZmxSession, ZmxSessionsError,
@@ -388,7 +388,7 @@ impl SshServerView {
     /// 从 DB 读节点 + server,把当前 buffer 写入各 editor。
     fn reload(&mut self, ctx: &mut ViewContext<Self>) {
         let id = self.node_id.clone();
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             let nodes = SshRepository::list_nodes(c)?;
             let node = nodes.iter().find(|n| n.id == id).cloned();
             let server = match node.as_ref().map(|n| n.kind) {
@@ -592,7 +592,7 @@ impl SshServerView {
     }
 
     fn reload_onekey_credentials(&mut self, ctx: &mut ViewContext<Self>) {
-        match warp_ssh_manager::with_conn(|c| Ok(SshRepository::list_onekey_credentials(c)?)) {
+        match zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::list_onekey_credentials(c)?)) {
             Ok(credentials) => {
                 self.onekey_credentials = credentials;
             }
@@ -786,7 +786,7 @@ impl SshServerView {
         let name_for_db = name.clone();
         let group_changed = self.current_group_id != self.original_parent_id;
         let new_parent_id = self.current_group_id.clone();
-        let result = warp_ssh_manager::with_conn(move |c| {
+        let result = zap_ng_ssh_manager::with_conn(move |c| {
             SshRepository::rename_node(c, &id, &name_for_db)?;
             SshRepository::update_server(c, &info_for_db)?;
             if group_changed {
@@ -997,7 +997,7 @@ impl SshServerView {
         let port = server.port;
         ctx.spawn(
             async move {
-                let result = warp_ssh_manager::ssh_command::test_connection(
+                let result = zap_ng_ssh_manager::ssh_command::test_connection(
                     &server,
                     password,
                     trusted_fingerprint.as_deref(),
@@ -1085,7 +1085,7 @@ impl SshServerView {
         let port = server.port;
         ctx.spawn(
             async move {
-                warp_ssh_manager::list_zmx_sessions(
+                zap_ng_ssh_manager::list_zmx_sessions(
                     &server,
                     password,
                     trusted_fingerprint.as_deref(),
@@ -1244,15 +1244,15 @@ impl SshServerView {
             credential.username = username;
             credential.kind = self.managed_onekey_kind;
             credential.key_path = key_path_for_db;
-            warp_ssh_manager::with_conn(move |conn| {
+            zap_ng_ssh_manager::with_conn(move |conn| {
                 SshRepository::update_onekey_credential(conn, &credential)?;
                 credential = SshRepository::get_onekey_credential(conn, &id)?
-                    .ok_or_else(|| warp_ssh_manager::SshRepositoryError::NotFound(id.clone()))?;
+                    .ok_or_else(|| zap_ng_ssh_manager::SshRepositoryError::NotFound(id.clone()))?;
                 Ok(credential)
             })
         } else {
             let kind = self.managed_onekey_kind;
-            warp_ssh_manager::with_conn(move |conn| {
+            zap_ng_ssh_manager::with_conn(move |conn| {
                 Ok(SshRepository::create_onekey_credential(
                     conn,
                     &label,
@@ -1305,7 +1305,7 @@ impl SshServerView {
             return;
         };
 
-        if let Err(e) = warp_ssh_manager::with_conn(|conn| {
+        if let Err(e) = zap_ng_ssh_manager::with_conn(|conn| {
             SshRepository::delete_onekey_credential(conn, &id)?;
             Ok(())
         }) {
@@ -1409,7 +1409,7 @@ impl SshServerView {
         let icon_color = theme.sub_text_color(theme.background());
         let icon_el = ConstrainedBox::new(
             crate::ui_components::icons::Icon::Folder
-                .to_warpui_icon(icon_color)
+                .to_zap_ng_ui_icon(icon_color)
                 .finish(),
         )
         .with_width(16.0)
@@ -1425,7 +1425,7 @@ impl SshServerView {
             .with_uniform_padding(2.0)
             .with_background(theme.surface_2())
             .with_border(
-                warpui::elements::Border::all(1.0)
+                zap_ng_ui::elements::Border::all(1.0)
                     .with_border_color(internal_colors::neutral_3(theme)),
             )
             .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.0)))
@@ -1482,7 +1482,7 @@ impl SshServerView {
         let icon_color = theme.sub_text_color(theme.background());
         let icon_el = ConstrainedBox::new(
             crate::ui_components::icons::Icon::Folder
-                .to_warpui_icon(icon_color)
+                .to_zap_ng_ui_icon(icon_color)
                 .finish(),
         )
         .with_width(16.0)
@@ -1556,7 +1556,7 @@ impl SshServerView {
             .finish();
 
         let icon =
-            warpui::elements::Icon::new("bundled/svg/refresh.svg", theme.active_ui_text_color());
+            zap_ng_ui::elements::Icon::new("bundled/svg/refresh.svg", theme.active_ui_text_color());
         let list_button = appearance
             .ui_builder()
             .button(ButtonVariant::Secondary, self.zmx_list_btn_state.clone())
@@ -2053,7 +2053,7 @@ impl SshServerView {
             appearance,
         );
         let icon =
-            warpui::elements::Icon::new("bundled/svg/gear.svg", theme.active_ui_text_color());
+            zap_ng_ui::elements::Icon::new("bundled/svg/gear.svg", theme.active_ui_text_color());
         let manager_button = appearance
             .ui_builder()
             .button(
@@ -2249,7 +2249,7 @@ impl SshServerView {
                 ButtonVariant::Text,
                 self.onekey_manager_close_btn_state.clone(),
             )
-            .with_icon_label(warpui::elements::Icon::new(
+            .with_icon_label(zap_ng_ui::elements::Icon::new(
                 "bundled/svg/x-close.svg",
                 theme.active_ui_text_color(),
             ))
@@ -2456,7 +2456,7 @@ fn validate_form_endpoint(
         AuthType::OneKey => "",
         AuthType::Password | AuthType::Key => username,
     };
-    warp_ssh_manager::validate_ssh_endpoint(host, username, port)
+    zap_ng_ssh_manager::validate_ssh_endpoint(host, username, port)
 }
 
 /// Parses the port field (empty means the default, 22) and validates the endpoint with it, for

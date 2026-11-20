@@ -7,11 +7,11 @@
 
 use std::collections::HashMap;
 
-use warp::integration_testing::sftp;
-use warp::integration_testing::sftp::{ConnectionState, Dialog, SftpBrowserAction};
-use warp::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
-use warp::integration_testing::view_getters::{pane_group_view, workspace_view};
-use warpui::{async_assert, async_assert_eq, integration::AssertionCallback, integration::StepDataMap, integration::TestStep, TypedActionView};
+use zap_ng::integration_testing::sftp;
+use zap_ng::integration_testing::sftp::{ConnectionState, Dialog, SftpBrowserAction};
+use zap_ng::integration_testing::terminal::wait_until_bootstrapped_single_pane_for_tab;
+use zap_ng::integration_testing::view_getters::{pane_group_view, workspace_view};
+use zap_ng_ui::{async_assert, async_assert_eq, integration::AssertionCallback, integration::StepDataMap, integration::TestStep, TypedActionView};
 
 use super::{new_builder, Builder};
 
@@ -26,13 +26,13 @@ fn assert_sftp_browser_view_exists() -> AssertionCallback {
         let view = sftp::sftp_browser_view(app, window_id);
         view.read(app, |_v, _| {
             // 视图成功获取即证明 SFTP 面板存在
-            warpui::integration::AssertionOutcome::Success
+            zap_ng_ui::integration::AssertionOutcome::Success
         })
     })
 }
 
 /// 打开 SFTP 面板（使用测试 node_id）
-fn open_sftp_pane(app: &mut warpui::App) {
+fn open_sftp_pane(app: &mut zap_ng_ui::App) {
     let window_id = app.read(|ctx| {
         ctx.windows()
             .active_window()
@@ -242,7 +242,7 @@ pub fn test_sftp_pane_disconnected_render() -> Builder {
 /// 打开 SFTP 面板并注入 mock 后端的通用步骤
 fn open_sftp_with_mock_step(
     files: &'static [(&'static str, &'static [u8])],
-) -> warpui::integration::TestStep {
+) -> zap_ng_ui::integration::TestStep {
     // 使用 TestStep::new 而非 new_step_with_default_assertions，
     // 因为打开 SFTP 面板后 pane 布局发生变化（SFTP 可能排在 pane_index=0），
     // 默认断言在 pane_index=0 查找 terminal_view 会 panic。

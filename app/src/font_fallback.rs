@@ -1,5 +1,5 @@
 use crate::ChannelState;
-use warpui::fonts::ExternalFontFamily;
+use zap_ng_ui::fonts::ExternalFontFamily;
 
 use std::sync::Arc;
 
@@ -108,7 +108,7 @@ lazy_static! {
 /// (Simplified Chinese) for every Han code point, which renders Japanese-locale UI text with
 /// Simplified Chinese glyph shapes (e.g. 直/設/規 look "off" to Japanese readers).
 fn cjk_han_font_for_ui_locale() -> ExternalFontFamily {
-    let locale = warpui::current_ui_locale();
+    let locale = zap_ng_ui::current_ui_locale();
     let lower = locale.to_ascii_lowercase();
     if lower.starts_with("ja") {
         NOTO_SANS_JP.clone()
@@ -125,7 +125,7 @@ fn cjk_han_font_for_ui_locale() -> ExternalFontFamily {
 pub fn fallback_font_fn(ch: char) -> Option<ExternalFontFamily> {
     let raw = fallback_font_fn_raw(ch);
     if let Some(ref font) = raw {
-        if font.name == "Noto Sans SC" && warpui::is_shared_cjk_han(ch) {
+        if font.name == "Noto Sans SC" && zap_ng_ui::is_shared_cjk_han(ch) {
             return Some(cjk_han_font_for_ui_locale());
         }
     }

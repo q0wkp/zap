@@ -1,13 +1,13 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::shimmering_text::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::shimmering_text::{
     ShimmerConfig, ShimmeringTextElement, ShimmeringTextStateHandle,
 };
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Flex, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::{AppContext, EventContext, SingletonEntity};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::{AppContext, EventContext, SingletonEntity};
 
 use crate::ui_components::spinner::{BrailleSpinner, SpinnerStateHandle};
 
@@ -21,7 +21,7 @@ pub fn render_search_results_header(
     title_text: String,
     right_label_text: String,
     is_expanded: bool,
-    mouse_state: warpui::elements::MouseStateHandle,
+    mouse_state: zap_ng_ui::elements::MouseStateHandle,
     on_toggle: impl Fn(&mut EventContext) + 'static,
     app: &AppContext,
 ) -> Box<dyn Element> {
@@ -37,7 +37,7 @@ pub fn render_search_results_header(
     // Left side: icon + title
     let mut left_side = Flex::row().with_cross_axis_alignment(CrossAxisAlignment::Center);
     let search_icon = ConstrainedBox::new(
-        warpui::elements::Icon::new(
+        zap_ng_ui::elements::Icon::new(
             Icon::SearchSmall.into(),
             appearance.theme().main_text_color(header_background),
         )
@@ -74,7 +74,7 @@ pub fn render_search_results_header(
     right_side.add_child(Container::new(right_label).with_margin_right(8.).finish());
 
     let chevron_icon = ConstrainedBox::new(
-        warpui::elements::Icon::new(
+        zap_ng_ui::elements::Icon::new(
             if is_expanded {
                 Icon::ChevronDown.into()
             } else {
@@ -100,7 +100,7 @@ pub fn render_search_results_header(
         })
         .finish();
 
-    warpui::elements::Hoverable::new(mouse_state, |_| inner)
+    zap_ng_ui::elements::Hoverable::new(mouse_state, |_| inner)
         .on_click(move |ctx, _, _| {
             on_toggle(ctx);
         })
@@ -120,7 +120,7 @@ pub fn render_results_body_container(body: Box<dyn Element>, app: &AppContext) -
 
 pub fn render_loading_header(
     text: String,
-    icon: warpui::elements::Icon,
+    icon: zap_ng_ui::elements::Icon,
     app: &AppContext,
 ) -> Box<dyn Element> {
     // 旧签名 fallback:不传 shimmer handle 时退化为静态 Text。
@@ -134,7 +134,7 @@ pub fn render_loading_header(
 /// 会让 animation_start_time 永远归零、动画不动)。
 pub fn render_loading_header_shimmer(
     text: String,
-    icon: warpui::elements::Icon,
+    icon: zap_ng_ui::elements::Icon,
     shimmer_handle: ShimmeringTextStateHandle,
     app: &AppContext,
 ) -> Box<dyn Element> {
@@ -165,11 +165,11 @@ pub fn render_loading_header_animated(
 /// 卡片用删除线表达"这个操作没发生过 / 被驳回"的视觉语义。
 pub fn render_terminal_header_strikethrough(
     text: String,
-    icon: warpui::elements::Icon,
+    icon: zap_ng_ui::elements::Icon,
     app: &AppContext,
 ) -> Box<dyn Element> {
-    use warpui::elements::{Highlight, HighlightedRange};
-    use warpui::text_layout::TextStyle;
+    use zap_ng_ui::elements::{Highlight, HighlightedRange};
+    use zap_ng_ui::text_layout::TextStyle;
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
     let header_background = theme.surface_2();
@@ -220,7 +220,7 @@ pub fn render_terminal_header_strikethrough(
 }
 
 enum IconOrSpinner {
-    Icon(warpui::elements::Icon),
+    Icon(zap_ng_ui::elements::Icon),
     Spinner(SpinnerStateHandle),
 }
 
@@ -243,7 +243,7 @@ fn render_loading_header_inner(
         IconOrSpinner::Spinner(spinner_state) => {
             // Spinner 颜色对齐原 yellow_running_icon:Yellow ANSI。
             // 颜色直接复用 sub_text_color 在 surface_2 上的视觉(浅黄/橙)避免对比过强。
-            use warp_core::ui::theme::AnsiColorIdentifier;
+            use zap_ng_core::ui::theme::AnsiColorIdentifier;
             let color = AnsiColorIdentifier::Yellow.to_ansi_color(&theme.terminal_colors().normal);
             Box::new(BrailleSpinner::new(
                 appearance.ui_font_family(),

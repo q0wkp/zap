@@ -1,13 +1,13 @@
 //! `candidates::CandidatesViewModel::rows()` 的纯函数单测。
 //!
-//! 这里只验"状态 → 行列表"的映射;真实 IO(`load_candidates`)、warpui
+//! 这里只验"状态 → 行列表"的映射;真实 IO(`load_candidates`)、zap_ng_ui
 //! runtime 都不参与。覆盖矩阵:状态 5 种(未加载 / NotFound / Error /
 //! Empty / 非空 Loaded)× 折叠 2 种 × `added_aliases` 命中/未命中。
 
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use warp_ssh_manager::SshConfigCandidate;
+use zap_ng_ssh_manager::SshConfigCandidate;
 
 use super::{
     CandidateRow, CandidatesViewModel, fake_load_result_error, fake_load_result_loaded,
@@ -333,7 +333,7 @@ fn rows_when_collapsed_with_error_returns_header_only() {
 }
 
 // ---- refresh() 设置分支测试 ----
-// 以下测试通过 warpui runtime 真正调用 `refresh()`，验证自动发现开关的设置分支。
+// 以下测试通过 zap_ng_ui runtime 真正调用 `refresh()`，验证自动发现开关的设置分支。
 // 与上方 `with_state(None, …)` 测试不同，这里经过 `refresh()` 的真实路径。
 
 #[test]
@@ -341,7 +341,7 @@ fn refresh_clears_state_when_auto_discovery_disabled() {
     use crate::settings::SshSettings;
     use crate::test_util::settings::initialize_settings_for_tests;
     use settings::Setting;
-    use warpui::{App, SingletonEntity};
+    use zap_ng_ui::{App, SingletonEntity};
 
     App::test((), |mut app| async move {
         initialize_settings_for_tests(&mut app);

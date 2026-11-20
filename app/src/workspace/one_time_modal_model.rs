@@ -5,8 +5,8 @@ use crate::channel::{Channel, ChannelState};
 use crate::settings::CodeSettings;
 use crate::terminal::general_settings::GeneralSettings;
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warpui::{Entity, ModelContext, SingletonEntity, WindowId};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity, WindowId};
 
 /// A generic model for managing one-time modals that should be shown to users only once.
 ///

@@ -3,9 +3,9 @@ use std::{borrow::Cow, collections::VecDeque, sync::Arc};
 use async_channel::{Receiver, Sender};
 use parking_lot::FairMutex;
 use thiserror::Error;
-use warp_util::path::ShellFamily;
-use warpui::r#async::block_on;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_util::path::ShellFamily;
+use zap_ng_ui::r#async::block_on;
+use zap_ng_ui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::agent::AIAgentPtyWriteMode;
 use crate::terminal::input::CommandExecutionSource;
@@ -156,7 +156,7 @@ impl<T: EventLoopSender> PtyController<T> {
                 if honor_ps1 {
                     me.send_switch_to_ps1_bindkey(ctx);
                 } else {
-                    me.send_switch_to_warp_prompt_bindkey(ctx);
+                    me.send_switch_to_zap_ng_prompt_bindkey(ctx);
                 }
             }
             ModelEvent::Handler(AnsiHandlerEvent::TmuxControlModeReady { primary_pane }) => {
@@ -293,7 +293,7 @@ impl<T: EventLoopSender> PtyController<T> {
     /// Sends bindkey to notify shell process to switch to Zap prompt logic for prompt
     /// with the combined prompt/command grid (we unset the PS1, but save the value for potential
     /// future restoration).
-    pub fn send_switch_to_warp_prompt_bindkey(&mut self, ctx: &mut ModelContext<Self>) {
+    pub fn send_switch_to_zap_ng_prompt_bindkey(&mut self, ctx: &mut ModelContext<Self>) {
         self.pending_writes.push_back(PtyWrite::Bytes {
             bytes: SWITCH_TO_WARP_PROMPT_ESCAPE_SEQUENCE.into(),
         });
@@ -453,7 +453,7 @@ impl<T: EventLoopSender> PtyController<T> {
             let chunks: Vec<Vec<u8>> = bytes.chunks(CHUNK_SIZE).map(|c| c.to_vec()).collect();
             for (i, chunk) in chunks.into_iter().enumerate() {
                 ctx.spawn(
-                    warpui::r#async::Timer::after(std::time::Duration::from_millis(i as u64 * 50)),
+                    zap_ng_ui::r#async::Timer::after(std::time::Duration::from_millis(i as u64 * 50)),
                     move |me, _, ctx| me.write_bytes(chunk, ctx),
                 );
             }
@@ -717,7 +717,7 @@ impl<T: EventLoopSender> PtyController<T> {
                 });
         }
 
-        // The `warp` crate is edition 2021, which does not allow let chains, so this is written as
+        // The `zap-ng` crate is edition 2021, which does not allow let chains, so this is written as
         // a nested `if let` instead of upstream's single `if let ... && let ...` chain.
         if let Some(shell_type) = shell_type_for_split {
             if let Some((kill_buffer, rest)) = split_kill_buffer_write(&bytes_to_write, shell_type)

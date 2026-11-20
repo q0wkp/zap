@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use warp_core::context_flag::ContextFlag;
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 pub mod categories;
 use workflow::Workflow;
@@ -21,8 +21,8 @@ use crate::cloud_object::model::view::ObjectStoreViewModel;
 use crate::cloud_object::{GenericStoredObject, ObjectType, StoredObjectModel};
 
 use crate::cloud_object::SerializedModel;
-use crate::drive::items::workflow::WarpDriveWorkflow;
-use crate::drive::items::WarpDriveItem;
+use crate::drive::items::workflow::ZapNGDriveWorkflow;
+use crate::drive::items::ZapNGDriveItem;
 use crate::drive::ObjectTypeAndId;
 use crate::notebooks::{NotebookId, NotebookLocation};
 use crate::persistence::ModelEvent;
@@ -136,7 +136,7 @@ crate::server_id_traits! { WorkflowId, "Workflow" }
 pub enum AIWorkflowOrigin {
     CommandSearch,
     AgentMode,
-    LegacyWarpAI,
+    LegacyZapNGAI,
 }
 
 /// Wrapper type for a workflow that may be saved locally or in the object store.
@@ -267,17 +267,17 @@ impl StoredObjectModel for WorkflowObjectModel {
         )
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         true
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         workflow: &WorkflowObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveWorkflow::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveWorkflow::new(
             self.object_type_and_id(id),
             workflow.clone(),
         )))

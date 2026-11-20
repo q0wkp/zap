@@ -13,19 +13,19 @@ use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use std::path::Path;
 #[cfg(not(target_family = "wasm"))]
-use warp_cli::agent::Harness;
-use warp_core::paths::home_relative_path;
+use zap_ng_cli::agent::Harness;
+use zap_ng_core::paths::home_relative_path;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::ai::ambient_agents::AmbientAgentTask;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::{AnsiColorIdentifier, Fill};
-use warpui::elements::{
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::{AnsiColorIdentifier, Fill};
+use zap_ng_ui::elements::{
     Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex,
     MainAxisSize, Padding, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::{
     AppContext, Element, Entity, EntityId, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
@@ -168,7 +168,7 @@ pub struct ConversationEndedTombstoneView {
     #[cfg(not(target_family = "wasm"))]
     continue_locally_button: Option<ViewHandle<ActionButton>>,
     #[cfg(target_family = "wasm")]
-    open_in_warp_button: Option<ViewHandle<ActionButton>>,
+    open_in_zap_ng_button: Option<ViewHandle<ActionButton>>,
 }
 
 impl ConversationEndedTombstoneView {
@@ -213,14 +213,14 @@ impl ConversationEndedTombstoneView {
         });
 
         // In wasm, continuing locally is impossible so we instead
-        // offer to open the conversation in warp (where you can continue locally).
+        // offer to open the conversation in zap-ng (where you can continue locally).
         #[cfg(target_family = "wasm")]
-        let open_in_warp_button = conversation_id.map(|conv_id| {
+        let open_in_zap_ng_button = conversation_id.map(|conv_id| {
             ctx.add_typed_action_view(move |_| {
                 ActionButton::new(crate::t!("terminal-open-in-warp"), PrimaryTheme)
                     .with_tooltip(crate::t!("terminal-open-conversation-in-warp-tooltip"))
                     .on_click(move |ctx| {
-                        ctx.dispatch_typed_action(ConversationEndedTombstoneAction::OpenInWarp(
+                        ctx.dispatch_typed_action(ConversationEndedTombstoneAction::OpenInZapNG(
                             conv_id,
                         ));
                     })
@@ -233,14 +233,14 @@ impl ConversationEndedTombstoneView {
             #[cfg(not(target_family = "wasm"))]
             continue_locally_button,
             #[cfg(target_family = "wasm")]
-            open_in_warp_button,
+            open_in_zap_ng_button,
         };
 
         ctx.subscribe_to_view(
             &view.artifact_buttons_view,
             |_, _, event, ctx| match event {
                 ArtifactButtonsRowEvent::OpenPlan { document_uid } => {
-                    // openWarp 本地化:在 shared session tombstone 中同样走本地
+                    // ZapNG 本地化:在 shared session tombstone 中同样走本地
                     // AIDocument pane,不再依赖云 notebook_uid。
                     let document_version =
                         crate::ai::document::ai_document_model::AIDocumentModel::as_ref(ctx)
@@ -254,7 +254,7 @@ impl ConversationEndedTombstoneView {
                 }
                 ArtifactButtonsRowEvent::CopyBranch { branch } => {
                     ctx.clipboard()
-                        .write(warpui::clipboard::ClipboardContent::plain_text(
+                        .write(zap_ng_ui::clipboard::ClipboardContent::plain_text(
                             branch.clone(),
                         ));
                 }
@@ -299,7 +299,7 @@ impl ConversationEndedTombstoneView {
             Fill::Solid(theme.ansi_fg_green())
         };
         let icon_element = Container::new(
-            ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_height(14.)
                 .with_width(14.)
                 .finish(),
@@ -448,9 +448,9 @@ impl ConversationEndedTombstoneView {
         #[cfg(target_family = "wasm")]
         {
             // Don't show on mobile devices - they can't use the desktop app
-            if !warpui::platform::wasm::is_mobile_device() {
-                if let Some(ref open_in_warp_button) = self.open_in_warp_button {
-                    row.add_child(ChildView::new(open_in_warp_button).finish());
+            if !zap_ng_ui::platform::wasm::is_mobile_device() {
+                if let Some(ref open_in_zap_ng_button) = self.open_in_zap_ng_button {
+                    row.add_child(ChildView::new(open_in_zap_ng_button).finish());
                     has_button = true;
                 }
             }
@@ -468,7 +468,7 @@ pub enum ConversationEndedTombstoneAction {
     #[cfg(not(target_family = "wasm"))]
     ContinueLocally(AIConversationId),
     #[cfg(target_family = "wasm")]
-    OpenInWarp(AIConversationId),
+    OpenInZapNG(AIConversationId),
 }
 
 impl View for ConversationEndedTombstoneView {
@@ -555,7 +555,7 @@ impl TypedActionView for ConversationEndedTombstoneView {
                 });
             }
             #[cfg(target_family = "wasm")]
-            ConversationEndedTombstoneAction::OpenInWarp(conversation_id) => {
+            ConversationEndedTombstoneAction::OpenInZapNG(conversation_id) => {
                 let conversation = BlocklistAIHistoryModel::handle(ctx)
                     .as_ref(ctx)
                     .conversation(conversation_id);

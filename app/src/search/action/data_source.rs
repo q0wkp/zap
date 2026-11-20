@@ -1,7 +1,7 @@
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use std::collections::HashMap;
 use std::sync::Arc;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle};
 
 use crate::search::action::search_item::MatchedBinding;
 use crate::search::command_palette::mixer::CommandPaletteItemAction;
@@ -11,7 +11,7 @@ use crate::search::mixer::{DataSourceRunErrorWrapper, SyncDataSource};
 use crate::util::bindings::CommandBinding;
 
 use crate::search::binding_source::BindingSource;
-use warpui::keymap::{BindingId, DescriptionContext};
+use zap_ng_ui::keymap::{BindingId, DescriptionContext};
 
 /// Data source for [`CommandBinding`]s. Produces a list of in-app actions a user can currently
 /// perform.
@@ -26,7 +26,7 @@ impl CommandBindingDataSource {
         // Tantivy 默认 tokenizer 不切 CJK,会把整段中文描述当成单 token 做前缀匹配,
         // 导致 zh-CN 下搜"主题"无法命中"打开主题选择器"。
         // 同时 fuzzy 还能让英文 keyword 经子序列匹配命中 binding.name(见下方 search 实现)。
-        let _ = warp_core::features::FeatureFlag::UseTantivySearch.is_enabled();
+        let _ = zap_ng_core::features::FeatureFlag::UseTantivySearch.is_enabled();
         Self::new_fuzzy(binding_source, ctx)
     }
 
@@ -218,7 +218,7 @@ mod full_text_searcher {
     use fuzzy_match::FuzzyMatchResult;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use warpui::keymap::{BindingId, DescriptionContext};
+    use zap_ng_ui::keymap::{BindingId, DescriptionContext};
 
     define_search_schema!(
         schema_name: ACTION_SEARCH_SCHEMA,

@@ -5,16 +5,16 @@ use crate::model::{OnboardingStateEvent, OnboardingStateModel};
 use crate::slides::{bottom_nav, layout, slide_content};
 use crate::visuals::agent_visual;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::features::FeatureFlag;
-use warp_core::ui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::{
     appearance::Appearance,
     theme::{color::internal_colors, Fill},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         AnchorPair, Border, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
         CornerRadius, CrossAxisAlignment, Dismiss, Empty, Flex, FormattedTextElement, Hoverable,
-        Icon as WarpUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
+        Icon as ZapNGUiIcon, MainAxisAlignment, MainAxisSize, MouseStateHandle, OffsetPositioning,
         OffsetType, ParentElement, ParentOffsetBounds, PositioningAxis, Radius, SavePosition,
         ScrollTarget, ScrollToPositionMode, ScrollbarWidth, Stack, Text, XAxisAnchor, YAxisAnchor,
     },
@@ -30,7 +30,7 @@ use warpui::{
 
 use ai::LLMId;
 use pathfinder_color::ColorU;
-use warp_core::ui::icons::Icon;
+use zap_ng_core::ui::icons::Icon;
 
 /// Information about a model displayed on the onboarding slide.
 #[derive(Clone, Debug)]
@@ -103,7 +103,7 @@ pub enum AgentSlideAction {
 }
 
 pub struct AgentSlide {
-    onboarding_state: warpui::ModelHandle<OnboardingStateModel>,
+    onboarding_state: zap_ng_ui::ModelHandle<OnboardingStateModel>,
 
     /// Mouse state handles for each model row.
     model_mouse_states: Vec<MouseStateHandle>,
@@ -141,7 +141,7 @@ fn sorted_models(models: &[OnboardingModelInfo]) -> Vec<OnboardingModelInfo> {
 
 impl AgentSlide {
     pub(crate) fn new(
-        onboarding_state: warpui::ModelHandle<OnboardingStateModel>,
+        onboarding_state: zap_ng_ui::ModelHandle<OnboardingStateModel>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
         let model_count = onboarding_state.as_ref(ctx).models().len();
@@ -440,7 +440,7 @@ impl AgentSlide {
             let title_row: Box<dyn Element> = if let Some(icon) = icon {
                 const ICON_SIZE: f32 = 14.;
                 let icon_el =
-                    ConstrainedBox::new(Box::new(icon.to_warpui_icon(title_color.into())))
+                    ConstrainedBox::new(Box::new(icon.to_zap_ng_ui_icon(title_color.into())))
                         .with_width(ICON_SIZE)
                         .with_height(ICON_SIZE)
                         .finish();
@@ -454,7 +454,7 @@ impl AgentSlide {
             };
 
             // Trailing chevron icon.
-            let chevron = ConstrainedBox::new(Box::new(WarpUiIcon::new(
+            let chevron = ConstrainedBox::new(Box::new(ZapNGUiIcon::new(
                 "bundled/svg/chevron-down.svg",
                 title_color,
             )))
@@ -611,7 +611,7 @@ impl AgentSlide {
                 .finish();
 
             const ICON_SIZE: f32 = 14.;
-            let icon_el = ConstrainedBox::new(Box::new(icon.to_warpui_icon(title_color.into())))
+            let icon_el = ConstrainedBox::new(Box::new(icon.to_zap_ng_ui_icon(title_color.into())))
                 .with_width(ICON_SIZE)
                 .with_height(ICON_SIZE)
                 .finish();
@@ -911,7 +911,7 @@ impl AgentSlide {
         );
 
         let step_index = 2;
-        let step_count = if warp_core::features::FeatureFlag::ZapNewSettingsModes.is_enabled()
+        let step_count = if zap_ng_core::features::FeatureFlag::ZapNewSettingsModes.is_enabled()
         {
             5
         } else {

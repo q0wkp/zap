@@ -28,7 +28,7 @@ use crate::{
     auth::UserUid,
     channel::ChannelState,
     drive::{
-        items::WarpDriveItem, ObjectTypeAndId, ZapDriveObjectArgs, ZapDriveObjectSettings,
+        items::ZapNGDriveItem, ObjectTypeAndId, ZapDriveObjectArgs, ZapDriveObjectSettings,
     },
     persistence::ModelEvent,
     server::ids::{ClientId, HashableId, HashedSqliteId, ObjectUid, ServerId, SyncId, ToServerId},
@@ -48,8 +48,8 @@ use std::{
     sync::Arc,
 };
 use url::Url;
-use warp_core::{channel::Channel, features::FeatureFlag};
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_core::{channel::Channel, features::FeatureFlag};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 pub mod breadcrumbs;
 pub mod grab_edit_access_modal;
@@ -184,7 +184,7 @@ pub trait StoredObject: Debug {
     fn display_name(&self) -> String;
 
     /// Returns whether this model type should render as a zap drive item.
-    fn renders_in_warp_drive(&self) -> bool;
+    fn renders_in_zap_ng_drive(&self) -> bool;
 
     /// Returns whether this model type should show update toasts in the UI.
     fn should_show_activity_toasts(&self) -> bool {
@@ -193,7 +193,7 @@ pub trait StoredObject: Debug {
 
     /// Creates a new Zap Drive item for this object.  Returns None if this
     /// object is not rendered in Zap Drive.
-    fn to_warp_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn WarpDriveItem>>;
+    fn to_zap_ng_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn ZapNGDriveItem>>;
 
     /// Returns the web link of this object. Will return none if we do not support web links
     /// for this particular object (i.e. if it's not yet sync'd to the server, or if we don't
@@ -464,7 +464,7 @@ pub trait StoredObjectModel: Debug + Clone + Send + Sync {
     fn object_type(&self) -> ObjectType;
 
     /// Returns whether this model type should render as a zap drive item.
-    fn renders_in_warp_drive(&self) -> bool;
+    fn renders_in_zap_ng_drive(&self) -> bool;
 
     /// Returns whether this model type should show update toasts in the UI.
     fn should_show_activity_toasts(&self) -> bool {
@@ -479,12 +479,12 @@ pub trait StoredObjectModel: Debug + Clone + Send + Sync {
 
     /// Creates a new zap drive item for this model type. Returns None
     /// if this object does not render in Zap Drive.
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         appearance: &Appearance,
         object: &Self::StoredObjectType,
-    ) -> Option<Box<dyn WarpDriveItem>>;
+    ) -> Option<Box<dyn ZapNGDriveItem>>;
 
     /// Returns the display name for this model (e.g. to show in the Zap Drive index)
     fn display_name(&self) -> String;
@@ -714,12 +714,12 @@ where
         self.model.display_name()
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
-        self.model.renders_in_warp_drive()
+    fn renders_in_zap_ng_drive(&self) -> bool {
+        self.model.renders_in_zap_ng_drive()
     }
 
-    fn to_warp_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn WarpDriveItem>> {
-        self.model.to_warp_drive_item(self.id, appearance, self)
+    fn to_zap_ng_drive_item(&self, appearance: &Appearance) -> Option<Box<dyn ZapNGDriveItem>> {
+        self.model.to_zap_ng_drive_item(self.id, appearance, self)
     }
 
     fn can_export(&self) -> bool {
@@ -824,7 +824,7 @@ where
 /// Extracts the server id and object type from a (caller validated) Drive link.
 /// Intended use is deriving metadata from links such that Zap objects
 /// can be opened natively in Zap with no web interaction.
-pub fn extract_server_id_and_object_type_from_warp_drive_link(
+pub fn extract_server_id_and_object_type_from_zap_ng_drive_link(
     url: &Url,
 ) -> Option<ZapDriveObjectArgs> {
     let server_id = url

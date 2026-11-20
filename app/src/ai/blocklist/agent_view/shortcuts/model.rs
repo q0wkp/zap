@@ -1,6 +1,6 @@
-use warpui::{Entity, ModelContext, ModelHandle};
+use zap_ng_ui::{Entity, ModelContext, ModelHandle};
 
-use warp_core::send_telemetry_from_ctx;
+use zap_ng_core::send_telemetry_from_ctx;
 
 use crate::{
     ai::blocklist::agent_view::{AgentViewController, AgentViewControllerEvent},

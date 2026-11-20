@@ -7,12 +7,12 @@ use crate::search::QueryFilter;
 use itertools::Itertools;
 use std::marker::PhantomData;
 use std::ops::Range;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, Empty, Flex, ParentElement, SavePosition, ScrollStateHandle,
     Scrollable, ScrollableElement, ScrollbarWidth, Text, UniformList, UniformListState,
 };
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     Action, AppContext, Element, Entity, ModelHandle, SingletonEntity, View, ViewContext,
     ViewHandle, WeakViewHandle,
 };
@@ -176,7 +176,7 @@ impl<T: Action + Clone> SearchResultsMenuView<T> {
                 ScrollbarWidth::Auto,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                zap_ng_ui::elements::Fill::None,
             )
             .with_overlayed_scrollbar()
             .finish(),

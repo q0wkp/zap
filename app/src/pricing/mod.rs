@@ -1,4 +1,4 @@
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 #[derive(Debug, Clone)]
 pub struct AddonCreditsOption {

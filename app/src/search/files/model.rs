@@ -8,7 +8,7 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "local_fs")] {

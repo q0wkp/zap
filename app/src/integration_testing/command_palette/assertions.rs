@@ -1,6 +1,6 @@
 use crate::integration_testing::view_getters::{command_palette_view, workspace_view};
-use warpui::async_assert;
-use warpui::integration::AssertionCallback;
+use zap_ng_ui::async_assert;
+use zap_ng_ui::integration::AssertionCallback;
 
 /// Asserts that the command palette is currently open.
 pub fn assert_command_palette_is_open() -> AssertionCallback {

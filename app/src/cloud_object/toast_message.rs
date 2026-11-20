@@ -1,4 +1,4 @@
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 use crate::cloud_object::update_manager::{InitiatedBy, ObjectOperation, OperationSuccessType};
 

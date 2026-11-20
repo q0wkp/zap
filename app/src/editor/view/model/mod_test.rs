@@ -1,5 +1,5 @@
 use string_offset::{ByteOffset, CharOffset};
-use warpui::{text_layout::TextStyle, App};
+use zap_ng_ui::{text_layout::TextStyle, App};
 
 use crate::editor::{EditorSnapshot, PlainTextEditorViewAction, TextRun, ValidInputType};
 

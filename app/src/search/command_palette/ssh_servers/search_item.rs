@@ -1,7 +1,7 @@
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text},
     fonts::{Properties, Weight},
     AppContext, Element, SingletonEntity,
@@ -15,7 +15,7 @@ use crate::search::item::SearchItem;
 use crate::search::result_renderer::ItemHighlightState;
 use crate::ui_components::icons::Icon as UiIcon;
 
-use warp_ssh_manager::{SshNode, SshServerInfo};
+use zap_ng_ssh_manager::{SshNode, SshServerInfo};
 
 #[derive(Debug)]
 pub struct SshServerSearchItem {

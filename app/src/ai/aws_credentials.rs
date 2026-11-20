@@ -13,8 +13,8 @@ use futures::channel::oneshot::channel;
 use futures::future::BoxFuture;
 use tokio::sync::OnceCell;
 use vec1::vec1;
-use warp_managed_secrets::{client::IdentityTokenOptions, ManagedSecretManager};
-use warpui::{ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_managed_secrets::{client::IdentityTokenOptions, ManagedSecretManager};
+use zap_ng_ui::{ModelContext, ModelHandle, SingletonEntity};
 
 /// Errors that can occur when loading AWS credentials.
 #[derive(Debug, Clone)]

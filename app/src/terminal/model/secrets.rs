@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use std::ops::{Not, RangeInclusive};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use warpui::elements::SecretRange;
-use warpui::EntityId;
+use zap_ng_ui::elements::SecretRange;
+use zap_ng_ui::EntityId;
 
 use super::grid::grid_handler::GridHandler;
 use super::grid::{Dimensions as _, RespectDisplayedOutput};

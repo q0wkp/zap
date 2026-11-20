@@ -71,7 +71,7 @@ pub use select::*;
 pub use ssh::*;
 pub use theme::*;
 pub use vim_banner::*;
-use warp_core::user_preferences::GetUserPreferences as _;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
 
 /// Describes errors encountered when loading settings from `settings.toml`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -125,8 +125,8 @@ impl SettingsFileError {
 use crate::{
     root_view::QuakeModePinPosition,
     terminal::{BlockListSettings, BlockPadding},
-    themes::theme::{ThemeKind, WarpTheme},
-    user_config::WarpConfig,
+    themes::theme::{ThemeKind, ZapNGTheme},
+    user_config::ZapNGConfig,
 };
 use lazy_static::lazy_static;
 use pathfinder_geometry::{rect::RectF, vector::Vector2F};
@@ -134,8 +134,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use settings::Setting as _;
 use std::{collections::HashMap, ops::Mul, path::PathBuf};
-use warp_core::features::FeatureFlag;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
     elements::DEFAULT_UI_LINE_HEIGHT_RATIO, keymap::Keystroke, AppContext, DisplayIdx,
     SingletonEntity,
 };
@@ -344,7 +344,7 @@ pub struct QuakeModeSettings {
     #[schemars(description = "Display to pin the hotkey window to.")]
     pub pin_screen: Option<DisplayIdx>,
     /// Whether we should hide quake mode window when it loses focus, this could happen either when
-    /// user focuses on another warp window or another app.
+    /// user focuses on another zap-ng window or another app.
     #[schemars(description = "Whether to hide the hotkey window when it loses focus.")]
     pub hide_window_when_unfocused: bool,
 }
@@ -523,10 +523,10 @@ impl Settings {
             })
     }
 
-    pub fn theme_for_theme_kind(theme_kind: &ThemeKind, ctx: &mut AppContext) -> WarpTheme {
+    pub fn theme_for_theme_kind(theme_kind: &ThemeKind, ctx: &mut AppContext) -> ZapNGTheme {
         match theme_kind {
             ThemeKind::InMemory(in_memory_theme) => in_memory_theme.theme(),
-            _ => WarpConfig::as_ref(ctx).theme_config().theme(theme_kind),
+            _ => ZapNGConfig::as_ref(ctx).theme_config().theme(theme_kind),
         }
     }
 }
@@ -590,10 +590,10 @@ pub struct ExtraMetaKeysChangedArg {
 
 /// Returns the path to the user preferences file.
 pub fn user_preferences_file_path() -> PathBuf {
-    warp_core::paths::config_local_dir().join("user_preferences.json")
+    zap_ng_core::paths::config_local_dir().join("user_preferences.json")
 }
 
 /// Returns the path to the TOML settings file.
 pub fn user_preferences_toml_file_path() -> PathBuf {
-    warp_core::paths::config_local_dir().join("settings.toml")
+    zap_ng_core::paths::config_local_dir().join("settings.toml")
 }

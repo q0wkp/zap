@@ -11,22 +11,22 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warp_ssh_manager::{KeychainSecretStore, SshRepository};
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_ssh_manager::{KeychainSecretStore, SshRepository};
+use zap_ng_ui::elements::{
     Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
     ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult, Element,
     EventHandler, Fill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition,
     ScrollbarWidth, Shrinkable, Stack, Text,
 };
-use warpui::platform::{Cursor, FilePickerConfiguration, SaveFilePickerConfiguration};
-use warpui::{
+use zap_ng_ui::platform::{Cursor, FilePickerConfiguration, SaveFilePickerConfiguration};
+use zap_ng_ui::{
     AppContext, Entity, ModelHandle, SingletonEntity, TypedActionView, View, ViewContext,
     ViewHandle,
 };
-use warpui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
 
 use crate::editor::{
     EditorView, Event as EditorEvent, SingleLineEditorOptions, TextColors, TextOptions,
@@ -462,7 +462,7 @@ impl SftpBrowserView {
     /// 连接到 SSH 服务器并建立 SFTP 通道
     fn connect_to_server(&mut self, ctx: &mut ViewContext<Self>) {
         let node_id = self.node_id.clone();
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             let server = SshRepository::get_server(c, &node_id)?;
             Ok(server)
         });
@@ -855,7 +855,7 @@ impl SftpBrowserView {
         let theme = appearance.theme();
         let icon_color = theme.sub_text_color(theme.background());
 
-        let icon_el = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+        let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(TOOLBAR_ICON_SIZE)
             .with_height(TOOLBAR_ICON_SIZE)
             .finish();
@@ -1315,7 +1315,7 @@ impl SftpBrowserView {
         let theme = appearance.theme();
         let text_color = theme.sub_text_color(theme.background());
 
-        let search_icon = ConstrainedBox::new(Icon::Search.to_warpui_icon(text_color).finish())
+        let search_icon = ConstrainedBox::new(Icon::Search.to_zap_ng_ui_icon(text_color).finish())
             .with_width(14.0)
             .with_height(14.0)
             .finish();
@@ -1355,7 +1355,7 @@ fn render_centered_status(
     let theme = appearance.theme();
     let text_color = theme.sub_text_color(theme.background());
 
-    let icon_el = ConstrainedBox::new(icon.to_warpui_icon(text_color).finish())
+    let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(text_color).finish())
         .with_width(24.0)
         .with_height(24.0)
         .finish();
@@ -2039,7 +2039,7 @@ mod tests {
     /// of path only adds or drops the states at the end.
     #[test]
     fn test_set_current_path_keeps_a_mouse_state_per_breadcrumb_segment() {
-        warpui::App::test((), |mut app| async move {
+        zap_ng_ui::App::test((), |mut app| async move {
             crate::test_util::settings::initialize_settings_for_tests(&mut app);
             app.add_singleton_model(|_| Appearance::mock());
             app.add_singleton_model(|_| {
@@ -2047,9 +2047,9 @@ mod tests {
             });
             app.add_singleton_model(|_| crate::workspace::ToastStack);
             let temp_db = std::env::temp_dir().join("warp_sftp_test.sqlite");
-            let _ = warp_ssh_manager::set_database_path(temp_db);
+            let _ = zap_ng_ssh_manager::set_database_path(temp_db);
 
-            let (_, view) = app.add_window(warpui::platform::WindowStyle::NotStealFocus, |ctx| {
+            let (_, view) = app.add_window(zap_ng_ui::platform::WindowStyle::NotStealFocus, |ctx| {
                 SftpBrowserView::new("test-node".to_string(), ctx)
             });
             view.update(&mut app, |view, _| {

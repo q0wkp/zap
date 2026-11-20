@@ -2,12 +2,12 @@ use crate::{
     appearance::Appearance,
     cloud_object::{model::persistence::ObjectStoreModel, Owner, StoredObject},
     server::ids::SyncId,
-    themes::theme::WarpTheme,
+    themes::theme::ZapNGTheme,
     workspaces::user_workspaces::UserWorkspaces,
 };
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildAnchor, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
         Container, CornerRadius, CrossAxisAlignment, Flex, Highlight, MouseStateHandle,
@@ -183,7 +183,7 @@ impl ImportModal {
     fn render_breadcrumbs(
         &self,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let (breadcrumb_text, highlight_indices) = self.breadcrumb(app);
@@ -221,7 +221,7 @@ impl ImportModal {
     fn render_header(
         &self,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let top_row = Flex::row()
@@ -261,7 +261,7 @@ impl ImportModal {
             .finish()
     }
 
-    fn render_body(&self, theme: &WarpTheme) -> Box<dyn Element> {
+    fn render_body(&self, theme: &ZapNGTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 ClippedScrollable::vertical(

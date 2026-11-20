@@ -16,9 +16,9 @@ use std::collections::HashSet;
 use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
-use warp_editor::content::{buffer::Buffer, markdown::MarkdownStyle};
+use zap_ng_editor::content::{buffer::Buffer, markdown::MarkdownStyle};
 
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::ai::agent::{AgentReviewCommentBatch, DiffSetHunk};
 use crate::ai::blocklist::CLAUDE_ORANGE;
@@ -27,8 +27,8 @@ use crate::code_review::comments::AttachedReviewCommentTarget;
 use crate::server::telemetry::CLIAgentType;
 use crate::ui_components::icons::Icon;
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use warp_completer::parsers::simple::top_level_command;
-use warp_util::path::EscapeChar;
+use zap_ng_completer::parsers::simple::top_level_command;
+use zap_ng_util::path::EscapeChar;
 
 /// UID for the Uber team.
 /// See https://warp.metabaseapp.com/dashboard/1454?team_id=46347

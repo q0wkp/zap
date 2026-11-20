@@ -5,9 +5,9 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, OnceLock},
 };
-use warp_core::ui::icons::Icon;
-use warp_core::user_preferences::GetUserPreferences;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::user_preferences::GetUserPreferences;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use crate::{
     auth::{
@@ -937,7 +937,7 @@ impl LLMPreferences {
 
         // 始终写 byop_last_used_model_id(即便 changed=false 也覆盖一遍,统一新 tab 行为)。
         // picker 显式切换 = 用户最强意图,新 tab/重启都应沿用。
-        use warp_core::errors::report_if_error;
+        use zap_ng_core::errors::report_if_error;
         let llm_id_str = preferred_llm_id.as_str().to_owned();
         crate::settings::AISettings::handle(ctx).update(ctx, |settings, ctx| {
             if settings.byop_last_used_model_id.to_string() != llm_id_str {
@@ -980,7 +980,7 @@ impl LLMPreferences {
 
     pub fn new_choices_since_last_update(&self) -> Option<Vec<LLMInfo>> {
         self.last_update.as_ref().map(|update| {
-            // We don't want to display new choices if they are warp branded.
+            // We don't want to display new choices if they are zap-ng branded.
             let filter_choices: Vec<LLMInfo> = update
                 .new_choices
                 .clone()
@@ -1228,7 +1228,7 @@ impl LLMPreferences {
             .insert((api_type, model_id.to_owned()), effort);
 
         // 同步写 AISettings.byop_last_used_reasoning(per-(api_type, model))。
-        use warp_core::errors::report_if_error;
+        use zap_ng_core::errors::report_if_error;
         let key = crate::settings::BYOPLastUsedReasoningMap::make_key(api_type, model_id);
         crate::settings::AISettings::handle(ctx).update(ctx, |settings, ctx| {
             let mut map = settings.byop_last_used_reasoning.value().0.clone();

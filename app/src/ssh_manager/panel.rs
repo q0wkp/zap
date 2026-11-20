@@ -15,24 +15,24 @@
 use std::collections::HashMap;
 
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::{
     AcceptedByDropTarget, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Dismiss, Draggable, DraggableState, DropTarget, DropTargetData, Element,
     Empty, Fill as ElementFill, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, SavePosition,
     ScrollbarWidth, Stack, Text,
 };
-use warpui::elements::{ClippedScrollStateHandle, ClippedScrollable};
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::elements::{ClippedScrollStateHandle, ClippedScrollable};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
 
-use warp_ssh_manager::{
+use zap_ng_ssh_manager::{
     AuthType, KeychainSecretStore, NodeKind, SshNode, SshRepository, SshServerInfo,
 };
 
@@ -161,8 +161,8 @@ struct CandidateRowFields<'a> {
 /// 主题色配对 —— 已导入行用 muted,普通行用 main。
 #[derive(Copy, Clone)]
 struct CandidateRowColors {
-    main: warp_core::ui::theme::Fill,
-    muted: warp_core::ui::theme::Fill,
+    main: zap_ng_core::ui::theme::Fill,
+    muted: zap_ng_core::ui::theme::Fill,
 }
 
 /// 拖拽落点 metadata。`parent_id = None` 表示拖到 panel 空白处(放回 root);
@@ -271,7 +271,7 @@ impl SshManagerPanel {
     }
 
     fn refresh_tree(&mut self, ctx: &mut ViewContext<Self>) {
-        match warp_ssh_manager::with_conn(|c| Ok(SshRepository::list_nodes(c)?)) {
+        match zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::list_nodes(c)?)) {
             Ok(nodes) => {
                 self.depths = compute_depths(&nodes);
                 self.nodes = sort_for_display(nodes, &self.depths);
@@ -354,7 +354,7 @@ impl SshManagerPanel {
 
     /// 新建文件夹。`parent` 为 None 时在根级创建。
     fn on_add_folder_with_parent(&mut self, parent: Option<String>, ctx: &mut ViewContext<Self>) {
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             let name = unique_name(c, parent.as_deref(), "New folder")?;
             Ok(SshRepository::create_folder(c, parent.as_deref(), &name)?)
         });
@@ -423,7 +423,7 @@ impl SshManagerPanel {
         };
 
         let parent = self.parent_for_new_node();
-        let result = warp_ssh_manager::with_conn(|conn| {
+        let result = zap_ng_ssh_manager::with_conn(|conn| {
             // 名字与手动 "New server" 相同的"自动避重"逻辑(unique_name);
             // 第一条候选用别名当名字,撞名追加 " 2"、" 3" …
             let name = unique_name(conn, parent.as_deref(), &c.alias)?;
@@ -456,7 +456,7 @@ impl SshManagerPanel {
     fn on_add_server(&mut self, ctx: &mut ViewContext<Self>) {
         let parent = self.parent_for_new_node();
         let info_template = SshServerInfo::new_default(String::new());
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             let name = unique_name(c, parent.as_deref(), "New server")?;
             Ok(SshRepository::create_server(
                 c,
@@ -483,11 +483,11 @@ impl SshManagerPanel {
 
     fn on_clone_server(&mut self, source_id: &str, ctx: &mut ViewContext<Self>) {
         let source_id = source_id.to_string();
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             let source_node = SshRepository::list_nodes(c)?
                 .into_iter()
                 .find(|n| n.id == source_id)
-                .ok_or_else(|| warp_ssh_manager::SshRepositoryError::NotFound(source_id.clone()))?;
+                .ok_or_else(|| zap_ng_ssh_manager::SshRepositoryError::NotFound(source_id.clone()))?;
 
             let parent = source_node.parent_id;
             let name = unique_name(
@@ -498,7 +498,7 @@ impl SshManagerPanel {
 
             // The copy and its password and passphrase are made together: if the keychain
             // refuses one, no half-made copy is left behind.
-            Ok(warp_ssh_manager::clone_server_with_secrets(
+            Ok(zap_ng_ssh_manager::clone_server_with_secrets(
                 c,
                 &KeychainSecretStore,
                 &source_id,
@@ -544,8 +544,8 @@ impl SshManagerPanel {
         ctx.notify();
         // The node, everything below it and the keychain secrets of the servers among them go
         // together, or not at all.
-        let result = warp_ssh_manager::with_conn(|c| {
-            Ok(warp_ssh_manager::delete_node_with_secrets(
+        let result = zap_ng_ssh_manager::with_conn(|c| {
+            Ok(zap_ng_ssh_manager::delete_node_with_secrets(
                 c,
                 &KeychainSecretStore,
                 &id,
@@ -582,7 +582,7 @@ impl SshManagerPanel {
         if !matches!(kind, Some(NodeKind::Server)) {
             return;
         }
-        let server = warp_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, &id)?))
+        let server = zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, &id)?))
             .ok()
             .flatten();
         if let Some(server) = server {
@@ -598,7 +598,7 @@ impl SshManagerPanel {
         if !matches!(kind, Some(NodeKind::Server)) {
             return;
         }
-        let server = warp_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, id)?))
+        let server = zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::get_server(c, id)?))
             .ok()
             .flatten();
         if let Some(server) = server {
@@ -643,7 +643,7 @@ impl SshManagerPanel {
             .map(|n| n.is_collapsed)
             .unwrap_or(false);
         let id = node_id.to_string();
-        let result = warp_ssh_manager::with_conn(move |c| {
+        let result = zap_ng_ssh_manager::with_conn(move |c| {
             Ok(SshRepository::set_collapsed(c, &id, new_collapsed)?)
         });
         if let Err(e) = result {
@@ -664,7 +664,7 @@ impl SshManagerPanel {
             .iter()
             .any(|n| matches!(n.kind, NodeKind::Folder) && !n.is_collapsed);
         let new_collapsed = any_expanded; // 至少一个展开 → 全收;否则全展
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             Ok(SshRepository::set_all_folders_collapsed(c, new_collapsed)?)
         });
         if let Err(e) = result {
@@ -766,7 +766,7 @@ impl SshManagerPanel {
             .unwrap_or_default();
 
         let editor = ctx.add_typed_action_view(move |ctx| {
-            let appearance = warp_core::ui::appearance::Appearance::as_ref(ctx);
+            let appearance = zap_ng_core::ui::appearance::Appearance::as_ref(ctx);
             let theme = appearance.theme();
             let options = SingleLineEditorOptions {
                 is_password: false,
@@ -820,7 +820,7 @@ impl SshManagerPanel {
             return;
         }
         let result =
-            warp_ssh_manager::with_conn(|c| Ok(SshRepository::rename_node(c, &id, &new_name)?));
+            zap_ng_ssh_manager::with_conn(|c| Ok(SshRepository::rename_node(c, &id, &new_name)?));
         if let Err(e) = result {
             log::error!("ssh_manager: rename failed: {e:?}");
             ctx.emit(SshManagerPanelEvent::PersistenceError(e.to_string()));
@@ -901,7 +901,7 @@ impl SshManagerPanel {
         // sort_order 取目标 parent 当前最大值 +1(排在末尾)。简化的方式:
         // 用 i32::MAX/2 让 SQL 层把它放最后(后续 normalize)。这里走 SQL
         // 查询拿真实 next_sort_order。
-        let result = warp_ssh_manager::with_conn(|c| {
+        let result = zap_ng_ssh_manager::with_conn(|c| {
             use diesel::prelude::*;
             use persistence::schema::ssh_nodes;
             let max: Option<i32> = match new_parent_id.as_deref() {
@@ -939,7 +939,7 @@ impl SshManagerPanel {
 
     fn render_toolbar(
         &self,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
         let icon_color = theme.sub_text_color(theme.background());
@@ -948,7 +948,7 @@ impl SshManagerPanel {
                         state: MouseStateHandle,
                         action: SshManagerPanelAction|
          -> Box<dyn Element> {
-            let icon_el = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+            let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_width(TOOLBAR_ICON_SIZE)
                 .with_height(TOOLBAR_ICON_SIZE)
                 .finish();
@@ -1007,7 +1007,7 @@ impl SshManagerPanel {
         // 整条 toolbar:左右两端对齐(MainAxisAlignment::SpaceBetween)。
         Flex::row()
             .with_main_axis_size(MainAxisSize::Max)
-            .with_main_axis_alignment(warpui::elements::MainAxisAlignment::SpaceBetween)
+            .with_main_axis_alignment(zap_ng_ui::elements::MainAxisAlignment::SpaceBetween)
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_child(left_group)
             .with_child(right_group)
@@ -1021,7 +1021,7 @@ impl SshManagerPanel {
     /// "+" 或 "Added" 徽章(PRODUCT.md decision E)。
     fn render_candidates(
         &self,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
@@ -1120,7 +1120,7 @@ impl SshManagerPanel {
         path_display: &str,
         count: usize,
         can_refresh: bool,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
@@ -1134,7 +1134,7 @@ impl SshManagerPanel {
         } else {
             crate::ui_components::icons::Icon::ChevronRight
         };
-        let chevron_el = ConstrainedBox::new(chevron_icon.to_warpui_icon(icon_color).finish())
+        let chevron_el = ConstrainedBox::new(chevron_icon.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(ITEM_ICON_SIZE)
             .with_height(ITEM_ICON_SIZE)
             .finish();
@@ -1163,7 +1163,7 @@ impl SshManagerPanel {
         let refresh_state = self.candidates_refresh_btn.clone();
         let refresh_icon = ConstrainedBox::new(
             crate::ui_components::icons::Icon::Refresh
-                .to_warpui_icon(icon_color)
+                .to_zap_ng_ui_icon(icon_color)
                 .finish(),
         )
         .with_width(ITEM_ICON_SIZE)
@@ -1224,8 +1224,8 @@ impl SshManagerPanel {
     fn render_candidates_message(
         &self,
         text: &str,
-        color: warp_core::ui::theme::Fill,
-        appearance: &warp_core::ui::appearance::Appearance,
+        color: zap_ng_core::ui::theme::Fill,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         Container::new(
             Text::new_inline(
@@ -1249,7 +1249,7 @@ impl SshManagerPanel {
         &self,
         text: &str,
         color: pathfinder_color::ColorU,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         Container::new(
             Text::new_inline(
@@ -1271,7 +1271,7 @@ impl SshManagerPanel {
         &self,
         fields: CandidateRowFields<'_>,
         colors: CandidateRowColors,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         let CandidateRowFields {
             alias,
@@ -1283,7 +1283,7 @@ impl SshManagerPanel {
         let CandidateRowColors { main, muted } = colors;
         let theme = appearance.theme();
         let icon = crate::ui_components::icons::Icon::Key
-            .to_warpui_icon(theme.sub_text_color(theme.background()))
+            .to_zap_ng_ui_icon(theme.sub_text_color(theme.background()))
             .finish();
         let icon_el = ConstrainedBox::new(icon)
             .with_width(ITEM_ICON_SIZE)
@@ -1362,7 +1362,7 @@ impl SshManagerPanel {
         } else {
             let plus_icon = ConstrainedBox::new(
                 crate::ui_components::icons::Icon::Plus
-                    .to_warpui_icon(theme.sub_text_color(theme.background()))
+                    .to_zap_ng_ui_icon(theme.sub_text_color(theme.background()))
                     .finish(),
             )
             .with_width(ITEM_ICON_SIZE)
@@ -1423,7 +1423,7 @@ impl SshManagerPanel {
         .finish()
     }
 
-    fn render_tree(&self, appearance: &warp_core::ui::appearance::Appearance) -> Box<dyn Element> {
+    fn render_tree(&self, appearance: &zap_ng_core::ui::appearance::Appearance) -> Box<dyn Element> {
         let mut col = Flex::column();
 
         if self.nodes.is_empty() {
@@ -1480,7 +1480,7 @@ impl SshManagerPanel {
     fn render_row(
         &self,
         node: &SshNode,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
         let depth = self.depths.get(&node.id).copied().unwrap_or(0);
@@ -1496,7 +1496,7 @@ impl SshManagerPanel {
             NodeKind::Server => crate::ui_components::icons::Icon::Key,
         };
         let icon_color = theme.sub_text_color(theme.background());
-        let icon_el = ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+        let icon_el = ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(ITEM_ICON_SIZE)
             .with_height(ITEM_ICON_SIZE)
             .finish();
@@ -1510,7 +1510,7 @@ impl SshManagerPanel {
                 } else {
                     crate::ui_components::icons::Icon::ChevronDown
                 };
-                ConstrainedBox::new(chevron_icon.to_warpui_icon(icon_color).finish())
+                ConstrainedBox::new(chevron_icon.to_zap_ng_ui_icon(icon_color).finish())
                     .with_width(ITEM_ICON_SIZE)
                     .with_height(ITEM_ICON_SIZE)
                     .finish()
@@ -1571,7 +1571,7 @@ impl SshManagerPanel {
             )
             .with_child(chevron_el)
             .with_child(icon_el)
-            .with_child(warpui::elements::Shrinkable::new(1.0, label_or_editor).finish())
+            .with_child(zap_ng_ui::elements::Shrinkable::new(1.0, label_or_editor).finish())
             .with_main_axis_size(MainAxisSize::Max)
             .finish();
 
@@ -1628,7 +1628,7 @@ impl SshManagerPanel {
         //
         // **关键嵌套**:`DropTarget(Container(Draggable(Hoverable)))`。
         // 没有 Container 层会出 bug —— `Draggable::origin()` 返回 `child.origin()`
-        // (`crates/warpui_core/src/elements/drag/draggable.rs:746-757`),而
+        // (`crates/zap_ng_ui_core/src/elements/drag/draggable.rs:746-757`),而
         // child 在 Dragging 状态被 paint 到 drag_origin,导致 child.origin() =
         // ghost 位置。结果 DropTarget 直接套 Draggable 时,bounds 跟着 ghost
         // 跑 → drop target 永远在鼠标下,落不到别的行。Container.origin/size
@@ -1737,7 +1737,7 @@ impl SshManagerPanel {
 
     fn render_context_menu(
         &self,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Box<dyn Element> {
         let theme = appearance.theme();
         let items = self.context_menu_items();
@@ -1815,7 +1815,7 @@ impl SshManagerPanel {
     fn render_delete_confirmation(
         &self,
         pending: &PendingDelete,
-        appearance: &warp_core::ui::appearance::Appearance,
+        appearance: &zap_ng_core::ui::appearance::Appearance,
     ) -> Option<Box<dyn Element>> {
         let theme = appearance.theme();
         let message = Text::new(
@@ -1941,7 +1941,7 @@ impl View for SshManagerPanel {
     fn on_focus(&mut self, _focus_ctx: &FocusContext, _ctx: &mut ViewContext<Self>) {}
 
     fn render(&self, app: &AppContext) -> Box<dyn Element> {
-        let appearance = warp_core::ui::appearance::Appearance::as_ref(app);
+        let appearance = zap_ng_core::ui::appearance::Appearance::as_ref(app);
 
         let toolbar = Container::new(self.render_toolbar(appearance))
             .with_uniform_padding(8.0)
@@ -1988,7 +1988,7 @@ impl View for SshManagerPanel {
                 .with_main_axis_size(MainAxisSize::Max)
                 .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
                 .with_child(toolbar)
-                .with_child(warpui::elements::Shrinkable::new(1.0, scrollable_content).finish())
+                .with_child(zap_ng_ui::elements::Shrinkable::new(1.0, scrollable_content).finish())
                 .finish(),
         )
         .finish();
@@ -2126,7 +2126,7 @@ fn compute_depths(nodes: &[SshNode]) -> HashMap<String, usize> {
 fn list_server_hosts() -> Vec<String> {
     use diesel::prelude::*;
     use persistence::schema::ssh_servers;
-    warp_ssh_manager::with_conn(|conn| {
+    zap_ng_ssh_manager::with_conn(|conn| {
         let hosts: Vec<String> = ssh_servers::table.select(ssh_servers::host).load(conn)?;
         Ok(hosts)
     })

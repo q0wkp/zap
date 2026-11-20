@@ -3,30 +3,30 @@ use std::sync::LazyLock;
 
 use itertools::Itertools;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::theme::Fill;
-use warp_core::ui::Icon;
-use warpui::color::ColorU;
-use warpui::elements::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::color::blend::Blend;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::elements::{
     drag_resize::drag_resize_handle, ChildAnchor, Clipped, DispatchEventResult, DragResizeElement,
     DragResizeHandle, EventHandler, Expanded, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseInBehavior, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, ResizeEndFn, Scrollable, ScrollableElement, ScrollbarWidth,
     SizeConstraintCondition, SizeConstraintSwitch, Stack, UniformList, UniformListState,
 };
-use warpui::fonts::Weight;
-use warpui::platform::Cursor;
-use warpui::prelude::{
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::prelude::{
     Align, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Empty, Flex, SavePosition,
     Text,
 };
-use warpui::scene::{Border, CornerRadius, Radius};
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{elements::ScrollStateHandle, ModelHandle, View};
-use warpui::{
+use zap_ng_ui::scene::{Border, CornerRadius, Radius};
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{elements::ScrollStateHandle, ModelHandle, View};
+use zap_ng_ui::{
     Action, AppContext, Element, Entity, SingletonEntity, TypedActionView, ViewContext, ViewHandle,
     WeakViewHandle,
 };
@@ -117,8 +117,8 @@ impl<A: InlineMenuAction> QueryResultRenderer<A> {
         is_selected: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use warpui::elements::{DispatchEventResult, EventHandler, Hoverable};
-        use warpui::platform::Cursor;
+        use zap_ng_ui::elements::{DispatchEventResult, EventHandler, Hoverable};
+        use zap_ng_ui::platform::Cursor;
 
         if self.search_result.is_static_separator() {
             return self.render_inline_with_highlight_state(ItemHighlightState::Default, true, app);
@@ -175,7 +175,7 @@ impl<A: InlineMenuAction> QueryResultRenderer<A> {
         is_static_separator: bool,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use warpui::elements::{MainAxisSize, Shrinkable};
+        use zap_ng_ui::elements::{MainAxisSize, Shrinkable};
 
         let appearance = Appearance::as_ref(app);
         let icon = self.search_result.render_icon(highlight_state, appearance);
@@ -811,7 +811,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuView<A, T> {
         let drag_indicator = Hoverable::new(self.drag_indicator_mouse_state.clone(), |_| {
             ConstrainedBox::new(
                 Icon::DragIndicator
-                    .to_warpui_icon(Fill::Solid(
+                    .to_zap_ng_ui_icon(Fill::Solid(
                         theme.disabled_text_color(header_bg.into()).into_solid(),
                     ))
                     .finish(),
@@ -914,7 +914,7 @@ impl<A: InlineMenuAction, T: 'static + Send + Sync> InlineMenuView<A, T> {
             ScrollbarWidth::Auto,
             theme.nonactive_ui_detail().into(),
             theme.active_ui_detail().into(),
-            warpui::elements::Fill::None,
+            zap_ng_ui::elements::Fill::None,
         )
         .with_overlayed_scrollbar()
         .finish();

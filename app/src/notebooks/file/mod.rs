@@ -5,11 +5,11 @@ use std::{
 };
 
 use pathfinder_geometry::vector::vec2f;
-use warp_util::path::user_friendly_path;
+use zap_ng_util::path::user_friendly_path;
 #[cfg(feature = "local_fs")]
-use warpui::clipboard::ClipboardContent;
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{
         Align, Container, CrossAxisAlignment, DispatchEventResult, Empty, EventHandler, Flex,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, SavePosition, Shrinkable,
@@ -64,12 +64,12 @@ use super::{
 use crate::code::editor_management::CodeSource;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
-use warp_core::ui::icons::ICON_DIMENSIONS;
-use warp_editor::model::CoreEditorModel;
+use zap_ng_core::ui::icons::ICON_DIMENSIONS;
+use zap_ng_editor::model::CoreEditorModel;
 #[cfg(feature = "local_fs")]
-use warp_files::{FileModel, FileModelEvent};
+use zap_ng_files::{FileModel, FileModelEvent};
 #[cfg(feature = "local_fs")]
-use warp_util::file::FileId;
+use zap_ng_util::file::FileId;
 
 pub use crate::util::openable_file_type::is_markdown_file;
 
@@ -120,7 +120,7 @@ pub enum FileNotebookEvent {
     OpenFileWithTarget {
         path: PathBuf,
         target: FileTarget,
-        line_col: Option<warp_util::path::LineAndColumnArg>,
+        line_col: Option<zap_ng_util::path::LineAndColumnArg>,
     },
 }
 
@@ -153,7 +153,7 @@ impl From<ContextMenuAction> for FileNotebookAction {
 }
 
 /// Information about the notebook's backing file.
-// TODO: This should probably build on the `warp_files` abstractions.
+// TODO: This should probably build on the `zap_ng_files` abstractions.
 #[derive(Debug, Clone)]
 enum SourceFile {
     Local {
@@ -214,7 +214,7 @@ impl FileState {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_editable_bindings([
         EditableBinding::new(
@@ -758,7 +758,7 @@ impl FileNotebookView {
                             TextAndIcon::new(
                                 TextAndIconAlignment::TextFirst,
                                 crate::t!("common-try-again"),
-                                Icon::Refresh.to_warpui_icon(error_text_color),
+                                Icon::Refresh.to_zap_ng_ui_icon(error_text_color),
                                 MainAxisSize::Min,
                                 MainAxisAlignment::Center,
                                 vec2f(16., 16.),
@@ -830,7 +830,7 @@ impl View for FileNotebookView {
     fn accessibility_contents(&self, _ctx: &AppContext) -> Option<AccessibilityContent> {
         Some(AccessibilityContent::new_without_help(
             format!("{} notebook", self.title()),
-            WarpA11yRole::TextRole,
+            ZapNGA11yRole::TextRole,
         ))
     }
 
@@ -1042,7 +1042,7 @@ impl BackingView for FileNotebookView {
             let title_text = render_pane_header_title_text(
                 title,
                 appearance,
-                warpui::text_layout::ClipConfig::start(),
+                zap_ng_ui::text_layout::ClipConfig::start(),
             );
 
             view::HeaderContent::Custom {
@@ -1065,7 +1065,7 @@ impl BackingView for FileNotebookView {
                 title,
                 title_secondary: None,
                 title_style: None,
-                title_clip_config: warpui::text_layout::ClipConfig::start(),
+                title_clip_config: zap_ng_ui::text_layout::ClipConfig::start(),
                 title_max_width: None,
                 left_of_title: None,
                 right_of_title: None,

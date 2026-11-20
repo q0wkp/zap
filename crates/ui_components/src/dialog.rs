@@ -1,7 +1,7 @@
 use std::{borrow::Cow, sync::Arc};
 
-use warp_core::ui::{Icon, appearance::Appearance, theme::color::internal_colors};
-use warpui::{
+use zap_ng_core::ui::{Icon, appearance::Appearance, theme::color::internal_colors};
+use zap_ng_ui::{
     AppContext, EventContext,
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Element,

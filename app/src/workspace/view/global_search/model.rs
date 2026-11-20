@@ -7,9 +7,9 @@ use num_traits::SaturatingSub;
 use regex::escape;
 use std::path::PathBuf;
 use string_offset::ByteOffset;
-use warp_ripgrep::search::{Match as RipgrepMatch, Submatch};
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::{Entity, ModelContext, ModelSpawner};
+use zap_ng_ripgrep::search::{Match as RipgrepMatch, Submatch};
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::{Entity, ModelContext, ModelSpawner};
 
 const START_BATCH_AFTER_COUNT: usize = 50;
 const MAX_BATCH_SIZE: usize = 512;
@@ -85,7 +85,7 @@ impl GlobalSearch {
 
         let handle = ctx.spawn(
             async move {
-                Self::run_warp_ripgrep_cli(
+                Self::run_zap_ng_ripgrep_cli(
                     search_id,
                     effective_pattern,
                     roots,
@@ -115,7 +115,7 @@ impl GlobalSearch {
         self.search_handle = Some(handle);
     }
 
-    async fn run_warp_ripgrep_cli(
+    async fn run_zap_ng_ripgrep_cli(
         search_id: u32,
         pattern: String,
         roots: Vec<PathBuf>,
@@ -130,7 +130,7 @@ impl GlobalSearch {
         );
 
         let stream =
-            warp_ripgrep::search::search_streaming(&[pattern], &roots, ignore_case, multiline)?;
+            zap_ng_ripgrep::search::search_streaming(&[pattern], &roots, ignore_case, multiline)?;
         futures::pin_mut!(stream);
 
         let mut total_match_count: usize = 0;

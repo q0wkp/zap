@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     platform::WindowStyle, presenter::ChildView, App, Element, Entity, TypedActionView, View,
     ViewHandle, WindowId,
 };
@@ -42,7 +42,7 @@ impl View for TestView {
         "CommentEditorTestView"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, _app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         ChildView::new(&self.editor).finish()
     }
 }

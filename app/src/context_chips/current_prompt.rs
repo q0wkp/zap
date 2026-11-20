@@ -23,8 +23,8 @@ use crate::{
 use futures::{pin_mut, FutureExt as _};
 use itertools::Itertools;
 use settings::Setting as _;
-use warp_completer::completer::{CommandExitStatus, CommandOutput};
-use warp_core::user_preferences::GetUserPreferences;
+use zap_ng_completer::completer::{CommandExitStatus, CommandOutput};
+use zap_ng_core::user_preferences::GetUserPreferences;
 
 use super::ChipResult;
 use super::{
@@ -47,12 +47,12 @@ use std::hash::{Hash as _, Hasher as _};
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(feature = "local_fs")]
-use warpui::WeakModelHandle;
-use warpui::{
+use zap_ng_ui::WeakModelHandle;
+use zap_ng_ui::{
     r#async::{SpawnedFutureHandle, Timer},
     AppContext, ViewHandle,
 };
-use warpui::{Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{Entity, ModelAsRef, ModelContext, ModelHandle, SingletonEntity};
 
 #[cfg(test)]
 #[path = "current_prompt_test.rs"]
@@ -267,7 +267,7 @@ impl CurrentPrompt {
         // A WeakViewHandle is used here to avoid leaking the terminal model
         let weak_editor_handle = editor.downgrade();
         ctx.subscribe_to_view(&editor, move |me, _, ctx| {
-            // CurrentPrompt exists and this fn is called even if we're not using warp prompt.
+            // CurrentPrompt exists and this fn is called even if we're not using zap-ng prompt.
             // We don't need to do anything if we're honoring PS1 unless universal developer input
             // or AgentView is enabled (agent view needs chips regardless of PS1 setting).
             if *SessionSettings::as_ref(ctx).honor_ps1
@@ -592,7 +592,7 @@ impl CurrentPrompt {
         current_dir_path: Option<String>,
         environment_variables: Option<HashMap<String, String>>,
         timeout: Option<Duration>,
-    ) -> (Option<warp_completer::completer::CommandOutput>, bool) {
+    ) -> (Option<zap_ng_completer::completer::CommandOutput>, bool) {
         let command_future = session
             .execute_command(&command, current_dir_path.as_deref(), environment_variables)
             .fuse();
@@ -1228,7 +1228,7 @@ impl CurrentPrompt {
     #[cfg(test)]
     pub fn await_generators(
         &self,
-        ctx: &mut warpui::AppContext,
+        ctx: &mut zap_ng_ui::AppContext,
     ) -> futures_util::future::BoxFuture<'static, ()> {
         use futures_util::FutureExt;
         use itertools::Itertools;

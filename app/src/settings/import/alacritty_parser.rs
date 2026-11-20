@@ -3,11 +3,11 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use serde::Deserialize;
 use std::{env, io::ErrorKind, path::PathBuf};
-use warp_core::ui::{
+use zap_ng_core::ui::{
     color::hex_color::coloru_from_hex_string,
-    theme::{AnsiColor, AnsiColors, TerminalColors, WarpTheme},
+    theme::{AnsiColor, AnsiColors, TerminalColors, ZapNGTheme},
 };
-use warpui::fonts::FontInfo;
+use zap_ng_ui::fonts::FontInfo;
 
 use super::config::{
     calculate_accent_color, Config, ConfigError, ImportableSetting, ParseableConfig, SettingType,
@@ -289,7 +289,7 @@ impl AlacrittyTheme {
         } else {
             let bright = terminal_colors.bright;
             let accent = calculate_accent_color(background, foreground, cursor_color, bright);
-            Ok(ThemeType::Single(WarpTheme::new(
+            Ok(ThemeType::Single(ZapNGTheme::new(
                 background.into(),
                 foreground.into(),
                 accent.into(),

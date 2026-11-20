@@ -3,7 +3,7 @@ use crate::ai::mcp::FileMCPWatcher;
 use crate::ai::mcp::ParsedTemplatableMCPServerResult;
 use crate::auth::AuthStateProvider;
 use crate::settings::{AISettings, FocusedTerminalInfo};
-use crate::warp_managed_paths_watcher::{warp_managed_mcp_config_path, WarpManagedPathsWatcher};
+use crate::zap_ng_managed_paths_watcher::{zap_ng_managed_mcp_config_path, ZapNGManagedPathsWatcher};
 use crate::workspaces::user_workspaces::UserWorkspaces;
 use repo_metadata::{
     repositories::DetectedRepositories, watcher::DirectoryWatcher, RepoMetadataModel,
@@ -12,17 +12,17 @@ use settings::Setting as _;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use uuid::Uuid;
-use warp_core::features::FeatureFlag;
-use warpui::{App, Entity, ModelHandle, SingletonEntity as _};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{App, Entity, ModelHandle, SingletonEntity as _};
 use watcher::HomeDirectoryWatcher;
 
 // Helper to initialize dependencies and return FileBasedMCPManager handle
-fn setup_app(app: &mut App) -> warpui::ModelHandle<FileBasedMCPManager> {
+fn setup_app(app: &mut App) -> zap_ng_ui::ModelHandle<FileBasedMCPManager> {
     app.add_singleton_model(DirectoryWatcher::new);
     app.add_singleton_model(|_| DetectedRepositories::default());
     app.add_singleton_model(RepoMetadataModel::new);
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(FileMCPWatcher::new);
     app.add_singleton_model(AISettings::new_with_defaults);
     app.add_singleton_model(|_| AuthStateProvider::new_for_test());
@@ -258,9 +258,9 @@ fn test_update_file_based_servers_removes_unreferenced_servers() {
 /// watcher uses the home directory as its logical root and still always
 /// auto-spawns.
 #[test]
-fn test_global_warp_server_from_managed_home_root_always_spawns() {
+fn test_global_zap_ng_server_from_managed_home_root_always_spawns() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
-    let Some(warp_mcp_config_path) = warp_managed_mcp_config_path() else {
+    let Some(zap_ng_mcp_config_path) = zap_ng_managed_mcp_config_path() else {
         return;
     };
     let parsed = parse_mcp_json(r#"{"global-warp": {"command": "npx", "args": ["warp"]}}"#);
@@ -273,7 +273,7 @@ fn test_global_warp_server_from_managed_home_root_always_spawns() {
         // be classified as the global Zap config and auto-spawn.
         manager.update(&mut app, |m, ctx| {
             m.apply_parsed_servers(
-                warp_mcp_config_path.root_path.clone(),
+                zap_ng_mcp_config_path.root_path.clone(),
                 MCPProvider::Zap,
                 parsed,
                 ctx,
@@ -303,7 +303,7 @@ fn test_global_warp_server_from_managed_home_root_always_spawns() {
 }
 /// A globally-scoped non-Zap installation only auto-spawns when the toggle is on.
 #[test]
-fn test_global_non_warp_server_respects_toggle() {
+fn test_global_non_zap_ng_server_respects_toggle() {
     let _flag_guard = FeatureFlag::FileBasedMcp.override_enabled(true);
     let Some(home_dir) = dirs::home_dir() else {
         // Skip on platforms where a home dir isn't available (shouldn't happen on
@@ -364,7 +364,7 @@ fn test_project_scoped_servers_never_auto_spawn() {
     let repo_path = PathBuf::from("/tmp/warp-test-repo");
     let claude_parsed =
         parse_mcp_json(r#"{"proj-claude": {"command": "npx", "args": ["proj-claude"]}}"#);
-    let warp_parsed = parse_mcp_json(r#"{"proj-warp": {"command": "npx", "args": ["proj-warp"]}}"#);
+    let zap_ng_parsed = parse_mcp_json(r#"{"proj-warp": {"command": "npx", "args": ["proj-warp"]}}"#);
 
     App::test((), |mut app| async move {
         let manager = setup_app(&mut app);
@@ -372,7 +372,7 @@ fn test_project_scoped_servers_never_auto_spawn() {
 
         manager.update(&mut app, |m, ctx| {
             m.apply_parsed_servers(repo_path.clone(), MCPProvider::Claude, claude_parsed, ctx);
-            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Zap, warp_parsed, ctx);
+            m.apply_parsed_servers(repo_path.clone(), MCPProvider::Zap, zap_ng_parsed, ctx);
         });
 
         // Neither detection should emit a spawn event.

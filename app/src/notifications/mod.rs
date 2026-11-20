@@ -26,6 +26,6 @@ pub(crate) use item::{
 pub use toast_stack::AgentNotificationToastStack;
 pub use view::{NotificationMailboxView, NotificationMailboxViewEvent};
 
-pub fn init(app: &mut warpui::AppContext) {
+pub fn init(app: &mut zap_ng_ui::AppContext) {
     NotificationMailboxView::init(app);
 }

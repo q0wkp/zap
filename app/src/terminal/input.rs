@@ -121,7 +121,7 @@ use crate::{
         },
         AIRequestUsageModel,
     },
-    ai_assistant::execution_context::WarpAiExecutionContext,
+    ai_assistant::execution_context::ZapNGAiExecutionContext,
     appearance::{Appearance, AppearanceEvent},
     channel::{Channel, ChannelState},
     cloud_object::{
@@ -188,7 +188,7 @@ use crate::{
     settings_view::{flags, SettingsSection},
     terminal::view::inline_banner::PromptSuggestionsView,
     ui_components::{blended_colors, icons::Icon},
-    user_config::WarpConfig,
+    user_config::ZapNGConfig,
     util::bindings::{self, CustomAction},
     util::image::MAX_IMAGE_COUNT_FOR_QUERY,
     view_components::{DismissibleToast, ToastFlavor},
@@ -243,9 +243,9 @@ use std::{
 use string_offset::CharOffset;
 use vec1::Vec1;
 use vim::vim::{VimHandler, VimMode};
-use warp_completer::util::parse_current_commands_and_tokens;
+use zap_ng_completer::util::parse_current_commands_and_tokens;
 
-use warp_completer::{
+use zap_ng_completer::{
     completer::{
         self, CompleterOptions, CompletionContext, CompletionsFallbackStrategy, Description, Match,
         MatchStrategy, MatchType, PathSeparators, SuggestionResults,
@@ -254,12 +254,12 @@ use warp_completer::{
     parsers::{simple::command_at_cursor_position, LiteCommand},
     signatures::CommandRegistry,
 };
-use warp_core::ui::theme::{color::internal_colors, AnsiColorIdentifier};
-use warp_core::user_preferences::GetUserPreferences as _;
-use warp_editor::editor::NavigationKey;
-use warp_util::path::ShellFamily;
-use warpui::{
-    accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole},
+use zap_ng_core::ui::theme::{color::internal_colors, AnsiColorIdentifier};
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_util::path::ShellFamily;
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ActionAccessibilityContent, ZapNGA11yRole},
     clipboard::{ClipboardContent, ImageData},
     clipboard_utils::CLIPBOARD_IMAGE_MIME_TYPES,
     color::ColorU,
@@ -286,7 +286,7 @@ use warpui::{
     AppContext, Entity, EntityId, FocusContext, ModelAsRef, ModelHandle, SingletonEntity,
     TypedActionView, View, ViewContext, ViewHandle, WeakViewHandle,
 };
-pub use warpui::{
+pub use zap_ng_ui::{
     elements::{ParentElement as _, Stack},
     geometry::vector::{vec2f, Vector2F},
     WindowId,
@@ -329,7 +329,7 @@ use super::{
         ExecuteCommandEvent, SyncInputType, TerminalAction,
         PADDING_LEFT as TERMINAL_VIEW_PADDING_LEFT,
     },
-    warpify::SubshellSource,
+    zapngify::SubshellSource,
     History, HistoryEntry, SizeInfo, TerminalModel, UpArrowHistoryConfig,
 };
 use crate::ai::blocklist::agent_view::{
@@ -983,7 +983,7 @@ pub enum Event {
     CtrlEnter,
     OpenSettings(SettingsSection),
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
         layout: external_editor::settings::EditorLayout,
     },
@@ -1713,7 +1713,7 @@ impl DeferredRemoteOperations {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     if cfg!(feature = "integration_tests") {
         app.register_fixed_bindings([
@@ -2622,7 +2622,7 @@ impl Input {
             .app_workflows()
             .cloned()
             .collect_vec();
-        let local_user_workflows = WarpConfig::as_ref(ctx).local_user_workflows().clone();
+        let local_user_workflows = ZapNGConfig::as_ref(ctx).local_user_workflows().clone();
 
         let workflows_search_view = ctx.add_typed_action_view(|ctx| {
             workflows::CategoriesView::new(local_user_workflows, app_workflows, ctx)
@@ -4932,7 +4932,7 @@ impl Input {
                 range_end: None,
             };
             // Emit an event to create a new code pane
-            ctx.emit(Event::OpenCodeInWarp {
+            ctx.emit(Event::OpenCodeInZapNG {
                 source: code_source,
                 layout: *external_editor::EditorSettings::as_ref(ctx)
                     .open_file_layout
@@ -5453,7 +5453,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = WarpAiExecutionContext::new(&session);
+        let context = ZapNGAiExecutionContext::new(&session);
         let completer_data = self.completer_data();
         let block_context = Some(BlockContext::from_completed_block(&block_completed));
         let previous_result = self.last_intelligent_autosuggestion_result.take();
@@ -6547,7 +6547,7 @@ impl Input {
         ctx.emit_a11y_content(AccessibilityContent::new(
             accessibility_text,
             "Press shift-tab to select the next workflow argument",
-            WarpA11yRole::UserAction,
+            ZapNGA11yRole::UserAction,
         ));
 
         // Only highlight an argument and show enum suggestions if history suggestions are not active
@@ -6899,7 +6899,7 @@ impl Input {
 
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Executed: {command}"),
-                    WarpA11yRole::UserAction,
+                    ZapNGA11yRole::UserAction,
                 ));
             }
             InputSuggestionsEvent::CloseSuggestion {
@@ -7924,7 +7924,7 @@ impl Input {
             let Some(session) = self.active_session(ctx) else {
                 return;
             };
-            let context = WarpAiExecutionContext::new(&session);
+            let context = ZapNGAiExecutionContext::new(&session);
             if let Some(last_user_block_completed) =
                 completer_data.last_user_block_completed.clone()
             {
@@ -8984,7 +8984,7 @@ impl Input {
                             // the completions finish quickly, since that causes a jittery UX.
                             let _ = ctx.spawn(
                                 async move {
-                                    warpui::r#async::Timer::after(Duration::from_millis(750)).await;
+                                    zap_ng_ui::r#async::Timer::after(Duration::from_millis(750)).await;
                                     old_buffer_text_original
                                 },
                                 move |input, old_buffer_text_original, ctx| {
@@ -9595,7 +9595,7 @@ impl Input {
                                         let absolute_path = git_repo_path.join(file_path);
 
                                         // Try to get relative path if it's shorter
-                                        let relative_path = warp_util::path::to_relative_path(
+                                        let relative_path = zap_ng_util::path::to_relative_path(
                                             &absolute_path,
                                             Path::new(pwd),
                                         );
@@ -9692,7 +9692,7 @@ impl Input {
                 if num_attached < image_filepaths.len() {
                     let shell_family = self.editor.read(ctx, |editor, _| editor.shell_family());
                     let paths_str =
-                        warpui::clipboard_utils::escaped_paths_str(image_filepaths, shell_family);
+                        zap_ng_ui::clipboard_utils::escaped_paths_str(image_filepaths, shell_family);
 
                     self.editor.update(ctx, |editor, ctx| {
                         editor.user_insert(&paths_str, ctx);
@@ -9736,7 +9736,7 @@ impl Input {
 
         // Check if we should insert clipboard text in advance
         let mut already_inserted_text = false;
-        if warpui::clipboard::should_insert_text_on_paste(&content) {
+        if zap_ng_ui::clipboard::should_insert_text_on_paste(&content) {
             self.insert_clipboard_text_content(ctx, content.clone());
             already_inserted_text = true;
         }
@@ -9748,7 +9748,7 @@ impl Input {
             self.handle_pasted_image_data(content.clone(), ctx) == 0
         } else if content.num_paths() > 0 {
             // Else, we check the pasted file paths for any images.
-            let image_filepaths = warpui::clipboard_utils::get_image_filepaths_from_paths(
+            let image_filepaths = zap_ng_ui::clipboard_utils::get_image_filepaths_from_paths(
                 content.paths.as_deref().unwrap_or(&[]),
             );
             let num_images_expected = image_filepaths.len();
@@ -10484,7 +10484,7 @@ impl Input {
             && CLIAgentSessionsModel::as_ref(ctx).is_input_open(self.terminal_view_id)
             && !self
                 .active_session(ctx)
-                .is_some_and(|s| matches!(s.session_type(), SessionType::WarpifiedRemote { .. }));
+                .is_some_and(|s| matches!(s.session_type(), SessionType::ZapNGifiedRemote { .. }));
 
         // If the cursor is in a valid completion position, go into CompletionSuggestions mode
         if (is_command_grid_active || is_cli_agent_shell_mode) && self.can_query_history(ctx) {
@@ -11177,7 +11177,7 @@ impl Input {
             if let Some(a11y_text) = self.selected_workflow_a11y_text(ctx) {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     a11y_text,
-                    WarpA11yRole::UserAction,
+                    ZapNGA11yRole::UserAction,
                 ));
             }
         } else {
@@ -11259,7 +11259,7 @@ impl Input {
             if trigger == CommandXRayTrigger::Keystroke {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     description.a11y_text(),
-                    WarpA11yRole::UserAction,
+                    ZapNGA11yRole::UserAction,
                 ));
             }
             ctx.notify();
@@ -12163,7 +12163,7 @@ impl Input {
         let Some(session) = self.active_session(ctx) else {
             return;
         };
-        let context = WarpAiExecutionContext::new(&session);
+        let context = ZapNGAiExecutionContext::new(&session);
 
         // BYOP 路径:替换 ServerApi::predict_am_queries 为 BYOP one-shot completion。
         let last_block = crate::ai::agent_providers::active_ai::LastBlockSnippet {
@@ -12485,7 +12485,7 @@ impl Input {
         if let Some(workflow_state) = self.workflows_state.selected_workflow_state.as_ref() {
             if let WorkflowType::Cloud(workflow) = &workflow_state.workflow_type {
                 send_telemetry_from_ctx!(
-                    TelemetryEvent::ExecutedWarpDrivePrompt {
+                    TelemetryEvent::ExecutedZapNGDrivePrompt {
                         id: workflow.id.into_server().map(Into::into),
                         selection_source: workflow_state.workflow_selection_source,
                     },
@@ -13369,7 +13369,7 @@ impl Input {
                 ..Default::default()
             },
         )
-        .with_icon(icon.to_warpui_icon(
+        .with_icon(icon.to_zap_ng_ui_icon(
             blended_colors::text_main(appearance.theme(), appearance.theme().background()).into(),
         ))
         .with_close_button(close_button)
@@ -13609,7 +13609,7 @@ impl TypedActionView for Input {
                     translate_input_key(INPUT_A11Y_LABEL_KEY),
                     // TODO (a11y) use bindings from user settings
                     translate_input_key(INPUT_A11Y_HELPER_KEY),
-                    WarpA11yRole::TextareaRole,
+                    ZapNGA11yRole::TextareaRole,
                 ))
             }
             _ => ActionAccessibilityContent::Empty,
@@ -13814,7 +13814,7 @@ impl View for Input {
             translate_input_key(INPUT_A11Y_LABEL_KEY),
             // TODO (a11y) use bindings from user settings
             translate_input_key(INPUT_A11Y_HELPER_KEY),
-            WarpA11yRole::TextareaRole,
+            ZapNGA11yRole::TextareaRole,
         ))
     }
 
@@ -13837,7 +13837,7 @@ impl View for Input {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut ctx = Self::default_keymap_context();
         let ai_settings = AISettings::as_ref(app);
 

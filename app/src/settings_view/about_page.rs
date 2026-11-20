@@ -14,9 +14,9 @@ use crate::{
     workspace::WorkspaceAction,
 };
 use settings::Setting as _;
-use warp_core::{execution_mode::AppExecutionMode, settings::ToggleableSetting as _};
-use warpui::ui_components::switch::SwitchStateHandle;
-use warpui::{
+use zap_ng_core::{execution_mode::AppExecutionMode, settings::ToggleableSetting as _};
+use zap_ng_ui::ui_components::switch::SwitchStateHandle;
+use zap_ng_ui::{
     assets::asset_cache::AssetSource,
     elements::{
         Align, CacheOption, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, Image,

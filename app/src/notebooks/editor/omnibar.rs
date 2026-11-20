@@ -3,7 +3,7 @@
 
 use itertools::Itertools;
 use pathfinder_geometry::{rect::RectF, vector::Vector2F};
-use warp_editor::{
+use zap_ng_editor::{
     content::text::{
         BlockType as ContentBlockType, BufferBlockStyle, BufferTextStyle, TextStyles,
         TextStylesWithMetadata,
@@ -11,8 +11,8 @@ use warp_editor::{
     model::RichTextEditorModel,
     render::model::RenderState,
 };
-use warpui::{
-    accessibility::{AccessibilityContent, ActionAccessibilityContent, WarpA11yRole},
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ActionAccessibilityContent, ZapNGA11yRole},
     elements::{
         AnchorPair, Border, ConstrainedBox, Container, CornerRadius, DropShadow, Flex,
         MainAxisSize, MouseStateHandle, OffsetPositioning, OffsetType, ParentElement, Point,
@@ -263,7 +263,7 @@ impl View for Omnibar {
         "Omnibar"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn Element> {
         let appearance = Appearance::as_ref(app);
         let mut actions = Flex::row().with_main_axis_size(MainAxisSize::Min);
 
@@ -447,12 +447,12 @@ impl TypedActionView for Omnibar {
             OmnibarAction::ConvertBlock(style) => {
                 ActionAccessibilityContent::Custom(AccessibilityContent::new_without_help(
                     format!("Convert to {}", BlockType::from(style).label()),
-                    WarpA11yRole::UserAction,
+                    ZapNGA11yRole::UserAction,
                 ))
             }
             OmnibarAction::OpenLinkEditor => ActionAccessibilityContent::from_debug(),
             OmnibarAction::UnstyleLink => ActionAccessibilityContent::Custom(
-                AccessibilityContent::new_without_help("Remove link", WarpA11yRole::UserAction),
+                AccessibilityContent::new_without_help("Remove link", ZapNGA11yRole::UserAction),
             ),
         }
     }
@@ -488,9 +488,9 @@ impl Compact {
 impl Element for Compact {
     fn layout(
         &mut self,
-        constraint: warpui::SizeConstraint,
-        ctx: &mut warpui::LayoutContext,
-        app: &warpui::AppContext,
+        constraint: zap_ng_ui::SizeConstraint,
+        ctx: &mut zap_ng_ui::LayoutContext,
+        app: &zap_ng_ui::AppContext,
     ) -> Vector2F {
         self.child.layout(
             SizeConstraint {
@@ -505,8 +505,8 @@ impl Element for Compact {
     fn paint(
         &mut self,
         origin: Vector2F,
-        ctx: &mut warpui::PaintContext,
-        app: &warpui::AppContext,
+        ctx: &mut zap_ng_ui::PaintContext,
+        app: &zap_ng_ui::AppContext,
     ) {
         self.child.paint(origin, ctx, app)
     }
@@ -521,18 +521,18 @@ impl Element for Compact {
 
     fn dispatch_event(
         &mut self,
-        event: &warpui::event::DispatchedEvent,
-        ctx: &mut warpui::EventContext,
-        app: &warpui::AppContext,
+        event: &zap_ng_ui::event::DispatchedEvent,
+        ctx: &mut zap_ng_ui::EventContext,
+        app: &zap_ng_ui::AppContext,
     ) -> bool {
         self.child.dispatch_event(event, ctx, app)
     }
 
-    fn after_layout(&mut self, ctx: &mut warpui::AfterLayoutContext, app: &AppContext) {
+    fn after_layout(&mut self, ctx: &mut zap_ng_ui::AfterLayoutContext, app: &AppContext) {
         self.child.after_layout(ctx, app)
     }
 
-    fn z_index(&self) -> Option<warpui::elements::ZIndex> {
+    fn z_index(&self) -> Option<zap_ng_ui::elements::ZIndex> {
         self.child.z_index()
     }
 

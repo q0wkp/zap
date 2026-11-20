@@ -18,20 +18,20 @@ use crate::editor::InteractionState;
 use crate::notebooks::editor::view::RichTextEditorView;
 use crate::util::time_format::human_readable_approx_duration;
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
-use warp_core::ui::theme::Fill;
-use warp_editor::content::buffer::InitialBufferState;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::elements::new_scrollable::ScrollableAppearance;
-use warpui::elements::ScrollbarWidth;
-use warpui::elements::{
+use zap_ng_core::ui::theme::color::internal_colors::{neutral_1, neutral_2, text_sub};
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_editor::content::buffer::InitialBufferState;
+use zap_ng_editor::render::element::VerticalExpansionBehavior;
+use zap_ng_ui::elements::new_scrollable::ScrollableAppearance;
+use zap_ng_ui::elements::ScrollbarWidth;
+use zap_ng_ui::elements::{
     Border, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::units::Pixels;
-use warpui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::units::Pixels;
+use zap_ng_ui::{AppContext, Element, EventContext, SingletonEntity, View, ViewContext, ViewHandle};
 
 /// Configuration for making the comment header clickable.
 pub(crate) struct HeaderClickHandler {
@@ -43,7 +43,7 @@ pub(crate) struct HeaderClickHandler {
 /// (rounded corners, neutral background, outline border).
 fn comment_card_container(
     content: Box<dyn Element>,
-    theme: &warp_core::ui::theme::WarpTheme,
+    theme: &zap_ng_core::ui::theme::ZapNGTheme,
 ) -> Box<dyn Element> {
     Container::new(content)
         .with_corner_radius(CornerRadius::with_all(Radius::Pixels(8.)))

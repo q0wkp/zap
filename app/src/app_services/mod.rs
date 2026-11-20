@@ -10,7 +10,7 @@ pub mod linux;
 #[cfg(target_os = "macos")]
 mod mac;
 
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 pub fn init(_ctx: &mut AppContext) {
     log::info!("Initializing app services");

@@ -13,8 +13,8 @@ use async_broadcast::InactiveReceiver;
 use async_stream::stream;
 use lazy_static::lazy_static;
 use regex::bytes::Regex;
-use warpui::r#async::FutureExt;
-use warpui::{ViewContext, WeakViewHandle};
+use zap_ng_ui::r#async::FutureExt;
+use zap_ng_ui::{ViewContext, WeakViewHandle};
 use zeroize::Zeroizing;
 
 use crate::ssh_manager::shell_prompt::bytes_look_like_shell_prompt;
@@ -54,7 +54,7 @@ pub fn spawn_su_password_injector<O>(
     root_password: Option<Zeroizing<String>>,
     ctx: &mut ViewContext<O>,
 ) where
-    O: warpui::View + 'static,
+    O: zap_ng_ui::View + 'static,
 {
     let Some(rx) = pty_reads_rx else {
         log::debug!("ssh su password injector: no pty_reads_rx — skip");

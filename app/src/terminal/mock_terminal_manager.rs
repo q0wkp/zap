@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::Vector2F;
-use warpui::{AppContext, ModelHandle, ViewHandle, WindowId};
+use zap_ng_ui::{AppContext, ModelHandle, ViewHandle, WindowId};
 
 use crate::{
     ai::blocklist::SerializedBlockListItem, context_chips::prompt_type::PromptType,
@@ -125,7 +125,7 @@ impl TerminalManager for MockTerminalManager {
 
 #[cfg(test)]
 mod testing {
-    use warpui::{platform::WindowStyle, App, Element};
+    use zap_ng_ui::{platform::WindowStyle, App, Element};
 
     use crate::terminal::{
         shell::{ShellName, ShellType},
@@ -138,21 +138,21 @@ mod testing {
         terminal_view: ViewHandle<TerminalView>,
     }
 
-    impl warpui::Entity for TerminalRootView {
+    impl zap_ng_ui::Entity for TerminalRootView {
         type Event = ();
     }
 
-    impl warpui::View for TerminalRootView {
+    impl zap_ng_ui::View for TerminalRootView {
         fn ui_name() -> &'static str {
             "TerminalRootView"
         }
 
-        fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
-            warpui::elements::ChildView::new(&self.terminal_view).finish()
+        fn render(&self, _app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
+            zap_ng_ui::elements::ChildView::new(&self.terminal_view).finish()
         }
     }
 
-    impl warpui::TypedActionView for TerminalRootView {
+    impl zap_ng_ui::TypedActionView for TerminalRootView {
         type Action = ();
     }
 

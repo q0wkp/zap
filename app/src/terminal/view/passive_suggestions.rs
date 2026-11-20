@@ -1,4 +1,4 @@
-use warpui::ViewContext;
+use zap_ng_ui::ViewContext;
 
 use crate::{server::telemetry::InteractionSource, terminal::view::CodeDiffAction};
 

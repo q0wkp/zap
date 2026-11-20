@@ -1,7 +1,7 @@
 //! WASM-only view functions for the Workspace.
 
-use warpui::elements::{ChildView, Element};
-use warpui::{AppContext, SingletonEntity, ViewContext, ViewHandle};
+use zap_ng_ui::elements::{ChildView, Element};
+use zap_ng_ui::{AppContext, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::uri::browser_url_handler::parse_current_url;
 
@@ -33,7 +33,7 @@ impl Workspace {
         wasm_nux_dialog
     }
 
-    pub(super) fn build_open_in_warp_button(
+    pub(super) fn build_open_in_zap_ng_button(
         ctx: &mut ViewContext<Self>,
     ) -> ViewHandle<ActionButton> {
         ctx.add_typed_action_view(|_ctx| {

@@ -12,16 +12,16 @@ pub(crate) use modal_shell::{
 
 use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     Border, ConstrainedBox, Container, CrossAxisAlignment, Dash, DispatchEventResult, Draggable,
     DraggableState, Element, Empty, EventHandler, Flex, Hoverable, MouseStateHandle,
     OffsetPositioning, ParentElement, ParentOffsetBounds, SavePosition, Stack, Text, Wrap,
 };
-use warpui::fonts::Properties;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::UiComponent;
-use warpui::{Action, View, ViewContext};
+use zap_ng_ui::fonts::Properties;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::{Action, View, ViewContext};
 
 use crate::ai::blocklist::agent_view::toolbar_item::AgentToolbarItemKind;
 use crate::appearance::Appearance;
@@ -185,7 +185,7 @@ impl ControlItemRenderer {
         let button = Hoverable::new(self.remove_button_state_handle.clone(), |_| {
             ConstrainedBox::new(
                 icons::Icon::X
-                    .to_warpui_icon(appearance.theme().ui_error_color().into())
+                    .to_zap_ng_ui_icon(appearance.theme().ui_error_color().into())
                     .finish(),
             )
             .with_height(icon_size)
@@ -240,7 +240,7 @@ impl ControlItemRenderer {
             if let Some(icon) = icon {
                 content.add_child(
                     Container::new(
-                        ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(color)).finish())
+                        ConstrainedBox::new(icon.to_zap_ng_ui_icon(Fill::Solid(color)).finish())
                             .with_height(font_size)
                             .with_width(font_size)
                             .finish(),
@@ -279,8 +279,8 @@ impl ControlItemRenderer {
                 OffsetPositioning::offset_from_parent(
                     vec2f(0., -2.5 * font_size),
                     ParentOffsetBounds::Unbounded,
-                    warpui::elements::ParentAnchor::Center,
-                    warpui::elements::ChildAnchor::Center,
+                    zap_ng_ui::elements::ParentAnchor::Center,
+                    zap_ng_ui::elements::ChildAnchor::Center,
                 ),
             );
             stack.finish()

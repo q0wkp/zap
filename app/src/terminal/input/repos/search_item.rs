@@ -4,12 +4,12 @@ use std::path::{Path, PathBuf};
 
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
-use warp_core::ui::theme::{AnsiColorIdentifier, Fill};
-use warp_core::ui::Icon;
-use warpui::elements::{ConstrainedBox, Container, Highlight, Text};
-use warpui::fonts::{Properties, Weight};
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_core::ui::theme::{AnsiColorIdentifier, Fill};
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::elements::{ConstrainedBox, Container, Highlight, Text};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::search::result_renderer::ItemHighlightState;
@@ -62,7 +62,7 @@ impl SearchItem for RepoSearchItem {
         let icon_size = inline_styles::font_size(appearance);
         let icon_color = inline_styles::icon_color(appearance);
 
-        let icon = ConstrainedBox::new(Icon::Folder.to_warpui_icon(icon_color).finish())
+        let icon = ConstrainedBox::new(Icon::Folder.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(icon_size)
             .with_height(icon_size)
             .finish();

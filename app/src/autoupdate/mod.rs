@@ -25,16 +25,16 @@ use settings::Setting as _;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
-use warp_core::execution_mode::AppExecutionMode;
-use warpui::platform::TerminationMode;
-use warpui::r#async::Timer;
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{self, WindowManager};
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_core::execution_mode::AppExecutionMode;
+use zap_ng_ui::platform::TerminationMode;
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::windowing::state::ApplicationStage;
+use zap_ng_ui::windowing::{self, WindowManager};
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     AppContext,
 };
-use warpui::{Entity, ModelContext, SingletonEntity, ViewContext};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity, ViewContext};
 
 pub use self::changelog::get_current_changelog;
 use self::channel_versions::fetch_channel_versions;
@@ -403,13 +403,13 @@ impl AutoupdateState {
             download.version.update_by = version.update_by;
         }
 
-        // openWarp 注:`ChannelState::app_version()` 返回的是注入的 `GIT_RELEASE_TAG`
+        // ZapNG 注:`ChannelState::app_version()` 返回的是注入的 `GIT_RELEASE_TAG`
         // 原值,**保留** `v` 前缀(如 `v2026.05.10.preview`);而 `VersionInfo.version`
         // 在 OSS 分支由 `github::GithubRelease::version()` 提供,已经 `trim_start_matches('v')`
         // 去掉了 `v`(如 `2026.05.10.preview`)。直接做字符串相等比较会永远 false,导致
         // "已是最新"被错判为"发现新版本"。这里做幂等的前缀归一化:
         // - 官方 Zap:tag 一律带 `v`,两边 trim 后仍相等,行为不变。
-        // - openWarp:trim 后才相等,正确识别同版本。
+        // - ZapNG:trim 后才相等,正确识别同版本。
         if version.version.trim_start_matches('v') == current_version.trim_start_matches('v') {
             log::info!("Already up to date with {}", version.version);
             UpdateReady::No
@@ -491,7 +491,7 @@ impl AutoupdateState {
                 new_version,
                 update_id,
             }) => {
-                // openWarp(Channel::Oss):走和官方一致的下载流程,平台 download_update_and_cleanup
+                // ZapNG(Channel::Oss):走和官方一致的下载流程,平台 download_update_and_cleanup
                 // 内部在 OSS 分支自己挑选合适的资产并跳过 codesign verify。
                 self.download_new_update(
                     update_id.clone(),
@@ -926,12 +926,12 @@ pub fn accessibility_content(
         (RequestType::ManualCheck, Ok(UpdateReady::Yes { .. })) => Some(AccessibilityContent::new(
             "Update available.",
             "Use the command palette to install and relaunch Zap",
-            WarpA11yRole::HelpRole,
+            ZapNGA11yRole::HelpRole,
         )),
         // Any non-successful autoupdate check
         (RequestType::ManualCheck, _) => Some(AccessibilityContent::new_without_help(
             "No updates available",
-            WarpA11yRole::HelpRole,
+            ZapNGA11yRole::HelpRole,
         )),
         _ => None,
     }
@@ -963,7 +963,7 @@ async fn fetch_version(
     update_id: &str,
     http_client: Arc<http_client::Client>,
 ) -> Result<VersionInfo> {
-    // openWarp 走 GitHub Releases(q0wkp/zap),完全旁路 Zap 官方
+    // ZapNG 走 GitHub Releases(q0wkp/zap),完全旁路 Zap 官方
     // channel_versions / GCS。提前返回避免后续 fetch_channel_versions 必然失败。
     if matches!(channel, Channel::Oss) {
         let release = github::fetch_latest_release(http_client.as_ref()).await?;
@@ -1033,7 +1033,7 @@ pub fn apply_update(
     _initiating_workspace: &mut Workspace,
     _ctx: &mut ViewContext<Workspace>,
 ) -> Result<ReadyForRelaunch> {
-    // openWarp:各平台 apply_update 都走与官方一致的入口,只是各平台 relaunch()
+    // ZapNG:各平台 apply_update 都走与官方一致的入口,只是各平台 relaunch()
     // 内部针对 OSS 分支选择了不同的"安装动作"(mac: open dmg / Linux AppImage:
     // in-place 覆盖+重启)。
 
@@ -1184,7 +1184,7 @@ fn finalize_update<F>(app: &mut AppContext, callback: F)
 where
     F: FnOnce(Result<()>, &mut AppContext) + Send + 'static,
 {
-    // openWarp(Channel::Oss):mac 平台 dmg 已下载,无需 mount/swap/verify,直接
+    // ZapNG(Channel::Oss):mac 平台 dmg 已下载,无需 mount/swap/verify,直接
     // 由 relaunch() 用 `open <dmg>` 触发 Finder 安装。这里跳过 apply_update_async,
     // 否则 mac::apply_update_async 会试图 codesign verify(没有 Apple Team ID 会失败)。
     if matches!(ChannelState::channel(), Channel::Oss) {

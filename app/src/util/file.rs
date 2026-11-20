@@ -5,7 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use warp_util::path::{CleanPathResult, LineAndColumnArg};
+use zap_ng_util::path::{CleanPathResult, LineAndColumnArg};
 
 use crate::terminal::model::grid::grid_handler::{ContainsPoint, Link};
 use crate::terminal::model::index::Point;

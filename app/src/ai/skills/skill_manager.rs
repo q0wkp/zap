@@ -16,10 +16,10 @@ use ai::skills::{
     get_provider_for_path, parse_bundled_skill, provider_rank, ParsedSkill, SkillProvider,
     SkillReference,
 };
-use warp_core::{
+use zap_ng_core::{
     channel::ChannelState, features::FeatureFlag, report_error, safe_warn, ui::icons::Icon,
 };
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SkillManagerEvent {
@@ -511,7 +511,7 @@ impl SkillManager {
 
     /// Load skill definitions bundled with Zap.
     async fn load_bundled_skills() -> HashMap<String, BundledSkill> {
-        let Some(resources_dir) = warp_core::paths::bundled_resources_dir() else {
+        let Some(resources_dir) = zap_ng_core::paths::bundled_resources_dir() else {
             return HashMap::new();
         };
         let skills_dir = resources_dir.join("bundled").join("skills");
@@ -533,7 +533,7 @@ impl SkillManager {
 
     /// Load Figma-specific bundled skills from the `figma/` subdirectory.
     async fn load_figma_skills() -> HashMap<String, BundledSkill> {
-        let Some(resources_dir) = warp_core::paths::bundled_resources_dir() else {
+        let Some(resources_dir) = zap_ng_core::paths::bundled_resources_dir() else {
             return HashMap::new();
         };
         let figma_skills_dir = resources_dir
@@ -617,7 +617,7 @@ async fn read_bundled_skills(skills_dir: &Path) -> HashMap<String, ParsedSkill> 
 /// Supported variables:
 /// - `{{warp_server_url}}` - Empty in Zap; retained for bundled skill compatibility.
 /// - `{{warp_cli_binary_name}}` - The CLI binary name (e.g., `warp` or `warp-cli`)
-/// - `{{warp_url_scheme}}` - The URL scheme (e.g., `warp`, `warpdev`, `warppreview`)
+/// - `{{warp_url_scheme}}` - The URL scheme (e.g., `zap-ng`, `warpdev`, `warppreview`)
 /// - `{{settings_schema_path}}` - Path to the bundled JSON settings schema
 /// - `{{settings_file_path}}` - Path to the user's settings TOML file
 fn build_bundled_skill_context() -> HashMap<String, String> {
@@ -640,7 +640,7 @@ fn build_bundled_skill_context() -> HashMap<String, String> {
     .collect();
 
     if let Some(schema_path) =
-        warp_core::paths::bundled_resources_dir().map(|dir| dir.join("settings_schema.json"))
+        zap_ng_core::paths::bundled_resources_dir().map(|dir| dir.join("settings_schema.json"))
     {
         context.insert(
             "settings_schema_path".to_owned(),
@@ -657,7 +657,7 @@ fn build_bundled_skill_context() -> HashMap<String, String> {
 fn icon_for_bundled_skill(skill_id: &str) -> Icon {
     match skill_id {
         "pr-comments" => Icon::Github,
-        _ => Icon::WarpLogoLight,
+        _ => Icon::ZapNGLogoLight,
     }
 }
 

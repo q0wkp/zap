@@ -17,11 +17,11 @@ use crate::{
     workspaces::workspace::{AiAutonomySettings, SandboxedAgentSettings},
 };
 use regex::Regex;
-use warp_core::{
+use zap_ng_core::{
     features::FeatureFlag,
     settings::{ChangeEventReason, Setting},
 };
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, Tracked};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity, Tracked};
 
 #[cfg(test)]
 use crate::workspaces::workspace::{
@@ -131,7 +131,7 @@ impl UserWorkspaces {
         }
     }
 
-    pub fn is_at_tier_limit_for_some_warp_drive_objects(
+    pub fn is_at_tier_limit_for_some_zap_ng_drive_objects(
         team_uid: ServerId,
         ctx: &AppContext,
     ) -> bool {
@@ -285,7 +285,7 @@ impl UserWorkspaces {
             .is_some_and(|team| team.billing_metadata.customer_type == CustomerType::Enterprise)
             || self
                 .current_team()
-                .is_some_and(|team| team.billing_metadata.is_warp_plan())
+                .is_some_and(|team| team.billing_metadata.is_zap_ng_plan())
             || ChannelState::channel().is_dogfood()
     }
 

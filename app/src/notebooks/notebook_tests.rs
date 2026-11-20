@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use chrono::{Duration, Utc};
 use futures_util::future::BoxFuture;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::editor::EditorView;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::editor::EditorView;
+use zap_ng_ui::{
     platform::WindowStyle, presenter::ChildView, r#async::Timer, AddSingletonModel, App,
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewHandle, WindowId,
 };

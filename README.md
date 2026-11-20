@@ -21,6 +21,6 @@ authors, where they come from and their license, with thanks.
 
 ## License
 
-The UI framework (the `warpui_core` and `warpui` crates) is licensed under the [MIT license](LICENSE-MIT).
+The UI framework (the `zap_ng_ui_core` and `zap_ng_ui` crates) is licensed under the [MIT license](LICENSE-MIT).
 
 The rest of the code in this repository is licensed under the [AGPL v3](LICENSE-AGPL).

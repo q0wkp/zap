@@ -1,4 +1,4 @@
-use warpui::{View, ViewContext};
+use zap_ng_ui::{View, ViewContext};
 
 pub trait OnboardingSlide: View {
     fn on_up(&mut self, _ctx: &mut ViewContext<Self>) {}

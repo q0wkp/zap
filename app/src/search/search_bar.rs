@@ -1,13 +1,13 @@
 use itertools::{Either, Itertools};
-use warp_editor::editor::NavigationKey;
-use warpui::elements::ConstrainedBox;
-use warpui::FocusContext;
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::elements::ConstrainedBox;
+use zap_ng_ui::FocusContext;
 
 use std::collections::HashSet;
 
-use warpui::fonts::FamilyId;
-use warpui::{
-    accessibility::{AccessibilityContent, WarpA11yRole},
+use zap_ng_ui::fonts::FamilyId;
+use zap_ng_ui::{
+    accessibility::{AccessibilityContent, ZapNGA11yRole},
     elements::{Clipped, Container, CrossAxisAlignment, Flex, ParentElement, Shrinkable, Text},
     fonts::{Properties, Style, Weight},
     presenter::ChildView,
@@ -792,7 +792,7 @@ impl<T: Action + Clone> SearchBar<T> {
             for loading_filter in loading_filters.into_iter() {
                 ctx.emit_a11y_content(AccessibilityContent::new_without_help(
                     format!("Loading {} suggestions", loading_filter.display_name()),
-                    WarpA11yRole::MenuItemRole,
+                    ZapNGA11yRole::MenuItemRole,
                 ));
             }
 
@@ -803,7 +803,7 @@ impl<T: Action + Clone> SearchBar<T> {
             ctx.emit_a11y_content(AccessibilityContent::new(
                 "Error finding results",
                 data_source_err.user_facing_error(),
-                WarpA11yRole::MenuItemRole,
+                ZapNGA11yRole::MenuItemRole,
             ));
             return;
         }
@@ -813,12 +813,12 @@ impl<T: Action + Clone> SearchBar<T> {
             let a11y_content = match selected_result.accessibility_help_message() {
                 None => AccessibilityContent::new_without_help(
                     a11y_content_text,
-                    WarpA11yRole::MenuItemRole,
+                    ZapNGA11yRole::MenuItemRole,
                 ),
                 Some(help_message) => AccessibilityContent::new(
                     a11y_content_text,
                     help_message,
-                    WarpA11yRole::MenuItemRole,
+                    ZapNGA11yRole::MenuItemRole,
                 ),
             };
             ctx.emit_a11y_content(a11y_content);
@@ -1014,7 +1014,7 @@ impl<T: Action + Clone> View for SearchBar<T> {
             let magnifying_glass = Container::new(
                 ConstrainedBox::new(
                     Icon::Search
-                        .to_warpui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
+                        .to_zap_ng_ui_icon(blended_colors::text_sub(theme, theme.surface_2()).into())
                         .finish(),
                 )
                 .with_height(size)

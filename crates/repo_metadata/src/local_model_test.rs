@@ -20,9 +20,9 @@ mod tests {
     use std::rc::Rc;
     use std::time::Duration;
     use virtual_fs::{Stub, VirtualFS};
-    use warp_util::standardized_path::StandardizedPath;
-    use warpui::r#async::FutureExt as _;
-    use warpui::App;
+    use zap_ng_util::standardized_path::StandardizedPath;
+    use zap_ng_ui::r#async::FutureExt as _;
+    use zap_ng_ui::App;
 
     impl LocalRepoMetadataModel {
         fn new_for_test() -> Self {
@@ -1089,7 +1089,7 @@ Thumbs.db
 
     #[test]
     fn test_canonicalized_path_functionality() {
-        use warp_util::standardized_path::StandardizedPath;
+        use zap_ng_util::standardized_path::StandardizedPath;
         VirtualFS::test("canonicalized_path_test", |dirs, mut vfs| {
             let repo_path = dirs.tests();
 
@@ -1155,7 +1155,7 @@ Thumbs.db
 
     #[test]
     fn test_repository_operations_with_standardized_paths() {
-        use warp_util::standardized_path::StandardizedPath;
+        use zap_ng_util::standardized_path::StandardizedPath;
 
         VirtualFS::test("repo_canonicalized_test", |dirs, mut vfs| {
             let test_root = dirs.tests();
@@ -1265,7 +1265,7 @@ Thumbs.db
 
     #[test]
     fn test_standardized_path_edge_cases() {
-        use warp_util::standardized_path::StandardizedPath;
+        use zap_ng_util::standardized_path::StandardizedPath;
 
         VirtualFS::test("canonicalized_edge_cases", |dirs, mut vfs| {
             let test_root = dirs.tests();

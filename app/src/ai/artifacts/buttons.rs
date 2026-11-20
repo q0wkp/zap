@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use ai::document::AIDocumentId;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warpui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
-use warpui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::AnsiColorIdentifier;
+use zap_ng_ui::elements::{ChildView, Element, Empty, ParentElement, Wrap};
+use zap_ng_ui::{AppContext, Entity, TypedActionView, View, ViewContext, ViewHandle};
 
 use crate::terminal::input::MenuPositioning;
 
@@ -53,7 +53,7 @@ impl ArtifactButtonsRow {
 }
 
 pub enum ArtifactButtonsRowEvent {
-    /// openWarp 本地化:点击 plan 按钮走本地 AIDocumentId,不再依赖云 notebook 镜像。
+    /// ZapNG 本地化:点击 plan 按钮走本地 AIDocumentId,不再依赖云 notebook 镜像。
     OpenPlan {
         document_uid: AIDocumentId,
     },
@@ -129,10 +129,10 @@ fn collect_buttons(
         match artifact {
             Artifact::Plan {
                 title,
-                notebook_uid: _, // openWarp 不再依赖云 notebook_uid;本地走 document_uid
+                notebook_uid: _, // ZapNG 不再依赖云 notebook_uid;本地走 document_uid
                 document_uid,
             } => {
-                // openWarp 本地化:只要能解析出本地 AIDocumentId 就显示按钮,
+                // ZapNG 本地化:只要能解析出本地 AIDocumentId 就显示按钮,
                 // 点击打开本地 AIDocument pane;不再依赖云 notebook 镜像。
                 if let Ok(document_uid) = AIDocumentId::try_from(document_uid.as_str()) {
                     let button_text = title.clone().unwrap_or("Untitled Plan".to_string());

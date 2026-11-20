@@ -58,10 +58,10 @@ use std::cmp::Ordering;
 use std::{collections::HashMap, path::PathBuf};
 use strum::IntoEnumIterator;
 use uuid::Uuid;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::{appearance::AppearanceEvent, theme::color::internal_colors, Icon};
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::ui::{appearance::AppearanceEvent, theme::color::internal_colors, Icon};
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Expanded, Fill, Flex, FormattedTextElement, HighlightedHyperlink, MainAxisAlignment,
@@ -1481,7 +1481,7 @@ impl MCPServersListPageView {
         // If the path is the Zap data directory (e.g. ~/.warp or ~/.warp_dev), set the text to
         // "global". The Zap provider stores its data directory as the root path rather than the
         // home directory, unlike other providers that store the home directory directly.
-        if root_path == &crate::warp_managed_paths_watcher::warp_data_dir() {
+        if root_path == &crate::zap_ng_managed_paths_watcher::zap_ng_data_dir() {
             return Some(crate::t!("settings-mcp-list-chip-global"));
         }
 

@@ -5,7 +5,7 @@
 //! agent never sees the question or the answer, and nothing is approved or run by it.
 
 use anyhow::anyhow;
-use warpui::{AppContext, SingletonEntity as _};
+use zap_ng_ui::{AppContext, SingletonEntity as _};
 
 use super::oneshot::{
     byop_oneshot_completion, resolve_active_ai_oneshot, OneshotConfig, OneshotOptions,

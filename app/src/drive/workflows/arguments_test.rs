@@ -1,7 +1,7 @@
 use std::{fmt::Debug, iter::zip};
 
 use crate::workflows::workflow::Argument;
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::ArgumentsState;
 

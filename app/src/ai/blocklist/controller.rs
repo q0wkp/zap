@@ -75,14 +75,14 @@ use parking_lot::FairMutex;
 use pending_response_streams::PendingResponseStreams;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use warp_core::assertions::safe_assert;
+use zap_ng_core::assertions::safe_assert;
 use warp_multi_agent_api::{
     client_action::{Action, UpdateTaskDescription},
     message, ClientAction, Task, ToolType,
 };
-use warpui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
 
-use warpui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 #[derive(Debug, Clone)]
 pub struct SessionContext {
@@ -129,11 +129,11 @@ impl SessionContext {
         &self.current_working_directory
     }
 
-    /// Returns the remote host ID if this is a `WarpifiedRemote` session with
+    /// Returns the remote host ID if this is a `ZapNGifiedRemote` session with
     /// a connected `RemoteServerClient`.
-    pub fn host_id(&self) -> Option<&warp_core::HostId> {
+    pub fn host_id(&self) -> Option<&zap_ng_core::HostId> {
         match &self.session_type {
-            Some(SessionType::WarpifiedRemote { host_id }) => host_id.as_ref(),
+            Some(SessionType::ZapNGifiedRemote { host_id }) => host_id.as_ref(),
             Some(SessionType::Local) | None => None,
         }
     }
@@ -141,7 +141,7 @@ impl SessionContext {
     /// Returns `true` if this is a remote session (regardless of whether
     /// the remote server client is connected).
     pub fn is_remote(&self) -> bool {
-        matches!(self.session_type, Some(SessionType::WarpifiedRemote { .. }))
+        matches!(self.session_type, Some(SessionType::ZapNGifiedRemote { .. }))
     }
 
     /// Zap:legacy SSH 连接信息(host/port),仅在 `is_legacy_ssh()` 为 true 时有意义。
@@ -846,7 +846,7 @@ impl BlocklistAIController {
                 continue;
             }
 
-            // openWarp 本地化:plan 只存本地 SQLite。会话恢复时如果 plan 不在内存中,
+            // ZapNG 本地化:plan 只存本地 SQLite。会话恢复时如果 plan 不在内存中,
             // 从 attachment 携带的 content 重建。title 从 attachment 调用方没携带,
             // 先用默认 planning 标题占位；apply_persisted_content 恢复时会被 SQLite 中存的 title 覆盖。
             AIDocumentModel::handle(ctx).update(ctx, |model, model_ctx| {

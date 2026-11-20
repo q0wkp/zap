@@ -6,9 +6,9 @@ use repo_metadata::watcher::DirectoryWatcher;
 use repo_metadata::RepoMetadataModel;
 use settings::Setting;
 use virtual_fs::{Stub, VirtualFS};
-use warp_core::ui::appearance::Appearance;
-use warpui::platform::WindowStyle;
-use warpui::{App, ModelHandle, SingletonEntity};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, ModelHandle, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 use crate::settings::CodeSettings;
@@ -21,8 +21,8 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 
 use super::FileTreeView;
 
-fn std_path(path: &std::path::Path) -> warp_util::standardized_path::StandardizedPath {
-    warp_util::standardized_path::StandardizedPath::try_from_local(path).unwrap()
+fn std_path(path: &std::path::Path) -> zap_ng_util::standardized_path::StandardizedPath {
+    zap_ng_util::standardized_path::StandardizedPath::try_from_local(path).unwrap()
 }
 
 fn initialize_app(
@@ -54,7 +54,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         false,
     ));
     let src_dir = Entry::Directory(DirectoryEntry {
-        path: warp_util::standardized_path::StandardizedPath::try_from_local(
+        path: zap_ng_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages/app/src"),
         )
         .unwrap(),
@@ -63,7 +63,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         loaded: true,
     });
     let app_dir = Entry::Directory(DirectoryEntry {
-        path: warp_util::standardized_path::StandardizedPath::try_from_local(
+        path: zap_ng_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages/app"),
         )
         .unwrap(),
@@ -72,7 +72,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
         loaded: true,
     });
     let packages_dir = Entry::Directory(DirectoryEntry {
-        path: warp_util::standardized_path::StandardizedPath::try_from_local(
+        path: zap_ng_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("packages"),
         )
         .unwrap(),
@@ -91,7 +91,7 @@ fn build_repo_state(repo_root: &std::path::Path) -> FileTreeState {
 
 fn build_repo_state_with_unloaded_directory(repo_root: &std::path::Path) -> FileTreeState {
     let unloaded_src_dir = Entry::Directory(DirectoryEntry {
-        path: warp_util::standardized_path::StandardizedPath::try_from_local(
+        path: zap_ng_util::standardized_path::StandardizedPath::try_from_local(
             &repo_root.join("src"),
         )
         .unwrap(),
@@ -111,7 +111,7 @@ fn build_repo_state_with_unloaded_directory(repo_root: &std::path::Path) -> File
 fn flattened_paths(
     view: &FileTreeView,
     root: &std::path::Path,
-) -> Vec<warp_util::standardized_path::StandardizedPath> {
+) -> Vec<zap_ng_util::standardized_path::StandardizedPath> {
     view.root_directories
         .get(&std_path(root))
         .expect("root directory is tracked")
@@ -263,7 +263,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
         let repo_root = dirs.tests().join("repo");
         let displayed_root = repo_root.join("packages/app");
         let canonical_repo_root =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -282,13 +282,13 @@ fn repo_transition_unregisters_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(view.registered_lazy_loaded_paths.contains(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap()
                 ));
                 let displayed_std =
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
                         .unwrap();
                 assert_eq!(
                     view.root_directories
@@ -299,7 +299,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -317,10 +317,10 @@ fn repo_transition_unregisters_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 let displayed_std =
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&displayed_root)
                         .unwrap();
                 let repo_std =
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap();
                 assert!(!view.registered_lazy_loaded_paths.contains(&displayed_std));
                 assert_eq!(view.root_for_path(&displayed_std), Some(repo_std.clone()));
@@ -333,7 +333,7 @@ fn repo_transition_unregisters_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -368,7 +368,7 @@ fn repo_backed_unloaded_directory_loads_through_model() {
         let nested_dir = repo_root.join("src/nested");
         let source_file = repo_root.join("src/nested/main.rs");
         let canonical_repo_root =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -396,11 +396,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(!view
                     .root_directories
                     .get(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file
                         )
                         .unwrap()
@@ -409,9 +409,9 @@ fn repo_backed_unloaded_directory_loads_through_model() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.ensure_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&src_dir)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&src_dir)
                         .unwrap(),
                     ctx,
                 );
@@ -421,11 +421,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(view
                     .root_directories
                     .get(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                             &nested_dir
                         )
                         .unwrap()
@@ -434,9 +434,9 @@ fn repo_backed_unloaded_directory_loads_through_model() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.ensure_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&nested_dir)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&nested_dir)
                         .unwrap(),
                     ctx,
                 );
@@ -446,11 +446,11 @@ fn repo_backed_unloaded_directory_loads_through_model() {
                 assert!(view
                     .root_directories
                     .get(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                             .unwrap()
                     )
                     .is_some_and(|root_dir| root_dir.entry.contains(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file
                         )
                         .unwrap()
@@ -458,17 +458,17 @@ fn repo_backed_unloaded_directory_loads_through_model() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                     ctx
                 ));
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(model.get_repository(&id, ctx).is_some_and(|state| {
                     state.entry.contains(
-                        &warp_util::standardized_path::StandardizedPath::try_from_local(
+                        &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                             &source_file,
                         )
                         .unwrap(),
@@ -489,7 +489,7 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
 
         let repo_root = dirs.tests().join("repo");
         let canonical_repo_root =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(&repo_root)
                 .unwrap();
 
         App::test((), |mut app| async move {
@@ -511,7 +511,7 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(matches!(
@@ -527,18 +527,18 @@ fn pending_repository_root_does_not_register_lazy_loaded_path() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(!view.registered_lazy_loaded_paths.contains(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap()
                 ));
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                     ctx
                 ));
                 let id = repo_metadata::RepositoryIdentifier::local(
-                    warp_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
+                    zap_ng_util::standardized_path::StandardizedPath::try_from_local(&repo_root)
                         .unwrap(),
                 );
                 assert!(matches!(
@@ -567,7 +567,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
 
             file_tree_view.read(&app, |view, _ctx| {
                 assert!(!view.registered_lazy_loaded_paths.contains(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap()
@@ -575,7 +575,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(!model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -600,7 +600,7 @@ fn failed_lazy_loaded_path_registration_is_retried() {
             });
             repository_metadata_model.read(&app, |model, ctx| {
                 assert!(model.is_lazy_loaded_path(
-                    &warp_util::standardized_path::StandardizedPath::try_from_local(
+                    &zap_ng_util::standardized_path::StandardizedPath::try_from_local(
                         &displayed_root
                     )
                     .unwrap(),
@@ -752,8 +752,8 @@ fn click_on_file_under_absorbed_descendant_keeps_file_selected() {
                     "fn main() {}\n",
                 )]);
             let code = dirs.tests().join("code");
-            let warp_server = code.join("warp-server");
-            let main_rs = warp_server.join("main.rs");
+            let zap_ng_server = code.join("warp-server");
+            let main_rs = zap_ng_server.join("main.rs");
 
             App::test((), |mut app| async move {
                 let _ = initialize_app(&mut app);
@@ -765,7 +765,7 @@ fn click_on_file_under_absorbed_descendant_keeps_file_selected() {
                 file_tree_view.update(&mut app, |view, ctx| {
                     view.set_is_active(true, ctx);
                     view.set_root_directories(vec![code.clone()], ctx);
-                    view.toggle_folder_expansion(&std_path(&code), &std_path(&warp_server), ctx);
+                    view.toggle_folder_expansion(&std_path(&code), &std_path(&zap_ng_server), ctx);
                 });
 
                 // Simulate a click on main.rs (select_id is what the click
@@ -789,7 +789,7 @@ fn click_on_file_under_absorbed_descendant_keeps_file_selected() {
                 // opening in a code view — the working-directories-model adds
                 // the file's repo/parent (warp-server) to the active set.
                 file_tree_view.update(&mut app, |view, ctx| {
-                    view.set_root_directories(vec![warp_server.clone(), code.clone()], ctx);
+                    view.set_root_directories(vec![zap_ng_server.clone(), code.clone()], ctx);
                 });
 
                 file_tree_view.read(&app, |view, _ctx| {
@@ -819,7 +819,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
                 "fn main() {}\n",
             )]);
         let tree = dirs.tests().join("tree");
-        let warp_server = tree.join("warp-server");
+        let zap_ng_server = tree.join("warp-server");
 
         App::test((), |mut app| async move {
             let _ = initialize_app(&mut app);
@@ -827,7 +827,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
 
             file_tree_view.update(&mut app, |view, ctx| {
                 view.set_is_active(true, ctx);
-                view.set_root_directories(vec![warp_server.clone(), tree.clone()], ctx);
+                view.set_root_directories(vec![zap_ng_server.clone(), tree.clone()], ctx);
             });
 
             // Initial apply should have scrolled once.
@@ -848,7 +848,7 @@ fn pending_focus_target_does_not_re_scroll_after_first_apply() {
                 let selected = view.selected_item.clone().expect("selection");
                 let root_dir = view.root_directories.get(&std_path(&tree)).unwrap();
                 let path = root_dir.items.get(selected.index).unwrap().path();
-                assert_eq!(path, &std_path(&warp_server));
+                assert_eq!(path, &std_path(&zap_ng_server));
                 let pending = view.pending_focus_target.as_ref().expect("pending");
                 assert!(pending.scrolled, "scrolled flag stays set after re-apply");
             });
@@ -865,7 +865,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                 "fn main() {}\n",
             )]);
         let tree = dirs.tests().join("tree");
-        let warp_server = tree.join("warp-server");
+        let zap_ng_server = tree.join("warp-server");
 
         App::test((), |mut app| async move {
             let _ = initialize_app(&mut app);
@@ -876,7 +876,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
             // selected as the focus-follow target.
             file_tree_view.update(&mut app, |view, ctx| {
                 view.set_is_active(true, ctx);
-                view.set_root_directories(vec![warp_server.clone(), tree.clone()], ctx);
+                view.set_root_directories(vec![zap_ng_server.clone(), tree.clone()], ctx);
             });
 
             file_tree_view.read(&app, |view, _ctx| {
@@ -890,7 +890,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                     .items
                     .get(selected.index)
                     .expect("selected index in range");
-                assert_eq!(selected_item.path(), &std_path(&warp_server));
+                assert_eq!(selected_item.path(), &std_path(&zap_ng_server));
                 // Pending target is preserved across rebuilds so later
                 // repo-metadata updates don't override the cwd-follow
                 // selection. It clears when the user interacts explicitly
@@ -900,7 +900,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                     .as_ref()
                     .expect("pending target preserved");
                 assert_eq!(pending.root, std_path(&tree));
-                assert_eq!(pending.path, std_path(&warp_server));
+                assert_eq!(pending.path, std_path(&zap_ng_server));
                 // The initial apply scrolled; later applies must not
                 // re-scroll so user scrolling is respected.
                 assert!(pending.scrolled, "initial apply scrolls the tree");
@@ -917,7 +917,7 @@ fn focus_follows_absorbed_descendant_once_its_item_is_materialized() {
                 // Sanity: the first item is the root header, not warp-server.
                 assert_ne!(
                     root_dir.items.first().unwrap().path(),
-                    &std_path(&warp_server)
+                    &std_path(&zap_ng_server)
                 );
                 view.select_id(&id, ctx);
             });

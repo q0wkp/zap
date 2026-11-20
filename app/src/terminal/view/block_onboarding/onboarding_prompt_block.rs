@@ -12,7 +12,7 @@ use crate::terminal::view::block_onboarding::util;
 use crate::terminal::SizeInfo;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use settings::Setting as _;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, Clipped, ConstrainedBox, Container, CornerRadius, Flex,
         FormattedTextElement, HighlightedHyperlink, Hoverable, HyperlinkUrl, MainAxisAlignment,
@@ -29,7 +29,7 @@ const CONFIRM_MARGIN_TOP: f32 = 16.;
 pub struct OnboardingPromptBlock {
     learn_more_highlight_index: HighlightedHyperlink,
     mouse_state_handle_look_incorrect: MouseStateHandle,
-    mouse_state_handle_warp_prompt: MouseStateHandle,
+    mouse_state_handle_zap_ng_prompt: MouseStateHandle,
     mouse_state_handle_existing_prompt: MouseStateHandle,
     mouse_state_handle_confirm: MouseStateHandle,
     ps1_grid_info: Option<(BlockGrid, SizeInfo)>,
@@ -42,7 +42,7 @@ impl OnboardingPromptBlock {
         Self {
             learn_more_highlight_index: Default::default(),
             mouse_state_handle_look_incorrect: Default::default(),
-            mouse_state_handle_warp_prompt: Default::default(),
+            mouse_state_handle_zap_ng_prompt: Default::default(),
             mouse_state_handle_existing_prompt: Default::default(),
             mouse_state_handle_confirm: Default::default(),
             ps1_grid_info,
@@ -111,7 +111,7 @@ impl OnboardingPromptBlock {
         let mut confirm_button = appearance
             .ui_builder()
             .button(
-                warpui::ui_components::button::ButtonVariant::Accent,
+                zap_ng_ui::ui_components::button::ButtonVariant::Accent,
                 self.mouse_state_handle_confirm.clone(),
             )
             .with_style(UiComponentStyles {
@@ -182,8 +182,8 @@ impl OnboardingPromptBlock {
                         };
 
                     ConstrainedBox::new(
-                        Container::new(if prompt_type == OnboardingPromptType::WarpDefault {
-                            self.render_warp_prompt_button_interior(appearance)
+                        Container::new(if prompt_type == OnboardingPromptType::ZapNGDefault {
+                            self.render_zap_ng_prompt_button_interior(appearance)
                         } else {
                             self.render_existing_prompt_button_interior(appearance)
                         })
@@ -326,7 +326,7 @@ impl OnboardingPromptBlock {
             .finish()
     }
 
-    fn render_warp_prompt_button_interior(&self, appearance: &Appearance) -> Box<dyn Element> {
+    fn render_zap_ng_prompt_button_interior(&self, appearance: &Appearance) -> Box<dyn Element> {
         // Pixel values pulled from Figma mocks
         // https://www.figma.com/file/y888viqzWBoMpFTxQqkQEN/Activation?node-id=568:1595&mode=dev
         const HEADER_TEXT: &str = "Zap prompt";
@@ -413,7 +413,7 @@ impl OnboardingPromptBlock {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum OnboardingPromptType {
     PS1,
-    WarpDefault,
+    ZapNGDefault,
 }
 
 impl Entity for OnboardingPromptBlock {
@@ -443,8 +443,8 @@ impl View for OnboardingPromptBlock {
                     .with_main_axis_alignment(MainAxisAlignment::Start)
                     .with_child(self.render_prompt_button(
                         appearance,
-                        self.mouse_state_handle_warp_prompt.clone(),
-                        OnboardingPromptType::WarpDefault,
+                        self.mouse_state_handle_zap_ng_prompt.clone(),
+                        OnboardingPromptType::ZapNGDefault,
                     ))
                     .with_child(self.render_prompt_button(
                         appearance,
@@ -483,8 +483,8 @@ impl TypedActionView for OnboardingPromptBlock {
                 self.selected_prompt = Some(*prompt);
 
                 match prompt {
-                    OnboardingPromptType::WarpDefault => {
-                        self.selected_prompt = Some(OnboardingPromptType::WarpDefault);
+                    OnboardingPromptType::ZapNGDefault => {
+                        self.selected_prompt = Some(OnboardingPromptType::ZapNGDefault);
                         Prompt::handle(ctx).update(ctx, |prompt, ctx| {
                             report_if_error!(prompt.reset(ctx));
                         });

@@ -1,5 +1,5 @@
-use warp_core::{context_flag::ContextFlag, features::FeatureFlag};
-use warpui::ViewContext;
+use zap_ng_core::{context_flag::ContextFlag, features::FeatureFlag};
+use zap_ng_ui::ViewContext;
 
 use super::{
     ContentItem, ContentSectionData, FeatureItem, FeatureSection, FeatureSectionData,
@@ -50,11 +50,11 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
     };
     sections.push(Section::Feature(get_started));
 
-    let maximize_warp = FeatureSectionData {
-        section_name: FeatureSection::MaximizeWarp,
-        items: maximize_warp_items(ctx),
+    let maximize_zap_ng = FeatureSectionData {
+        section_name: FeatureSection::MaximizeZapNG,
+        items: maximize_zap_ng_items(ctx),
     };
-    sections.push(Section::Feature(maximize_warp));
+    sections.push(Section::Feature(maximize_zap_ng));
 
     let advanced_setup = ContentSectionData {
         section_name: FeatureSection::AdvancedSetup,
@@ -84,17 +84,17 @@ pub fn sections(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Section> {
     sections
 }
 
-fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<FeatureItem> {
-    let mut maximize_warp_items = vec![];
+fn maximize_zap_ng_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<FeatureItem> {
+    let mut maximize_zap_ng_items = vec![];
 
-    maximize_warp_items.push(FeatureItem::new(
+    maximize_zap_ng_items.push(FeatureItem::new(
         crate::t!("resource-center-command-search-title"),
         crate::t!("resource-center-command-search-description"),
         Tip::Action(TipAction::CommandSearch),
         ctx,
     ));
 
-    maximize_warp_items.push(FeatureItem::new(
+    maximize_zap_ng_items.push(FeatureItem::new(
         crate::t!("resource-center-ai-command-search-title"),
         crate::t!("resource-center-ai-command-search-description"),
         Tip::Action(TipAction::AiCommandSearch),
@@ -102,7 +102,7 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
     ));
 
     if ContextFlag::CreateNewSession.is_enabled() {
-        maximize_warp_items.push(FeatureItem::new(
+        maximize_zap_ng_items.push(FeatureItem::new(
             crate::t!("resource-center-split-panes-title"),
             crate::t!("resource-center-split-panes-description"),
             Tip::Action(TipAction::SplitPane),
@@ -111,7 +111,7 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
     }
 
     if ContextFlag::LaunchConfigurations.is_enabled() {
-        maximize_warp_items.push(FeatureItem::new(
+        maximize_zap_ng_items.push(FeatureItem::new(
             crate::t!("resource-center-launch-configuration-title"),
             crate::t!("resource-center-launch-configuration-description"),
             Tip::Action(TipAction::SaveNewLaunchConfig),
@@ -119,5 +119,5 @@ fn maximize_warp_items(ctx: &mut ViewContext<ResourceCenterMainView>) -> Vec<Fea
         ));
     }
 
-    maximize_warp_items
+    maximize_zap_ng_items
 }

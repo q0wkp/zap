@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, ModelContext, SingletonEntity};
 
 use crate::{
     ai::{

@@ -9,7 +9,7 @@
 use std::any::Any;
 use std::path::PathBuf;
 
-use warpui::{
+use zap_ng_ui::{
     elements::Point,
     event::DispatchedEvent,
     geometry::vector::Vector2F,
@@ -57,7 +57,7 @@ impl Element for SftpDropTargetElement {
         self.child.origin()
     }
 
-    fn bounds(&self) -> Option<warpui::geometry::rect::RectF> {
+    fn bounds(&self) -> Option<zap_ng_ui::geometry::rect::RectF> {
         self.child.bounds()
     }
 

@@ -17,7 +17,7 @@ use std::sync::mpsc::SyncSender;
 
 use ai::project_context::model::{ProjectContextModel, ProjectContextModelEvent};
 use repo_metadata::repositories::{DetectedRepositories, DetectedRepositoriesEvent};
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use crate::persistence::ModelEvent;
 

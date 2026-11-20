@@ -6,9 +6,9 @@ use crate::code::editor_management::CodeSource;
 use crate::search::files::icon::icon_from_file_path;
 use crate::search::ItemHighlightState;
 use std::iter;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{ChildView, HighlightedRange, MouseStateHandle};
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{ChildView, HighlightedRange, MouseStateHandle};
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Expanded, Flex,
         MainAxisAlignment, MainAxisSize, ParentElement, Radius, Shrinkable, Text,
@@ -16,7 +16,7 @@ use warpui::{
     ui_components::components::UiComponent,
     AppContext, Element, SingletonEntity,
 };
-use warpui::{EventContext, ViewHandle};
+use zap_ng_ui::{EventContext, ViewHandle};
 
 use crate::code::editor::view::CodeEditorView;
 use crate::ui_components::blended_colors;
@@ -102,7 +102,7 @@ pub struct CodeBlockOptions {
     pub file_path: Option<String>,
 }
 
-pub fn render_code_block_with_warp_text(
+pub fn render_code_block_with_zap_ng_text(
     options: CodeBlockOptions,
     view: &ViewHandle<CodeEditorView>,
     app: &AppContext,

@@ -6,8 +6,8 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use serde_yaml::Mapping;
 use string_offset::ByteOffset;
-use warp_core::ui::appearance::Appearance;
-use warp_editor::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::{
     content::{markdown::MarkdownStyle, text::TextStylesWithMetadata},
     editor::EmbeddedItemModel,
     extract_block,
@@ -22,11 +22,11 @@ use warp_editor::{
         BLOCK_FOOTER_HEIGHT,
     },
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{Border, Empty},
     SingletonEntity,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{ConstrainedBox, CornerRadius, Margin, Padding, Radius},
     text_layout::TextFrame,
     units::{IntoPixels, Pixels},
@@ -35,7 +35,7 @@ use warpui::{
 
 use crate::{
     cloud_object::{model::persistence::ObjectStoreModel, StoredObject},
-    drive::{cloud_object_styling::warp_drive_icon_color, DriveObjectType},
+    drive::{cloud_object_styling::zap_ng_drive_icon_color, DriveObjectType},
     server::ids::{HashableId, ToServerId},
     ui_components::icons::Icon,
     workflows::{workflow::Workflow, WorkflowId, WorkflowObject},
@@ -458,16 +458,16 @@ impl RenderableEmbeddedWorkflow {
         let (icon, icon_color) = if is_agent_mode_prompt {
             (
                 Icon::Prompt,
-                warp_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
+                zap_ng_drive_icon_color(appearance, DriveObjectType::AgentModeWorkflow),
             )
         } else {
             (
                 Icon::Workflow,
-                warp_drive_icon_color(appearance, DriveObjectType::Workflow),
+                zap_ng_drive_icon_color(appearance, DriveObjectType::Workflow),
             )
         };
         let workflow_icon = ConstrainedBox::new(
-            icon.to_warpui_icon(icon_color.into())
+            icon.to_zap_ng_ui_icon(icon_color.into())
                 .with_opacity(1.0)
                 .finish(),
         )
@@ -616,7 +616,7 @@ impl RenderableBlock for RenderableEmbeddedWorkflow {
             );
         }
 
-        ctx.paint.scene.start_layer(warpui::ClipBounds::ActiveLayer);
+        ctx.paint.scene.start_layer(zap_ng_ui::ClipBounds::ActiveLayer);
 
         // Position the block footer right below the content area, flush with its right-hand edge.
         // This gives the footer some padding relative to the visible area with a background.
@@ -631,15 +631,15 @@ impl RenderableBlock for RenderableEmbeddedWorkflow {
         ctx.paint.scene.stop_layer();
     }
 
-    fn after_layout(&mut self, ctx: &mut warpui::AfterLayoutContext, app: &warpui::AppContext) {
+    fn after_layout(&mut self, ctx: &mut zap_ng_ui::AfterLayoutContext, app: &zap_ng_ui::AppContext) {
         self.footer.after_layout(ctx, app);
     }
 
     fn dispatch_event(
         &mut self,
-        _model: &warp_editor::render::model::RenderState,
-        event: &warpui::event::DispatchedEvent,
-        ctx: &mut warpui::EventContext,
+        _model: &zap_ng_editor::render::model::RenderState,
+        event: &zap_ng_ui::event::DispatchedEvent,
+        ctx: &mut zap_ng_ui::EventContext,
         app: &AppContext,
     ) -> bool {
         self.footer.dispatch_event(event, ctx, app)

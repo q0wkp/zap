@@ -1,7 +1,7 @@
 ﻿use std::sync::Arc;
 
 use remote_server::auth::RemoteServerAuthContext;
-use warpui::r#async::BoxFuture;
+use zap_ng_ui::r#async::BoxFuture;
 
 use crate::auth::AuthState;
 

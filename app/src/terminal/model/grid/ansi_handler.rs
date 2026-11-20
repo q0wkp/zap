@@ -14,12 +14,12 @@ use bounded_vec_deque::BoundedVecDeque;
 use pathfinder_geometry::vector::Vector2F;
 use rand::Rng;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-use warp_core::channel::ChannelState;
-use warp_core::features::FeatureFlag;
-use warp_terminal::model::ansi::CharsetIndex;
-use warp_terminal::model::grid::cell;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use warpui::image_cache::{resize_dimensions, FitType};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_terminal::model::ansi::CharsetIndex;
+use zap_ng_terminal::model::grid::cell;
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use zap_ng_ui::image_cache::{resize_dimensions, FitType};
 
 use crate::server::telemetry::ImageProtocol;
 use crate::terminal::event::Event;
@@ -1127,7 +1127,7 @@ impl ansi::Handler for GridHandler {
         self.grid.cursor.charsets[index] = charset;
     }
 
-    fn set_color(&mut self, _: usize, _: warpui::color::ColorU) {
+    fn set_color(&mut self, _: usize, _: zap_ng_ui::color::ColorU) {
         log::error!("Handler method GridHandler::set_color should never be called. This should be handled by TerminalModel.");
     }
 

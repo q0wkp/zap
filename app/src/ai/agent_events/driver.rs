@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use futures::future::Either;
 use futures::StreamExt;
 use instant::Instant;
-use warpui::r#async::Timer;
+use zap_ng_ui::r#async::Timer;
 
 use crate::ai::agent_events::{AgentEventStreamClient, AgentRunEvent};
 

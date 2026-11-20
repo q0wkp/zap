@@ -15,9 +15,9 @@ use super::{
 use watcher::{BulkFilesystemWatcherEvent, HomeDirectoryWatcher, HomeDirectoryWatcherEvent};
 
 use crate::server::datetime_ext::DateTimeExt;
-use crate::warp_managed_paths_watcher::{
-    filter_repository_update_by_prefix, warp_managed_skill_dirs, WarpManagedPathsWatcher,
-    WarpManagedPathsWatcherEvent,
+use crate::zap_ng_managed_paths_watcher::{
+    filter_repository_update_by_prefix, zap_ng_managed_skill_dirs, ZapNGManagedPathsWatcher,
+    ZapNGManagedPathsWatcherEvent,
 };
 use ai::skills::{
     home_skills_path, parse_skill, ParsedSkill, SkillProvider, SKILL_PROVIDER_DEFINITIONS,
@@ -29,7 +29,7 @@ use repo_metadata::{
     repository::{Repository, SubscriberId},
     DirectoryWatcher, RepoMetadataModel, RepositoryUpdate,
 };
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[derive(Debug, PartialEq)]
 pub enum SkillWatcherEvent {
@@ -124,8 +124,8 @@ impl SkillWatcher {
                     }
                 },
             );
-            ctx.subscribe_to_model(&WarpManagedPathsWatcher::handle(ctx), |me, event, ctx| {
-                me.handle_warp_managed_paths_event(event, ctx);
+            ctx.subscribe_to_model(&ZapNGManagedPathsWatcher::handle(ctx), |me, event, ctx| {
+                me.handle_zap_ng_managed_paths_event(event, ctx);
             });
         }
 
@@ -138,7 +138,7 @@ impl SkillWatcher {
         // We use a separate HomeDirectoryWatcher to detect when those are created and start watching them after they are created.
         let mut home_provider_watchers = HashMap::new();
         if let Some(home_path) = home_dir {
-            Self::spawn_read_skills_from_directories(warp_managed_skill_dirs(), ctx);
+            Self::spawn_read_skills_from_directories(zap_ng_managed_skill_dirs(), ctx);
             let skills_parent_paths: HashSet<PathBuf> = SKILL_PROVIDER_DEFINITIONS
                 .iter()
                 .filter(|provider| provider.provider != SkillProvider::Zap)
@@ -557,7 +557,7 @@ impl SkillWatcher {
             }
 
             let Ok(std_dir_path) =
-                warp_util::standardized_path::StandardizedPath::from_local_canonicalized(
+                zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(
                     &canonical_dir,
                 )
             else {
@@ -783,13 +783,13 @@ impl SkillWatcher {
         }
     }
 
-    fn handle_warp_managed_paths_event(
+    fn handle_zap_ng_managed_paths_event(
         &mut self,
-        event: &WarpManagedPathsWatcherEvent,
+        event: &ZapNGManagedPathsWatcherEvent,
         ctx: &mut ModelContext<Self>,
     ) {
-        let WarpManagedPathsWatcherEvent::FilesChanged(update) = event;
-        for skill_dir in warp_managed_skill_dirs() {
+        let ZapNGManagedPathsWatcherEvent::FilesChanged(update) = event;
+        for skill_dir in zap_ng_managed_skill_dirs() {
             if let Some(filtered_update) = filter_repository_update_by_prefix(update, &skill_dir) {
                 self.handle_repository_update(&filtered_update, ctx);
             }
@@ -806,7 +806,7 @@ impl SkillWatcher {
         ctx: &mut ModelContext<Self>,
     ) {
         let Ok(std_path) =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(path)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(path)
         else {
             return;
         };

@@ -1,6 +1,6 @@
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warp_core::ui::Icon;
-use warpui::Element;
+use zap_ng_core::ui::theme::{Fill, ZapNGTheme};
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::Element;
 
 pub mod conversation_usage_view;
 
@@ -33,7 +33,7 @@ pub fn icon_for_context_window_usage(context_window_usage: f32) -> Icon {
 
 pub fn render_context_window_usage_icon(
     context_window_usage: f32,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     color_override: Option<Fill>,
 ) -> Box<dyn Element> {
     let icon = icon_for_context_window_usage(context_window_usage);
@@ -44,5 +44,5 @@ pub fn render_context_window_usage_icon(
         color_override.unwrap_or_else(|| theme.main_text_color(theme.background()))
     };
 
-    icon.to_warpui_icon(fill).finish()
+    icon.to_zap_ng_ui_icon(fill).finish()
 }

@@ -3,8 +3,8 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
-use warpui::elements::ChildView;
-use warpui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
+use zap_ng_ui::elements::ChildView;
+use zap_ng_ui::{Element, Entity, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::blocklist::agent_view::AgentViewController;
 use crate::ai::conversation_navigation::ConversationNavigationData;
@@ -188,7 +188,7 @@ impl View for InlineConversationMenuView {
         "InlineConversationMenuView"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn Element> {
+    fn render(&self, _app: &zap_ng_ui::AppContext) -> Box<dyn Element> {
         ChildView::new(&self.menu_view).finish()
     }
 }

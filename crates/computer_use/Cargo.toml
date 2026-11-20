@@ -34,14 +34,14 @@ objc2-app-kit.workspace = true
 objc2-core-foundation.workspace = true
 objc2-core-graphics.workspace = true
 tempfile.workspace = true
-warpui.workspace = true
+zap_ng_ui.workspace = true
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 ashpd.workspace = true
 futures.workspace = true
 image.workspace = true
 url.workspace = true
-warpui.workspace = true
+zap_ng_ui.workspace = true
 x11rb = { workspace = true, features = ["xtest"] }
 zbus.workspace = true
 

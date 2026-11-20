@@ -90,7 +90,7 @@ mod view_components;
 mod vim_registers;
 mod voice;
 mod voltron;
-mod warp_managed_paths_watcher;
+mod zap_ng_managed_paths_watcher;
 #[cfg(target_family = "wasm")]
 mod wasm_nux_dialog;
 mod window_settings;
@@ -99,14 +99,14 @@ mod workspaces;
 
 // PLEASE DO NOT ADD MORE PUBLIC MODULES!
 //
-// Any modules which we make public outside of the `warp` crate lose dead code
+// Any modules which we make public outside of the `zap-ng` crate lose dead code
 // checking support, as the compiler cannot make any assumptions about whether
 // or not the function/type is used by another crate that pulls in this one as
 // a dependency.
 //
 // If you feel the need to export a module so that a type or function within it
 // can be used by an integration test, you should define a new assertion function
-// in the warp::integration_testing::assertions module (or a sub-module).  These
+// in the zap_ng::integration_testing::assertions module (or a sub-module).  These
 // functions will allow us to keep types internal to this crate and expose a
 // simpler API for integration tests to consume.
 pub mod ai_assistant;
@@ -150,8 +150,8 @@ use quit_warning::UnsavedStateSummary;
 #[cfg(feature = "local_fs")]
 use settings::import::model::ImportedConfigModel;
 use voice::transcriber::VoiceTranscriber;
-use warp_cli::GlobalOptions;
-use warp_cli::{agent::AgentCommand, CliCommand};
+use zap_ng_cli::GlobalOptions;
+use zap_ng_cli::{agent::AgentCommand, CliCommand};
 
 #[cfg(feature = "local_fs")]
 use repo_metadata::{
@@ -173,13 +173,13 @@ pub mod workspace;
 pub use persistence::testing as sqlite_testing;
 
 use ::settings::{Setting, ToggleableSetting};
-pub use warp_core::errors::{report_error, report_if_error};
+pub use zap_ng_core::errors::{report_error, report_if_error};
 
 #[cfg(feature = "plugin_host")]
 pub use plugin::{run_plugin_host, PLUGIN_HOST_FLAG};
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::modals::{AlertDialogWithCallbacks, AppModalCallback};
-use warpui::platform::app::ApproveTerminateResult;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::modals::{AlertDialogWithCallbacks, AppModalCallback};
+use zap_ng_ui::platform::app::ApproveTerminateResult;
 use window_settings::WindowSettings;
 use workflows::manager::WorkflowManager;
 
@@ -224,9 +224,9 @@ use crate::terminal::resizable_data::ResizableData;
 use crate::terminal::view::inline_banner::ByoLlmAuthBannerSessionState;
 use crate::terminal::{AudibleBell, History};
 use crate::undo_close::UndoCloseStack;
-use crate::user_config::WarpConfig;
+use crate::user_config::ZapNGConfig;
 use crate::vim_registers::VimRegisters;
-use crate::warp_managed_paths_watcher::{ensure_warp_watch_roots_exist, WarpManagedPathsWatcher};
+use crate::zap_ng_managed_paths_watcher::{ensure_zap_ng_watch_roots_exist, ZapNGManagedPathsWatcher};
 use crate::workflows::aliases::WorkflowAliases;
 use crate::workflows::local_workflows::LocalWorkflows;
 use crate::workspace::{ActiveSession, OneTimeModalModel, ToastStack};
@@ -247,11 +247,11 @@ use std::sync::Arc;
 use terminal::input;
 use terminal::session_settings::SessionSettings;
 use url::Url;
-use warp_core::execution_mode::{AppExecutionMode, ExecutionMode};
-use warp_managed_secrets::ManagedSecretManager;
+use zap_ng_core::execution_mode::{AppExecutionMode, ExecutionMode};
+use zap_ng_managed_secrets::ManagedSecretManager;
 use workspace::sync_inputs::SyncedInputState;
 
-use warpui::{integration::TestDriver, App, AssetProvider, Event};
+use zap_ng_ui::{integration::TestDriver, App, AssetProvider, Event};
 
 use self::features::FeatureFlag;
 use crate::app_state::AppState;
@@ -271,23 +271,23 @@ use crate::terminal::CustomSecretRegexUpdater;
 use crate::util::bindings::is_binding_cross_platform;
 use crate::workspace::{PaneViewLocator, Workspace, WorkspaceAction};
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use warp_logging::LogDestination;
+use zap_ng_logging::LogDestination;
 
 // Re-export the send_telemetry_from_ctx macro at the crate root level
-pub use warp_core::send_telemetry_from_app_ctx;
-pub use warp_core::send_telemetry_from_ctx;
-pub use warp_core::send_telemetry_on_executor;
-pub use warp_core::send_telemetry_sync_from_app_ctx;
-pub use warp_core::send_telemetry_sync_from_ctx;
+pub use zap_ng_core::send_telemetry_from_app_ctx;
+pub use zap_ng_core::send_telemetry_from_ctx;
+pub use zap_ng_core::send_telemetry_on_executor;
+pub use zap_ng_core::send_telemetry_sync_from_app_ctx;
+pub use zap_ng_core::send_telemetry_sync_from_ctx;
 
 // Re-export the safe logging macros at the crate root level for backwards compatibility
-pub use warp_core::{safe_debug, safe_error, safe_info, safe_warn};
+pub use zap_ng_core::{safe_debug, safe_error, safe_info, safe_warn};
 
 #[cfg(feature = "local_fs")]
-use warp_files::FileModel;
-use warpui::platform::TerminationMode;
-use warpui::windowing::state::ApplicationStage;
-use warpui::{AppContext, SingletonEntity, WindowId};
+use zap_ng_files::FileModel;
+use zap_ng_ui::platform::TerminationMode;
+use zap_ng_ui::windowing::state::ApplicationStage;
+use zap_ng_ui::{AppContext, SingletonEntity, WindowId};
 
 #[derive(Clone, Copy, RustEmbed)]
 #[folder = "assets"]
@@ -309,7 +309,7 @@ pub static ASSETS: Assets = Assets;
 pub enum LaunchMode {
     /// Run the regular GUI application.
     App {
-        args: warp_cli::AppArgs,
+        args: zap_ng_cli::AppArgs,
         /// API key for server authentication, if provided via `--api-key` or `WARP_API_KEY`.
         /// Only used on dogfood channels.
         api_key: Option<String>,
@@ -317,7 +317,7 @@ pub enum LaunchMode {
 
     /// Run the Zap command-line SDK.
     CommandLine {
-        command: warp_cli::CliCommand,
+        command: zap_ng_cli::CliCommand,
         global_options: GlobalOptions,
         debug: bool,
         /// Whether this CLI invocation is running in a sandboxed environment.
@@ -341,13 +341,13 @@ pub enum LaunchMode {
 }
 
 impl LaunchMode {
-    fn args(&self) -> Cow<'_, warp_cli::AppArgs> {
+    fn args(&self) -> Cow<'_, zap_ng_cli::AppArgs> {
         match self {
             LaunchMode::App { args, .. } => Cow::Borrowed(args),
             LaunchMode::CommandLine { .. }
             | LaunchMode::Test { .. }
             | LaunchMode::RemoteServerProxy
-            | LaunchMode::RemoteServerDaemon => Cow::Owned(warp_cli::AppArgs::default()),
+            | LaunchMode::RemoteServerDaemon => Cow::Owned(zap_ng_cli::AppArgs::default()),
         }
     }
 
@@ -552,12 +552,12 @@ pub fn run() -> Result<()> {
     init_feature_flags();
 
     // Parse command-line arguments.
-    let args = warp_cli::Args::from_env();
+    let args = zap_ng_cli::Args::from_env();
 
     if let Some(command) = args.command() {
         match command {
             #[cfg(all(feature = "local_tty", unix))]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::TerminalServer(args)) => {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::TerminalServer(args)) => {
                 // If we were asked to run as a terminal server (as opposed to the main
                 // GUI application), do so immediately.  Ideally, the terminal server would
                 // be a separate binary, but it's much easier to distribute a single binary,
@@ -567,11 +567,11 @@ pub fn run() -> Result<()> {
                 return Ok(());
             }
             #[cfg(feature = "plugin_host")]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::PluginHost { .. }) => {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::PluginHost { .. }) => {
                 return crate::run_plugin_host();
             }
             #[cfg(feature = "local_tty")]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::MinidumpServer { socket_name }) => {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::MinidumpServer { socket_name }) => {
                 cfg_if::cfg_if! {
                     if #[cfg(all(target_os = "linux", feature = "crash_reporting"))] {
                         return crate::crash_reporting::run_minidump_server(socket_name);
@@ -582,24 +582,24 @@ pub fn run() -> Result<()> {
                 }
             }
             #[cfg(not(target_family = "wasm"))]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::RemoteServerProxy(args)) => {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::RemoteServerProxy(args)) => {
                 init_common(&LaunchMode::RemoteServerProxy, None)?;
                 return crate::remote_server::run_proxy(args.identity_key.clone());
             }
             #[cfg(not(target_family = "wasm"))]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::RemoteServerDaemon(args)) => {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::RemoteServerDaemon(args)) => {
                 init_common(&LaunchMode::RemoteServerDaemon, None)?;
                 return crate::remote_server::run_daemon(args.identity_key.clone());
             }
             #[cfg(not(target_family = "wasm"))]
-            warp_cli::Command::Worker(warp_cli::WorkerCommand::RipgrepSearch {
+            zap_ng_cli::Command::Worker(zap_ng_cli::WorkerCommand::RipgrepSearch {
                 parent,
                 ignore_case,
                 multiline,
                 pattern,
                 paths,
             }) => {
-                warp_ripgrep::search::run_search_subprocess(
+                zap_ng_ripgrep::search::run_search_subprocess(
                     std::slice::from_ref(pattern),
                     paths.clone(),
                     *ignore_case,
@@ -614,20 +614,20 @@ pub fn run() -> Result<()> {
                 feature = "plugin_host",
                 not(target_family = "wasm")
             )))]
-            warp_cli::Command::Worker(worker) => {
+            zap_ng_cli::Command::Worker(worker) => {
                 // Need this case to handle platforms where there are no enum variants in
-                // warp_cli::WorkerCommand, as we still need to check Command::Worker.
+                // zap_ng_cli::WorkerCommand, as we still need to check Command::Worker.
 
                 // On wasm, specifically, we should fail spectacularly if we get here.
                 #[cfg(target_family = "wasm")]
                 panic!("Worker process not supported on WASM: {worker:?}")
             }
-            warp_cli::Command::Completions { shell } => {
-                return warp_cli::completions::generate_to_stdout(*shell);
+            zap_ng_cli::Command::Completions { shell } => {
+                return zap_ng_cli::completions::generate_to_stdout(*shell);
             }
-            warp_cli::Command::CommandLine(cmd) => {
+            zap_ng_cli::Command::CommandLine(cmd) => {
                 let (is_sandboxed, computer_use_override) = match cmd.as_ref() {
-                    warp_cli::CliCommand::Agent(warp_cli::agent::AgentCommand::Run(run_args)) => (
+                    zap_ng_cli::CliCommand::Agent(zap_ng_cli::agent::AgentCommand::Run(run_args)) => (
                         run_args.sandboxed,
                         run_args.computer_use.computer_use_override(),
                     ),
@@ -645,7 +645,7 @@ pub fn run() -> Result<()> {
                     computer_use_override,
                 });
             }
-            warp_cli::Command::DumpDebugInfo => {
+            zap_ng_cli::Command::DumpDebugInfo => {
                 return debug_dump::run();
             }
         }
@@ -654,10 +654,10 @@ pub fn run() -> Result<()> {
     // If running as a standalone CLI binary or invoked as "oz", print help
     // instead of launching the GUI app.
     let is_cli_binary = cfg!(feature = "standalone")
-        || warp_cli::binary_name().is_some_and(|name| name.starts_with("oz"))
+        || zap_ng_cli::binary_name().is_some_and(|name| name.starts_with("oz"))
         || std::env::var_os("WARP_CLI_MODE").is_some();
     if is_cli_binary {
-        warp_cli::Args::clap_command().print_help()?;
+        zap_ng_cli::Args::clap_command().print_help()?;
         return Ok(());
     }
 
@@ -702,12 +702,12 @@ fn init_common(launch_mode: &LaunchMode, timer: Option<&mut IntervalTimer>) -> R
     cfg_if::cfg_if! {
         if #[cfg(enable_crash_recovery)] {
             if crash_recovery::is_crash_recovery_process(launch_mode.args().as_ref()) {
-                warp_logging::init_for_crash_recovery_process()?;
+                zap_ng_logging::init_for_crash_recovery_process()?;
             } else {
-                warp_logging::init(warp_logging::LogConfig { is_cli, log_destination })?;
+                zap_ng_logging::init(zap_ng_logging::LogConfig { is_cli, log_destination })?;
             }
         } else {
-            warp_logging::init(warp_logging::LogConfig { is_cli, log_destination })?;
+            zap_ng_logging::init(zap_ng_logging::LogConfig { is_cli, log_destination })?;
         }
     }
 
@@ -808,7 +808,7 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         not(any(enable_crash_recovery, any(target_os = "linux", target_os = "freebsd"))),
         expect(unused)
     )]
-    let prefs_for_public_settings: &dyn warpui_extras::user_preferences::UserPreferences =
+    let prefs_for_public_settings: &dyn zap_ng_ui_extras::user_preferences::UserPreferences =
         if FeatureFlag::SettingsFile.is_enabled() {
             public_preferences.as_ref()
         } else {
@@ -828,13 +828,13 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         terminal::local_tty::spawner::PtySpawner::new().context("Failed to create pty spawner")?;
 
     let mut app_builder = if launch_mode.is_headless() {
-        warpui::platform::AppBuilder::new_headless(
+        zap_ng_ui::platform::AppBuilder::new_headless(
             app_callbacks(launch_mode.is_integration_test()),
             Box::new(ASSETS),
             launch_mode.take_test_driver(),
         )
     } else {
-        warpui::platform::AppBuilder::new(
+        zap_ng_ui::platform::AppBuilder::new(
             app_callbacks(launch_mode.is_integration_test()),
             Box::new(ASSETS),
             launch_mode.take_test_driver(),
@@ -843,7 +843,7 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
 
     #[cfg(target_os = "macos")]
     {
-        use warpui::platform::mac::AppExt;
+        use zap_ng_ui::platform::mac::AppExt;
 
         let activate_on_launch = !launch_mode.is_integration_test()
             || std::env::var("WARPUI_USE_REAL_DISPLAY_IN_INTEGRATION_TESTS").is_ok();
@@ -859,7 +859,7 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
     {
         use crate::settings::ForceX11;
-        use warpui::platform::linux::{self, AppBuilderExt};
+        use zap_ng_ui::platform::linux::{self, AppBuilderExt};
 
         app_builder.set_window_class(ChannelState::app_id().to_string());
 
@@ -888,7 +888,7 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         #[cfg(not(target_family = "wasm"))]
         // Rotate the log files in the background.
         ctx.background_executor()
-            .spawn(warp_logging::rotate_log_files())
+            .spawn(zap_ng_logging::rotate_log_files())
             .detach();
 
         ctx.add_singleton_model(|ctx| {
@@ -947,8 +947,8 @@ pub struct UpdateQuakeModeEventArg {
 fn initialize_app(
     launch_mode: &LaunchMode,
     mut timer: IntervalTimer,
-    startup_toml_parse_error: Option<warpui_extras::user_preferences::Error>,
-    ctx: &mut warpui::AppContext,
+    startup_toml_parse_error: Option<zap_ng_ui_extras::user_preferences::Error>,
+    ctx: &mut zap_ng_ui::AppContext,
     pre_init_errors: impl IntoIterator<Item = anyhow::Error>,
 ) -> Option<AppState> {
     // 警告:这里在 crash_reporting::init 之前发生的错误只能落本地日志。
@@ -958,24 +958,24 @@ fn initialize_app(
     // Register an implementation of the secure storage service.
     cfg_if::cfg_if! {
         if #[cfg(feature = "integration_tests")] {
-            warpui_extras::secure_storage::register_noop(&data_domain, ctx);
+            zap_ng_ui_extras::secure_storage::register_noop(&data_domain, ctx);
         } else if #[cfg(any(target_os = "linux", target_os = "freebsd"))] {
-            warpui_extras::secure_storage::register_with_fallback(&data_domain, warp_core::paths::state_dir(), ctx)
+            zap_ng_ui_extras::secure_storage::register_with_fallback(&data_domain, zap_ng_core::paths::state_dir(), ctx)
         } else {
-            warpui_extras::secure_storage::register(&data_domain, ctx);
+            zap_ng_ui_extras::secure_storage::register(&data_domain, ctx);
         }
     }
 
     // One-time migration: give Preview its own config directory by
     // symlinking contents from the shared ~/.warp location. Must run
-    // before ensure_warp_watch_roots_exist() creates the new directory.
+    // before ensure_zap_ng_watch_roots_exist() creates the new directory.
     #[cfg(target_os = "macos")]
     preview_config_migration::migrate_preview_config_dir_if_needed();
 
-    ensure_warp_watch_roots_exist();
-    ctx.add_singleton_model(WarpManagedPathsWatcher::new);
+    ensure_zap_ng_watch_roots_exist();
+    ctx.add_singleton_model(ZapNGManagedPathsWatcher::new);
 
-    ctx.add_singleton_model(WarpConfig::new);
+    ctx.add_singleton_model(ZapNGConfig::new);
     ctx.add_singleton_model(|_ctx| SettingsManager::default());
 
     let user_defaults_on_startup = settings::init(startup_toml_parse_error, ctx);
@@ -1020,7 +1020,7 @@ fn initialize_app(
     // SSH 管理器在主写线程外开自己的写连接(WAL + busy_timeout 保证安全)。
     // 必须在 persistence::initialize 跑完 migration 之后才设路径,否则首个
     // SshManager 操作可能撞 missing-table。
-    warp_ssh_manager::set_database_path(persistence::database_file_path());
+    zap_ng_ssh_manager::set_database_path(persistence::database_file_path());
 
     let persistence_writer = PersistenceWriter::new(writer_handles);
 
@@ -1284,7 +1284,7 @@ fn initialize_app(
 
             GPUState::handle(ctx).update(ctx, |gpu_state, ctx| {
                 gpu_state
-                    .set_has_lower_power_gpu(warpui::rendering::is_low_power_gpu_available(), ctx);
+                    .set_has_lower_power_gpu(zap_ng_ui::rendering::is_low_power_gpu_available(), ctx);
             });
 
             for window_id in ctx.window_ids().collect_vec() {
@@ -1334,7 +1334,7 @@ fn initialize_app(
         let imported_config_model = ctx.add_singleton_model(ImportedConfigModel::new);
 
         if FeatureFlag::SettingsImport.is_enabled()
-            && ChannelState::channel() != warp_core::channel::Channel::Integration
+            && ChannelState::channel() != zap_ng_core::channel::Channel::Integration
         {
             imported_config_model.update(ctx, |model, ctx| {
                 model.search_for_settings_to_import(ctx);
@@ -1420,7 +1420,7 @@ fn initialize_app(
     // 主体子系统物理删。
     env_vars::env_var_collection_block::init(ctx);
     terminal::ssh::install_tmux::init(ctx);
-    terminal::ssh::warpify::init(ctx);
+    terminal::ssh::zapngify::init(ctx);
     terminal::ssh::error::init(ctx);
     context_chips::display_menu::init(ctx);
     context_chips::node_version_popup::init(ctx);
@@ -1687,8 +1687,8 @@ fn initialize_app(
     app_state
 }
 
-fn app_callbacks(is_integration_test: bool) -> warpui::platform::AppCallbacks {
-    warpui::platform::AppCallbacks {
+fn app_callbacks(is_integration_test: bool) -> zap_ng_ui::platform::AppCallbacks {
+    zap_ng_ui::platform::AppCallbacks {
         on_internet_reachability_changed: Some(Box::new(move |reachable, ctx| {
             NetworkStatus::handle(ctx)
                 .update(ctx, move |me, ctx| me.reachability_changed(reachable, ctx));
@@ -2098,7 +2098,7 @@ fn on_close_window_cancelled(
     }
 }
 
-fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode: LaunchMode) {
+fn launch(ctx: &mut zap_ng_ui::AppContext, app_state: Option<AppState>, launch_mode: LaunchMode) {
     IntervalTimer::handle(ctx).update(ctx, |timer, _ctx| {
         timer.mark_interval_end("APP_LAUNCHED");
     });
@@ -2177,7 +2177,7 @@ fn launch(ctx: &mut warpui::AppContext, app_state: Option<AppState>, launch_mode
 #[cfg(test)]
 fn init_logging_for_unit_tests_glue() {
     // Initialize terminal-friendly logging for tests from the shared logger crate.
-    warp_logging::init_logging_for_unit_tests();
+    zap_ng_logging::init_logging_for_unit_tests();
 }
 
 /// Mark all features which should be enabled on the current channel as enabled.
@@ -2304,7 +2304,7 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::AutoupdateUIRevamp,
         #[cfg(feature = "kitty_images")]
         FeatureFlag::KittyImages,
-        #[cfg(feature = "warp_packs")]
+        #[cfg(feature = "zap_ng_packs")]
         FeatureFlag::WarpPacks,
         #[cfg(feature = "default_adeberry_theme")]
         FeatureFlag::DefaultAdeberryTheme,
@@ -2526,7 +2526,7 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::OzPlatformSkills,
         #[cfg(feature = "bundled_skills")]
         FeatureFlag::BundledSkills,
-        #[cfg(feature = "open_warp_launch_modal")]
+        #[cfg(feature = "open_zap_ng_launch_modal")]
         FeatureFlag::ZapLaunchModal,
         #[cfg(feature = "new_tab_styling")]
         FeatureFlag::NewTabStyling,
@@ -2548,7 +2548,7 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::InlineMenuHeaders,
         #[cfg(feature = "directory_tab_colors")]
         FeatureFlag::DirectoryTabColors,
-        #[cfg(feature = "open_warp_new_settings_modes")]
+        #[cfg(feature = "open_zap_ng_new_settings_modes")]
         FeatureFlag::ZapNewSettingsModes,
         #[cfg(feature = "hoa_code_review")]
         FeatureFlag::HoaCodeReview,
@@ -2568,7 +2568,7 @@ pub fn enabled_features() -> HashSet<FeatureFlag> {
         FeatureFlag::CLIAgentRichInput,
         #[cfg(feature = "transfer_control_tool")]
         FeatureFlag::TransferControlTool,
-        #[cfg(feature = "warpify_footer")]
+        #[cfg(feature = "zapngify_footer")]
         FeatureFlag::WarpifyFooter,
         #[cfg(feature = "solo_user_byok")]
         FeatureFlag::SoloUserByok,

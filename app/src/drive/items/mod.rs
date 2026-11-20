@@ -1,4 +1,4 @@
-use warpui::{elements::MouseStateHandle, AppContext, Element};
+use zap_ng_ui::{elements::MouseStateHandle, AppContext, Element};
 
 use crate::{
     appearance::Appearance,
@@ -8,8 +8,8 @@ use crate::{
 };
 
 use super::{
-    cloud_object_styling::warp_drive_icon_color,
-    index::{warp_drive_section_header_position_id, DriveIndexAction, DriveIndexSection},
+    cloud_object_styling::zap_ng_drive_icon_color,
+    index::{zap_ng_drive_section_header_position_id, DriveIndexAction, DriveIndexSection},
     DriveObjectType, ObjectTypeAndId,
 };
 
@@ -24,7 +24,7 @@ pub mod notebook;
 pub mod space;
 pub mod workflow;
 
-pub trait WarpDriveItem {
+pub trait ZapNGDriveItem {
     /// The display name of the item. If the item is unnamed, this may return `None` - implementations
     /// should prefer this over `Some("")`, as it lets the index view use alternate styling.
     fn display_name(&self) -> Option<String>;
@@ -33,7 +33,7 @@ pub trait WarpDriveItem {
     fn secondary_icon(&self, color: Option<Fill>) -> Option<Box<dyn Element>>; // The optional icon to the right of the name
     fn click_action(&self) -> Option<DriveIndexAction>;
     fn preview(&self, appearance: &Appearance) -> Option<Box<dyn Element>>;
-    fn warp_drive_id(&self) -> WarpDriveItemId;
+    fn zap_ng_drive_id(&self) -> ZapNGDriveItemId;
     fn sync_status_icon(
         &self,
         sync_queue_is_dequeueing: bool,
@@ -43,8 +43,8 @@ pub trait WarpDriveItem {
 
     fn icon(&self, appearance: &Appearance, color: Option<Fill>) -> Option<Box<dyn Element>> {
         let object_type = self.object_type()?;
-        let icon_fill = color.unwrap_or(warp_drive_icon_color(appearance, object_type).into());
-        Some(Icon::from(object_type).to_warpui_icon(icon_fill).finish())
+        let icon_fill = color.unwrap_or(zap_ng_drive_icon_color(appearance, object_type).into());
+        Some(Icon::from(object_type).to_zap_ng_ui_icon(icon_fill).finish())
     }
 
     /// If implemented, returns a string that summarizes the primary action history. For example, "Run 2 times in the last week"
@@ -55,17 +55,17 @@ pub trait WarpDriveItem {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem>;
+    fn clone_box(&self) -> Box<dyn ZapNGDriveItem>;
 }
 
-impl WarpDriveItemId {
+impl ZapNGDriveItemId {
     pub fn drive_row_position_id(&self) -> String {
         match self {
             Self::AIFactCollection => "AI_fact_collection".to_string(),
             Self::MCPServerCollection => "MCP_server_collection".to_string(),
             Self::Object(object_id) => object_id.drive_row_position_id(),
             Self::Space(space) => {
-                warp_drive_section_header_position_id(&DriveIndexSection::Space(*space))
+                zap_ng_drive_section_header_position_id(&DriveIndexSection::Space(*space))
             }
             Self::Trash => "Trash".to_string(),
         }
@@ -74,7 +74,7 @@ impl WarpDriveItemId {
 /// This uniquely identifies an item in Zap Drive index
 /// Includes spaces (which ObjectTypeAndId does not entail)
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum WarpDriveItemId {
+pub enum ZapNGDriveItemId {
     AIFactCollection,
     MCPServerCollection,
     Object(ObjectTypeAndId),
@@ -82,7 +82,7 @@ pub enum WarpDriveItemId {
     Trash,
 }
 
-impl Clone for Box<dyn WarpDriveItem> {
+impl Clone for Box<dyn ZapNGDriveItem> {
     fn clone(&self) -> Self {
         self.clone_box()
     }

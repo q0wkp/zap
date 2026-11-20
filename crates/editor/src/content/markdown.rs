@@ -15,11 +15,11 @@ use std::collections::VecDeque;
 use std::fmt::Write;
 use std::iter;
 use std::{io, ops::Range};
-use warpui::text::point::Point;
-use warpui::{AppContext, ModelContext, ModelHandle};
+use zap_ng_ui::text::point::Point;
+use zap_ng_ui::{AppContext, ModelContext, ModelHandle};
 
 use string_offset::CharOffset;
-use warpui::elements::{ListIndentLevel, ListNumbering};
+use zap_ng_ui::elements::{ListIndentLevel, ListNumbering};
 
 use crate::content::anchor::AnchorSide;
 use crate::content::selection_model::BufferSelectionModel;

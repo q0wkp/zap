@@ -14,7 +14,7 @@ pub(super) mod util;
 
 // Re-export types that were moved to the ai crate.
 pub use ai::agent::{action::*, action_result::*, AIAgentCitation, FileLocations};
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 #[cfg(test)]
 mod suggestion_test;
@@ -33,7 +33,7 @@ use comment::ReviewComment;
 use task::TaskId;
 pub use telemetry::AIIdentifiers;
 
-use warp_editor::render::model::LineCount;
+use zap_ng_editor::render::model::LineCount;
 
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
@@ -45,7 +45,7 @@ use uuid::Uuid;
 use warp_multi_agent_api::{diff_hunk as diff_hunk_api, AgentEvent, AgentType};
 
 pub use self::api::{MaybeAIAgentOutputMessage, MessageToAIAgentOutputMessageError};
-use crate::ai_assistant::execution_context::WarpAiExecutionContext;
+use crate::ai_assistant::execution_context::ZapNGAiExecutionContext;
 use crate::terminal::model::block::BlockId;
 use crate::terminal::shell::ShellType;
 use crate::terminal::view::block_onboarding::onboarding_agentic_suggestions_block::OnboardingChipType;
@@ -1273,7 +1273,7 @@ impl From<FormattedText> for FormattedTextWrapper {
 pub struct AgentOutputText {
     pub(crate) formatted_lines: Option<FormattedTextWrapper>,
     /// The raw text with the Markdown formatting syntax. This is needed for restoring the
-    /// Markdown formatting when reopening warp.
+    /// Markdown formatting when reopening zap-ng.
     markdown_text: String,
 }
 
@@ -1499,7 +1499,7 @@ pub enum SubagentType {
         /// current conversation.
         conversation_id: Option<String>,
     },
-    WarpDocumentationSearch,
+    ZapNGDocumentationSearch,
     Unknown,
 }
 
@@ -2001,7 +2001,7 @@ pub enum AIAgentContext {
 
     /// Information about the execution environment (OS, shell type and version) is included in the
     /// query.
-    ExecutionEnvironment(WarpAiExecutionContext),
+    ExecutionEnvironment(ZapNGAiExecutionContext),
 
     /// The current date and time.
     CurrentTime {

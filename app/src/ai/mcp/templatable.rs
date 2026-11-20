@@ -4,8 +4,8 @@ use chrono::DateTime;
 use handlebars::get_arguments;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use warp_core::ui::appearance::Appearance;
-use warpui::{AppContext, SingletonEntity as _};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{AppContext, SingletonEntity as _};
 
 use crate::{
     cloud_object::{
@@ -17,7 +17,7 @@ use crate::{
         GenericStoredObject, GenericStringObjectFormat, GenericStringObjectUniqueKey,
         JsonObjectType, UniquePer,
     },
-    drive::items::WarpDriveItem,
+    drive::items::ZapNGDriveItem,
     server::{datetime_ext::DateTimeExt, ids::SyncId},
 };
 
@@ -265,16 +265,16 @@ impl StringModel for TemplatableMCPServer {
         })
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         false
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         _id: SyncId,
         _appearance: &Appearance,
         _templatable_mcp_server: &TemplatableMCPServerObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
         None
     }
 }

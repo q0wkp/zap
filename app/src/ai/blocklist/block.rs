@@ -55,8 +55,8 @@ use crate::view_components::compactible_action_button::CompactibleActionButton;
 use crate::AIAgentTodoList;
 use crate::FileEdit;
 use pathfinder_color::ColorU;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::Fill;
 
 use cli_controller::CLISubagentController;
 use cli_controller::CLISubagentEvent;
@@ -64,11 +64,11 @@ use find::FindState;
 use model::AIBlockOutputStatus;
 use parking_lot::FairMutex;
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warpui::elements::get_rich_content_position_id;
-use warpui::elements::ClippedScrollStateHandle;
-use warpui::elements::TableStateHandle;
-use warpui::ui_components::radio_buttons::RadioButtonStateHandle;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::elements::get_rich_content_position_id;
+use zap_ng_ui::elements::ClippedScrollStateHandle;
+use zap_ng_ui::elements::TableStateHandle;
+use zap_ng_ui::ui_components::radio_buttons::RadioButtonStateHandle;
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent::AIAgentActionResultType;
@@ -115,26 +115,26 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::{cell::OnceCell, sync::Arc};
-use warp_util::path::ShellFamily;
-use warpui::elements::MainAxisAlignment;
-use warpui::elements::MainAxisSize;
-use warpui::elements::SecretRange;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::button::TextAndIcon;
-use warpui::ui_components::button::TextAndIconAlignment;
-use warpui::ui_components::components::UiComponent;
-use warpui::ui_components::components::UiComponentStyles;
+use zap_ng_util::path::ShellFamily;
+use zap_ng_ui::elements::MainAxisAlignment;
+use zap_ng_ui::elements::MainAxisSize;
+use zap_ng_ui::elements::SecretRange;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::button::TextAndIcon;
+use zap_ng_ui::ui_components::button::TextAndIconAlignment;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::ui_components::components::UiComponentStyles;
 
 use crate::util::link_detection::*;
 use chrono::Duration;
 use itertools::Itertools;
 use secret_redaction::*;
 #[cfg(feature = "local_fs")]
-use warp_editor::content::edit::resolve_asset_source_relative_to_directory;
-use warp_editor::{
+use zap_ng_editor::content::edit::resolve_asset_source_relative_to_directory;
+use zap_ng_editor::{
     content::buffer::InitialBufferState, render::element::VerticalExpansionBehavior,
 };
-use warpui::{
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{MouseStateHandle, SelectionBound, SelectionHandle},
     keymap::FixedBinding,
@@ -236,7 +236,7 @@ pub const RICH_CONTENT_SECRET_FIRST_CHAR_POSITION_ID: &str =
     "ai_block:rich_content_secret_first_char_position";
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -752,7 +752,7 @@ pub struct AIBlock {
     active_session: ModelHandle<ActiveSession>,
     ambient_agent_view_model: ModelHandle<AmbientAgentViewModel>,
     terminal_view_id: EntityId,
-    window_id: warpui::WindowId,
+    window_id: zap_ng_ui::WindowId,
 
     /// The current working directory at the time the AI block was created. Note that this
     /// is different from `directory_context`, which represents the directory-related contexts
@@ -1993,7 +1993,7 @@ impl AIBlock {
                         button = button.with_text_and_icon_label(TextAndIcon::new(
                             TextAndIconAlignment::TextFirst,
                             accept_text.clone(),
-                            Icon::CornerDownLeft.to_warpui_icon(appearance.theme().foreground()),
+                            Icon::CornerDownLeft.to_zap_ng_ui_icon(appearance.theme().foreground()),
                             MainAxisSize::Max,
                             MainAxisAlignment::SpaceBetween,
                             vec2f(
@@ -2035,7 +2035,7 @@ impl AIBlock {
                         button = button.with_text_and_icon_label(TextAndIcon::new(
                             TextAndIconAlignment::TextFirst,
                             reject_text.clone(),
-                            Icon::CornerDownLeft.to_warpui_icon(appearance.theme().foreground()),
+                            Icon::CornerDownLeft.to_zap_ng_ui_icon(appearance.theme().foreground()),
                             MainAxisSize::Max,
                             MainAxisAlignment::SpaceBetween,
                             vec2f(
@@ -2787,7 +2787,7 @@ impl AIBlock {
                 CodeDiffViewEvent::OpenSkill { reference, path } => {
                     #[cfg(feature = "local_fs")]
                     {
-                        ctx.emit(AIBlockEvent::OpenCodeInWarp {
+                        ctx.emit(AIBlockEvent::OpenCodeInZapNG {
                             source: CodeSource::Skill {
                                 reference: reference.clone(),
                                 path: path.clone(),
@@ -2805,7 +2805,7 @@ impl AIBlock {
                 CodeDiffViewEvent::OpenMCPConfig { path, .. } => {
                     #[cfg(feature = "local_fs")]
                     {
-                        ctx.emit(AIBlockEvent::OpenCodeInWarp {
+                        ctx.emit(AIBlockEvent::OpenCodeInZapNG {
                             source: CodeSource::Link {
                                 path: path.clone(),
                                 range_start: None,
@@ -3387,7 +3387,7 @@ impl AIBlock {
             AwsBedrockCredentialsErrorEvent::ConfigureLoginCommand => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "aws bedrock".to_string(),
-                    section: Some(SettingsSection::WarpAgent),
+                    section: Some(SettingsSection::ZapNGAgent),
                 });
             }
         });
@@ -5141,7 +5141,7 @@ pub enum AIBlockEvent {
     #[cfg(feature = "local_fs")]
     OpenDetectedFilePath {
         absolute_path: PathBuf,
-        line_and_column_num: Option<warp_util::path::LineAndColumnArg>,
+        line_and_column_num: Option<zap_ng_util::path::LineAndColumnArg>,
         target_override: Option<FileTarget>,
     },
     ShowLinkTooltip(RichContentLinkTooltipInfo),
@@ -5187,7 +5187,7 @@ pub enum AIBlockEvent {
     CopiedEmptyText,
     OpenSettings,
     #[cfg(feature = "local_fs")]
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
         layout: crate::util::file::external_editor::settings::EditorLayout,
     },
@@ -5315,7 +5315,7 @@ pub enum AIBlockAction {
         server_output_id: Option<ServerOutputId>,
     },
     /// Clear the selections of all other views **except** for the source view that dispatched the event.
-    /// The `source_view_id` will be `None` if the event is dispatched by the [`warpui::elements::SelectableArea`]
+    /// The `source_view_id` will be `None` if the event is dispatched by the [`zap_ng_ui::elements::SelectableArea`]
     /// instead of a nested view (i.e. code block, requested command, etc.), which means all nested views
     /// should have their selections cleared.
     ClearOtherSelections {
@@ -5338,7 +5338,7 @@ pub enum AIBlockAction {
     StoreRightClickedCommand {
         command: String,
     },
-    OpenCodeInWarp {
+    OpenCodeInZapNG {
         source: CodeSource,
     },
     ToggleTodoListExpanded(MessageId),
@@ -5774,7 +5774,7 @@ impl TypedActionView for AIBlock {
                 // Clear the stored command after copying
                 self.last_right_clicked_command = None;
             }
-            AIBlockAction::OpenCodeInWarp {
+            AIBlockAction::OpenCodeInZapNG {
                 #[cfg_attr(not(feature = "local_fs"), allow(unused))]
                 source,
             } => {
@@ -5808,7 +5808,7 @@ impl TypedActionView for AIBlock {
 
                 #[cfg(feature = "local_fs")]
                 {
-                    ctx.emit(AIBlockEvent::OpenCodeInWarp {
+                    ctx.emit(AIBlockEvent::OpenCodeInZapNG {
                         source: source.clone(),
                         layout: *crate::util::file::external_editor::EditorSettings::as_ref(ctx)
                             .open_file_layout
@@ -5847,7 +5847,7 @@ impl TypedActionView for AIBlock {
             AIBlockAction::ConfigureAwsLoginCommand => {
                 ctx.dispatch_typed_action(&WorkspaceAction::ShowSettingsPageWithSearch {
                     search_query: "aws bedrock".to_string(),
-                    section: Some(SettingsSection::WarpAgent),
+                    section: Some(SettingsSection::ZapNGAgent),
                 });
             }
             AIBlockAction::ToggleImportedCommentCollapsed {

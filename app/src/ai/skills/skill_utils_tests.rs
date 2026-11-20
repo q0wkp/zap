@@ -13,19 +13,19 @@ fn test_skill_path_from_file_path_skill_md() {
 }
 
 #[test]
-fn test_skill_path_from_file_path_warp_home_skill() {
-    let Some(warp_home_skills_dir) = warp_core::paths::warp_home_skills_dir() else {
+fn test_skill_path_from_file_path_zap_ng_home_skill() {
+    let Some(zap_ng_home_skills_dir) = zap_ng_core::paths::zap_ng_home_skills_dir() else {
         eprintln!("Skipping test: Zap home skills directory not available");
         return;
     };
-    let warp_home_skill = warp_home_skills_dir
+    let zap_ng_home_skill = zap_ng_home_skills_dir
         .join("my-skill")
         .join("assets")
         .join("image.png");
-    let result = skill_path_from_file_path(&warp_home_skill);
+    let result = skill_path_from_file_path(&zap_ng_home_skill);
     assert_eq!(
         result,
-        Some(warp_home_skills_dir.join("my-skill").join("SKILL.md"))
+        Some(zap_ng_home_skills_dir.join("my-skill").join("SKILL.md"))
     );
 }
 

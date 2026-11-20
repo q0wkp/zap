@@ -1,6 +1,6 @@
 use super::*;
 use itertools::Itertools;
-use warpui::keymap::BindingId;
+use zap_ng_ui::keymap::BindingId;
 
 #[test]
 fn test_enqueue_new_item() {

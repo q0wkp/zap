@@ -1,11 +1,11 @@
-use warpui::{
+use zap_ng_ui::{
     async_assert, async_assert_eq, integration::AssertionCallback, App, ViewHandle, WindowId,
 };
 
 use crate::code::editor::goto_line::view::GoToLineView;
 use crate::code::editor::view::CodeEditorView;
 
-use warp_editor::content::buffer::ToBufferPoint;
+use zap_ng_editor::content::buffer::ToBufferPoint;
 
 fn file_code_editor_view(app: &App, window_id: WindowId) -> ViewHandle<CodeEditorView> {
     let views = app

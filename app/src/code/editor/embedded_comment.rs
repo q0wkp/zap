@@ -6,18 +6,18 @@ use std::sync::Arc;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use serde_yaml::Mapping;
 use uuid::Uuid;
-use warp_editor::content::markdown::MarkdownStyle;
-use warp_editor::editor::EmbeddedItemModel;
-use warp_editor::render::element::{RenderContext, RenderableBlock};
-use warp_editor::render::layout::TextLayout;
+use zap_ng_editor::content::markdown::MarkdownStyle;
+use zap_ng_editor::editor::EmbeddedItemModel;
+use zap_ng_editor::render::element::{RenderContext, RenderableBlock};
+use zap_ng_editor::render::layout::TextLayout;
 
-use warp_editor::render::model::{
+use zap_ng_editor::render::model::{
     viewport::ViewportItem, BlockSpacing, EmbeddedItem, EmbeddedItemHTMLRepresentation,
     EmbeddedItemRichFormat, LaidOutEmbeddedItem, RenderState,
 };
-use warpui::event::DispatchedEvent;
-use warpui::units::Pixels;
-use warpui::{AppContext, EntityId, EventContext, LayoutContext, ViewHandle, WindowId};
+use zap_ng_ui::event::DispatchedEvent;
+use zap_ng_ui::units::Pixels;
+use zap_ng_ui::{AppContext, EntityId, EventContext, LayoutContext, ViewHandle, WindowId};
 
 use crate::code::editor::comment_editor::CommentEditor;
 use crate::code_review::comments::CommentId;

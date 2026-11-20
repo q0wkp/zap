@@ -68,9 +68,9 @@ impl CompactionConfig {
     /// - `byop_compaction_reserved` → `reserved`(0 → None,走 min(20_000, max_output))
     /// - `byop_compaction_model_provider_id` + `byop_compaction_model_id` → `compaction_model`
     ///   (任一为空 → None,回退到 conversation 当前 model)
-    pub fn from_settings(app: &warpui::AppContext) -> Self {
+    pub fn from_settings(app: &zap_ng_ui::AppContext) -> Self {
         use crate::settings::AISettings;
-        use warpui::SingletonEntity as _;
+        use zap_ng_ui::SingletonEntity as _;
         let s = AISettings::as_ref(app);
         let provider_id = s.byop_compaction_model_provider_id.to_string();
         let model_id = s.byop_compaction_model_id.to_string();

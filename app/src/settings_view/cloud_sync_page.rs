@@ -5,7 +5,7 @@
 
 use pathfinder_geometry::vector::vec2f;
 use settings::Setting;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         ChildAnchor, Container, CrossAxisAlignment, Dismiss, Element, Flex, MainAxisSize,
         MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds,
@@ -32,7 +32,7 @@ use crate::settings::{CloudSyncTokenStore, GITHUB_TOKEN_KEY, GITEE_TOKEN_KEY};
 use crate::ssh_manager::{SshTreeChangedEvent, SshTreeChangedNotifier};
 use crate::view_components::dropdown::{Dropdown, DropdownItem};
 
-use warp_ssh_manager::{with_conn, DbVersionStore, SyncMetaRepository, SshSyncProvider};
+use zap_ng_ssh_manager::{with_conn, DbVersionStore, SyncMetaRepository, SshSyncProvider};
 use zap_sync::{GistClient, GistClientError, SyncEngine, SyncPlatform, SyncResult, SyncEngineError};
 
 const INPUT_AREA_MAX_WIDTH: f32 = 420.0;
@@ -1174,7 +1174,7 @@ impl SettingsWidget for CloudSyncPageWidget {
         );
 
         // 平台选择 Dropdown
-        let dropdown_element = warpui::elements::ChildView::new(&view.platform_dropdown).finish();
+        let dropdown_element = zap_ng_ui::elements::ChildView::new(&view.platform_dropdown).finish();
         content.add_child(render_body_item::<CloudSyncPageAction>(
             crate::t!("settings-cloud-sync-platform-label"),
             None::<AdditionalInfo<CloudSyncPageAction>>,

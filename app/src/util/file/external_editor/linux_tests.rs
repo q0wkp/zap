@@ -1,4 +1,4 @@
-use warp_util::path::LineAndColumnArg;
+use zap_ng_util::path::LineAndColumnArg;
 
 use super::{DesktopExecError, EditorMetadata};
 use std::path::PathBuf;

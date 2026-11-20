@@ -5,8 +5,8 @@ use crate::search::item::SearchItem;
 use ordered_float::OrderedFloat;
 use std::collections::HashSet;
 use std::time::Duration;
-use warpui::r#async::Timer;
-use warpui::{App, AppContext, Element};
+use zap_ng_ui::r#async::Timer;
+use zap_ng_ui::{App, AppContext, Element};
 
 #[derive(Clone, Debug, PartialEq)]
 struct TestAction {

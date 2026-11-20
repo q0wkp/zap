@@ -4,7 +4,7 @@ use futures_lite::future;
 use itertools::Itertools;
 use rangemap::RangeSet;
 use sum_tree::SumTree;
-use warpui::App;
+use zap_ng_ui::App;
 
 use crate::content::{
     buffer::Buffer,
@@ -28,7 +28,7 @@ fn test_search_cjk_literal() {
         buffer.read(&app, |buffer, _| {
             // The buffer always starts with a block marker at char 0, so the text begins at
             // offset 1: `账户` lands at 21..23 (verified against the engine). This expectation
-            // was stale after the OpenWarp→Zap rename shortened the fixture string.
+            // was stale after the ZapNG→Zap rename shortened the fixture string.
             assert_matches(
                 buffer,
                 &SearchConfig {

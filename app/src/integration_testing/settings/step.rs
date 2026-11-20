@@ -1,5 +1,5 @@
 use settings::{Setting, ToggleableSetting};
-use warpui::{async_assert, integration::TestStep, windowing::WindowManager, SingletonEntity};
+use zap_ng_ui::{async_assert, integration::TestStep, windowing::WindowManager, SingletonEntity};
 
 use crate::{
     integration_testing::{

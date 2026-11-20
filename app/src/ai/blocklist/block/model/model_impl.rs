@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use anyhow::{anyhow, Result};
 use chrono::{Local, TimeDelta};
 use history_model::{BlocklistAIHistoryEvent, BlocklistAIHistoryModel};
-use warpui::{AppContext, SingletonEntity, View, ViewContext};
+use zap_ng_ui::{AppContext, SingletonEntity, View, ViewContext};
 
 use crate::terminal::shared_session::ParticipantId;
 

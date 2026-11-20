@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use pathfinder_geometry::vector::vec2f;
 
-use warpui::{
+use zap_ng_ui::{
     assets::asset_cache::{AssetCache, AssetSource, LocalFileContentVersion},
     elements::{
         Border, CacheOption, ChildAnchor, ConstrainedBox, Container, CornerRadius, Dismiss, Flex,
@@ -76,25 +76,25 @@ struct GridTooltipLink {
     mouse_state: MouseStateHandle,
 }
 
-/// If appropriate, returns a GridTooltipLink for opening the file in warp.
+/// If appropriate, returns a GridTooltipLink for opening the file in zap-ng.
 /// Mutates `detail_for_default` leaving None in place if the GridTooltipLink returned is the default
 /// action on "Cmd+Click" and thus should use the detail_for_default.
 #[cfg(feature = "local_fs")]
-fn open_in_warp_tooltip(
+fn open_in_zap_ng_tooltip(
     path: std::path::PathBuf,
-    line_and_column_num: Option<warp_util::path::LineAndColumnArg>,
+    line_and_column_num: Option<zap_ng_util::path::LineAndColumnArg>,
     detail_for_default: &mut Option<String>,
     mouse_state: MouseStateHandle,
     app: &AppContext,
 ) -> Option<GridTooltipLink> {
     use crate::{
         settings::CodeSettings, util::file::external_editor::EditorSettings,
-        util::tooltips::should_show_open_in_warp_link,
+        util::tooltips::should_show_open_in_zap_ng_link,
     };
     use settings::Setting as _;
-    use warpui::SingletonEntity;
+    use zap_ng_ui::SingletonEntity;
 
-    if !should_show_open_in_warp_link(&path, app) {
+    if !should_show_open_in_zap_ng_link(&path, app) {
         return None;
     }
 
@@ -105,7 +105,7 @@ fn open_in_warp_tooltip(
     };
     Some(GridTooltipLink {
         text: crate::t!("terminal-open-in-warp"),
-        action: TerminalAction::OpenCodeInWarp {
+        action: TerminalAction::OpenCodeInZapNG {
             path,
             layout: *EditorSettings::as_ref(app).open_file_layout.value(),
             line_col: line_and_column_num,
@@ -250,7 +250,7 @@ impl TerminalView {
 
         #[cfg_attr(not(feature = "local_fs"), allow(unused_mut))]
         if let Some(link) = &self.open_grid_link_tool_tip {
-            let mut open_in_warp = None;
+            let mut open_in_zap_ng = None;
             let mut show_in_file_explorer = None;
             let modifier = directly_open_link_keybinding_string();
             let mut detail = Some(format!("[{modifier} Click]"));
@@ -258,11 +258,11 @@ impl TerminalView {
             {
                 if let GridHighlightedLink::File(file_link) = link {
                     if let Some(path) = file_link.get_inner().absolute_path() {
-                        open_in_warp = open_in_warp_tooltip(
+                        open_in_zap_ng = open_in_zap_ng_tooltip(
                             path.clone(),
                             file_link.get_inner().line_and_column_num,
                             &mut detail,
-                            self.mouse_states.open_in_warp_tooltip.clone(),
+                            self.mouse_states.open_in_zap_ng_tooltip.clone(),
                             app,
                         );
                         show_in_file_explorer = Some(show_in_file_explorer_tooltip(
@@ -280,14 +280,14 @@ impl TerminalView {
                 detail,
             });
 
-            links.extend(open_in_warp);
+            links.extend(open_in_zap_ng);
             links.extend(show_in_file_explorer);
         }
 
         #[cfg_attr(not(feature = "local_fs"), allow(unused_mut))]
         if let Some(tooltip_info) = &self.open_rich_content_link_tool_tip {
             element_id = tooltip_info.position_id.to_owned();
-            let mut open_in_warp = None;
+            let mut open_in_zap_ng = None;
             let mut show_in_file_explorer = None;
             let modifier_string = directly_open_link_keybinding_string();
             let mut detail = Some(format!("[{modifier_string} Click]"));
@@ -300,11 +300,11 @@ impl TerminalView {
                     ..
                 } = &tooltip_info.link
                 {
-                    open_in_warp = open_in_warp_tooltip(
+                    open_in_zap_ng = open_in_zap_ng_tooltip(
                         absolute_path.clone(),
                         *line_and_column_num,
                         &mut detail,
-                        self.mouse_states.open_in_warp_tooltip.clone(),
+                        self.mouse_states.open_in_zap_ng_tooltip.clone(),
                         app,
                     );
                     show_in_file_explorer = Some(show_in_file_explorer_tooltip(
@@ -321,7 +321,7 @@ impl TerminalView {
                 detail,
             });
 
-            links.extend(open_in_warp);
+            links.extend(open_in_zap_ng);
             links.extend(show_in_file_explorer);
         }
 

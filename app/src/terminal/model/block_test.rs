@@ -260,7 +260,7 @@ pub fn test_find() {
 
 #[test]
 pub fn test_long_running_block_bottom_padding() {
-    warpui::r#async::block_on(async {
+    zap_ng_ui::r#async::block_on(async {
         let mut block = TestBlockBuilder::new().build();
 
         block.precmd(Default::default());
@@ -279,7 +279,7 @@ pub fn test_long_running_block_bottom_padding() {
 
         // After the long running duration, the block should switch
         let duration = LONG_RUNNING_COMMAND_DURATION_MS + 1;
-        warpui::r#async::Timer::after(Duration::from_millis(duration)).await;
+        zap_ng_ui::r#async::Timer::after(Duration::from_millis(duration)).await;
 
         assert!(block.is_active_and_long_running());
         assert!(block.padding_bottom() == LONG_RUNNING_BOTTOM_PADDING_LINES.into_lines());
@@ -508,7 +508,7 @@ pub fn test_block_emits_block_completed_event_for_in_band_command() {
 
     events_rx.close();
     let block_completed_event =
-        warpui::r#async::block_on(pin!(events_rx).find(|event| match event {
+        zap_ng_ui::r#async::block_on(pin!(events_rx).find(|event| match event {
             Event::BlockCompleted(event) => matches!(event.block_type, BlockType::InBandCommand),
             _ => false,
         }));
@@ -701,7 +701,7 @@ fn test_command_and_output_to_string_includes_ps1_prompt_command_rprompt_and_out
 }
 
 #[test]
-fn test_command_and_output_to_string_excludes_warp_prompt() {
+fn test_command_and_output_to_string_excludes_zap_ng_prompt() {
     let block_index = BlockIndex::zero();
     let mut prompt_and_command_grid = mock_blockgrid("cmd1");
     prompt_and_command_grid.finish();
@@ -1191,11 +1191,11 @@ fn test_command_is_not_empty_combined_grid() {
 /// be against (0, 0) in the combined grid, for the Zap prompt case, rather than checking against the
 /// prompt grid (which we do in the PS1 active case).
 #[test]
-fn test_command_is_empty_warp_prompt() {
+fn test_command_is_empty_zap_ng_prompt() {
     let block_index = BlockIndex::zero();
     // Combined grid contents:
     // -----
-    // warp_prompt
+    // zap_ng_prompt
     // abcde
     // -----
 
@@ -1359,7 +1359,7 @@ fn test_top_level_command_with_aliases() {
 
 #[test]
 fn test_mark_end_of_prompt_with_some_rows_in_flat_storage() {
-    use warp_terminal::model::grid::Dimensions as _;
+    use zap_ng_terminal::model::grid::Dimensions as _;
 
     let mut block = TestBlockBuilder::new()
         // Set the number of visible rows to 1, so that the first row of the

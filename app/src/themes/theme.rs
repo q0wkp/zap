@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::path::PathBuf;
-use warp_core::ui::color::pick_foreground_color;
-use warpui::assets::asset_cache::AssetSource;
-use warpui::{
+use zap_ng_core::ui::color::pick_foreground_color;
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::{
     color::ColorU,
     elements::{
         Align, Border, ConstrainedBox, Container, Element, Empty, Flex, ParentElement, Rect,
@@ -17,8 +17,8 @@ use warpui::{
 
 use super::theme_creator::{pick_accent_color_from_options, top_colors_for_image};
 
-pub use warp_core::ui::color::blend::Blend;
-pub use warp_core::ui::theme::*;
+pub use zap_ng_core::ui::color::blend::Blend;
+pub use zap_ng_core::ui::theme::*;
 
 const THUMBNAIL_MARGIN: f32 = 10.;
 
@@ -260,7 +260,7 @@ impl InMemoryThemeOptions {
         self.path = path;
     }
 
-    pub fn theme(&self) -> WarpTheme {
+    pub fn theme(&self) -> ZapNGTheme {
         let bg_color = self.chosen_bg_color();
         let fg_color = pick_foreground_color(bg_color);
         let possible_accent_colors: Vec<ColorU> = self
@@ -279,7 +279,7 @@ impl InMemoryThemeOptions {
             (Details::Lighter, light_mode_colors())
         };
 
-        WarpTheme::new(
+        ZapNGTheme::new(
             bg_color.into(),
             fg_color,
             accent_color.into(),
@@ -301,14 +301,14 @@ impl InMemoryThemeOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct WarpThemeConfig {
-    theme_map: HashMap<ThemeKind, WarpTheme>,
+pub struct ZapNGThemeConfig {
+    theme_map: HashMap<ThemeKind, ZapNGTheme>,
 }
 
-impl WarpThemeConfig {
+impl ZapNGThemeConfig {
     pub fn new() -> Self {
         // preload with built-in themes
-        let theme_map: HashMap<ThemeKind, WarpTheme> = HashMap::from_iter([
+        let theme_map: HashMap<ThemeKind, ZapNGTheme> = HashMap::from_iter([
             (ThemeKind::SentReferralReward, sent_referral_reward()),
             (
                 ThemeKind::ReceivedReferralReward,
@@ -340,10 +340,10 @@ impl WarpThemeConfig {
             (ThemeKind::WezTermClassic, wezterm_classic()),
             (ThemeKind::VsCode2026Dark, vscode_2026_dark()),
         ]);
-        WarpThemeConfig { theme_map }
+        ZapNGThemeConfig { theme_map }
     }
 
-    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: WarpTheme) {
+    pub fn add_new_theme(&mut self, theme_name: ThemeKind, theme: ZapNGTheme) {
         self.theme_map.insert(theme_name, theme);
     }
 
@@ -351,16 +351,16 @@ impl WarpThemeConfig {
         CustomTheme::new(name, path).into()
     }
 
-    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &WarpTheme)> {
+    pub fn theme_items(&self) -> impl Iterator<Item = (&ThemeKind, &ZapNGTheme)> {
         self.theme_map.iter()
     }
 
-    pub fn theme(&self, name: &ThemeKind) -> WarpTheme {
+    pub fn theme(&self, name: &ThemeKind) -> ZapNGTheme {
         self.theme_map.get(name).cloned().unwrap_or_else(dark_theme)
     }
 }
 
-impl Default for WarpThemeConfig {
+impl Default for ZapNGThemeConfig {
     fn default() -> Self {
         Self::new()
     }
@@ -429,8 +429,8 @@ pub struct PromptColors {
     pub input_prompt_ssh: ColorU,
 }
 
-impl From<WarpTheme> for PromptColors {
-    fn from(theme: WarpTheme) -> Self {
+impl From<ZapNGTheme> for PromptColors {
+    fn from(theme: ZapNGTheme) -> Self {
         PromptColors {
             input_prompt_conversation_management: theme.terminal_colors().normal.white.into(),
             input_prompt_pwd: theme.terminal_colors().normal.magenta.into(),
@@ -453,7 +453,7 @@ impl From<WarpTheme> for PromptColors {
 }
 
 pub fn render_preview(
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     font_family: FamilyId,
     form_factor: Option<f32>,
 ) -> Box<dyn Element> {
@@ -535,9 +535,9 @@ pub fn render_preview(
         thumbnail.add_child(
             Shrinkable::new(
                 1.,
-                warpui::elements::Image::new(
+                zap_ng_ui::elements::Image::new(
                     background_image.source(),
-                    warpui::elements::CacheOption::BySize,
+                    zap_ng_ui::elements::CacheOption::BySize,
                 )
                 .cover()
                 .finish(),

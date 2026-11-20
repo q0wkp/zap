@@ -8,9 +8,9 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tempfile::NamedTempFile;
-use warp_cli::agent::Harness;
-use warp_managed_secrets::ManagedSecretValue;
-use warpui::{ModelHandle, ModelSpawner};
+use zap_ng_cli::agent::Harness;
+use zap_ng_managed_secrets::ManagedSecretValue;
+use zap_ng_ui::{ModelHandle, ModelSpawner};
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::agent_events::AgentEventStreamClient;

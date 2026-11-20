@@ -33,21 +33,21 @@ use markdown_parser::{
 use pathfinder_geometry::vector::Vector2F;
 use string_offset::CharOffset;
 use vec1::vec1;
-use warp_core::features::FeatureFlag;
-use warp_editor::content::buffer::{AutoScrollBehavior, BufferSelectAction, SelectionOffsets};
-use warp_editor::content::text::{BlockType, BufferBlockStyle, CodeBlockType, TextStyles};
-use warp_editor::model::{CoreEditorModel, RichTextEditorModel};
-use warp_editor::render::model::viewport::SizeInfo;
-use warp_editor::render::model::BlockItem;
-use warp_editor::render::model::RenderEvent;
-use warp_editor::selection::{TextDirection, TextUnit};
-use warpui::elements::ListIndentLevel;
-use warpui::platform::WindowStyle;
-use warpui::presenter::ChildView;
-use warpui::r#async::{block_on, FutureId};
-use warpui::text::word_boundaries::WordBoundariesPolicy;
-use warpui::{r#async::Timer, App, Entity, ModelHandle, SingletonEntity, TypedActionView};
-use warpui::{AddSingletonModel, AppContext, Element, View, ViewHandle};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_editor::content::buffer::{AutoScrollBehavior, BufferSelectAction, SelectionOffsets};
+use zap_ng_editor::content::text::{BlockType, BufferBlockStyle, CodeBlockType, TextStyles};
+use zap_ng_editor::model::{CoreEditorModel, RichTextEditorModel};
+use zap_ng_editor::render::model::viewport::SizeInfo;
+use zap_ng_editor::render::model::BlockItem;
+use zap_ng_editor::render::model::RenderEvent;
+use zap_ng_editor::selection::{TextDirection, TextUnit};
+use zap_ng_ui::elements::ListIndentLevel;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::presenter::ChildView;
+use zap_ng_ui::r#async::{block_on, FutureId};
+use zap_ng_ui::text::word_boundaries::WordBoundariesPolicy;
+use zap_ng_ui::{r#async::Timer, App, Entity, ModelHandle, SingletonEntity, TypedActionView};
+use zap_ng_ui::{AddSingletonModel, AppContext, Element, View, ViewHandle};
 
 /// Container for a [`RichTextEditorView`] in unit tests.
 struct TestView {
@@ -63,7 +63,7 @@ impl View for TestView {
         "TestView"
     }
 
-    fn render(&self, _app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, _app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         ChildView::new(&self.editor).finish()
     }
 }

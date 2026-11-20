@@ -39,7 +39,7 @@ pub use shell_command::{ShellCommandExecutor, ShellCommandExecutorEvent};
 pub use suggest_new_conversation::NewConversationDecision;
 use suggest_new_conversation::SuggestNewConversationExecutor;
 pub use suggest_prompt::{PromptSuggestionExecutor, PromptSuggestionExecutorEvent};
-use warp_core::{execution_mode::AppExecutionMode, features::FeatureFlag};
+use zap_ng_core::{execution_mode::AppExecutionMode, features::FeatureFlag};
 
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::is_binary_file;
@@ -47,12 +47,12 @@ use crate::util::openable_file_type::is_binary_file;
 use futures::AsyncReadExt;
 use std::{any::Any, path::PathBuf, pin::Pin, sync::Arc};
 #[cfg(feature = "local_fs")]
-use warp_files::{FileModel, TextFileReadResult};
+use zap_ng_files::{FileModel, TextFileReadResult};
 #[cfg(feature = "local_fs")]
-use warp_util::file::FileLoadError;
+use zap_ng_util::file::FileLoadError;
 #[cfg(feature = "local_fs")]
-use warp_util::file_type::is_buffer_binary;
-use warpui::{
+use zap_ng_util::file_type::is_buffer_binary;
+use zap_ng_ui::{
     r#async::{Spawnable, SpawnableOutput},
     AppContext, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity,
 };
@@ -988,11 +988,11 @@ async fn should_read_as_binary(path: &std::path::Path) -> bool {
     is_file_content_binary_async(path).await
 }
 
-/// Async sibling of [`warp_util::file_type::is_file_content_binary`]. Reads
+/// Async sibling of [`zap_ng_util::file_type::is_file_content_binary`]. Reads
 /// the first 1 KiB of `path` asynchronously and returns `true` if the content
 /// looks binary according to [`is_buffer_binary`]. Returns `true` on any I/O
 /// error so callers default to the binary code path. Kept local to this
-/// module so `warp_util` doesn't need to grow an `async_fs` dependency.
+/// module so `zap_ng_util` doesn't need to grow an `async_fs` dependency.
 #[cfg(feature = "local_fs")]
 async fn is_file_content_binary_async(path: &std::path::Path) -> bool {
     const CHUNK_SIZE: usize = 1024;

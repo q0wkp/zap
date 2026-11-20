@@ -1,5 +1,5 @@
-use warp_editor::content::version::BufferVersion;
-use warp_util::path::LineAndColumnArg;
+use zap_ng_editor::content::version::BufferVersion;
+use zap_ng_util::path::LineAndColumnArg;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScrollWheelBehavior {

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use warp_core::ui::{appearance::Appearance, icons::Icon};
-use warpui::{keymap::Keystroke, platform::OperatingSystem, prelude::*};
+use zap_ng_core::ui::{appearance::Appearance, icons::Icon};
+use zap_ng_ui::{keymap::Keystroke, platform::OperatingSystem, prelude::*};
 
 use crate::Component;
 

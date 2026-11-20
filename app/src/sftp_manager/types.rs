@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use warpui::elements::MouseStateHandle;
+use zap_ng_ui::elements::MouseStateHandle;
 
 /// 文件条目类型（UI 层）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

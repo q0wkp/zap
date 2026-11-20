@@ -5,9 +5,9 @@ use super::*;
 use pathfinder_geometry::vector::vec2f;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use warp_core::ui::appearance::Appearance;
-use warpui::platform::WindowStyle;
-use warpui::{App, WindowId, WindowInvalidation};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, WindowId, WindowInvalidation};
 
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
@@ -369,7 +369,7 @@ fn open_server_view(app: &mut App) -> (WindowId, ViewHandle<SshServerView>) {
     app.add_singleton_model(|_| KeybindingChangedNotifier::mock());
     // 表单一构造就读 SSH 管理器的库:没有路径会 panic,给一个临时文件即可,
     // 里面没有表,读不到节点只记一条日志。进程内只有第一次设置生效。
-    warp_ssh_manager::set_database_path(
+    zap_ng_ssh_manager::set_database_path(
         std::env::temp_dir().join("warp_ssh_server_view_test.sqlite"),
     );
 

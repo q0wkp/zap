@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use string_offset::CharOffset;
-use warp_editor::model::CoreEditorModel;
-use warpui::{
+use zap_ng_editor::model::CoreEditorModel;
+use zap_ng_ui::{
     async_assert, integration::TestStep, windowing::WindowManager, App, SingletonEntity,
     ViewHandle, WindowId,
 };

@@ -5,12 +5,12 @@ use pathfinder_geometry::vector::vec2f;
 use ui_components::{
     button, button::Button as ButtonComponent, Component, MouseEventHandler, Options as _,
 };
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::Appearance,
     color::{coloru_with_opacity, contrast::relative_luminance},
     theme::{phenomenon::PhenomenonStyle, Fill},
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DropShadow, Flex,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Rect,
@@ -18,7 +18,7 @@ use warpui::{
     fonts::Weight,
     keymap::Keystroke,
     prelude::*,
-    ui_components::checkbox::Checkbox as WarpCheckbox,
+    ui_components::checkbox::Checkbox as ZapNGCheckbox,
     ui_components::components::{UiComponent as _, UiComponentStyles},
 };
 
@@ -251,7 +251,7 @@ impl OnboardingCallout {
         let foreground_color = PhenomenonStyle::foreground();
         let subtle_border = Fill::Solid(PhenomenonStyle::subtle_border());
 
-        let checkbox_element = WarpCheckbox::new(
+        let checkbox_element = ZapNGCheckbox::new(
             self.checkbox_mouse_state.clone(),
             UiComponentStyles {
                 font_size: checkbox_size,

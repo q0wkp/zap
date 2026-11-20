@@ -13,7 +13,7 @@ use super::{
 };
 use header::PaneHeader;
 
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, Container, DropTarget, DropTargetData, Flex, MainAxisSize, ParentElement,
         SavePosition, Shrinkable,
@@ -400,7 +400,7 @@ impl<P: BackingView> View for PaneView<P> {
         .finish()
     }
 
-    fn keymap_context(&self, _ctx: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, _ctx: &AppContext) -> zap_ng_ui::keymap::Context {
         Self::default_keymap_context()
     }
 }

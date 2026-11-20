@@ -1,7 +1,7 @@
 //! Generic model for tracking the selected item in an inline menu.
 use std::collections::HashSet;
-use warpui::elements::MouseStateHandle;
-use warpui::{Entity, ModelContext};
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::{Entity, ModelContext};
 
 use crate::search::data_source::QueryFilter;
 use crate::terminal::input::inline_menu::view::InlineMenuAction;

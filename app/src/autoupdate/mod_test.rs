@@ -1,6 +1,6 @@
 use chrono::{Local, TimeZone};
 use std::sync::Arc;
-use warpui::{App, ModelHandle, UpdateModel};
+use zap_ng_ui::{App, ModelHandle, UpdateModel};
 
 use crate::{
     auth::{AuthManager, AuthStateProvider},
@@ -8,7 +8,7 @@ use crate::{
 };
 
 use settings::{Setting as _, SettingsManager};
-use warp_core::execution_mode::{AppExecutionMode, ExecutionMode};
+use zap_ng_core::execution_mode::{AppExecutionMode, ExecutionMode};
 
 use super::*;
 
@@ -605,10 +605,10 @@ fn test_should_update() {
                 _ => panic!("Expected UpdateReady::CanDownload for new update"),
             }
 
-            // openWarp(Channel::Oss)下 `ChannelState::app_version()` 保留 `v` 前缀,
+            // ZapNG(Channel::Oss)下 `ChannelState::app_version()` 保留 `v` 前缀,
             // 而 `github::GithubRelease::version()` 已经 trim 掉 `v`。两者只差 `v`
             // 前缀时应识别为 `UpdateReady::No`,否则关于页会永远提示“发现新版本”。
-            // Test 6: openWarp 同版本(本地带 v、远端不带 v)
+            // Test 6: ZapNG 同版本(本地带 v、远端不带 v)
             ChannelState::set_app_version(Some("v2026.05.10.preview"));
             let version = make_version_info("2026.05.10.preview", false);
             let result = autoupdate.should_update(version, "oss_same_version".to_string());

@@ -14,9 +14,9 @@
 
 use std::collections::HashMap;
 
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::artifacts::Artifact;

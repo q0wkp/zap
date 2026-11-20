@@ -1,5 +1,5 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     fonts::Weight,
     ui_components::components::{Coords, UiComponentStyles},
 };

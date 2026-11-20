@@ -1,19 +1,19 @@
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use zap_ng_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::elements::{
     CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, Image, MainAxisSize, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::Element;
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::Element;
 
 use crate::appearance::Appearance;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::ActionButton;
 
-use warpui::ViewHandle;
+use zap_ng_ui::ViewHandle;
 
 const BANNER_WIDTH: f32 = 420.;
 const HERO_HEIGHT: f32 = 92.;
@@ -114,7 +114,7 @@ pub fn render_welcome_banner(
     for item in FEATURE_ITEMS {
         let icon_el = ConstrainedBox::new(
             item.icon
-                .to_warpui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
+                .to_zap_ng_ui_icon(Fill::Solid(PhenomenonStyle::modal_feature_title_text()))
                 .finish(),
         )
         .with_width(16.)

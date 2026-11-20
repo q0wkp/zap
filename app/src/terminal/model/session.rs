@@ -17,13 +17,13 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use typed_path::{TypedPath, TypedPathBuf};
-use warp_util::path::ShellFamily;
+use zap_ng_util::path::ShellFamily;
 
 use version_compare::Version;
-use warp_completer::completer::{
+use zap_ng_completer::completer::{
     CommandExitStatus, CommandOutput, PathSeparators, TopLevelCommandCaseSensitivity,
 };
-use warpui::{platform::OperatingSystem, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{platform::OperatingSystem, Entity, ModelContext, SingletonEntity};
 
 #[cfg(feature = "local_tty")]
 use crate::features::FeatureFlag;
@@ -38,7 +38,7 @@ use command_executor::remote_server_executor::RemoteServerCommandExecutor;
 use parking_lot::{Mutex, RwLock};
 
 use crate::terminal::shell::{Shell, ShellType};
-use crate::terminal::warpify::SubshellSource;
+use crate::terminal::zapngify::SubshellSource;
 use crate::terminal::History;
 
 use super::ansi::{BootstrappedValue, InitShellValue, SSHValue};
@@ -51,8 +51,8 @@ pub enum ReadHistoryContentsError {
     AsyncFsError(std::io::Error),
 }
 
-// SessionId is defined in warp_core and re-exported here for backward compatibility.
-pub use warp_core::SessionId;
+// SessionId is defined in zap_ng_core and re-exported here for backward compatibility.
+pub use zap_ng_core::SessionId;
 
 /// Information about the sessions within a given terminal pane/top-level
 /// shell.
@@ -338,7 +338,7 @@ impl Sessions {
         if FeatureFlag::SshRemoteServer.is_enabled()
             && matches!(
                 session_info.session_type,
-                BootstrapSessionType::WarpifiedRemote
+                BootstrapSessionType::ZapNGifiedRemote
             )
         {
             if let Some(host_id) = RemoteServerManager::as_ref(ctx).host_id_for_session(session_id)
@@ -501,7 +501,7 @@ impl Sessions {
 impl From<SessionType> for command_corrections::SessionType {
     fn from(session_type: SessionType) -> Self {
         match session_type {
-            SessionType::WarpifiedRemote { .. } => command_corrections::SessionType::Remote,
+            SessionType::ZapNGifiedRemote { .. } => command_corrections::SessionType::Remote,
             SessionType::Local => command_corrections::SessionType::Local,
         }
     }
@@ -510,7 +510,7 @@ impl From<SessionType> for command_corrections::SessionType {
 impl From<&SessionType> for command_corrections::SessionType {
     fn from(session_type: &SessionType) -> Self {
         match session_type {
-            SessionType::WarpifiedRemote { .. } => command_corrections::SessionType::Remote,
+            SessionType::ZapNGifiedRemote { .. } => command_corrections::SessionType::Remote,
             SessionType::Local => command_corrections::SessionType::Local,
         }
     }
@@ -598,7 +598,7 @@ impl SessionInfo {
         subshell_info: Option<SubshellInitializationInfo>,
         launch_data: Option<ShellLaunchData>,
         legacy_ssh_session: Option<SSHValue>,
-        is_warpified_ssh_session: bool,
+        is_zapngified_ssh_session: bool,
         active_block_session_id: Option<SessionId>,
     ) -> Self {
         let is_legacy_ssh_session = match legacy_ssh_session {
@@ -616,11 +616,11 @@ impl SessionInfo {
         // to determine if this is a local or remote session.
         let session_type = Self::determine_session_type(
             &init_shell_value,
-            is_warpified_ssh_session
+            is_zapngified_ssh_session
                 || matches!(&is_legacy_ssh_session, IsLegacySSHSession::Yes { .. }),
         );
 
-        let spawning_session_id = if matches!(session_type, BootstrapSessionType::WarpifiedRemote)
+        let spawning_session_id = if matches!(session_type, BootstrapSessionType::ZapNGifiedRemote)
             || subshell_info.is_some()
         {
             active_block_session_id
@@ -657,18 +657,18 @@ impl SessionInfo {
     #[cfg(not(feature = "remote_tty"))]
     fn determine_session_type(
         init_shell_value: &InitShellValue,
-        is_warpified_ssh_session: bool,
+        is_zapngified_ssh_session: bool,
     ) -> BootstrapSessionType {
         match get_local_hostname() {
             Ok(local_hostname) => {
                 // Ensures subshells are treated as local
                 if local_hostname == init_shell_value.hostname &&
                 // Ensures `ssh localhost` is treated as remote
-                !is_warpified_ssh_session
+                !is_zapngified_ssh_session
                 {
                     BootstrapSessionType::Local
                 } else {
-                    BootstrapSessionType::WarpifiedRemote
+                    BootstrapSessionType::ZapNGifiedRemote
                 }
             }
             Err(e) => {
@@ -681,10 +681,10 @@ impl SessionInfo {
     #[cfg(feature = "remote_tty")]
     fn determine_session_type(
         _init_shell_value: &InitShellValue,
-        _is_warpified_ssh_session: bool,
+        _is_zapngified_ssh_session: bool,
     ) -> BootstrapSessionType {
         // When the `remote_tty` feature is enabled--the session is always considered remote.
-        BootstrapSessionType::WarpifiedRemote
+        BootstrapSessionType::ZapNGifiedRemote
     }
 
     /// Returns a fully populated [`SessionInfo`] containing data derived from the given
@@ -807,7 +807,7 @@ pub enum BootstrapSessionType {
     Local,
 
     /// The session host is a different host from where Zap is running.
-    WarpifiedRemote,
+    ZapNGifiedRemote,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -816,20 +816,20 @@ pub enum SessionType {
     Local,
 
     /// The session host is a different host from where Zap is running.
-    /// Note that we only know this for sure when we Warpify a block.
+    /// Note that we only know this for sure when we ZapNGify a block.
     ///
     /// `host_id` is `Some` when the remote server feature flag is enabled and
     /// `RemoteServerManager` has completed the connection handshake. It is
     /// `None` when the feature flag is off or the connection hasn't been
     /// established yet.
-    WarpifiedRemote { host_id: Option<warp_core::HostId> },
+    ZapNGifiedRemote { host_id: Option<zap_ng_core::HostId> },
 }
 
 impl From<BootstrapSessionType> for SessionType {
     fn from(bst: BootstrapSessionType) -> Self {
         match bst {
             BootstrapSessionType::Local => SessionType::Local,
-            BootstrapSessionType::WarpifiedRemote => SessionType::WarpifiedRemote { host_id: None },
+            BootstrapSessionType::ZapNGifiedRemote => SessionType::ZapNGifiedRemote { host_id: None },
         }
     }
 }
@@ -896,11 +896,11 @@ impl Session {
         self.session_type.lock().clone()
     }
 
-    /// Updates the `host_id` on a `WarpifiedRemote` session type after the
+    /// Updates the `host_id` on a `ZapNGifiedRemote` session type after the
     /// remote server handshake completes (or clears it on disconnect).
-    pub fn set_remote_host_id(&self, host_id: Option<warp_core::HostId>) {
+    pub fn set_remote_host_id(&self, host_id: Option<zap_ng_core::HostId>) {
         let mut st = self.session_type.lock();
-        if let SessionType::WarpifiedRemote { host_id: ref mut h } = *st {
+        if let SessionType::ZapNGifiedRemote { host_id: ref mut h } = *st {
             *h = host_id;
         }
     }
@@ -926,7 +926,7 @@ impl Session {
 
     pub fn home_dir(&self) -> Option<&str> {
         if cfg!(test) {
-            return warp_util::path::TEST_SESSION_HOME_DIR.as_deref();
+            return zap_ng_util::path::TEST_SESSION_HOME_DIR.as_deref();
         }
 
         self.info.home_dir.as_deref()
@@ -948,7 +948,7 @@ impl Session {
     }
 
     pub fn is_subshell_or_ssh(&self) -> bool {
-        matches!(self.session_type(), SessionType::WarpifiedRemote { .. })
+        matches!(self.session_type(), SessionType::ZapNGifiedRemote { .. })
             || self.is_legacy_ssh_session()
             || self.subshell_info().is_some()
     }
@@ -1230,7 +1230,7 @@ impl Session {
     pub async fn read_history(&self) -> Vec<String> {
         match self.info.session_type {
             BootstrapSessionType::Local => self.read_history_for_local_session().await,
-            BootstrapSessionType::WarpifiedRemote => self.read_history_for_remote_session().await,
+            BootstrapSessionType::ZapNGifiedRemote => self.read_history_for_remote_session().await,
         }
     }
 
@@ -1323,7 +1323,7 @@ impl Session {
         // - warpified zsh --> unix
 
         // If the host architecture is unix, we can infer unix file paths. This would break
-        // if we supported warpifying a powershell-on-windows SSH session.
+        // if we supported zapngifying a powershell-on-windows SSH session.
         if cfg!(unix) {
             return TypedPathBuf::from_unix(pwd);
         }
@@ -1458,7 +1458,7 @@ pub mod testing {
 
         pub fn with_ssh_socket_path(mut self, socket_path: PathBuf) -> Self {
             if let BootstrapSessionType::Local = self.session_type {
-                self.session_type = BootstrapSessionType::WarpifiedRemote;
+                self.session_type = BootstrapSessionType::ZapNGifiedRemote;
             }
             self.is_legacy_ssh_session = IsLegacySSHSession::Yes { socket_path };
             self
@@ -1521,7 +1521,7 @@ pub mod testing {
 
         pub fn test_remote() -> Self {
             let info = SessionInfo::new_for_test()
-                .with_session_type(BootstrapSessionType::WarpifiedRemote)
+                .with_session_type(BootstrapSessionType::ZapNGifiedRemote)
                 .with_shell_type(ShellType::Bash); // We only support UNIX-based remote sessions.
             let session_type = SessionType::from(info.session_type.clone());
             Self {

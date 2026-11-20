@@ -1,4 +1,4 @@
-use warpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle, WindowId};
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle, WindowId};
 
 use crate::{
     app_state::{LeafContents, SettingsPaneSnapshot},

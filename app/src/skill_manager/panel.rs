@@ -4,9 +4,9 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use ai::skills::SkillProvider;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::{
     elements::{
         Border, ChildView, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox,
         Container, CornerRadius, CrossAxisAlignment, Element, Fill as ElementFill, Flex, Hoverable,
@@ -596,7 +596,7 @@ impl View for SkillManagerPanel {
         "SkillManagerPanel"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus(&self.query_editor);
         self.scroll_selected_path_into_view_with_ctx(ctx);
         ctx.notify();

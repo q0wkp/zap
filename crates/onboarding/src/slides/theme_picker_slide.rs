@@ -7,10 +7,10 @@ use crate::visuals::theme_picker_visual;
 use crate::OnboardingIntention;
 use pathfinder_color::ColorU;
 use ui_components::{button, Component as _, Options as _};
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::{appearance::Appearance, theme::color::internal_colors, theme::WarpTheme};
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::ui::{appearance::Appearance, theme::color::internal_colors, theme::ZapNGTheme};
+use zap_ng_ui::{
     elements::{
         Border, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
         CrossAxisAlignment, Empty, Flex, FormattedTextElement, Hoverable, MainAxisAlignment,
@@ -40,7 +40,7 @@ pub enum ThemePickerSlideAction {
 
 #[derive(Debug, Clone)]
 struct ThemeOption {
-    theme: WarpTheme,
+    theme: ZapNGTheme,
     mouse_state: MouseStateHandle,
 }
 
@@ -57,7 +57,7 @@ pub struct ThemePickerSlide {
 
 impl ThemePickerSlide {
     pub(crate) fn new(
-        themes: [WarpTheme; 4],
+        themes: [ZapNGTheme; 4],
         onboarding_state: ModelHandle<OnboardingStateModel>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
@@ -150,8 +150,8 @@ impl ThemePickerSlide {
         // afterwards.
         let state = self.onboarding_state.as_ref(app);
         let is_terminal = matches!(state.intention(), OnboardingIntention::Terminal);
-        let warp_drive_enabled = state.ui_customization().show_warp_drive;
-        if is_terminal && !warp_drive_enabled && FeatureFlag::ZapNewSettingsModes.is_enabled()
+        let zap_ng_drive_enabled = state.ui_customization().show_zap_ng_drive;
+        if is_terminal && !zap_ng_drive_enabled && FeatureFlag::ZapNewSettingsModes.is_enabled()
         {
             content.push(self.render_disclaimer_section(appearance));
         }
@@ -204,7 +204,7 @@ impl ThemePickerSlide {
     fn render_theme_options(
         &self,
         appearance: &Appearance,
-        chrome_theme: &WarpTheme,
+        chrome_theme: &ZapNGTheme,
     ) -> Box<dyn Element> {
         let options = (0..self.theme_options.len())
             .map(|index| {
@@ -298,10 +298,10 @@ impl ThemePickerSlide {
     fn render_theme_option(
         &self,
         appearance: &Appearance,
-        chrome_theme: &WarpTheme,
+        chrome_theme: &ZapNGTheme,
         index: usize,
         theme_name: String,
-        option_theme: &WarpTheme,
+        option_theme: &ZapNGTheme,
         mouse_state: MouseStateHandle,
         interactive: bool,
     ) -> Box<dyn Element> {

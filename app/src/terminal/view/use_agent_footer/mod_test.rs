@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use crate::terminal::shared_session::protocol::SessionSourceType;
-use warp_core::settings::Setting as _;
-use warpui::{App, AppContext, SingletonEntity, ViewContext};
+use zap_ng_core::settings::Setting as _;
+use zap_ng_ui::{App, AppContext, SingletonEntity, ViewContext};
 
 use crate::{
     ai::{

@@ -27,16 +27,16 @@ use crate::ui_components::blended_colors;
 use crate::ui_components::buttons::icon_button_with_color;
 use crate::ui_components::icons;
 use crate::workspace::tab_settings::TabSettings;
-use warp_core::ui::Icon as WarpIcon;
-use warpui::elements::{
+use zap_ng_core::ui::Icon as ZapNGIcon;
+use zap_ng_ui::elements::{
     ChildAnchor, ConstrainedBox, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Shrinkable, Stack,
 };
-use warpui::prelude::{vec2f, ChildView, Container, Hoverable};
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::components::UiComponent;
-use warpui::WeakModelHandle;
-use warpui::{AppContext, Element, ModelHandle, SingletonEntity, TypedActionView, ViewContext};
+use zap_ng_ui::prelude::{vec2f, ChildView, Container, Hoverable};
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::WeakModelHandle;
+use zap_ng_ui::{AppContext, Element, ModelHandle, SingletonEntity, TypedActionView, ViewContext};
 
 impl TerminalView {
     /// Returns a reference to the focus handle if one has been set.
@@ -164,7 +164,7 @@ impl TerminalView {
     /// Renders the back button for the pane header, or an empty element if the
     /// back button should not be shown.
     fn maybe_render_header_back_button(&self, app: &AppContext) -> Box<dyn Element> {
-        if !FeatureFlag::AgentView.is_enabled() || warpui::platform::is_mobile_device() {
+        if !FeatureFlag::AgentView.is_enabled() || zap_ng_ui::platform::is_mobile_device() {
             return Flex::row().finish();
         }
 
@@ -233,7 +233,7 @@ impl TerminalView {
                 Some(
                     ConstrainedBox::new(
                         icons::Icon::Sharing
-                            .to_warpui_icon(shared_session_indicator_color(appearance).into())
+                            .to_zap_ng_ui_icon(shared_session_indicator_color(appearance).into())
                             .finish(),
                     )
                     .with_height(appearance.ui_font_size())
@@ -538,7 +538,7 @@ impl TerminalView {
         let Some(conversation) =
             BlocklistAIHistoryModel::as_ref(app).conversation(&conversation_id)
         else {
-            return warpui::elements::Empty::new().finish();
+            return zap_ng_ui::elements::Empty::new().finish();
         };
 
         let appearance = Appearance::as_ref(app);
@@ -557,8 +557,8 @@ impl TerminalView {
             && !is_long_running
         {
             ConstrainedBox::new(
-                WarpIcon::Oz
-                    .to_warpui_icon(blended_colors::text_sub(theme, theme.background()).into())
+                ZapNGIcon::Oz
+                    .to_zap_ng_ui_icon(blended_colors::text_sub(theme, theme.background()).into())
                     .finish(),
             )
             .with_height(appearance.ui_font_size())
@@ -586,7 +586,7 @@ impl TerminalView {
             return Some(
                 ConstrainedBox::new(
                     icons::Icon::AlertTriangle
-                        .to_warpui_icon(appearance.theme().ui_error_color().into())
+                        .to_zap_ng_ui_icon(appearance.theme().ui_error_color().into())
                         .finish(),
                 )
                 .with_height(font_size)
@@ -614,7 +614,7 @@ impl TerminalView {
                 let mut stack = Stack::new().with_child(
                     ConstrainedBox::new(
                         icons::Icon::AmbientAgentMode
-                            .to_warpui_icon(icon_color)
+                            .to_zap_ng_ui_icon(icon_color)
                             .finish(),
                     )
                     .with_height(font_size * 1.5)

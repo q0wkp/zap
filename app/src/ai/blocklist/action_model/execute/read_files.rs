@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use futures::{future::BoxFuture, FutureExt};
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::{
     ai::{
@@ -112,7 +112,7 @@ impl ReadFilesExecutor {
         // Check if this is a remote session with a connected host.
         let session_type = self.active_session.as_ref(ctx).session_type(ctx);
         let remote_client = match &session_type {
-            Some(SessionType::WarpifiedRemote {
+            Some(SessionType::ZapNGifiedRemote {
                 host_id: Some(host_id),
             }) => remote_server::manager::RemoteServerManager::as_ref(ctx)
                 .client_for_host(host_id)
@@ -123,7 +123,7 @@ impl ReadFilesExecutor {
         // Remote session without a usable remote server client. File reading
         // requires either local access or a connected remote server, neither
         // of which is available.
-        if matches!(session_type, Some(SessionType::WarpifiedRemote { .. }))
+        if matches!(session_type, Some(SessionType::ZapNGifiedRemote { .. }))
             && remote_client.is_none()
         {
             return ActionExecution::Sync(AIAgentActionResultType::ReadFiles(

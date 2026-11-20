@@ -4,7 +4,7 @@
 //!
 //! ## 注意
 //!
-//! - 内部调用 `warp_ssh_manager::with_conn`(同步 Mutex + SQLite)和
+//! - 内部调用 `zap_ng_ssh_manager::with_conn`(同步 Mutex + SQLite)和
 //!   `KeychainSecretStore::get`(同步 OS API),**不可以**在 UI 主线程直接
 //!   同步调用——server 一多就会卡顿。调用方需走 `tokio::task::spawn_blocking`。
 //! - secret 全程用 `Zeroizing<String>` 持有,丢弃时自动清零。
@@ -12,7 +12,7 @@
 use anyhow::Result;
 use zeroize::Zeroizing;
 
-use warp_ssh_manager::{
+use zap_ng_ssh_manager::{
     AuthType, KeychainSecretStore, NodeKind, OneKeyCredentialKind as StoredOneKeyCredentialKind,
     SecretKind, SshRepository, SshSecretStore,
 };
@@ -38,7 +38,7 @@ pub fn load_saved_ssh_credentials() -> Result<Vec<OneKeyCredential>> {
 fn load_saved_ssh_credentials_with_store(
     store: &dyn SshSecretStore,
 ) -> Result<Vec<OneKeyCredential>> {
-    warp_ssh_manager::with_conn(|conn| {
+    zap_ng_ssh_manager::with_conn(|conn| {
         let nodes = SshRepository::list_nodes(conn)?;
         let mut credentials = Vec::new();
 

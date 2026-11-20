@@ -1,8 +1,8 @@
 use std::{cell::RefCell, collections::HashMap};
 
 use settings::{Setting, ToggleableSetting};
-use warp_core::features::FeatureFlag;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{
     elements::{Flex, MouseStateHandle, ParentElement},
     ui_components::{components::UiComponent, switch::SwitchStateHandle},
     Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
@@ -276,7 +276,7 @@ impl View for ExternalEditorView {
         "ExternalEditorView"
     }
 
-    fn render(&self, app: &warpui::AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &zap_ng_ui::AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
 
         let default_editor = render_dropdown_item(

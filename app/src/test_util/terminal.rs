@@ -2,7 +2,7 @@ use repo_metadata::repositories::DetectedRepositories;
 #[cfg(feature = "local_fs")]
 use repo_metadata::RepoMetadataModel;
 use std::sync::Arc;
-use warp_core::ui::appearance::Appearance;
+use zap_ng_core::ui::appearance::Appearance;
 
 use crate::ai::agent_conversations_model::AgentConversationsModel;
 use crate::ai::ambient_agents::github_auth_notifier::GitHubAuthNotifier;
@@ -13,8 +13,8 @@ use crate::ai::mcp::{
 use crate::ai::skills::SkillManager;
 use crate::code_review::git_status_update::GitStatusUpdateModel;
 use crate::terminal::cli_agent_sessions::CLIAgentSessionsModel;
-use crate::warp_managed_paths_watcher::WarpManagedPathsWatcher;
-use warpui::{platform::WindowStyle, App, ViewHandle, WindowId};
+use crate::zap_ng_managed_paths_watcher::ZapNGManagedPathsWatcher;
+use zap_ng_ui::{platform::WindowStyle, App, ViewHandle, WindowId};
 use watcher::HomeDirectoryWatcher;
 
 use super::settings::initialize_settings_for_tests;
@@ -95,7 +95,7 @@ pub fn initialize_app_for_terminal_view(app: &mut App) {
     app.add_singleton_model(|_| GitStatusUpdateModel::new());
     // Zap:RepoOutlines 已删除,不再注册。
     app.add_singleton_model(HomeDirectoryWatcher::new_for_test);
-    app.add_singleton_model(WarpManagedPathsWatcher::new_for_testing);
+    app.add_singleton_model(ZapNGManagedPathsWatcher::new_for_testing);
     app.add_singleton_model(SkillManager::new);
 
     app.add_singleton_model(|_| TemplatableMCPServerManager::default());

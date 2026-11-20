@@ -6,15 +6,15 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use crate::content::text::{BufferBlockStyle, TextStylesWithMetadata};
-use warpui::fonts::TextLayoutSystem;
+use zap_ng_ui::fonts::TextLayoutSystem;
 #[cfg(test)]
-use warpui::fonts::{Style, Weight};
-use warpui::text_layout::{
+use zap_ng_ui::fonts::{Style, Weight};
+use zap_ng_ui::text_layout::{
     ClipConfig, LayoutCache, Line, StyleAndFont, TextAlignment, TextBorder, TextStyle,
 };
-use warpui::units::{IntoPixels, Pixels};
-use warpui::{AppContext, LayoutContext};
-use warpui::{color::ColorU, text_layout::TextFrame};
+use zap_ng_ui::units::{IntoPixels, Pixels};
+use zap_ng_ui::{AppContext, LayoutContext};
+use zap_ng_ui::{color::ColorU, text_layout::TextFrame};
 
 use super::model::{BlockSpacing, ParagraphStyles, RenderState, RichTextStyles};
 

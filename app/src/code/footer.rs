@@ -10,19 +10,19 @@
 
 use std::path::{Path, PathBuf};
 
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::WarpTheme;
-use warp_core::ui::{appearance::Appearance, Icon};
-use warpui::elements::{
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::ZapNGTheme;
+use zap_ng_core::ui::{appearance::Appearance, Icon};
+use zap_ng_ui::elements::{
     ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, MainAxisAlignment,
     MainAxisSize, ParentElement, Shrinkable,
 };
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     elements::{Border, Fill},
     AppContext, Element, Entity, SingletonEntity, View,
 };
-use warpui::{TypedActionView, ViewContext, ViewHandle};
+use zap_ng_ui::{TypedActionView, ViewContext, ViewHandle};
 
 use crate::settings::AISettings;
 #[cfg(feature = "local_fs")]
@@ -127,11 +127,11 @@ impl CodeFooterView {
         });
     }
 
-    fn render_tab_config_info_icon(theme: &WarpTheme) -> Box<dyn Element> {
+    fn render_tab_config_info_icon(theme: &ZapNGTheme) -> Box<dyn Element> {
         Container::new(
             ConstrainedBox::new(
                 Icon::Info
-                    .to_warpui_icon(theme.active_ui_text_color())
+                    .to_zap_ng_ui_icon(theme.active_ui_text_color())
                     .finish(),
             )
             .with_width(12.)
@@ -143,7 +143,7 @@ impl CodeFooterView {
     }
 
     fn render_status_text(
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         appearance: &Appearance,
         message: String,
     ) -> Box<dyn Element> {

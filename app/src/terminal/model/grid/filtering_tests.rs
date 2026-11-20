@@ -1,4 +1,4 @@
-use warp_terminal::model::grid::cell::Flags;
+use zap_ng_terminal::model::grid::cell::Flags;
 
 use crate::{
     terminal::model::{

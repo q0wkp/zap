@@ -2,8 +2,8 @@ use super::*;
 
 /// 构造一个 CLI `agent run` 的启动模式,用于验证 headless / GUI 判定。
 fn command_line_launch_mode(gui: bool) -> LaunchMode {
-    let args = warp_cli::agent::RunAgentArgs {
-        prompt_arg: warp_cli::agent::PromptArg {
+    let args = zap_ng_cli::agent::RunAgentArgs {
+        prompt_arg: zap_ng_cli::agent::PromptArg {
             prompt: Some("hello".to_owned()),
             saved_prompt: None,
         },
@@ -13,7 +13,7 @@ fn command_line_launch_mode(gui: bool) -> LaunchMode {
         name: None,
         cwd: None,
         gui,
-        share: warp_cli::share::ShareArgs { share: None },
+        share: zap_ng_cli::share::ShareArgs { share: None },
         mcp_specs: Vec::new(),
         mcp_servers: Vec::new(),
         idle_on_complete: None,

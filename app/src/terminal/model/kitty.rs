@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 use std::io::Read;
 #[cfg(feature = "local_fs")]
 use std::{env, fs, str};
-use warpui::image_cache::{resize_dimensions, FitType};
-use warpui::{
+use zap_ng_ui::image_cache::{resize_dimensions, FitType};
+use zap_ng_ui::{
     assets::asset_cache::Asset,
     image_cache::{CustomHeaderCreationError, CustomImageFormat, CustomImageHeader, ImageType},
     util::{parse_i32, parse_u32},

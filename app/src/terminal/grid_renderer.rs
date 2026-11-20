@@ -14,7 +14,7 @@ use crate::terminal::model::kitty_placeholder::PLACEHOLDER as KITTY_PLACEHOLDER;
 use crate::terminal::model::selection::SelectionPoint;
 use crate::terminal::model::{ObfuscateSecrets, SecretHandle};
 
-use crate::themes::theme::WarpTheme;
+use crate::themes::theme::ZapNGTheme;
 use crate::util::color::{ContrastingColor, MinimumAllowedContrast};
 
 use core::mem;
@@ -25,18 +25,18 @@ use std::ops::Range;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::{collections::HashMap, ops::RangeInclusive};
 use unicode_width::UnicodeWidthChar;
-use warp_core::features::FeatureFlag;
-use warpui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use warpui::color::ColorU;
-use warpui::elements::{Border, CornerRadius, Fill, Radius, DEFAULT_UI_LINE_HEIGHT_RATIO};
-use warpui::fonts::{Cache as FontCache, FamilyId, FontId, Properties, Style, Weight};
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
-use warpui::platform::LineStyle;
-use warpui::text_layout::{Line, StyleAndFont, TextStyle, DEFAULT_TOP_BOTTOM_RATIO};
-use warpui::units::{IntoLines as _, Lines, Pixels};
-use warpui::{AppContext, Element, EntityId, PaintContext, Scene, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::elements::{Border, CornerRadius, Fill, Radius, DEFAULT_UI_LINE_HEIGHT_RATIO};
+use zap_ng_ui::fonts::{Cache as FontCache, FamilyId, FontId, Properties, Style, Weight};
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::{vec2f, Vector2F};
+use zap_ng_ui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
+use zap_ng_ui::platform::LineStyle;
+use zap_ng_ui::text_layout::{Line, StyleAndFont, TextStyle, DEFAULT_TOP_BOTTOM_RATIO};
+use zap_ng_ui::units::{IntoLines as _, Lines, Pixels};
+use zap_ng_ui::{AppContext, Element, EntityId, PaintContext, Scene, SingletonEntity};
 
 pub use self::cell_glyph_cache::CellGlyphCache;
 use self::cell_type::{CellType, IsFocused, Secret};
@@ -303,7 +303,7 @@ pub fn render_grid<'a>(
     end_row: usize,
     colors: &color::List,
     override_colors: &color::OverrideList,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     default_font_properties: Properties,
     font_family: FamilyId,
     font_size: f32,
@@ -483,7 +483,7 @@ fn render_grid_without_ligatures<'a>(
     used_displayed_output_rows: bool,
     colors: &color::List,
     override_colors: &color::OverrideList,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     default_font_properties: Properties,
     font_family: FamilyId,
     font_size: f32,
@@ -604,7 +604,7 @@ fn render_grid_without_ligatures<'a>(
         }
 
         if !foreground_image_ids.is_empty() {
-            ctx.scene.start_layer(warpui::ClipBounds::ActiveLayer);
+            ctx.scene.start_layer(zap_ng_ui::ClipBounds::ActiveLayer);
             ctx.scene.set_active_layer_click_through();
             for image_placement in foreground_image_ids {
                 if let Some((image_metadata, image_placement_data)) = image_metadata
@@ -1012,7 +1012,7 @@ fn render_grid_with_ligatures<'a>(
     used_displayed_output_rows: bool,
     colors: &color::List,
     override_colors: &color::OverrideList,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     default_font_properties: Properties,
     font_family: FamilyId,
     font_size: f32,
@@ -1128,7 +1128,7 @@ fn render_grid_with_ligatures<'a>(
         }
 
         if !foreground_image_ids.is_empty() {
-            ctx.scene.start_layer(warpui::ClipBounds::ActiveLayer);
+            ctx.scene.start_layer(zap_ng_ui::ClipBounds::ActiveLayer);
             ctx.scene.set_active_layer_click_through();
             for image_placement in foreground_image_ids {
                 if let Some((image_metadata, image_placement_data)) = image_metadata

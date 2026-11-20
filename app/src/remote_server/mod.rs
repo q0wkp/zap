@@ -50,16 +50,16 @@ pub fn run_daemon(_identity_key: String) -> anyhow::Result<()> {
 /// ```
 #[cfg(not(target_family = "wasm"))]
 pub(super) fn run_daemon_app(
-    server_model_init: impl FnOnce(&mut warpui::ModelContext<server_model::ServerModel>) -> server_model::ServerModel
+    server_model_init: impl FnOnce(&mut zap_ng_ui::ModelContext<server_model::ServerModel>) -> server_model::ServerModel
         + 'static,
 ) -> anyhow::Result<()> {
-    use warpui::platform::app::AppCallbacks;
-    use warpui::platform::AppBuilder;
+    use zap_ng_ui::platform::app::AppCallbacks;
+    use zap_ng_ui::platform::AppBuilder;
 
     AppBuilder::new_headless(AppCallbacks::default(), Box::new(()), None).run(|ctx| {
         // Rotate log files from the previous daemon invocation in the background.
         ctx.background_executor()
-            .spawn(warp_logging::rotate_log_files())
+            .spawn(zap_ng_logging::rotate_log_files())
             .detach();
         use repo_metadata::repositories::DetectedRepositories;
         use repo_metadata::watcher::DirectoryWatcher;
@@ -71,7 +71,7 @@ pub(super) fn run_daemon_app(
         ctx.add_singleton_model(DirectoryWatcher::new);
         ctx.add_singleton_model(|_ctx| DetectedRepositories::default());
         ctx.add_singleton_model(RepoMetadataModel::new_with_incremental_updates);
-        ctx.add_singleton_model(warp_files::FileModel::new);
+        ctx.add_singleton_model(zap_ng_files::FileModel::new);
         // GlobalBufferModel 必须在 ServerModel 之前注册:buffer-sync 的服务端
         // 处理(server_model.rs / server_buffer_tracker.rs)通过
         // `GlobalBufferModel::handle(ctx)` 访问它,未注册会在 daemon 启动时

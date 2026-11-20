@@ -17,8 +17,8 @@
 //! Dismissing the block (on click of either option, or when the session is
 //! deregistered) is the parent's responsibility.
 use settings::Setting;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::{
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::{
     elements::{
         Border, ChildView, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,
@@ -37,7 +37,7 @@ use crate::{
     send_telemetry_from_ctx,
     server::telemetry::TelemetryEvent,
     terminal::model::session::SessionId,
-    terminal::warpify::settings::{SshExtensionInstallMode, WarpifySettings},
+    terminal::zapngify::settings::{SshExtensionInstallMode, ZapNGifySettings},
     ui_components::blended_colors,
     Appearance,
 };
@@ -170,7 +170,7 @@ impl SshRemoteServerChoiceView {
             .with_child(Container::new(checkbox_label).with_margin_left(4.).finish())
             .finish();
 
-        // Right: "Manage Warpify settings" link.
+        // Right: "Manage ZapNGify settings" link.
         let manage_settings_link = appearance
             .ui_builder()
             .link(
@@ -263,7 +263,7 @@ impl TypedActionView for SshRemoteServerChoiceView {
             SshRemoteServerChoiceViewAction::Install => {
                 if self.do_not_ask_again {
                     let mode = SshExtensionInstallMode::AlwaysInstall;
-                    WarpifySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    ZapNGifySettings::handle(ctx).update(ctx, |settings, ctx| {
                         if let Err(e) = settings.ssh_extension_install_mode.set_value(mode, ctx) {
                             log::error!("Failed to persist ssh_extension_install_mode: {e}");
                         }
@@ -280,7 +280,7 @@ impl TypedActionView for SshRemoteServerChoiceView {
             SshRemoteServerChoiceViewAction::Skip => {
                 if self.do_not_ask_again {
                     let mode = SshExtensionInstallMode::NeverInstall;
-                    WarpifySettings::handle(ctx).update(ctx, |settings, ctx| {
+                    ZapNGifySettings::handle(ctx).update(ctx, |settings, ctx| {
                         if let Err(e) = settings.ssh_extension_install_mode.set_value(mode, ctx) {
                             log::error!("Failed to persist ssh_extension_install_mode: {e}");
                         }

@@ -18,8 +18,8 @@ pub use dcs_hooks::*;
 pub use handler::*;
 use instant::Instant;
 use itertools::Itertools;
-pub use warp_terminal::model::ansi::control_sequence_parameters::*;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+pub use zap_ng_terminal::model::ansi::control_sequence_parameters::*;
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
 
 use crate::features::FeatureFlag;
 use crate::terminal::model::completions::{
@@ -50,7 +50,7 @@ use std::str::FromStr as _;
 use std::time::Duration;
 use std::{io, str};
 use vte::{Params, Parser as VteParser, Perform as VtePerform};
-use warpui::color::ColorU;
+use zap_ng_ui::color::ColorU;
 
 use super::kitty::parse_kitty_chunk;
 use super::terminal_model::TmuxInstallationState;
@@ -618,7 +618,7 @@ impl<'a, H: Handler + 'a, W: io::Write> Performer<'a, H, W> {
             Ok(DProtoHook::InitSubshell { value }) => self.handler.init_subshell(value),
             Ok(DProtoHook::InitSsh { value }) => self.handler.init_ssh(value),
             Ok(DProtoHook::SourcedRcFileForWarp { .. }) => {
-                // The SourcedRCFileForWarp hook should only be emitted by the
+                // The SourcedRCFileForZapNG hook should only be emitted by the
                 // shell without hex encoding. The RC file snippet given to
                 // users is not hex-encoded for the sake of transparency and
                 // debugability.
@@ -626,7 +626,7 @@ impl<'a, H: Handler + 'a, W: io::Write> Performer<'a, H, W> {
             }
             Ok(DProtoHook::FinishUpdate { value }) => self.handler.finish_update(value),
             Ok(DProtoHook::RemoteWarpificationIsUnavailable { value }) => {
-                self.handler.remote_warpification_is_unavailable(value)
+                self.handler.remote_zapngification_is_unavailable(value)
             }
             Ok(DProtoHook::SshTmuxInstaller { value }) => {
                 if let Ok(tmux_installation) = TmuxInstallationState::from_str(&value) {

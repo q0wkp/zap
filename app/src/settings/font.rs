@@ -1,16 +1,16 @@
-use warp_core::ui::builder::MIN_FONT_SIZE;
+use zap_ng_core::ui::builder::MIN_FONT_SIZE;
 
-// 重导出底层 warp_core 定义的 UI 字号常量,
+// 重导出底层 zap_ng_core 定义的 UI 字号常量,
 // 使 `crate::settings::DEFAULT_UI_FONT_SIZE` / `UI_FONT_SIZE_MIN` / `UI_FONT_SIZE_MAX` 仍可用。
-pub use warp_core::ui::appearance::{
+pub use zap_ng_core::ui::appearance::{
     DEFAULT_UI_FONT_SIZE, UI_FONT_SIZE_MAX, UI_FONT_SIZE_MIN,
 };
-use warpui::{fonts::Weight, rendering::ThinStrokes, AppContext, SingletonEntity};
+use zap_ng_ui::{fonts::Weight, rendering::ThinStrokes, AppContext, SingletonEntity};
 
 use settings::{
     macros::define_settings_group, RespectUserSyncSetting, Setting, SupportedPlatforms, SyncToCloud,
 };
-use warpui::elements::{HeadingFontSizeMultipliers, DEFAULT_UI_LINE_HEIGHT_RATIO};
+use zap_ng_ui::elements::{HeadingFontSizeMultipliers, DEFAULT_UI_LINE_HEIGHT_RATIO};
 
 use super::EnforceMinimumContrast as EnforceMinimumContrastEnum;
 

@@ -1,4 +1,4 @@
-//! "Candidates" 区域的视图模型 —— 把 `warp_ssh_manager::load_candidates()`
+//! "Candidates" 区域的视图模型 —— 把 `zap_ng_ssh_manager::load_candidates()`
 //! 的结果(及已导入别名集合、折叠状态)摊平成 UI 友好的 [`CandidateRow`]
 //! 列表。
 //!
@@ -6,9 +6,9 @@
 //!
 //! - `rows()` 是**纯函数**:只依赖 view-model 的当前字段,不碰 IO / runtime,
 //!   单元测试可以直接构造一个 `CandidatesViewModel` 并断言输出。这正是 TDD
-//!   讨论里要求的点 —— PR 2 的渲染层 warpui 测试代价太高,把"哪些行该显示"
+//!   讨论里要求的点 —— PR 2 的渲染层 zap_ng_ui 测试代价太高,把"哪些行该显示"
 //!   的逻辑抽出来单测就够覆盖关键判断。
-//! - `refresh()` 同步调用 `warp_ssh_manager::load_candidates()`(<10KB 文件,
+//! - `refresh()` 同步调用 `zap_ng_ssh_manager::load_candidates()`(<10KB 文件,
 //!   见 TECH.md §3.1 的取舍),把结果存进 `state`。
 //! - `on_tree_changed()` 由 panel 在订阅 `SshTreeChangedNotifier` 后调用 —— 把
 //!   保存树里所有 server 的 `host` 字段收集成 `HashSet`,作为 "Added" 徽章的
@@ -22,8 +22,8 @@
 use std::collections::HashSet;
 
 use settings::Setting;
-use warp_ssh_manager::{LoadOutcome, LoadResult, SshConfigCandidate, load_candidates};
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ssh_manager::{LoadOutcome, LoadResult, SshConfigCandidate, load_candidates};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use crate::settings::SshSettings;
 

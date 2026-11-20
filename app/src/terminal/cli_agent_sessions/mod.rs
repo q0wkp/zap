@@ -5,7 +5,7 @@ pub(crate) mod plugin_manager;
 
 use std::collections::{HashMap, HashSet};
 
-use warpui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{Entity, EntityId, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::ai::blocklist::InputConfig;
 

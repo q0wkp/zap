@@ -1,9 +1,9 @@
 use super::{Space, StoredObject};
 use crate::{
-    drive::{folders::FolderObject, items::WarpDriveItemId, ObjectTypeAndId},
+    drive::{folders::FolderObject, items::ZapNGDriveItemId, ObjectTypeAndId},
     ui_components::breadcrumb::Breadcrumb,
 };
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 // Encapsulates an object that can contain other objects, and keeps
 // information necessary to show breadcrumbs.
@@ -48,10 +48,10 @@ pub enum ContainingObjectKind {
 }
 
 impl ContainingObjectKind {
-    pub fn into_item_id(self) -> WarpDriveItemId {
+    pub fn into_item_id(self) -> ZapNGDriveItemId {
         match self {
-            ContainingObjectKind::Space(space) => WarpDriveItemId::Space(space),
-            ContainingObjectKind::Object(object) => WarpDriveItemId::Object(object),
+            ContainingObjectKind::Space(space) => ZapNGDriveItemId::Space(space),
+            ContainingObjectKind::Object(object) => ZapNGDriveItemId::Object(object),
         }
     }
 }

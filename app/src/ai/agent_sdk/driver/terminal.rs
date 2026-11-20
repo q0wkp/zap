@@ -9,10 +9,10 @@ use std::{
 };
 
 use futures::channel::oneshot;
-use warp_completer::completer::CommandOutput;
-use warp_core::command::ExitCode;
-use warp_util::path::ShellFamily;
-use warpui::{r#async::FutureExt, AppContext, Entity, ModelContext, ModelHandle, ViewHandle};
+use zap_ng_completer::completer::CommandOutput;
+use zap_ng_core::command::ExitCode;
+use zap_ng_util::path::ShellFamily;
+use zap_ng_ui::{r#async::FutureExt, AppContext, Entity, ModelContext, ModelHandle, ViewHandle};
 
 use crate::{
     ai::ambient_agents::AmbientAgentTaskId,
@@ -181,7 +181,7 @@ impl TerminalDriver {
     pub fn with_terminal_view(
         &self,
         ctx: &mut ModelContext<Self>,
-        f: impl FnOnce(&mut TerminalView, &mut warpui::ViewContext<TerminalView>),
+        f: impl FnOnce(&mut TerminalView, &mut zap_ng_ui::ViewContext<TerminalView>),
     ) {
         self.terminal_view.update(ctx, f);
     }

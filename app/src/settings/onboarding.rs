@@ -1,6 +1,6 @@
 use crate::ai::execution_profiles::profiles::AIExecutionProfilesModel;
 use crate::ai::execution_profiles::{ActionPermission, WriteToPtyPermission};
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 use crate::report_if_error;
 use crate::settings::ai::DefaultSessionMode;
 use crate::settings::{AISettings, CodeSettings};
@@ -9,8 +9,8 @@ use crate::workspaces::user_workspaces::UserWorkspaces;
 use onboarding::slides::{AgentAutonomy, AgentDevelopmentSettings};
 use onboarding::{SelectedSettings, SessionDefault, UICustomizationSettings};
 use settings::Setting as _;
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, SingletonEntity as _};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, SingletonEntity as _};
 
 /// Applies onboarding settings based on the user's selected mode.
 pub fn apply_onboarding_settings(selected_settings: &SelectedSettings, app: &mut AppContext) {
@@ -67,10 +67,10 @@ fn apply_ui_customization_settings(
             .set_value(ui.show_code_review_button, ctx));
     });
 
-    WarpDriveSettings::handle(app).update(app, |settings, ctx| {
+    ZapNGDriveSettings::handle(app).update(app, |settings, ctx| {
         report_if_error!(settings
-            .enable_warp_drive
-            .set_value(ui.show_warp_drive, ctx));
+            .enable_zap_ng_drive
+            .set_value(ui.show_zap_ng_drive, ctx));
     });
 
     CodeSettings::handle(app).update(app, |settings, ctx| {

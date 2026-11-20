@@ -25,13 +25,13 @@ use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::sync::mpsc::SyncSender;
 
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::cloud_object::StoredObject;
 use crate::util::sync::Condition;
 use chrono::{DateTime, Duration, Utc};
 use rand::Rng;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 
 use super::generic_string_model::GenericStringObjectId;
 
@@ -732,7 +732,7 @@ impl ObjectStoreModel {
     pub fn num_visible_errored_objects(&self) -> usize {
         self.objects_by_id
             .values()
-            .filter(|object| object.renders_in_warp_drive() && object.metadata().is_errored())
+            .filter(|object| object.renders_in_zap_ng_drive() && object.metadata().is_errored())
             .count()
     }
 
@@ -1020,7 +1020,7 @@ impl ObjectStoreModel {
     pub fn current_revision(&self, id: &SyncId) -> Option<&Revision> {
         self.objects_by_id
             .get(&id.uid())
-            .and_then(|warp_cloud_object| warp_cloud_object.metadata().revision.as_ref())
+            .and_then(|zap_ng_cloud_object| zap_ng_cloud_object.metadata().revision.as_ref())
     }
 
     /// Returns only active (not trashed) notebooks in object store.

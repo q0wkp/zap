@@ -3,17 +3,17 @@ use markdown_parser::{
 };
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
-use warpui::assets::asset_cache::AssetSource;
-use warpui::elements::{
+use zap_ng_core::ui::theme::{phenomenon::PhenomenonStyle, Fill};
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::elements::{
     Align, CacheOption, ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Expanded, Flex, FormattedTextElement, HighlightedHyperlink, Image,
     MainAxisSize, OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius,
     Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::FixedBinding;
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::{
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,
 };
 
@@ -67,7 +67,7 @@ fn feature_items() -> [FeatureItem; 3] {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -298,7 +298,7 @@ impl ZapLaunchModal {
     fn render_feature_row(item: &FeatureItem, appearance: &Appearance) -> Box<dyn Element> {
         let icon_el = ConstrainedBox::new(
             item.icon
-                .to_warpui_icon(Fill::Solid(
+                .to_zap_ng_ui_icon(Fill::Solid(
                     PhenomenonStyle::modal_feature_description_text(),
                 ))
                 .finish(),
@@ -373,7 +373,7 @@ impl View for ZapLaunchModal {
         "ZapLaunchModal"
     }
 
-    fn on_focus(&mut self, _focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, _focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         ctx.focus_self();
     }
 

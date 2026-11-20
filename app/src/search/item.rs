@@ -1,6 +1,6 @@
 use ordered_float::OrderedFloat;
-use warp_core::ui::theme::Fill;
-use warpui::{Action, AppContext, Element};
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{Action, AppContext, Element};
 
 use crate::appearance::Appearance;
 

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 use serde_json as json;
 
-use warpui::r#async::executor::Background;
+use zap_ng_ui::r#async::executor::Background;
 
 use crate::terminal::color;
 use crate::terminal::color::Colors;
@@ -118,7 +118,7 @@ fn ref_test(dir: &Path) {
         block_padding,
         size,
         max_block_scroll_limit: history_size as usize,
-        warp_prompt_height_lines: 0.1,
+        zap_ng_prompt_height_lines: 0.1,
     };
     let mut terminal = TerminalModel::new(
         None, /* restored_blocks */

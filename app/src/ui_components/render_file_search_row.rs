@@ -13,18 +13,18 @@
 
 use fuzzy_match::FuzzyMatchResult;
 use std::path::Path;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     Container, CrossAxisAlignment, Flex, Highlight, MainAxisSize, ParentElement, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::text_layout::ClipConfig;
-use warpui::{AppContext, Element};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::{AppContext, Element};
 
 use crate::appearance::Appearance;
 use crate::search::ai_context_menu::safe_truncate;
 use crate::search::ItemHighlightState;
-use warpui::SingletonEntity;
+use zap_ng_ui::SingletonEntity;
 
 pub const MAX_COMBINED_LENGTH: usize = 55;
 

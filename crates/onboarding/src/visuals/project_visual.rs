@@ -1,7 +1,7 @@
 use pathfinder_color::ColorU;
-use warp_core::ui::Icon;
-use warpui::elements::Align;
-use warpui::Element;
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::elements::Align;
+use zap_ng_ui::Element;
 
 use super::onboarding_visual::{IconPct, OnboardingVisual, Pill, RectPct};
 

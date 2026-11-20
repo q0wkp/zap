@@ -3,7 +3,7 @@
 #[cfg(feature = "local_fs")]
 use std::path::Path;
 
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, Container, CornerRadius, Flex, MouseStateHandle, ParentElement, Radius, Text,
     },
@@ -243,13 +243,13 @@ where
 /// - Whether this file is openable in Zap (skips binary files and directories)
 /// - Whether Zap is an OS-level default editor (skips Markdown files)
 #[cfg(feature = "local_fs")]
-pub fn should_show_open_in_warp_link(path: &Path, app: &AppContext) -> bool {
+pub fn should_show_open_in_zap_ng_link(path: &Path, app: &AppContext) -> bool {
     use crate::{
         code::view::is_binary_file,
         notebooks::file::is_markdown_file,
         util::file::external_editor::{settings::EditorChoice, EditorSettings},
     };
-    use warpui::SingletonEntity;
+    use zap_ng_ui::SingletonEntity;
 
     let settings = EditorSettings::as_ref(app);
 
@@ -261,6 +261,6 @@ pub fn should_show_open_in_warp_link(path: &Path, app: &AppContext) -> bool {
 }
 
 #[cfg(not(feature = "local_fs"))]
-pub fn should_show_open_in_warp_link(_path: &std::path::Path, _app: &AppContext) -> bool {
+pub fn should_show_open_in_zap_ng_link(_path: &std::path::Path, _app: &AppContext) -> bool {
     false
 }

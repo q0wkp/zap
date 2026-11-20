@@ -6,16 +6,16 @@
 //! overlay, while settings consumers can render the sections inline.
 
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     Align, Border, ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
     Expanded, Flex, Hoverable, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Stack,
 };
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{Action, Element};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{Action, Element};
 
 use super::{ChipConfigurator, ChipConfiguratorAction};
 use crate::Appearance;
@@ -128,7 +128,7 @@ fn render_header(title: &str, appearance: &Appearance) -> Box<dyn Element> {
         .span(title.to_string())
         .with_style(UiComponentStyles {
             font_size: Some(appearance.ui_font_heading_3()),
-            font_weight: Some(warpui::fonts::Weight::Bold),
+            font_weight: Some(zap_ng_ui::fonts::Weight::Bold),
             ..Default::default()
         })
         .build()
@@ -168,7 +168,7 @@ fn render_section_label(label: &str, appearance: &Appearance) -> Box<dyn Element
         .span(label.to_string())
         .with_style(UiComponentStyles {
             font_size: Some(appearance.ui_font_subheading()),
-            font_weight: Some(warpui::fonts::Weight::Semibold),
+            font_weight: Some(zap_ng_ui::fonts::Weight::Semibold),
             ..Default::default()
         })
         .build()

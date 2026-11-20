@@ -4,7 +4,7 @@
 //! 跟 `KeybindingChangedNotifier`(`app/src/settings_view/keybindings.rs:72`)
 //! 一个套路:Empty struct + SingletonEntity + 单个 Event 变体。
 
-use warpui::{Entity, SingletonEntity};
+use zap_ng_ui::{Entity, SingletonEntity};
 
 #[derive(Default)]
 pub struct SshTreeChangedNotifier {}

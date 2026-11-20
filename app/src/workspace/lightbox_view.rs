@@ -2,18 +2,18 @@ use std::sync::Arc;
 
 use pathfinder_geometry::vector::Vector2F;
 use ui_components::{lightbox, Component as _};
-use warpui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use warpui::image_cache::ImageType;
-use warpui::keymap::{FixedBinding, Keystroke};
-use warpui::prelude::*;
-use warpui::{AppContext, BlurContext, Element, Entity, SingletonEntity, View, ViewContext};
+use zap_ng_ui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use zap_ng_ui::image_cache::ImageType;
+use zap_ng_ui::keymap::{FixedBinding, Keystroke};
+use zap_ng_ui::prelude::*;
+use zap_ng_ui::{AppContext, BlurContext, Element, Entity, SingletonEntity, View, ViewContext};
 
 use crate::appearance::Appearance;
 
 pub use lightbox::LightboxImage;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
     let view_id = id!(LightboxView::ui_name());
     app.register_fixed_bindings([
         FixedBinding::new("escape", LightboxViewAction::Dismiss, view_id.clone()),

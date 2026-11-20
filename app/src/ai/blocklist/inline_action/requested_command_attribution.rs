@@ -1,8 +1,8 @@
 //! Module to attribute AI-generated requested commands
 //! to known documents (e.g. Zap Drive objects).
 
-use warpui::AppContext;
-use warpui::SingletonEntity;
+use zap_ng_ui::AppContext;
+use zap_ng_ui::SingletonEntity;
 
 use crate::env_vars::EnvVarCollection;
 use crate::env_vars::EnvVarValue;
@@ -25,7 +25,7 @@ pub(crate) fn is_command_copied_from_document(
 
     match document {
         AIAgentCitation::WarpDriveObject { uid } => {
-            is_command_copied_from_warp_drive_object(command, uid, shell_type, ctx)
+            is_command_copied_from_zap_ng_drive_object(command, uid, shell_type, ctx)
         }
         _ => false,
     }
@@ -33,7 +33,7 @@ pub(crate) fn is_command_copied_from_document(
 
 /// Returns true iff the `command` is directly copied from the
 /// Zap Drive object identified by `object_uid`.
-fn is_command_copied_from_warp_drive_object(
+fn is_command_copied_from_zap_ng_drive_object(
     command: &str,
     object_uid: &str,
     shell_type: Option<ShellType>,

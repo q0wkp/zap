@@ -1,5 +1,5 @@
 use ordered_float::OrderedFloat;
-use warpui::{
+use zap_ng_ui::{
     elements::{ConstrainedBox, Container, Highlight, Text},
     fonts::{Properties, Weight},
     AppContext, Element, SingletonEntity,
@@ -38,7 +38,7 @@ impl SearchItem for ExternalSecretSearchItem {
             ConstrainedBox::new(
                 self.external_secret
                     .icon()
-                    .to_warpui_icon(appearance.theme().active_ui_text_color())
+                    .to_zap_ng_ui_icon(appearance.theme().active_ui_text_color())
                     .finish(),
             )
             .with_width(ICON_SIZE)

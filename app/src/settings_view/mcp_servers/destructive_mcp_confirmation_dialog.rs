@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     elements::{ChildView, Container, Dismiss, Empty},
     ui_components::components::UiComponent,
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext, ViewHandle,

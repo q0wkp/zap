@@ -6,6 +6,6 @@ pub mod projects;
 pub mod searcher;
 pub mod settings;
 pub mod view;
-mod warp_ai;
+mod zap_ng_ai;
 mod workflows;
 mod zero_state;

@@ -31,8 +31,8 @@ use num_traits::FromPrimitive;
 use pathfinder_geometry::{rect::RectF, vector::Vector2F};
 use persistence::model::AMBIENT_AGENT_PANE_KIND;
 use uuid::Uuid;
-use warpui::platform::FullscreenState;
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_ui::platform::FullscreenState;
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use super::agent::{delete_agent_conversations, upsert_agent_conversation};
 use super::block_list::{
@@ -370,7 +370,7 @@ unsafe fn init_logging() {
         let err_message = String::from_utf8_lossy(msg.to_bytes());
         // 本地日志路径不应 panic,但仍避免跨 FFI 边界 unwind。
         let _ = panic::catch_unwind(|| {
-            // openWarp 仅写本地日志,错误码/描述照常保留诊断价值。
+            // ZapNG 仅写本地日志,错误码/描述照常保留诊断价值。
             log::log!(
                 level,
                 "SQLite error {} ({}): {}",
@@ -419,7 +419,7 @@ pub(super) fn init_db() -> Result<SqliteConnection> {
     }
 
     #[cfg(target_os = "macos")]
-    if warp_core::channel::ChannelState::channel() == warp_core::channel::Channel::Oss {
+    if zap_ng_core::channel::ChannelState::channel() == zap_ng_core::channel::Channel::Oss {
         if let Some(legacy_dir) = zap_legacy_app_group_sqlite_dir() {
             if let Err(err) = migrate_zap_app_group_sqlite_if_needed(&db_path, &legacy_dir)
                 .context("Failed to migrate Zap SQLite database out of legacy App Group")
@@ -431,7 +431,7 @@ pub(super) fn init_db() -> Result<SqliteConnection> {
     }
 
     // Migrate old SQLite files into the secure application container.
-    let old_db_path = warp_core::paths::state_dir().join(WARP_SQLITE_FILE_NAME);
+    let old_db_path = zap_ng_core::paths::state_dir().join(WARP_SQLITE_FILE_NAME);
     if old_db_path != db_path && old_db_path.exists() && !db_path.exists() {
         match std::fs::rename(&old_db_path, &db_path) {
             Ok(_) => {
@@ -481,7 +481,7 @@ fn zap_legacy_app_group_sqlite_dir() -> Option<PathBuf> {
             .join("Library/Group Containers")
             .join(WARP_APP_GROUP_ID)
             .join("Library/Application Support")
-            .join(warp_core::channel::ChannelState::app_id().to_string())
+            .join(zap_ng_core::channel::ChannelState::app_id().to_string())
     })
 }
 
@@ -613,8 +613,8 @@ fn setup_database(database_path: &Path) -> Result<SqliteConnection> {
 /// Integration tests that initialize the database with known data should use
 /// this function to determine where to create the database file.
 pub fn database_file_path() -> PathBuf {
-    warp_core::paths::secure_state_dir()
-        .unwrap_or_else(warp_core::paths::state_dir)
+    zap_ng_core::paths::secure_state_dir()
+        .unwrap_or_else(zap_ng_core::paths::state_dir)
         .join(WARP_SQLITE_FILE_NAME)
 }
 
@@ -2296,7 +2296,7 @@ fn upsert_folders(
             let folder_clone = cloud_folder.clone();
             let folder_name = cloud_folder.model().name.clone();
             let folder_is_open = cloud_folder.model().is_open;
-            let folder_is_warp_pack = cloud_folder.model().is_warp_pack;
+            let folder_is_zap_ng_pack = cloud_folder.model().is_warp_pack;
             upsert_stored_object(
                 conn,
                 ObjectType::Folder,
@@ -2307,7 +2307,7 @@ fn upsert_folders(
                     let new_folder = NewFolder {
                         name: folder_name,
                         is_open: folder_is_open,
-                        is_warp_pack: folder_is_warp_pack,
+                        is_warp_pack: folder_is_zap_ng_pack,
                     };
                     diesel::insert_into(schema::folders::dsl::folders)
                         .values(new_folder)
@@ -2631,7 +2631,7 @@ fn read_node(conn: &mut SqliteConnection, node: model::PaneNode) -> Result<PaneN
 /// and makes it invalid to write the logic recursively. It's ok it's not in a
 /// transaction because we should be the only connection using the database.
 ///
-/// One notable exception is the case where there may be two warp apps running
+/// One notable exception is the case where there may be two zap-ng apps running
 /// in the same bundle. In this case, we may read some garbage, but all that will
 /// happen is the user won't have session restoration.
 ///

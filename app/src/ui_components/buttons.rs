@@ -2,11 +2,11 @@ use super::icons::{Icon, ICON_DIMENSIONS};
 use super::{blended_colors, BORDER_RADIUS};
 use crate::appearance::Appearance;
 use crate::themes::theme::Fill;
-use crate::themes::theme::WarpTheme;
-use warpui::elements::Radius;
-use warpui::elements::{CornerRadius, MouseStateHandle};
-use warpui::ui_components::button::Button;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use crate::themes::theme::ZapNGTheme;
+use zap_ng_ui::elements::Radius;
+use zap_ng_ui::elements::{CornerRadius, MouseStateHandle};
+use zap_ng_ui::ui_components::button::Button;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
 
 const ICON_BUTTON_PADDING: f32 = 4.;
 
@@ -33,39 +33,39 @@ pub struct AllButtonStyles {
     disabled_styles: Option<UiComponentStyles>,
 }
 
-fn all_icon_button_styles(warp_theme: &WarpTheme, mode: ButtonMode) -> AllButtonStyles {
+fn all_icon_button_styles(zap_ng_theme: &ZapNGTheme, mode: ButtonMode) -> AllButtonStyles {
     AllButtonStyles {
-        default_styles: icon_button_styles(warp_theme, mode, ButtonState::Default),
-        hovered_styles: Some(icon_button_styles(warp_theme, mode, ButtonState::Hover)),
-        clicked_styles: Some(icon_button_styles(warp_theme, mode, ButtonState::Pressed)),
-        disabled_styles: Some(icon_button_styles(warp_theme, mode, ButtonState::Disabled)),
+        default_styles: icon_button_styles(zap_ng_theme, mode, ButtonState::Default),
+        hovered_styles: Some(icon_button_styles(zap_ng_theme, mode, ButtonState::Hover)),
+        clicked_styles: Some(icon_button_styles(zap_ng_theme, mode, ButtonState::Pressed)),
+        disabled_styles: Some(icon_button_styles(zap_ng_theme, mode, ButtonState::Disabled)),
     }
 }
 
 fn icon_button_styles(
-    warp_theme: &WarpTheme,
+    zap_ng_theme: &ZapNGTheme,
     mode: ButtonMode,
     state: ButtonState,
 ) -> UiComponentStyles {
-    let icon_color = icon_color(warp_theme, mode);
+    let icon_color = icon_color(zap_ng_theme, mode);
 
     let (background_color, border_color): (Option<Fill>, Option<Fill>) = match (mode, state) {
         (ButtonMode::Base, ButtonState::Default) => (None, None),
         (ButtonMode::Base, ButtonState::Hover) => {
-            (Some(warp_theme.surface_2()), Some(warp_theme.surface_3()))
+            (Some(zap_ng_theme.surface_2()), Some(zap_ng_theme.surface_3()))
         }
         (ButtonMode::Base, ButtonState::Pressed) | (ButtonMode::Base, ButtonState::Disabled) => {
-            (Some(warp_theme.background()), Some(warp_theme.surface_3()))
+            (Some(zap_ng_theme.background()), Some(zap_ng_theme.surface_3()))
         }
         (ButtonMode::Accent, ButtonState::Default) => (None, None),
         (ButtonMode::Accent, ButtonState::Hover) => (
-            Some(warp_theme.surface_3()),
-            Some(blended_colors::accent(warp_theme)),
+            Some(zap_ng_theme.surface_3()),
+            Some(blended_colors::accent(zap_ng_theme)),
         ),
         (ButtonMode::Accent, ButtonState::Pressed)
         | (ButtonMode::Accent, ButtonState::Disabled) => (
-            Some(warp_theme.background()),
-            Some(blended_colors::accent_pressed(warp_theme)),
+            Some(zap_ng_theme.background()),
+            Some(blended_colors::accent_pressed(zap_ng_theme)),
         ),
     };
 
@@ -86,12 +86,12 @@ fn icon_button_styles(
     styles
 }
 
-fn combo_inner_button_styles(warp_theme: &WarpTheme, state: ButtonState) -> UiComponentStyles {
+fn combo_inner_button_styles(zap_ng_theme: &ZapNGTheme, state: ButtonState) -> UiComponentStyles {
     let background = match state {
         ButtonState::Default => None,
-        ButtonState::Hover => Some(blended_colors::neutral_2(warp_theme)),
-        ButtonState::Pressed => Some(blended_colors::neutral_4(warp_theme)),
-        ButtonState::Disabled => Some(warp_theme.background().into()),
+        ButtonState::Hover => Some(blended_colors::neutral_2(zap_ng_theme)),
+        ButtonState::Pressed => Some(blended_colors::neutral_4(zap_ng_theme)),
+        ButtonState::Disabled => Some(zap_ng_theme.background().into()),
     };
 
     UiComponentStyles {
@@ -100,7 +100,7 @@ fn combo_inner_button_styles(warp_theme: &WarpTheme, state: ButtonState) -> UiCo
         border_width: None,
         padding: Some(Coords::uniform(ICON_BUTTON_PADDING - 1.)),
         border_radius: None,
-        font_color: Some(warp_theme.foreground().into()),
+        font_color: Some(zap_ng_theme.foreground().into()),
         border_color: None,
         background: background.map(Into::into),
         ..Default::default()
@@ -130,7 +130,7 @@ pub fn combo_inner_button(
         Some(combo_inner_button_styles(theme, ButtonState::Pressed)),
         Some(combo_inner_button_styles(theme, ButtonState::Disabled)),
     )
-    .with_icon_label(icon.to_warpui_icon(theme.foreground()));
+    .with_icon_label(icon.to_zap_ng_ui_icon(theme.foreground()));
 
     if active {
         return button.active();
@@ -138,10 +138,10 @@ pub fn combo_inner_button(
     button
 }
 
-fn icon_color(warp_theme: &WarpTheme, mode: ButtonMode) -> Fill {
+fn icon_color(zap_ng_theme: &ZapNGTheme, mode: ButtonMode) -> Fill {
     match mode {
-        ButtonMode::Base => warp_theme.foreground(),
-        ButtonMode::Accent => blended_colors::accent(warp_theme),
+        ButtonMode::Base => zap_ng_theme.foreground(),
+        ButtonMode::Accent => blended_colors::accent(zap_ng_theme),
     }
 }
 
@@ -163,7 +163,7 @@ fn icon_button_internal(
         button_styles.clicked_styles,
         button_styles.disabled_styles,
     )
-    .with_icon_label(icon.to_warpui_icon(color.unwrap_or(icon_color(theme, mode))));
+    .with_icon_label(icon.to_zap_ng_ui_icon(color.unwrap_or(icon_color(theme, mode))));
 
     if let Some(color) = color.take() {
         // We also need to set the font color here to get the button to be colored correctly.

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use warpui::{
+use zap_ng_ui::{
     elements::{MouseStateHandle, Text},
     Element,
 };

@@ -14,9 +14,9 @@ use serde::Serialize;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
-use warp_core::channel::ChannelState;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::channel::ChannelState;
+use zap_ng_core::execution_mode::AppExecutionMode;
+use zap_ng_core::features::FeatureFlag;
 
 use crate::ai::agent::conversation::AIConversationId;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
@@ -38,8 +38,8 @@ use crate::cloud_object::StoredObject;
 use crate::settings::AISettings;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use warp_core::user_preferences::GetUserPreferences;
-use warpui::{AppContext, EntityId, SingletonEntity as _};
+use zap_ng_core::user_preferences::GetUserPreferences;
+use zap_ng_ui::{AppContext, EntityId, SingletonEntity as _};
 
 /// Unique, server-generated conversation-scoped token to be roundtripped to the API when sending
 /// requests that follow-up within a given conversation.
@@ -100,7 +100,7 @@ pub struct RequestParams {
     /// Zap BYOP: the active profile's prompt choices, read once in `new()` so that the
     /// system prompt and the title prompt of this request follow the same profile.
     pub prompt_overrides: PromptOverrides,
-    pub warp_drive_context_enabled: bool,
+    pub zap_ng_drive_context_enabled: bool,
     pub context_window_limit: Option<u32>,
     pub mcp_context: Option<MCPContext>,
     pub planning_enabled: bool,
@@ -108,7 +108,7 @@ pub struct RequestParams {
 
     /// User-provided API keys for AI providers (BYO API Key).
     pub api_keys: Option<warp_multi_agent_api::request::settings::ApiKeys>,
-    pub allow_use_of_warp_credits_with_byok: bool,
+    pub allow_use_of_zap_ng_credits_with_byok: bool,
     pub autonomy_level: warp_multi_agent_api::AutonomyLevel,
     pub isolation_level: warp_multi_agent_api::IsolationLevel,
     pub web_search_enabled: bool,
@@ -217,13 +217,13 @@ impl RequestParams {
             is_memory_enabled: false,
             user_rules: Vec::new(),
             prompt_overrides: PromptOverrides::default(),
-            warp_drive_context_enabled: false,
+            zap_ng_drive_context_enabled: false,
             context_window_limit: None,
             mcp_context: None,
             planning_enabled: true,
             should_redact_secrets: false,
             api_keys: None,
-            allow_use_of_warp_credits_with_byok: false,
+            allow_use_of_zap_ng_credits_with_byok: false,
             autonomy_level: warp_multi_agent_api::AutonomyLevel::Supervised,
             isolation_level: warp_multi_agent_api::IsolationLevel::None,
             web_search_enabled: false,
@@ -253,7 +253,7 @@ impl RequestParams {
     ) -> Self {
         let ai_settings = AISettings::as_ref(app);
         let is_memory_enabled = ai_settings.is_memory_enabled(app);
-        let warp_drive_context_enabled = ai_settings.is_warp_drive_context_enabled(app);
+        let zap_ng_drive_context_enabled = ai_settings.is_zap_ng_drive_context_enabled(app);
 
         // Zap BYOP 修复 Issue #116:gate 在 `is_memory_enabled`,具体收集逻辑
         // 抽到 `collect_user_rules` 纯函数,只接 `&ObjectStoreModel` 入参以便测试,
@@ -337,8 +337,8 @@ impl RequestParams {
             user_workspaces.is_byo_api_key_enabled(),
             user_workspaces.is_aws_bedrock_credentials_enabled(app),
         );
-        let allow_use_of_warp_credits_with_byok =
-            *AISettings::as_ref(app).can_use_warp_credits_with_byok;
+        let allow_use_of_zap_ng_credits_with_byok =
+            *AISettings::as_ref(app).can_use_zap_ng_credits_with_byok;
 
         let app_execution_mode = AppExecutionMode::as_ref(app);
         let autonomy_level = if app_execution_mode.is_autonomous() {
@@ -424,12 +424,12 @@ impl RequestParams {
             is_memory_enabled,
             user_rules,
             prompt_overrides,
-            warp_drive_context_enabled,
+            zap_ng_drive_context_enabled,
             mcp_context,
             planning_enabled: true,
             should_redact_secrets,
             api_keys,
-            allow_use_of_warp_credits_with_byok,
+            allow_use_of_zap_ng_credits_with_byok,
             autonomy_level,
             isolation_level,
             web_search_enabled,

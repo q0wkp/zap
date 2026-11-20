@@ -16,7 +16,7 @@ pub struct WarpAiOsContext {
 /// The execution context of the active session. This struct
 /// is sent as a JSON blob in our AI prompts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WarpAiExecutionContext {
+pub struct ZapNGAiExecutionContext {
     pub os: WarpAiOsContext,
     pub shell_name: String,
 
@@ -24,9 +24,9 @@ pub struct WarpAiExecutionContext {
     pub shell_version: Option<String>,
 }
 
-impl WarpAiExecutionContext {
+impl ZapNGAiExecutionContext {
     pub fn new(session: &Arc<Session>) -> Self {
-        WarpAiExecutionContext {
+        ZapNGAiExecutionContext {
             os: WarpAiOsContext {
                 category: session.host_info().os_category.clone(),
                 distribution: session.host_info().linux_distribution.clone(),
@@ -36,7 +36,7 @@ impl WarpAiExecutionContext {
         }
     }
 }
-impl WarpAiExecutionContext {
+impl ZapNGAiExecutionContext {
     pub fn to_json_string(&self) -> Option<String> {
         serde_json::to_string(self).ok()
     }

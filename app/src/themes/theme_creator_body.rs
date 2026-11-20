@@ -13,18 +13,18 @@ use std::path::PathBuf;
 #[cfg(feature = "local_fs")]
 use std::{fs::copy, io::Write};
 #[cfg(feature = "local_fs")]
-use warp_core::ui::theme::WarpTheme;
-use warpui::elements::{
+use zap_ng_core::ui::theme::ZapNGTheme;
+use zap_ng_ui::elements::{
     Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     EventHandler, Fill, Flex, Icon, MainAxisAlignment, MainAxisSize, MouseStateHandle,
     ParentElement, Radius, Rect, SavePosition, Shrinkable, Text,
 };
-use warpui::fonts::Weight;
-use warpui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::ui_components::text_input::TextInput;
-use warpui::ViewHandle;
-use warpui::{
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::ui_components::button::{ButtonVariant, TextAndIcon, TextAndIconAlignment};
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::ui_components::text_input::TextInput;
+use zap_ng_ui::ViewHandle;
+use zap_ng_ui::{
     platform::Cursor, AppContext, Element, Entity, SingletonEntity, TypedActionView, View,
     ViewContext,
 };
@@ -202,7 +202,7 @@ impl ThemeCreatorBody {
     /// Note: the image option should be (original_theme_image_path, theme_name, image_extension).
     #[cfg(feature = "local_fs")]
     pub fn write_theme<T>(
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         dir: PathBuf,
         theme_yaml_file_name: String,
         image_option: Option<(PathBuf, String, &str)>,

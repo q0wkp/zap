@@ -7,8 +7,8 @@ use num_traits::Zero;
 use ordered_float::OrderedFloat;
 use serde::Serialize;
 use sysinfo::ProcessesToUpdate;
-use warp_core::channel::ChannelState;
-use warpui::{App, AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_core::channel::ChannelState;
+use zap_ng_ui::{App, AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::{
     send_telemetry_from_app_ctx, send_telemetry_sync_from_ctx, server::telemetry,
@@ -127,7 +127,7 @@ impl SystemInfo {
     fn schedule_refresh(ctx: &mut ModelContext<Self>) {
         ctx.spawn(
             async {
-                warpui::r#async::Timer::after(REFRESH_INTERVAL).await;
+                zap_ng_ui::r#async::Timer::after(REFRESH_INTERVAL).await;
             },
             |me, _, ctx| {
                 me.refresh(ctx);

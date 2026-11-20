@@ -26,17 +26,17 @@ use std::{collections::HashMap, fmt::Display};
 use super::task_store::TaskStore;
 use uuid::Uuid;
 use vec1::{Size0Error, Vec1};
-use warp_core::command::ExitCode;
-use warp_core::execution_mode::AppExecutionMode;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::WarpTheme;
+use zap_ng_core::command::ExitCode;
+use zap_ng_core::execution_mode::AppExecutionMode;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::ZapNGTheme;
 use warp_multi_agent_api::response_event::stream_finished;
 use warp_multi_agent_api::{self as api, response_event::stream_finished::TokenUsage};
-use warpui::color::ColorU;
-use warpui::{EntityId, ModelContext, SingletonEntity};
+use zap_ng_ui::color::ColorU;
+use zap_ng_ui::{EntityId, ModelContext, SingletonEntity};
 
 use crate::ai::agent::{AIIdentifiers, CancellationReason};
 use crate::{
@@ -193,7 +193,7 @@ pub struct AIConversation {
     /// Unique ID for this conversation.
     id: AIConversationId,
 
-    /// Whether this conversation is being shared from a different warp instance
+    /// Whether this conversation is being shared from a different zap-ng instance
     /// (i.e. is not a local conversation).
     is_viewing_shared_session: bool,
     task_store: TaskStore,
@@ -3577,7 +3577,7 @@ impl AIConversation {
     /// Converts the conversation into a vector of serialized AI and command blocks.
     /// When we open a new tab to restore a conversation in, we need to precompute this serialized list of blocks
     /// to pass into the TerminalModel constructor since command blocks must be created
-    /// before the warp input block to not break bootstrapping.
+    /// before the zap-ng input block to not break bootstrapping.
     /// Only the command blocks are actually created in the terminal model, but this sequencing is used later in the TerminalView
     /// to know where to insert AI blocks relative to the command blocks.
     pub fn to_serialized_blocklist_items(&self) -> Vec<SerializedBlockListItem> {
@@ -4187,7 +4187,7 @@ impl std::fmt::Display for ConversationStatus {
 }
 
 impl ConversationStatus {
-    pub fn render_icon(&self, appearance: &Appearance) -> warpui::elements::Icon {
+    pub fn render_icon(&self, appearance: &Appearance) -> zap_ng_ui::elements::Icon {
         match self {
             ConversationStatus::InProgress => in_progress_icon(appearance),
             ConversationStatus::Success => succeeded_icon(appearance),
@@ -4197,7 +4197,7 @@ impl ConversationStatus {
         }
     }
 
-    pub fn status_icon_and_color(&self, theme: &WarpTheme) -> (Icon, ColorU) {
+    pub fn status_icon_and_color(&self, theme: &ZapNGTheme) -> (Icon, ColorU) {
         match self {
             ConversationStatus::InProgress => (Icon::ClockLoader, theme.ansi_fg_magenta()),
             ConversationStatus::Success => (Icon::Check, theme.ansi_fg_green()),

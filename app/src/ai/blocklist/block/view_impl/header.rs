@@ -1,12 +1,12 @@
 //! Renders the AI block "header", which includes a version of the AI "prompt" as it was rendered
 //! when the query was submitted.
-use warp_core::features::FeatureFlag;
-use warp_util::path::user_friendly_path;
-use warpui::elements::MouseStateHandle;
-use warpui::elements::{ChildView, Hoverable, SavePosition};
-use warpui::platform::Cursor;
-use warpui::EntityId;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_util::path::user_friendly_path;
+use zap_ng_ui::elements::MouseStateHandle;
+use zap_ng_ui::elements::{ChildView, Hoverable, SavePosition};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::EntityId;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment,
         MainAxisSize, ParentElement, Radius, Text,
@@ -26,7 +26,7 @@ use crate::terminal::view::{TerminalAction, WARP_PROMPT_HEIGHT_LINES};
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon;
 use crate::view_components::action_button::ActionButton;
-use warpui::elements::Icon as ElementIcon;
+use zap_ng_ui::elements::Icon as ElementIcon;
 
 /// Data required to render the AI block header.
 pub(super) struct Props<'a> {
@@ -163,7 +163,7 @@ fn render_attached_context_chip(
                         Container::new(
                             ConstrainedBox::new(
                                 Icon::Paperclip
-                                    .to_warpui_icon(block_count_color.into())
+                                    .to_zap_ng_ui_icon(block_count_color.into())
                                     .finish(),
                             )
                             .with_height(font_size)
@@ -256,7 +256,7 @@ pub(super) fn render_overflow_menu_button(
 
 /// Returns the font size to be used to render text in the AI block "prompt" line.
 ///
-/// This matches the font size used for the warp prompt in completed command blocks.
+/// This matches the font size used for the zap-ng prompt in completed command blocks.
 fn prompt_font_size(appearance: &Appearance) -> f32 {
     appearance.monospace_font_size() * WARP_PROMPT_HEIGHT_LINES
 }

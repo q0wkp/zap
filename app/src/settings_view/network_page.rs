@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use settings::Setting;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, ConstrainedBox, Container, CrossAxisAlignment, Element, Flex, MainAxisAlignment,
         MainAxisSize, MouseStateHandle, ParentElement, Text,
@@ -614,7 +614,7 @@ impl SettingsWidget for NetworkPageWidget {
             LocalOnlyIconState::Hidden,
             ToggleState::Enabled,
             appearance,
-            warpui::elements::ChildView::new(&view.mode_dropdown).finish(),
+            zap_ng_ui::elements::ChildView::new(&view.mode_dropdown).finish(),
             Some(crate::t!("settings-network-mode-description")),
         ));
 
@@ -627,7 +627,7 @@ impl SettingsWidget for NetworkPageWidget {
                             save_action: NetworkPageAction,
                             clear_action: NetworkPageAction|
          -> Box<dyn Element> {
-            let editor_element = warpui::elements::ChildView::new(editor).finish();
+            let editor_element = zap_ng_ui::elements::ChildView::new(editor).finish();
             // 注意:不要把 `margin` 写进 button 的 `UiComponentStyles`。
             // `WrappableText::build()`(`Span::new(text, styles).build()` 内部)
             // 会把同一份 `styles.margin` 应用到 label 容器上,导致按钮**内部**

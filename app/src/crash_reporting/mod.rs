@@ -7,8 +7,8 @@ mod linux;
 use std::borrow::Cow;
 
 use lazy_static::lazy_static;
-use warp_core::channel::Channel;
-use warpui::{r#async::block_on, AppContext, SingletonEntity};
+use zap_ng_core::channel::Channel;
+use zap_ng_ui::{r#async::block_on, AppContext, SingletonEntity};
 
 use crate::auth::{AuthStateProvider, UserUid};
 use crate::channel::ChannelState;
@@ -17,9 +17,9 @@ use crate::settings::{PrivacySettings, PrivacySettingsChangedEvent};
 use parking_lot::RwLock;
 use regex::Regex;
 use std::collections::HashMap;
-use warpui::rendering::GPUDeviceInfo;
-use warpui::windowing::state::ApplicationStage;
-use warpui::windowing::{self, StateEvent, WindowManager};
+use zap_ng_ui::rendering::GPUDeviceInfo;
+use zap_ng_ui::windowing::state::ApplicationStage;
+use zap_ng_ui::windowing::{self, StateEvent, WindowManager};
 
 #[cfg(target_os = "linux")]
 pub use local_minidump::run_server as run_minidump_server;
@@ -308,12 +308,12 @@ fn release_version() -> &'static str {
     ChannelState::app_version().unwrap_or("<no tag>")
 }
 
-/// Sets the warp.client_type local crash metadata.
+/// Sets the zap-ng.client_type local crash metadata.
 pub fn set_client_type_tag(client_id: &str) {
     set_tag("warp.client_type", client_id);
 }
 
-/// Initializes the warp.virtual_env local crash metadata group.
+/// Initializes the zap-ng.virtual_env local crash metadata group.
 fn init_virtual_environment_tag(ctx: &mut AppContext) {
     let (tx, rx) = async_channel::unbounded();
 

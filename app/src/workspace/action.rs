@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use warp_util::path::LineAndColumnArg;
+use zap_ng_util::path::LineAndColumnArg;
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::AIConversationId;
@@ -10,7 +10,7 @@ use crate::ai::agent::AIAgentExchangeId;
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use crate::ai::document::ai_document_model::{AIDocumentId, AIDocumentVersion};
 use crate::auth::LoginGatedFeature;
-use crate::drive::items::WarpDriveItemId;
+use crate::drive::items::ZapNGDriveItemId;
 use crate::drive::ObjectTypeAndId;
 use crate::palette::PaletteMode;
 use crate::prompt::editor_modal::OpenSource as PromptEditorOpenSource;
@@ -29,11 +29,11 @@ use crate::workflows::{WorkflowSelectionSource, WorkflowSource, WorkflowType};
 use crate::workspace::PaneViewLocator;
 
 use ui_components::lightbox;
-use warpui::accessibility::AccessibilityVerbosity;
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::Vector2F;
-use warpui::platform::Cursor;
-use warpui::{EntityId, WindowId};
+use zap_ng_ui::accessibility::AccessibilityVerbosity;
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::Vector2F;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::{EntityId, WindowId};
 
 use super::global_actions::{ForkFromExchange, ForkedConversationDestination};
 use super::tab_settings::{
@@ -141,15 +141,15 @@ pub enum WorkspaceAction {
     AddTerminalTab {
         hide_homepage: bool,
     },
-    /// 在当前 tab 中央开新 terminal pane,执行 `ssh user@host`(openWarp 独有)。
+    /// 在当前 tab 中央开新 terminal pane,执行 `ssh user@host`(ZapNG 独有)。
     /// 由 SshServerView 的 Connect 按钮 / SshManagerPanel 右键"连接" 触发。
     OpenSshTerminal {
         node_id: String,
-        server: warp_ssh_manager::SshServerInfo,
+        server: zap_ng_ssh_manager::SshServerInfo,
     },
-    /// 打开/关闭左侧 panel 的 SSH 管理器视图(openWarp 独有)。
+    /// 打开/关闭左侧 panel 的 SSH 管理器视图(ZapNG 独有)。
     ToggleSshManager,
-    /// 打开/关闭左侧 panel 的 Skill 管理器视图(openWarp 独有)。
+    /// 打开/关闭左侧 panel 的 Skill 管理器视图(ZapNG 独有)。
     ToggleSkillManager,
     AddTabWithShell {
         shell: AvailableShell,
@@ -224,7 +224,7 @@ pub enum WorkspaceAction {
     ToggleErrorUnderlining,
     ToggleSyntaxHighlighting,
     CheckForUpdate,
-    ExportAllWarpDriveObjects,
+    ExportAllZapNGDriveObjects,
     SetA11yVerbosityLevel(AccessibilityVerbosity),
     ToggleNotifications,
     ToggleTabColor {
@@ -335,7 +335,7 @@ pub enum WorkspaceAction {
     /// Moves focus to the panel on the right
     FocusRightPanel,
     /// An action to view a newly created/edited workflow in WD from the toast
-    ViewObjectInWarpDrive(WarpDriveItemId),
+    ViewObjectInZapNGDrive(ZapNGDriveItemId),
     UndoTrash(ObjectTypeAndId),
     /// Open a local path in the file explorer.
     OpenInExplorer {
@@ -532,10 +532,10 @@ pub enum WorkspaceAction {
     ResetZapLaunchModalState,
     /// Install the opencode-warp plugin from GitHub into the global opencode config.
     #[cfg(debug_assertions)]
-    InstallOpenCodeWarpPlugin,
+    InstallOpenCodeZapNGPlugin,
     /// Use a local checkout of the opencode-warp plugin (for testing/development).
     #[cfg(debug_assertions)]
-    UseLocalOpenCodeWarpPlugin,
+    UseLocalOpenCodeZapNGPlugin,
     /// Take a process sample of the app (equivalent to Activity Monitor > Sample Process).
     #[cfg(target_os = "macos")]
     SampleProcess,
@@ -715,7 +715,7 @@ impl WorkspaceAction {
             | CopyVersion(_)
             | DownloadNewVersion
             | ConfigureKeybindingSettings { .. }
-            | ExportAllWarpDriveObjects
+            | ExportAllZapNGDriveObjects
             | ShowSettings
             | ShowSettingsPage(_)
             | ShowSettingsPageWithSearch { .. }
@@ -825,7 +825,7 @@ impl WorkspaceAction {
             | QueuePromptForConversation { .. }
             | UndoTrash(_)
             | OpenFilePath { .. }
-            | ViewObjectInWarpDrive(_)
+            | ViewObjectInZapNGDrive(_)
             | TerminateApp
             | TabHoverWidthStart { .. }
             | TabHoverWidthEnd
@@ -874,8 +874,8 @@ impl WorkspaceAction {
             DebugResetAwsBedrockLoginBannerDismissed
             | OpenZapLaunchModal
             | ResetZapLaunchModalState
-            | InstallOpenCodeWarpPlugin
-            | UseLocalOpenCodeWarpPlugin => false,
+            | InstallOpenCodeZapNGPlugin
+            | UseLocalOpenCodeZapNGPlugin => false,
             #[cfg(not(target_family = "wasm"))]
             ViewLogs => false,
             #[cfg(not(target_family = "wasm"))]

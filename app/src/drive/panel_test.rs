@@ -1,5 +1,5 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::{platform::WindowStyle, App};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{platform::WindowStyle, App};
 
 use crate::{
     ai::blocklist::BlocklistAIHistoryModel,
@@ -40,7 +40,7 @@ fn initialize_app(app: &mut App) {
 }
 
 #[test]
-fn test_warp_drive_sections_with_no_team() {
+fn test_zap_ng_drive_sections_with_no_team() {
     App::test(Assets, |mut app| async move {
         initialize_app(&mut app);
 

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use warpui::{Entity, SingletonEntity};
+use zap_ng_ui::{Entity, SingletonEntity};
 
 #[derive(thiserror::Error, Debug)]
 pub enum TranscribeError {

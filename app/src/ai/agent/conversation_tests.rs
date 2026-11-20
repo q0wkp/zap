@@ -18,7 +18,7 @@ use crate::terminal::model::block::{
     AgentInteractionMetadata, AgentViewVisibility, SerializedAIMetadata, SerializedBlock,
 };
 use crate::terminal::model::BlockId;
-use warp_core::features::FeatureFlag;
+use zap_ng_core::features::FeatureFlag;
 use warp_multi_agent_api as api;
 
 fn restored_conversation(conversation_data: Option<AgentConversationData>) -> AIConversation {

@@ -8,9 +8,9 @@
 
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::color::blend::Blend;
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::color::blend::Blend;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{
         ChildAnchor, ChildView, ConstrainedBox, OffsetPositioning, ParentAnchor, ParentElement,
         ParentOffsetBounds, Stack,
@@ -90,7 +90,7 @@ impl GenericMenuItem for ReasoningDepthMenuItem {
         let theme = Appearance::as_ref(app).theme();
         let color = theme.main_text_color(theme.surface_2()).into_solid();
         Some(
-            ConstrainedBox::new(Icon::Check.to_warpui_icon(Fill::Solid(color)).finish())
+            ConstrainedBox::new(Icon::Check.to_zap_ng_ui_icon(Fill::Solid(color)).finish())
                 .with_width(ITEM_CHECK_ICON_SIZE)
                 .with_height(ITEM_CHECK_ICON_SIZE)
                 .finish(),

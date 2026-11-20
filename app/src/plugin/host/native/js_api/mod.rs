@@ -5,8 +5,8 @@ use super::plugin::PluginHandle;
 cfg_if::cfg_if! {
     if #[cfg(feature = "completions_v2")] {
         use rquickjs::{prelude::MutFn, Value};
-        use warp_completer::signatures::CommandSignature;
-        use warp_js::FromWarpJs;
+        use zap_ng_completer::signatures::CommandSignature;
+        use zap_ng_js::FromZapNGJs;
     }
 }
 
@@ -14,7 +14,7 @@ cfg_if::cfg_if! {
 ///
 /// Currently, the API contains a single "completions" namespace for registering command
 /// signatures.
-pub fn warp(
+pub fn zap_ng(
     #[allow(unused_variables)] plugin: PluginHandle,
     ctx: Ctx<'_>,
 ) -> rquickjs::Result<Object<'_>> {
@@ -59,7 +59,7 @@ fn completions<'js>(plugin: PluginHandle, ctx: Ctx<'js>) -> rquickjs::Result<Obj
             MutFn::from(move |val: Value<'js>| {
                 if val.is_array() {
                     let mut plugin = plugin.get_mut();
-                    match Vec::<CommandSignature>::from_warp_js(
+                    match Vec::<CommandSignature>::from_zap_ng_js(
                         ctx,
                         val,
                         plugin.js_function_registry_mut(),
@@ -71,7 +71,7 @@ fn completions<'js>(plugin: PluginHandle, ctx: Ctx<'js>) -> rquickjs::Result<Obj
                     }
                 } else if val.is_object() {
                     let mut plugin = plugin.get_mut();
-                    match CommandSignature::from_warp_js(
+                    match CommandSignature::from_zap_ng_js(
                         ctx,
                         val,
                         plugin.js_function_registry_mut(),

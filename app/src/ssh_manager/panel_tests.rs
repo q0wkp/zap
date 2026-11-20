@@ -5,11 +5,11 @@
 use super::*;
 use chrono::NaiveDateTime;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::appearance::Appearance;
-use warp_ssh_manager::{NodeKind, SshNode};
-use warpui::platform::WindowStyle;
-use warpui::units::IntoPixels;
-use warpui::{App, Presenter, WindowInvalidation};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ssh_manager::{NodeKind, SshNode};
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::units::IntoPixels;
+use zap_ng_ui::{App, Presenter, WindowInvalidation};
 
 use crate::test_util::settings::initialize_settings_for_tests;
 
@@ -86,7 +86,7 @@ fn panel_with_nodes(
     }
 }
 
-fn render_panel_scene(app: &mut App, presenter: &mut Presenter, window_id: warpui::WindowId) {
+fn render_panel_scene(app: &mut App, presenter: &mut Presenter, window_id: zap_ng_ui::WindowId) {
     let mut updated = std::collections::HashSet::new();
     updated.insert(app.root_view_id(window_id).unwrap());
     let invalidation = WindowInvalidation {

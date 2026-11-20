@@ -3,14 +3,14 @@ use std::{path::PathBuf, sync::Arc};
 use pathfinder_color::ColorU;
 use serde::Serialize;
 use strum_macros::EnumIter;
-use warp_core::ui::{
+use zap_ng_core::ui::{
     color::hex_color::HexColorError as UiHexColorError,
-    theme::{AnsiColors, WarpTheme},
+    theme::{AnsiColors, ZapNGTheme},
 };
 
 use async_trait::async_trait;
 use thiserror::Error;
-use warpui::{fonts::FontInfo, keymap::Keystroke, DisplayIdx};
+use zap_ng_ui::{fonts::FontInfo, keymap::Keystroke, DisplayIdx};
 
 use crate::{
     interval_timer::IntervalTimer,
@@ -29,8 +29,8 @@ use super::iterm_parser::ITermProfile;
 
 #[derive(Debug)]
 pub enum ThemeType {
-    LightAndDark { light: WarpTheme, dark: WarpTheme },
-    Single(WarpTheme),
+    LightAndDark { light: ZapNGTheme, dark: ZapNGTheme },
+    Single(ZapNGTheme),
 }
 
 #[derive(Clone, Debug)]

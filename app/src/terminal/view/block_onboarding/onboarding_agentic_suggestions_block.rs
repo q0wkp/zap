@@ -18,18 +18,18 @@ use markdown_parser::FormattedTextFragment;
 use markdown_parser::FormattedTextLine;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::CornerRadius;
-use warpui::elements::CrossAxisAlignment;
-use warpui::elements::FormattedTextElement;
-use warpui::elements::Radius;
-use warpui::keymap::Keystroke;
-use warpui::ui_components::components::UiComponent;
-use warpui::ui_components::components::UiComponentStyles;
-use warpui::TypedActionView;
-use warpui::WeakViewHandle;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::CornerRadius;
+use zap_ng_ui::elements::CrossAxisAlignment;
+use zap_ng_ui::elements::FormattedTextElement;
+use zap_ng_ui::elements::Radius;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::ui_components::components::UiComponentStyles;
+use zap_ng_ui::TypedActionView;
+use zap_ng_ui::WeakViewHandle;
+use zap_ng_ui::{
     elements::{
         Border, ConstrainedBox, Container, Flex, Hoverable, MainAxisAlignment, MainAxisSize,
         MouseStateHandle, ParentElement, Text, Wrap,
@@ -444,7 +444,7 @@ impl OnboardingAgenticSuggestionsBlock {
                 self.agent_suggestions[index]
                     .0
                     .icon
-                    .to_warpui_icon(main_text_color)
+                    .to_zap_ng_ui_icon(main_text_color)
                     .finish(),
             )
             .with_height(KEYBOARD_ICON_SIZE)
@@ -526,7 +526,7 @@ impl OnboardingAgenticSuggestionsBlock {
                         // Use a more muted background for disabled state
                         theme.surface_1()
                     } else {
-                        warp_core::ui::theme::Fill::Solid(internal_colors::neutral_1(theme))
+                        zap_ng_core::ui::theme::Fill::Solid(internal_colors::neutral_1(theme))
                     };
 
                     let mut button_content =
@@ -639,7 +639,7 @@ impl OnboardingAgenticSuggestionsBlock {
                         Container::new(
                             ConstrainedBox::new(
                                 UIIcon::Icon::Loading
-                                    .to_warpui_icon(ai_brand_color(appearance.theme()).into())
+                                    .to_zap_ng_ui_icon(ai_brand_color(appearance.theme()).into())
                                     .finish(),
                             )
                             .with_height(icon_size)

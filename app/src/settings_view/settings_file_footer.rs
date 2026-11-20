@@ -12,16 +12,16 @@ use crate::settings::SettingsFileError;
 use crate::ui_components::icons::Icon;
 use crate::WorkspaceAction;
 use pathfinder_color::ColorU;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::color::coloru_with_opacity;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     Border, Clipped, ClippedScrollStateHandle, ClippedScrollable, ConstrainedBox, Container,
     CornerRadius, CrossAxisAlignment, Element, Empty, Expanded, Flex, Highlight, Hoverable,
     MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, ScrollbarWidth, Text,
     Wrap,
 };
-use warpui::fonts::{FamilyId, Properties, Weight};
-use warpui::platform::Cursor;
+use zap_ng_ui::fonts::{FamilyId, Properties, Weight};
+use zap_ng_ui::platform::Cursor;
 
 /// Horizontal + vertical padding applied to the footer inside the sidebar.
 const FOOTER_PADDING: f32 = 12.;
@@ -107,7 +107,7 @@ pub fn render_open_settings_file_button(
     let ui_font_family = appearance.ui_font_family();
 
     Hoverable::new(mouse_state, move |state| {
-        let icon = ConstrainedBox::new(Icon::Code2.to_warpui_icon(text_fill).finish())
+        let icon = ConstrainedBox::new(Icon::Code2.to_zap_ng_ui_icon(text_fill).finish())
             .with_width(FOOTER_ICON_SIZE)
             .with_height(FOOTER_ICON_SIZE)
             .finish();
@@ -190,7 +190,7 @@ pub fn render_settings_error_alert(
 
     let alert_icon = ConstrainedBox::new(
         Icon::AlertCircle
-            .to_warpui_icon(Fill::Solid(text_color))
+            .to_zap_ng_ui_icon(Fill::Solid(text_color))
             .finish(),
     )
     .with_width(FOOTER_ICON_SIZE)
@@ -209,7 +209,7 @@ pub fn render_settings_error_alert(
     // action buttons below stay fixed and always actionable. Scrollbar thumb
     // colors are derived from `text_color` (which already contrasts against
     // the yellow alert background) so they remain visible in both themes.
-    // `ClippedScrollable` wants `warpui::elements::Fill` (not the theme
+    // `ClippedScrollable` wants `zap_ng_ui::elements::Fill` (not the theme
     // `Fill` used elsewhere in this file), so the three fills below are
     // fully qualified to avoid an import alias.
     let scrollable_text = ConstrainedBox::new(
@@ -217,9 +217,9 @@ pub fn render_settings_error_alert(
             mouse_states.alert_text_scroll_state.clone(),
             text_row,
             ScrollbarWidth::Auto,
-            warpui::elements::Fill::Solid(coloru_with_opacity(text_color, 30)),
-            warpui::elements::Fill::Solid(coloru_with_opacity(text_color, 60)),
-            warpui::elements::Fill::None,
+            zap_ng_ui::elements::Fill::Solid(coloru_with_opacity(text_color, 30)),
+            zap_ng_ui::elements::Fill::Solid(coloru_with_opacity(text_color, 60)),
+            zap_ng_ui::elements::Fill::None,
         )
         .finish(),
     )
@@ -336,7 +336,7 @@ fn render_alert_action_button(
         if let Some(icon) = icon {
             row.add_child(
                 Container::new(
-                    ConstrainedBox::new(icon.to_warpui_icon(Fill::Solid(text_color)).finish())
+                    ConstrainedBox::new(icon.to_zap_ng_ui_icon(Fill::Solid(text_color)).finish())
                         .with_width(ALERT_OZ_ICON_SIZE)
                         .with_height(ALERT_OZ_ICON_SIZE)
                         .finish(),

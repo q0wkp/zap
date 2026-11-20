@@ -18,7 +18,7 @@ use crate::{
         JsonObjectType,
     },
     drive::{
-        items::{mcp_server::WarpDriveMCPServer, WarpDriveItem},
+        items::{mcp_server::ZapNGDriveMCPServer, ZapNGDriveItem},
         ObjectTypeAndId,
     },
     server::ids::SyncId,
@@ -28,8 +28,8 @@ use diesel::{QueryDsl, RunQueryDsl, SqliteConnection};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::Icon;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::Icon;
 
 pub mod manager;
 pub mod templatable_manager;
@@ -48,7 +48,7 @@ cfg_if::cfg_if! {
 
 pub(crate) fn home_config_file_path(provider: MCPProvider) -> Option<PathBuf> {
     match provider {
-        MCPProvider::Zap => warp_core::paths::warp_home_mcp_config_file_path(),
+        MCPProvider::Zap => zap_ng_core::paths::zap_ng_home_mcp_config_file_path(),
         _ => dirs::home_dir().map(|home_dir| home_dir.join(provider.home_config_path())),
     }
 }
@@ -145,12 +145,12 @@ mod tests {
     use super::{mcp_provider_from_file_path, MCPProvider};
 
     #[test]
-    fn mcp_provider_from_file_path_recognizes_warp_home_path() {
-        if let Some(warp_home_mcp_config_file_path) =
-            warp_core::paths::warp_home_mcp_config_file_path()
+    fn mcp_provider_from_file_path_recognizes_zap_ng_home_path() {
+        if let Some(zap_ng_home_mcp_config_file_path) =
+            zap_ng_core::paths::zap_ng_home_mcp_config_file_path()
         {
             assert_eq!(
-                mcp_provider_from_file_path(&warp_home_mcp_config_file_path),
+                mcp_provider_from_file_path(&zap_ng_home_mcp_config_file_path),
                 Some(MCPProvider::Zap)
             );
         }
@@ -159,7 +159,7 @@ mod tests {
 
 pub mod gallery;
 pub use gallery::MCPGalleryManager;
-use warpui::{AppContext, SingletonEntity as _};
+use zap_ng_ui::{AppContext, SingletonEntity as _};
 pub mod templatable;
 pub use templatable::JsonTemplate;
 pub use templatable::{TemplatableMCPServer, TemplateVariable};
@@ -320,17 +320,17 @@ impl StringModel for MCPServer {
         None
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         false
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         mcp_server: &MCPServerObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveMCPServer::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveMCPServer::new(
             ObjectTypeAndId::GenericStringObject {
                 object_type: GenericStringObjectFormat::Json(JsonObjectType::MCPServer),
                 id,

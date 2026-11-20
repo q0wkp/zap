@@ -1,4 +1,4 @@
-use warpui::{elements::MouseStateHandle, AppContext, Element};
+use zap_ng_ui::{elements::MouseStateHandle, AppContext, Element};
 
 use crate::{
     appearance::Appearance,
@@ -8,14 +8,14 @@ use crate::{
     themes::theme::Fill,
 };
 
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{ZapNGDriveItem, ZapNGDriveItemId};
 
 #[derive(Clone)]
-pub struct WarpDriveAIFactCollection {
+pub struct ZapNGDriveAIFactCollection {
     id: ClientId,
 }
 
-impl WarpDriveAIFactCollection {
+impl ZapNGDriveAIFactCollection {
     pub fn new(id: ClientId) -> Self {
         Self { id }
     }
@@ -25,7 +25,7 @@ impl WarpDriveAIFactCollection {
     }
 }
 
-impl WarpDriveItem for WarpDriveAIFactCollection {
+impl ZapNGDriveItem for ZapNGDriveAIFactCollection {
     fn display_name(&self) -> Option<String> {
         Some(crate::t!("rules-collection-name"))
     }
@@ -50,8 +50,8 @@ impl WarpDriveItem for WarpDriveAIFactCollection {
         None
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::AIFactCollection
+    fn zap_ng_drive_id(&self) -> ZapNGDriveItemId {
+        ZapNGDriveItemId::AIFactCollection
     }
 
     fn sync_status_icon(
@@ -67,7 +67,7 @@ impl WarpDriveItem for WarpDriveAIFactCollection {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn ZapNGDriveItem> {
         Box::new(self.clone())
     }
 }

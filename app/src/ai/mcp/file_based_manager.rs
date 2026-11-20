@@ -5,8 +5,8 @@ use repo_metadata::repositories::DetectedRepositories;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity};
 
 use crate::{
     ai::mcp::{
@@ -14,7 +14,7 @@ use crate::{
         ParsedTemplatableMCPServerResult,
     },
     settings::{ai::AISettings, AISettingsChangedEvent},
-    warp_managed_paths_watcher::warp_managed_mcp_config_path,
+    zap_ng_managed_paths_watcher::zap_ng_managed_mcp_config_path,
 };
 
 /// Singleton model to manage file-based MCP servers.
@@ -248,7 +248,7 @@ impl FileBasedMCPManager {
                         return false;
                     }
                     match provider {
-                        MCPProvider::Zap => Self::is_global_warp_root(root_path),
+                        MCPProvider::Zap => Self::is_global_zap_ng_root(root_path),
                         MCPProvider::Claude | MCPProvider::Codex | MCPProvider::Agents => {
                             home_dir.as_ref().is_some_and(|home| root_path == home)
                         }
@@ -259,19 +259,19 @@ impl FileBasedMCPManager {
 
     /// Returns `true` if the server identified by `hash` is referenced from the global
     /// Zap config (`~/.warp/.mcp.json`). Global Zap servers always auto-spawn.
-    fn is_global_warp_server(&self, hash: u64) -> bool {
+    fn is_global_zap_ng_server(&self, hash: u64) -> bool {
         self.file_based_servers_by_root
             .iter()
             .any(|(root_path, provider_map)| {
-                Self::is_global_warp_root(root_path)
+                Self::is_global_zap_ng_root(root_path)
                     && provider_map
                         .get(&MCPProvider::Zap)
                         .is_some_and(|hashes| hashes.contains(&hash))
             })
     }
 
-    fn is_global_warp_root(root_path: &Path) -> bool {
-        warp_managed_mcp_config_path().is_some_and(|path| root_path == path.root_path.as_path())
+    fn is_global_zap_ng_root(root_path: &Path) -> bool {
+        zap_ng_managed_mcp_config_path().is_some_and(|path| root_path == path.root_path.as_path())
     }
 
     fn spawn_file_based_servers(
@@ -294,7 +294,7 @@ impl FileBasedMCPManager {
             let Some(hash) = installation.hash() else {
                 continue;
             };
-            if self.is_global_warp_server(hash) || (self.is_global_server(hash) && mcp_enabled) {
+            if self.is_global_zap_ng_server(hash) || (self.is_global_server(hash) && mcp_enabled) {
                 to_spawn.push(installation);
             }
 
@@ -318,7 +318,7 @@ impl FileBasedMCPManager {
             .file_based_servers
             .iter()
             .filter(|(hash, _)| {
-                self.is_global_server(**hash) && !self.is_global_warp_server(**hash)
+                self.is_global_server(**hash) && !self.is_global_zap_ng_server(**hash)
             })
             .map(|(_, server)| server.clone())
             .collect();
@@ -410,7 +410,7 @@ impl FileBasedMCPManager {
         // state rather than a meaningful working directory. Map them to the
         // home dir so all global installs (Zap and third-party) share a
         // consistent cwd.
-        if self.is_global_warp_server(hash) {
+        if self.is_global_zap_ng_server(hash) {
             return dirs::home_dir().or(Some(discovery_root));
         }
         Some(discovery_root)

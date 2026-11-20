@@ -54,12 +54,12 @@ use super::{
     empty_trash_confirmation_dialog::{EmptyTrashConfirmationDialog, EmptyTrashConfirmationEvent},
     folders::FolderObject,
     items::{
-        ai_fact_collection::WarpDriveAIFactCollection,
-        item::{tools_panel_menu_direction, ItemStates, WarpDriveRow},
-        mcp_server_collection::WarpDriveMCPServerCollection,
-        WarpDriveItemId,
+        ai_fact_collection::ZapNGDriveAIFactCollection,
+        item::{tools_panel_menu_direction, ItemStates, ZapNGDriveRow},
+        mcp_server_collection::ZapNGDriveMCPServerCollection,
+        ZapNGDriveItemId,
     },
-    settings::WarpDriveSettings,
+    settings::ZapNGDriveSettings,
     sharing::ContentEditability,
     DriveObjectType, DriveSortOrder, ObjectTypeAndId,
 };
@@ -70,8 +70,8 @@ use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::{vec2f, Vector2F};
 use std::{any::Any, collections::HashMap, sync::Arc};
 use url::Url;
-use warp_core::{context_flag::ContextFlag, settings::Setting};
-use warpui::{
+use zap_ng_core::{context_flag::ContextFlag, settings::Setting};
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::{
         Align, AnchorPair, Border, ChildAnchor, ChildView, ClippedScrollStateHandle,
@@ -174,7 +174,7 @@ impl DropTargetData for StoredObjectLocation {
     }
 }
 
-struct RenderedWarpDriveItemAndChildren {
+struct RenderedZapNGDriveItemAndChildren {
     element: Box<dyn Element>,
     num_items: usize, // represents the total number of elements, including the parent and any children
 }
@@ -219,7 +219,7 @@ pub enum DriveIndexAction {
     ToggleSortingMenu,
     ToggleItemOverflowMenu {
         space: Space,
-        warp_drive_item_id: WarpDriveItemId,
+        zap_ng_drive_item_id: ZapNGDriveItemId,
     },
     ToggleSpaceOverflowMenu {
         space: Space,
@@ -393,7 +393,7 @@ pub enum DriveIndexEvent {
         initial_folder_id: Option<SyncId>,
     },
     OpenWorkflowModalWithWorkflowObject(SyncId),
-    FocusWarpDrive,
+    FocusZapNGDrive,
     OpenSharedObjectsCreationDeniedModal(DriveObjectType, ServerId),
     AttachPlanAsContext(AIDocumentId),
 }
@@ -434,10 +434,10 @@ pub struct DriveIndex {
     /// Variant of the index, determines whether base Zap Drive or trash is viewed.
     index_variant: DriveIndexVariant,
     /// If None, the context menu is closed. Otherwise, this contains the ID of the object it's open on.
-    menu_object_id_if_open: Option<WarpDriveItemId>,
+    menu_object_id_if_open: Option<ZapNGDriveItemId>,
     sections: Vec<DriveIndexSection>,
     /// Selected represents an object that is open in the active pane
-    selected: Option<WarpDriveItemId>,
+    selected: Option<ZapNGDriveItemId>,
     /// The numerical index of the item that is focused in WD (via keyboard)
     focused_index: Option<usize>,
     item_mouse_states: HashMap<Space, Vec<ItemStates>>,
@@ -459,7 +459,7 @@ pub struct DriveIndex {
     /// A sorted list of all the items (spaces + objects) in Zap Drive
     /// Unlike sorted_orders_by_location, this is not used for rendering
     /// This is used for object focusing and WD keyboard navigation
-    ordered_items: Vec<WarpDriveItemId>,
+    ordered_items: Vec<ZapNGDriveItemId>,
 
     /// Whether or not we have done an initial setting of all the section states.
     /// We need to keep track of this to make sure we don't do any opening actions on WD
@@ -475,17 +475,17 @@ pub struct DriveIndex {
 
     /// Drive item to represent collection of AI facts.
     /// Special-cased to always render at the top of the Personal space section.
-    ai_fact_collection: WarpDriveAIFactCollection,
+    ai_fact_collection: ZapNGDriveAIFactCollection,
     ai_fact_collection_item_mouse_states: ItemStates,
 
     /// Drive item to represent collection of MCP servers.
     /// Special-cased to always render at the top of the Personal space section.
-    mcp_server_collection: WarpDriveMCPServerCollection,
+    mcp_server_collection: ZapNGDriveMCPServerCollection,
     mcp_server_collection_item_mouse_states: ItemStates,
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings(vec![
         FixedBinding::new("up", DriveIndexAction::FocusPreviousItem, id!("DriveIndex")),
@@ -638,7 +638,7 @@ impl DriveIndex {
                 object_store_model
                     .active_cloud_objects_in_location_without_descendents(location, app)
                     .filter(move |cloud_object| {
-                        cloud_object.renders_in_warp_drive()
+                        cloud_object.renders_in_zap_ng_drive()
                             && user_uid.is_some_and(|uid| {
                                 cloud_object.permissions().has_direct_user_access(uid)
                             })
@@ -651,7 +651,7 @@ impl DriveIndex {
             }
             (DriveIndexVariant::MainIndex, _) => object_store_model
                 .active_cloud_objects_in_location_without_descendents(location, app)
-                .filter(|cloud_object| cloud_object.renders_in_warp_drive())
+                .filter(|cloud_object| cloud_object.renders_in_zap_ng_drive())
                 .sorted_by(self.sorting_choice.sort_by(
                     cloud_view_model,
                     UpdateTimestamp::Revision,
@@ -710,7 +710,7 @@ impl DriveIndex {
             if let Some(cloud_object) = object_store_model.get_by_uid(&uid) {
                 // Add object to the list
                 let cloud_id = cloud_object.object_type_and_id();
-                self.ordered_items.push(WarpDriveItemId::Object(cloud_id));
+                self.ordered_items.push(ZapNGDriveItemId::Object(cloud_id));
                 // If the item is a folder and the folder is open, recurse
                 if let ObjectTypeAndId::Folder(folder_id) = cloud_id {
                     if self
@@ -735,7 +735,7 @@ impl DriveIndex {
         for section in self.sections.clone() {
             let DriveIndexSection::Space(space) = section;
             // Add space to the list
-            self.ordered_items.push(WarpDriveItemId::Space(space));
+            self.ordered_items.push(ZapNGDriveItemId::Space(space));
             // If the space is not collapsed, iterate through the items in the space
             if let Some(section_state) = self
                 .section_states
@@ -748,9 +748,9 @@ impl DriveIndex {
                             && ContextFlag::ShowMCPServers.is_enabled()
                         {
                             self.ordered_items
-                                .push(WarpDriveItemId::MCPServerCollection);
+                                .push(ZapNGDriveItemId::MCPServerCollection);
                         }
-                        self.ordered_items.push(WarpDriveItemId::AIFactCollection);
+                        self.ordered_items.push(ZapNGDriveItemId::AIFactCollection);
                     }
                     // Sort and add the rest of the items in the space
                     let Some(uids) = self
@@ -764,7 +764,7 @@ impl DriveIndex {
             }
         }
         if self.index_variant == DriveIndexVariant::MainIndex {
-            self.ordered_items.push(WarpDriveItemId::Trash);
+            self.ordered_items.push(ZapNGDriveItemId::Trash);
         }
     }
 
@@ -847,7 +847,7 @@ impl DriveIndex {
             me.handle_empty_trash_confirmation_dialog_event(event, ctx);
         });
 
-        let sorting_choice = *WarpDriveSettings::as_ref(ctx).sorting_choice.value();
+        let sorting_choice = *ZapNGDriveSettings::as_ref(ctx).sorting_choice.value();
 
         let initial_load_complete =
             crate::cloud_object::model::persistence::ObjectStoreModel::as_ref(ctx)
@@ -895,8 +895,8 @@ impl DriveIndex {
             dropdown
         });
 
-        let ai_fact_collection = WarpDriveAIFactCollection::new(ClientId::default());
-        let mcp_server_collection = WarpDriveMCPServerCollection::new(ClientId::default());
+        let ai_fact_collection = ZapNGDriveAIFactCollection::new(ClientId::default());
+        let mcp_server_collection = ZapNGDriveMCPServerCollection::new(ClientId::default());
 
         Self {
             window_id: ctx.window_id(),
@@ -958,7 +958,7 @@ impl DriveIndex {
         NetworkStatus::as_ref(app).is_online()
     }
 
-    pub fn scroll_item_into_view(&mut self, item_id: WarpDriveItemId, ctx: &mut ViewContext<Self>) {
+    pub fn scroll_item_into_view(&mut self, item_id: ZapNGDriveItemId, ctx: &mut ViewContext<Self>) {
         self.clipped_scroll_state.scroll_to_position(ScrollTarget {
             position_id: item_id.drive_row_position_id(),
             mode: ScrollToPositionMode::FullyIntoView,
@@ -967,7 +967,7 @@ impl DriveIndex {
     }
 
     /// Sets focused to the index of either the selected object or the first item in WD
-    pub fn reset_focused_index_in_warp_drive(
+    pub fn reset_focused_index_in_zap_ng_drive(
         &mut self,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
@@ -995,7 +995,7 @@ impl DriveIndex {
 
     pub fn set_focused_item(
         &mut self,
-        item_id: WarpDriveItemId,
+        item_id: ZapNGDriveItemId,
         should_scroll: bool,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -1068,8 +1068,8 @@ impl DriveIndex {
         if let Event::Close { via_select_item } = event {
             self.reset_menus(ctx);
             if !*via_select_item {
-                ctx.emit(DriveIndexEvent::FocusWarpDrive);
-                self.reset_focused_index_in_warp_drive(false, ctx);
+                ctx.emit(DriveIndexEvent::FocusZapNGDrive);
+                self.reset_focused_index_in_zap_ng_drive(false, ctx);
             }
         }
     }
@@ -1119,14 +1119,14 @@ impl DriveIndex {
         ctx.notify();
     }
 
-    /// Expand the section for zap drive item. This is called when we perform deep link to warp
+    /// Expand the section for zap drive item. This is called when we perform deep link to zap-ng
     /// drive items.
     pub fn expand_section_for_drive_item_id(
         &mut self,
-        item_id: WarpDriveItemId,
+        item_id: ZapNGDriveItemId,
         ctx: &mut ViewContext<DriveIndex>,
     ) {
-        if let WarpDriveItemId::Object(object_id) = item_id {
+        if let ZapNGDriveItemId::Object(object_id) = item_id {
             match object_id {
                 ObjectTypeAndId::Notebook(sync_id) => {
                     self.expand_section_for_object(&sync_id.uid().clone(), ctx);
@@ -1212,7 +1212,7 @@ impl DriveIndex {
             ctx.dispatch_typed_action(DriveIndexAction::ToggleSectionCollapsed(section))
         })
         .on_right_click(move |ctx, _, position| {
-            let position_id = &warp_drive_section_header_position_id(&section);
+            let position_id = &zap_ng_drive_section_header_position_id(&section);
             let Some(prompt_rect) = ctx.element_position_by_id(position_id) else {
                 return;
             };
@@ -1231,7 +1231,7 @@ impl DriveIndex {
                 stack.add_positioned_overlay_child(
                     ChildView::new(&self.menu).finish(),
                     OffsetPositioning::offset_from_save_position_element(
-                        warp_drive_section_header_position_id(&section),
+                        zap_ng_drive_section_header_position_id(&section),
                         space_menu_state.offset,
                         PositionedElementOffsetBounds::WindowByPosition,
                         PositionedElementAnchor::TopLeft,
@@ -1275,10 +1275,10 @@ impl DriveIndex {
         // If the space is focused, set background
         let mut is_focused = false;
         if let Some(focused_index) = self.focused_index {
-            if Some(&WarpDriveItemId::Space(section_space)) == self.ordered_items.get(focused_index)
+            if Some(&ZapNGDriveItemId::Space(section_space)) == self.ordered_items.get(focused_index)
             {
                 container = container.with_background(
-                    warp_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
+                    zap_ng_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
                 );
                 is_focused = true;
             }
@@ -1290,7 +1290,7 @@ impl DriveIndex {
                     // If the item is hovered, set a hover background that matches the hover state of zap drive items.
                     if mouse_state.is_hovered() && !is_focused || section_state.menu_open {
                         container = container.with_background(
-                            warp_core::ui::theme::color::internal_colors::fg_overlay_2(
+                            zap_ng_core::ui::theme::color::internal_colors::fg_overlay_2(
                                 appearance.theme(),
                             ),
                         );
@@ -1331,7 +1331,7 @@ impl DriveIndex {
                 ctx.dispatch_typed_action(DriveIndexAction::ToggleSectionCollapsed(section))
             })
             .on_right_click(move |ctx, _, position| {
-                let position_id = &warp_drive_section_header_position_id(&section);
+                let position_id = &zap_ng_drive_section_header_position_id(&section);
                 let Some(prompt_rect) = ctx.element_position_by_id(position_id) else {
                     return;
                 };
@@ -1350,7 +1350,7 @@ impl DriveIndex {
                 left_stack.add_positioned_overlay_child(
                     ChildView::new(&self.menu).finish(),
                     OffsetPositioning::offset_from_save_position_element(
-                        warp_drive_section_header_position_id(&section),
+                        zap_ng_drive_section_header_position_id(&section),
                         space_menu_state.offset,
                         PositionedElementOffsetBounds::WindowByPosition,
                         PositionedElementAnchor::TopLeft,
@@ -1365,7 +1365,7 @@ impl DriveIndex {
             if self
                 .focused_index
                 .and_then(|idx| self.ordered_items.get(idx))
-                .is_some_and(|item| item == &WarpDriveItemId::Space(space_clone))
+                .is_some_and(|item| item == &ZapNGDriveItemId::Space(space_clone))
             {
                 (
                     blended_colors::text_main(appearance.theme(), appearance.theme().background()),
@@ -1384,7 +1384,7 @@ impl DriveIndex {
             font_color: Some(empty_trash_default_font_color),
             font_size: Some(14.),
             font_family_id: Some(appearance.ui_font_family()),
-            font_weight: Some(warpui::fonts::Weight::Semibold),
+            font_weight: Some(zap_ng_ui::fonts::Weight::Semibold),
             padding: Some(Coords::uniform(6.)),
             border_radius: Some(CornerRadius::with_all(Radius::Pixels(6.))),
             ..Default::default()
@@ -1445,7 +1445,7 @@ impl DriveIndex {
                     self.add_dialog_to_stack(
                         &mut right_stack,
                         ChildView::new(&self.empty_trash_confirmation_dialog).finish(),
-                        warp_drive_section_header_position_id(&section).as_str(),
+                        zap_ng_drive_section_header_position_id(&section).as_str(),
                         app,
                     );
                 }
@@ -1476,9 +1476,9 @@ impl DriveIndex {
         let mut is_focused = false;
         let DriveIndexSection::Space(space) = section;
         if let Some(focused_index) = self.focused_index {
-            if Some(&WarpDriveItemId::Space(space)) == self.ordered_items.get(focused_index) {
+            if Some(&ZapNGDriveItemId::Space(space)) == self.ordered_items.get(focused_index) {
                 container = container.with_background(
-                    warp_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
+                    zap_ng_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
                 );
                 is_focused = true;
             }
@@ -1490,7 +1490,7 @@ impl DriveIndex {
                 // If the item is hovered, set a hover background that matches the hover state of zap drive items.
                 if mouse_state.is_hovered() && !is_focused || section_state.menu_open {
                     container = container.with_background(
-                        warp_core::ui::theme::color::internal_colors::fg_overlay_2(
+                        zap_ng_core::ui::theme::color::internal_colors::fg_overlay_2(
                             appearance.theme(),
                         ),
                     );
@@ -1502,7 +1502,7 @@ impl DriveIndex {
         .finish()
     }
 
-    // Todo: move the header rendering into WarpDriveItem to consolidate styling logic.
+    // Todo: move the header rendering into ZapNGDriveItem to consolidate styling logic.
     fn render_section_header(
         &self,
         section: DriveIndexSection,
@@ -1514,7 +1514,7 @@ impl DriveIndex {
             (DriveIndexVariant::MainIndex, DriveIndexSection::Space(space)) => {
                 let title_font_color: ColorU = if self.focused_index.is_some()
                     && self.ordered_items.get(self.focused_index.unwrap())
-                        == Some(&WarpDriveItemId::Space(space))
+                        == Some(&ZapNGDriveItemId::Space(space))
                 {
                     blended_colors::text_main(appearance.theme(), appearance.theme().background())
                 } else {
@@ -1531,7 +1531,7 @@ impl DriveIndex {
             }
             (DriveIndexVariant::Trash, DriveIndexSection::Space(space)) => {
                 let title_font_color = self
-                    .font_color_based_on_focused_state(appearance, WarpDriveItemId::Space(space));
+                    .font_color_based_on_focused_state(appearance, ZapNGDriveItemId::Space(space));
                 Some(self.render_trash_section_header(
                     self.render_section_title(space, title_font_color, appearance, app),
                     &space,
@@ -1549,7 +1549,7 @@ impl DriveIndex {
                 ConstrainedBox::new(header)
                     .with_height(SECTION_HEADER_CONTENT_HEIGHT + SECTION_HEADER_MARGIN_BOTTOM)
                     .finish(),
-                &warp_drive_section_header_position_id(&section),
+                &zap_ng_drive_section_header_position_id(&section),
             )
             .finish()
         } else {
@@ -1588,9 +1588,9 @@ impl DriveIndex {
     }
 
     fn render_trash_row(&self, appearance: &Appearance, _: &AppContext) -> Box<dyn Element> {
-        let font_color = self.font_color_based_on_focused_state(appearance, WarpDriveItemId::Trash);
+        let font_color = self.font_color_based_on_focused_state(appearance, ZapNGDriveItemId::Trash);
         let icon = Container::new(
-            ConstrainedBox::new(Icon::Trash.to_warpui_icon(font_color.into()).finish())
+            ConstrainedBox::new(Icon::Trash.to_zap_ng_ui_icon(font_color.into()).finish())
                 .with_width(SECTION_HEADER_FONT_SIZE)
                 .with_height(SECTION_HEADER_FONT_SIZE)
                 .finish(),
@@ -1637,9 +1637,9 @@ impl DriveIndex {
         // If the trash row is focused, set background
         let mut is_focused = false;
         if let Some(focused_index) = self.focused_index {
-            if Some(&WarpDriveItemId::Trash) == self.ordered_items.get(focused_index) {
+            if Some(&ZapNGDriveItemId::Trash) == self.ordered_items.get(focused_index) {
                 container = container.with_background(
-                    warp_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
+                    zap_ng_core::ui::theme::color::internal_colors::fg_overlay_4(appearance.theme()),
                 );
                 is_focused = true;
             }
@@ -1652,7 +1652,7 @@ impl DriveIndex {
                 if mouse_state.is_hovered() && !is_focused {
                     container
                         .with_background(
-                            warp_core::ui::theme::color::internal_colors::fg_overlay_2(
+                            zap_ng_core::ui::theme::color::internal_colors::fg_overlay_2(
                                 appearance.theme(),
                             ),
                         )
@@ -1683,24 +1683,24 @@ impl DriveIndex {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
-        let warp_drive_item_id = WarpDriveItemId::AIFactCollection;
-        let is_selected = self.selected == Some(warp_drive_item_id);
+        let zap_ng_drive_item_id = ZapNGDriveItemId::AIFactCollection;
+        let is_selected = self.selected == Some(zap_ng_drive_item_id);
         let mut is_focused = false;
         if let Some(focused_index) = self.focused_index {
-            if let Some(&WarpDriveItemId::AIFactCollection) = self.ordered_items.get(focused_index)
+            if let Some(&ZapNGDriveItemId::AIFactCollection) = self.ordered_items.get(focused_index)
             {
                 is_focused = true;
             }
         }
 
-        let row = WarpDriveRow::new(
+        let row = ZapNGDriveRow::new(
             Box::new(self.ai_fact_collection.clone()),
             self.ai_fact_collection_item_mouse_states.clone(),
             space,
             0,
             self.menu.clone(),
             false, /* can_move */
-            !self.menu_items(&space, &warp_drive_item_id, app).is_empty(),
+            !self.menu_items(&space, &zap_ng_drive_item_id, app).is_empty(),
             false,
             false, /* share_dialog_open */
             is_selected,
@@ -1719,25 +1719,25 @@ impl DriveIndex {
         appearance: &Appearance,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
-        let warp_drive_item_id = WarpDriveItemId::MCPServerCollection;
-        let is_selected = self.selected == Some(warp_drive_item_id);
+        let zap_ng_drive_item_id = ZapNGDriveItemId::MCPServerCollection;
+        let is_selected = self.selected == Some(zap_ng_drive_item_id);
         let mut is_focused = false;
         if let Some(focused_index) = self.focused_index {
-            if let Some(&WarpDriveItemId::MCPServerCollection) =
+            if let Some(&ZapNGDriveItemId::MCPServerCollection) =
                 self.ordered_items.get(focused_index)
             {
                 is_focused = true;
             }
         }
 
-        let row = WarpDriveRow::new(
+        let row = ZapNGDriveRow::new(
             Box::new(self.mcp_server_collection.clone()),
             self.mcp_server_collection_item_mouse_states.clone(),
             space,
             0,
             self.menu.clone(),
             false, /* can_move */
-            !self.menu_items(&space, &warp_drive_item_id, app).is_empty(),
+            !self.menu_items(&space, &zap_ng_drive_item_id, app).is_empty(),
             false,
             false, /* share_dialog_open */
             is_selected,
@@ -1831,7 +1831,7 @@ impl DriveIndex {
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let rendered_icon = ConstrainedBox::new(
-            icon.to_warpui_icon(appearance.theme().nonactive_ui_text_color())
+            icon.to_zap_ng_ui_icon(appearance.theme().nonactive_ui_text_color())
                 .finish(),
         )
         .with_width(ITEM_FONT_SIZE)
@@ -2030,7 +2030,7 @@ impl DriveIndex {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::CloudOffline
-                                .to_warpui_icon(
+                                .to_zap_ng_ui_icon(
                                     appearance
                                         .theme()
                                         .sub_text_color(appearance.theme().surface_2()),
@@ -2240,7 +2240,7 @@ impl DriveIndex {
                     Container::new(
                         ConstrainedBox::new(
                             Icon::Info
-                                .to_warpui_icon(appearance.theme().nonactive_ui_text_color())
+                                .to_zap_ng_ui_icon(appearance.theme().nonactive_ui_text_color())
                                 .finish(),
                         )
                         .with_height(15.)
@@ -2297,30 +2297,30 @@ impl DriveIndex {
         object_store_model: &ObjectStoreModel,
         appearance: &Appearance,
         app: &AppContext,
-    ) -> Option<RenderedWarpDriveItemAndChildren> {
-        if !object.renders_in_warp_drive() {
+    ) -> Option<RenderedZapNGDriveItemAndChildren> {
+        if !object.renders_in_zap_ng_drive() {
             return None;
         }
 
         let mut stack = Stack::new();
         let row_object_id = object.object_type_and_id();
-        let warp_drive_item_id = WarpDriveItemId::Object(row_object_id);
+        let zap_ng_drive_item_id = ZapNGDriveItemId::Object(row_object_id);
         let access_level =
             ObjectStoreViewModel::as_ref(app).access_level(&row_object_id.uid(), app);
 
         // Zap Phase 2a: sharing dialog removed; pass `false` for the
-        // legacy `share_dialog_open` slot in `WarpDriveRow::new_from_cloud_object`.
+        // legacy `share_dialog_open` slot in `ZapNGDriveRow::new_from_cloud_object`.
         let share_dialog_open = false;
-        let menu_open = self.menu_object_id_if_open == Some(warp_drive_item_id);
+        let menu_open = self.menu_object_id_if_open == Some(zap_ng_drive_item_id);
         let can_move = self.online_only_operation_allowed(&row_object_id, app)
             && matches!(self.index_variant, DriveIndexVariant::MainIndex)
             && access_level.can_move_drive();
         let mut is_focused = false;
 
-        let is_selected = self.selected == Some(warp_drive_item_id);
+        let is_selected = self.selected == Some(zap_ng_drive_item_id);
         if let Some(focused_index) = self.focused_index {
             if !self.ordered_items.is_empty() {
-                if let Some(&WarpDriveItemId::Object(cloud_id)) =
+                if let Some(&ZapNGDriveItemId::Object(cloud_id)) =
                     self.ordered_items.get(focused_index)
                 {
                     is_focused = row_object_id == cloud_id;
@@ -2328,14 +2328,14 @@ impl DriveIndex {
             }
         }
 
-        let row = WarpDriveRow::new_from_cloud_object(
+        let row = ZapNGDriveRow::new_from_cloud_object(
             object,
             item_mouse_states[space_index].clone(),
             space,
             folder_depth,
             self.menu.clone(),
             can_move,
-            !self.menu_items(&space, &warp_drive_item_id, app).is_empty(),
+            !self.menu_items(&space, &zap_ng_drive_item_id, app).is_empty(),
             menu_open,
             share_dialog_open,
             is_selected,
@@ -2459,7 +2459,7 @@ impl DriveIndex {
             );
         }
 
-        Some(RenderedWarpDriveItemAndChildren {
+        Some(RenderedZapNGDriveItemAndChildren {
             element: rendered_item,
             num_items: total_rows_for_item,
         })
@@ -2543,7 +2543,7 @@ impl DriveIndex {
         section: DriveIndexSection,
         is_collapsed: bool,
         appearance: &Appearance,
-    ) -> Box<dyn warpui::Element> {
+    ) -> Box<dyn zap_ng_ui::Element> {
         let icon = if is_collapsed {
             Icon::ListCollapsed
         } else {
@@ -2554,7 +2554,7 @@ impl DriveIndex {
             // Set icon color contrast correctly if a space is focused
             if self.focused_index.is_some()
                 && self.ordered_items.get(self.focused_index.unwrap())
-                    == Some(&WarpDriveItemId::Space(space))
+                    == Some(&ZapNGDriveItemId::Space(space))
             {
                 blended_colors::text_main(appearance.theme(), appearance.theme().background())
                     .into()
@@ -2565,7 +2565,7 @@ impl DriveIndex {
 
         // This icon should render the same as other ZapDrive icons but with no click or hover states.
         Container::new(
-            ConstrainedBox::new(icon.to_warpui_icon(icon_color).finish())
+            ConstrainedBox::new(icon.to_zap_ng_ui_icon(icon_color).finish())
                 .with_width(SECTION_HEADER_FONT_SIZE)
                 .with_height(SECTION_HEADER_FONT_SIZE)
                 .finish(),
@@ -2574,7 +2574,7 @@ impl DriveIndex {
         .finish()
     }
 
-    fn render_sorting_button(&self, appearance: &Appearance) -> Box<dyn warpui::Element> {
+    fn render_sorting_button(&self, appearance: &Appearance) -> Box<dyn zap_ng_ui::Element> {
         let mut button = icon_button_with_context_menu(
             Icon::Sort,
             move |ctx, _, _| ctx.dispatch_typed_action(DriveIndexAction::ToggleSortingMenu),
@@ -2610,7 +2610,7 @@ impl DriveIndex {
         hoverable.finish()
     }
 
-    fn render_retry_button(&self, appearance: &Appearance) -> Box<dyn warpui::Element> {
+    fn render_retry_button(&self, appearance: &Appearance) -> Box<dyn zap_ng_ui::Element> {
         let ui_builder = appearance.ui_builder().clone();
 
         icon_button(
@@ -2638,12 +2638,12 @@ impl DriveIndex {
         space: Space,
         state: &DriveIndexSectionState,
         app: &AppContext,
-    ) -> Box<dyn warpui::Element> {
+    ) -> Box<dyn zap_ng_ui::Element> {
         let mut button;
         // Set color contrast correctly when focused
         if self.focused_index.is_some()
             && self.ordered_items.get(self.focused_index.unwrap())
-                == Some(&WarpDriveItemId::Space(space))
+                == Some(&ZapNGDriveItemId::Space(space))
         {
             button = highlight(
                 icon_button(
@@ -2714,7 +2714,7 @@ impl DriveIndex {
     fn font_color_based_on_focused_state(
         &self,
         appearance: &Appearance,
-        item: WarpDriveItemId,
+        item: ZapNGDriveItemId,
     ) -> ColorU {
         if self.focused_index.is_some()
             && self.ordered_items.get(self.focused_index.unwrap()) == Some(&item)
@@ -2745,7 +2745,7 @@ impl DriveIndex {
     fn refocus_section_index(&mut self, section: &DriveIndexSection, ctx: &mut ViewContext<Self>) {
         if self.focused_index.is_some() {
             let DriveIndexSection::Space(space) = *section;
-            self.set_focused_item(WarpDriveItemId::Space(space), true, ctx);
+            self.set_focused_item(ZapNGDriveItemId::Space(space), true, ctx);
             // Need to re-render focused index in Zap Drive after a space has been toggled
             if let Some(focused_index) = self.focused_index {
                 self.update_focused_params(focused_index, ObjectStoreModel::as_ref(ctx));
@@ -3287,7 +3287,7 @@ impl DriveIndex {
         self.initialize_section_states(ctx);
         ctx.notify();
 
-        WarpDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
+        ZapNGDriveSettings::handle(ctx).update(ctx, |settings, ctx| {
             report_if_error!(settings.sorting_choice.set_value(*sorting_choice, ctx));
         });
 
@@ -3426,7 +3426,7 @@ impl DriveIndex {
             |_| {
                 ConstrainedBox::new(
                     Icon::X
-                        .to_warpui_icon(appearance.theme().main_text_color(background_color))
+                        .to_zap_ng_ui_icon(appearance.theme().main_text_color(background_color))
                         .finish(),
                 )
                 .with_width(12.)
@@ -3447,7 +3447,7 @@ impl DriveIndex {
                 Text::new_inline(crate::t!("drive-title"), appearance.ui_font_family(), 14.)
                     .with_color(theme.main_text_color(background_color).into())
                     .with_style(Properties {
-                        weight: warpui::fonts::Weight::Bold,
+                        weight: zap_ng_ui::fonts::Weight::Bold,
                         ..Default::default()
                     })
                     .finish(),
@@ -3730,12 +3730,12 @@ impl DriveIndex {
     fn menu_items(
         &self,
         space: &Space,
-        warp_drive_item_id: &WarpDriveItemId,
+        zap_ng_drive_item_id: &ZapNGDriveItemId,
         app: &AppContext,
     ) -> Vec<MenuItem<DriveIndexAction>> {
         match self.index_variant {
-            DriveIndexVariant::MainIndex => self.index_menu_items(space, warp_drive_item_id, app),
-            DriveIndexVariant::Trash => self.trash_menu_items(space, warp_drive_item_id, app),
+            DriveIndexVariant::MainIndex => self.index_menu_items(space, zap_ng_drive_item_id, app),
+            DriveIndexVariant::Trash => self.trash_menu_items(space, zap_ng_drive_item_id, app),
         }
     }
 
@@ -3743,11 +3743,11 @@ impl DriveIndex {
     fn index_menu_items(
         &self,
         space: &Space,
-        warp_drive_item_id: &WarpDriveItemId,
+        zap_ng_drive_item_id: &ZapNGDriveItemId,
         app: &AppContext,
     ) -> Vec<MenuItem<DriveIndexAction>> {
         let mut menu_items = Vec::new();
-        let WarpDriveItemId::Object(object_type_and_id) = warp_drive_item_id else {
+        let ZapNGDriveItemId::Object(object_type_and_id) = zap_ng_drive_item_id else {
             return menu_items;
         };
         let can_move_or_trash = self.online_only_operation_allowed(object_type_and_id, app);
@@ -4067,7 +4067,7 @@ impl DriveIndex {
                             );
                         }
                         // Zap Phase 2a: drive-share menu item removed (sharing dialog gone).
-                        if !warpui::platform::is_mobile_device()
+                        if !zap_ng_ui::platform::is_mobile_device()
                             && !ContextFlag::HideOpenOnDesktopButton.is_enabled()
                             && *UserAppInstallDetectionSettings::as_ref(app)
                                 .user_app_installation_detected
@@ -4156,11 +4156,11 @@ impl DriveIndex {
     fn trash_menu_items(
         &self,
         _space: &Space,
-        warp_drive_item_id: &WarpDriveItemId,
+        zap_ng_drive_item_id: &ZapNGDriveItemId,
         app: &AppContext,
     ) -> Vec<MenuItem<DriveIndexAction>> {
         let mut menu_items = Vec::new();
-        let WarpDriveItemId::Object(object_type_and_id) = warp_drive_item_id else {
+        let ZapNGDriveItemId::Object(object_type_and_id) = zap_ng_drive_item_id else {
             return menu_items;
         };
 
@@ -4220,16 +4220,16 @@ impl DriveIndex {
     pub fn toggle_item_menu(
         &mut self,
         space: &Space,
-        warp_drive_item_id: &WarpDriveItemId,
+        zap_ng_drive_item_id: &ZapNGDriveItemId,
         ctx: &mut ViewContext<Self>,
     ) {
         let menu_items: Vec<MenuItem<DriveIndexAction>> =
-            self.menu_items(space, warp_drive_item_id, ctx);
+            self.menu_items(space, zap_ng_drive_item_id, ctx);
         ctx.update_view(&self.menu, |menu, ctx| {
             menu.set_items(menu_items, ctx);
         });
 
-        self.menu_object_id_if_open = Some(*warp_drive_item_id);
+        self.menu_object_id_if_open = Some(*zap_ng_drive_item_id);
         ctx.focus(&self.menu);
         ctx.notify();
     }
@@ -4280,7 +4280,7 @@ impl DriveIndex {
 
     pub fn set_selected_object(
         &mut self,
-        id: Option<WarpDriveItemId>,
+        id: Option<ZapNGDriveItemId>,
         ctx: &mut ViewContext<Self>,
     ) {
         self.selected = id;
@@ -4308,17 +4308,17 @@ impl DriveIndex {
                 return;
             };
             match focused_item_id {
-                WarpDriveItemId::AIFactCollection => {
+                ZapNGDriveItemId::AIFactCollection => {
                     if let DriveIndexAction::EnterKey = key {
                         ctx.emit(DriveIndexEvent::OpenAIFactCollection);
                     }
                 }
-                WarpDriveItemId::MCPServerCollection => {
+                ZapNGDriveItemId::MCPServerCollection => {
                     if let DriveIndexAction::EnterKey = key {
                         ctx.emit(DriveIndexEvent::OpenMCPServerCollection);
                     }
                 }
-                WarpDriveItemId::Object(cloud_id) => match cloud_id {
+                ZapNGDriveItemId::Object(cloud_id) => match cloud_id {
                     ObjectTypeAndId::Notebook(_) => {
                         if let DriveIndexAction::EnterKey = key {
                             ctx.emit(DriveIndexEvent::OpenObject(*cloud_id))
@@ -4363,7 +4363,7 @@ impl DriveIndex {
                         }
                     }
                 },
-                WarpDriveItemId::Space(space) => {
+                ZapNGDriveItemId::Space(space) => {
                     let section = &DriveIndexSection::Space(*space);
                     match key {
                         DriveIndexAction::EnterKey => self.toggle_section_collapse(section, ctx),
@@ -4376,7 +4376,7 @@ impl DriveIndex {
                         _ => {}
                     }
                 }
-                WarpDriveItemId::Trash => {
+                ZapNGDriveItemId::Trash => {
                     if let DriveIndexAction::EnterKey = key {
                         self.index_variant = DriveIndexVariant::Trash;
                         self.initialize_section_states(ctx);
@@ -4394,7 +4394,7 @@ impl DriveIndex {
     }
 }
 
-pub fn warp_drive_section_header_position_id(section: &DriveIndexSection) -> String {
+pub fn zap_ng_drive_section_header_position_id(section: &DriveIndexSection) -> String {
     format!("section_position_{section:?}")
 }
 
@@ -4410,7 +4410,7 @@ impl View for DriveIndex {
         }
     }
 
-    fn keymap_context(&self, _ctx: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, _ctx: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
 
         // Disable WD Vim keybindings when a dialog is open
@@ -4422,7 +4422,7 @@ impl View for DriveIndex {
         context
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         let workspaces = UserWorkspaces::as_ref(app);
 
@@ -4594,7 +4594,7 @@ impl TypedActionView for DriveIndex {
             DriveIndexAction::OpenObject(object_type_and_id) => {
                 if !matches!(self.index_variant, DriveIndexVariant::Trash) {
                     self.set_selected_object(
-                        Some(WarpDriveItemId::Object(*object_type_and_id)),
+                        Some(ZapNGDriveItemId::Object(*object_type_and_id)),
                         ctx,
                     );
                     ctx.emit(DriveIndexEvent::OpenObject(*object_type_and_id))
@@ -4606,7 +4606,7 @@ impl TypedActionView for DriveIndex {
             } => {
                 if !matches!(self.index_variant, DriveIndexVariant::Trash) {
                     self.set_selected_object(
-                        Some(WarpDriveItemId::Object(*object_type_and_id)),
+                        Some(ZapNGDriveItemId::Object(*object_type_and_id)),
                         ctx,
                     );
                     ctx.emit(DriveIndexEvent::OpenWorkflowInPane {
@@ -4681,9 +4681,9 @@ impl TypedActionView for DriveIndex {
             }
             DriveIndexAction::ToggleItemOverflowMenu {
                 space,
-                warp_drive_item_id,
+                zap_ng_drive_item_id,
             } => {
-                self.toggle_item_menu(space, warp_drive_item_id, ctx);
+                self.toggle_item_menu(space, zap_ng_drive_item_id, ctx);
             }
             DriveIndexAction::ToggleSpaceOverflowMenu { space, offset } => {
                 self.toggle_space_menu(space, *offset, ctx);
@@ -4793,7 +4793,7 @@ impl TypedActionView for DriveIndex {
                 // If WD is focused, then clicking a folder will set that folder to be focused
                 if self.focused_index.is_some() {
                     self.set_focused_item(
-                        WarpDriveItemId::Object(ObjectTypeAndId::Folder(*id)),
+                        ZapNGDriveItemId::Object(ObjectTypeAndId::Folder(*id)),
                         true,
                         ctx,
                     );
@@ -4877,7 +4877,7 @@ impl TypedActionView for DriveIndex {
             }
             DriveIndexAction::ToggleDriveItemContextMenu => {
                 if let Some(focused_index) = self.focused_index {
-                    if let Some(&warp_drive_item_id) = self.ordered_items.get(focused_index) {
+                    if let Some(&zap_ng_drive_item_id) = self.ordered_items.get(focused_index) {
                         // Retrieve space of the WD item (because context menu options depend on the space)
                         // by finding the last space before the focused item in ordered_items
                         if let Some(space) = self
@@ -4885,7 +4885,7 @@ impl TypedActionView for DriveIndex {
                             .iter()
                             .take(focused_index)
                             .filter_map(|id| {
-                                if let WarpDriveItemId::Space(space) = *id {
+                                if let ZapNGDriveItemId::Space(space) = *id {
                                     Some(space)
                                 } else {
                                     None
@@ -4893,7 +4893,7 @@ impl TypedActionView for DriveIndex {
                             })
                             .next_back()
                         {
-                            self.toggle_item_menu(&space, &warp_drive_item_id, ctx);
+                            self.toggle_item_menu(&space, &zap_ng_drive_item_id, ctx);
                         }
                     }
                 }

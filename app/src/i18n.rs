@@ -70,14 +70,14 @@ pub fn init(override_locale: Option<&str>) {
     let _ = LANGUAGE_LOADER.set(loader);
 }
 
-/// Forward the resolved UI locale to `warpui::set_ui_locale` so CoreText / fontconfig
+/// Forward the resolved UI locale to `zap_ng_ui::set_ui_locale` so CoreText / fontconfig
 /// glyph fallback biases CJK Han characters toward the user's UI language. Japanese,
 /// Simplified Chinese, and Traditional Chinese share Han code points, so without a locale
 /// hint the fallback font may not match the UI language.
 fn propagate_ui_locale(loader: &FluentLanguageLoader) {
     let langs = loader.current_languages();
     if let Some(li) = langs.first() {
-        warpui::set_ui_locale(li.to_string());
+        zap_ng_ui::set_ui_locale(li.to_string());
     }
 }
 
@@ -96,7 +96,7 @@ fn system_requested_languages() -> Vec<LanguageIdentifier> {
 #[cfg(target_os = "macos")]
 fn macos_requested_languages() -> Vec<LanguageIdentifier> {
     use objc::{class, msg_send, runtime::Object, sel, sel_impl};
-    use warpui::platform::mac::utils::nsstring_as_str;
+    use zap_ng_ui::platform::mac::utils::nsstring_as_str;
 
     unsafe {
         let locale_class = class!(NSLocale);

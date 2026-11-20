@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 
 use itertools::Itertools;
 use pathfinder_color::ColorU;
-use warp_core::{features::FeatureFlag, ui::appearance::Appearance};
-use warp_editor::editor::NavigationKey;
-use warpui::{
+use zap_ng_core::{features::FeatureFlag, ui::appearance::Appearance};
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::{
     elements::{
         ChildView, ConstrainedBox, Container, CrossAxisAlignment, Fill, Flex, MainAxisAlignment,
         MainAxisSize, ParentElement, Shrinkable,

@@ -8,7 +8,7 @@ use crate::send_telemetry_from_ctx;
 use crate::server::telemetry::TelemetryEvent;
 use crate::user_config::launch_configs_dir;
 #[cfg(feature = "local_fs")]
-use crate::user_config::{util::file_name_to_human_readable_name, WarpConfig};
+use crate::user_config::{util::file_name_to_human_readable_name, ZapNGConfig};
 use crate::util::bindings::keybinding_name_to_display_string;
 #[cfg(feature = "local_fs")]
 use crate::util::openable_file_type::FileTarget;
@@ -17,18 +17,18 @@ use markdown_parser::{
 };
 use pathfinder_geometry::vector::vec2f;
 use serde::{Deserialize, Serialize};
-use warp_core::paths::home_relative_path;
-use warp_core::ui::theme::Fill;
-use warpui::accessibility::{AccessibilityContent, WarpA11yRole};
-use warpui::elements::{
+use zap_ng_core::paths::home_relative_path;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::accessibility::{AccessibilityContent, ZapNGA11yRole};
+use zap_ng_ui::elements::{
     Align, Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     Element, Empty, Flex, FormattedTextElement, MouseStateHandle, OffsetPositioning, ParentAnchor,
     ParentElement, ParentOffsetBounds, Radius, SavePosition, Shrinkable, Stack, Text,
 };
-use warpui::keymap::FixedBinding;
-use warpui::ui_components::button::{Button, ButtonVariant};
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::ui_components::button::{Button, ButtonVariant};
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{
     AppContext, Entity, FocusContext, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle,
 };
@@ -39,7 +39,7 @@ const BUTTON_SIZE: f32 = 24.;
 const DOC_LINK_WIDTH: f32 = 120.;
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",
@@ -151,14 +151,14 @@ pub enum LaunchConfigModalEvent {
     /// It's called when the new config was just saved. Note that when we save the configuration,
     /// it take a moment for the file system to register the change, and us to receive it (as there
     /// is a delay in our watcher). But because we actually have the LaunchConfig in our hands
-    /// already, we may as well save it "manually" to the WarpConfig, while waiting for the update
+    /// already, we may as well save it "manually" to the ZapNGConfig, while waiting for the update
     /// from the file system. This event passes a saved config to the handler to let us do that.
     SuccessfullySavedConfig(LaunchConfig),
     #[cfg(feature = "local_fs")]
     OpenFileWithTarget {
         path: std::path::PathBuf,
         target: FileTarget,
-        line_col: Option<warp_util::path::LineAndColumnArg>,
+        line_col: Option<zap_ng_util::path::LineAndColumnArg>,
     },
     Close,
 }
@@ -261,7 +261,7 @@ impl LaunchConfigSaveModal {
         let launch_config_name = file_name_to_human_readable_name(&file_name_candidate);
         if let Some(app_state) = &self.current_app_state {
             let launch_config = LaunchConfig::from_snapshot(launch_config_name, app_state);
-            match WarpConfig::save_new_launch_config(file_name_candidate, launch_config.clone()) {
+            match ZapNGConfig::save_new_launch_config(file_name_candidate, launch_config.clone()) {
                 Ok(file_name) => {
                     self.saved_successfully(file_name, ctx);
                     ctx.emit(LaunchConfigModalEvent::SuccessfullySavedConfig(
@@ -675,7 +675,7 @@ impl View for LaunchConfigSaveModal {
         Some(AccessibilityContent::new(
             crate::t!("launch-config-save-modal-a11y-title"),
             crate::t!("launch-config-save-modal-a11y-description"),
-            WarpA11yRole::PopoverRole,
+            ZapNGA11yRole::PopoverRole,
         ))
     }
 }

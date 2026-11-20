@@ -2,7 +2,7 @@
 
 use num_traits::SaturatingSub;
 use sum_tree::SeekBias;
-use warpui::units::{IntoPixels, Pixels};
+use zap_ng_ui::units::{IntoPixels, Pixels};
 
 use string_offset::CharOffset;
 

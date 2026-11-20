@@ -2,13 +2,13 @@
 //!
 //! 仅存密码;用户名、URL 等非敏感字段仍在 `NetworkSettings` 的 settings.toml 里。
 //! 设计形态与 `crate::ai::agent_providers::AgentProviderSecrets` 一致:基于
-//! `warpui_extras::secure_storage`(macOS Keychain / Windows DPAPI / Linux Keyring)。
+//! `zap_ng_ui_extras::secure_storage`(macOS Keychain / Windows DPAPI / Linux Keyring)。
 //!
 //! 注意:代理只有一个全局 password,因此存储里就一个 key、value 是原始 password
 //! 字符串(不再走 JSON map)。
 
-use warpui::{Entity, ModelContext, SingletonEntity};
-use warpui_extras::secure_storage::{self, AppContextExt};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui_extras::secure_storage::{self, AppContextExt};
 
 const SECURE_STORAGE_KEY: &str = "ProxyPassword";
 

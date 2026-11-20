@@ -14,7 +14,7 @@ use pathfinder_color::ColorU;
 use rand::Rng;
 
 use asset_cache::AssetCacheExt as _;
-use warpui::{
+use zap_ng_ui::{
     assets::asset_cache::{AssetCache, AssetState},
     image_cache::ImageType,
     r#async::SpawnedFutureHandle,

@@ -1,7 +1,7 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::elements::{Container, CrossAxisAlignment, Element, Flex, ParentElement, Text};
-use warpui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::shimmering_text::ShimmeringTextStateHandle;
+use zap_ng_ui::elements::{Container, CrossAxisAlignment, Element, Flex, ParentElement, Text};
+use zap_ng_ui::{AppContext, Entity, SingletonEntity, TypedActionView, View, ViewContext};
 
 use super::search_results_common::{
     render_collapsible_search_results, CollapsibleSearchResultsState,

@@ -7,8 +7,8 @@ use std::sync::Arc;
 use crate::ai::agent::conversation::ConversationStatus;
 use parking_lot::FairMutex;
 use warp_multi_agent_api as api;
-use warp_terminal::model::escape_sequences::{BRACKETED_PASTE_END, BRACKETED_PASTE_START};
-use warpui::{notification::UserNotification, Presenter, WindowInvalidation};
+use zap_ng_terminal::model::escape_sequences::{BRACKETED_PASTE_END, BRACKETED_PASTE_START};
+use zap_ng_ui::{notification::UserNotification, Presenter, WindowInvalidation};
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId};
 use crate::ai::agent::task::TaskId;
@@ -16,7 +16,7 @@ use crate::ai::blocklist::block::cli_controller::{
     CLISubagentEvent, LongRunningCommandControlState, UserTakeOverReason,
 };
 use crate::ai::blocklist::SerializedBlockListItem;
-use warpui::App;
+use zap_ng_ui::App;
 
 use crate::pane_group::focus_state::PaneGroupFocusState;
 use crate::pane_group::{BackingView, TerminalPaneId};
@@ -1138,7 +1138,7 @@ fn set_input_mode_agent_does_not_enter_local_agent_from_root_ambient_agent_pane(
 /// Test clearing of session flag state when terminal is cleared
 #[test]
 fn test_clear_session_flag_state() {
-    use warp_terminal::shell::ShellType;
+    use zap_ng_terminal::shell::ShellType;
 
     use crate::ai::blocklist::SerializedBlockListItem;
     use crate::terminal::model::block::SerializedBlock;
@@ -1589,7 +1589,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseDown {
+                zap_ng_ui::Event::LeftMouseDown {
                     position: start_position,
                     modifiers: Default::default(),
                     click_count: 1,
@@ -1602,7 +1602,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseDragged {
+                zap_ng_ui::Event::LeftMouseDragged {
                     position: end_position,
                     modifiers: Default::default(),
                 },
@@ -1613,7 +1613,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseUp {
+                zap_ng_ui::Event::LeftMouseUp {
                     position: end_position,
                     modifiers: Default::default(),
                 },
@@ -1635,7 +1635,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseDown {
+                zap_ng_ui::Event::LeftMouseDown {
                     position: start_position,
                     modifiers: ModifiersState {
                         shift: true,
@@ -1651,7 +1651,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseDragged {
+                zap_ng_ui::Event::LeftMouseDragged {
                     position: end_position,
                     modifiers: ModifiersState {
                         shift: true,
@@ -1665,7 +1665,7 @@ fn test_alt_screen_select_with_sgr_mouse() {
         rerender!(app, presenter, invalidation, size_info);
         app.update(enclose!((presenter) move |ctx| {
             ctx.simulate_window_event(
-                warpui::Event::LeftMouseUp {
+                zap_ng_ui::Event::LeftMouseUp {
                     position: end_position,
                     modifiers: ModifiersState {
                         shift: true,
@@ -4414,7 +4414,7 @@ fn cli_agent_rich_input_open_sets_terminal_keymap_context() {
 
         let terminal = open_cli_agent_rich_input_for_agent(&mut app, CLIAgent::Claude);
         terminal.read(&app, |view, ctx| {
-            let keymap_context = <TerminalView as warpui::View>::keymap_context(view, ctx);
+            let keymap_context = <TerminalView as zap_ng_ui::View>::keymap_context(view, ctx);
             assert!(
                 keymap_context
                     .set

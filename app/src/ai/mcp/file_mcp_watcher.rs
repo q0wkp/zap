@@ -11,16 +11,16 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::LazyLock;
-use warp_core::safe_warn;
-use warpui::{Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::safe_warn;
+use zap_ng_ui::{Entity, ModelContext, ModelHandle, SingletonEntity};
 use watcher::HomeDirectoryWatcherEvent;
 
 use crate::ai::mcp::{
     home_config_file_path, parsing::normalize_codex_toml_to_json, MCPProvider,
     ParsedTemplatableMCPServerResult,
 };
-use crate::warp_managed_paths_watcher::{
-    warp_managed_mcp_config_path, WarpManagedPathsWatcher, WarpManagedPathsWatcherEvent,
+use crate::zap_ng_managed_paths_watcher::{
+    zap_ng_managed_mcp_config_path, ZapNGManagedPathsWatcher, ZapNGManagedPathsWatcherEvent,
 };
 use crate::HomeDirectoryWatcher;
 use strum::IntoEnumIterator;
@@ -158,12 +158,12 @@ impl FileMCPWatcher {
         ctx.subscribe_to_model(&HomeDirectoryWatcher::handle(ctx), |me, event, ctx| {
             me.handle_home_directory_watcher_event(event, ctx);
         });
-        ctx.subscribe_to_model(&WarpManagedPathsWatcher::handle(ctx), |me, event, ctx| {
-            me.handle_warp_managed_paths_event(event, ctx);
+        ctx.subscribe_to_model(&ZapNGManagedPathsWatcher::handle(ctx), |me, event, ctx| {
+            me.handle_zap_ng_managed_paths_event(event, ctx);
         });
 
         let mut home_provider_watchers = HashMap::new();
-        if let Some(mcp_config_path) = warp_managed_mcp_config_path() {
+        if let Some(mcp_config_path) = zap_ng_managed_mcp_config_path() {
             Self::spawn_config_parse(
                 mcp_config_path.config_path,
                 mcp_config_path.root_path,
@@ -270,7 +270,7 @@ impl FileMCPWatcher {
         }
 
         let Ok(std_path) =
-            warp_util::standardized_path::StandardizedPath::from_local_canonicalized(subdir_path)
+            zap_ng_util::standardized_path::StandardizedPath::from_local_canonicalized(subdir_path)
         else {
             return;
         };
@@ -400,13 +400,13 @@ impl FileMCPWatcher {
         }
     }
 
-    fn handle_warp_managed_paths_event(
+    fn handle_zap_ng_managed_paths_event(
         &mut self,
-        event: &WarpManagedPathsWatcherEvent,
+        event: &ZapNGManagedPathsWatcherEvent,
         ctx: &mut ModelContext<Self>,
     ) {
-        let WarpManagedPathsWatcherEvent::FilesChanged(update) = event;
-        let Some(mcp_config_path) = warp_managed_mcp_config_path() else {
+        let ZapNGManagedPathsWatcherEvent::FilesChanged(update) = event;
+        let Some(mcp_config_path) = zap_ng_managed_mcp_config_path() else {
             return;
         };
         let config_path = mcp_config_path.config_path;

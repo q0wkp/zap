@@ -2,8 +2,8 @@ use chrono::NaiveDateTime;
 use fuzzy_match::FuzzyMatchResult;
 use ordered_float::OrderedFloat;
 use std::{cmp::Ordering, path::PathBuf};
-use warp_core::ui::theme::Fill;
-use warpui::{
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::{
     elements::{Align, ConstrainedBox, Flex, Highlight, ParentElement, Shrinkable, Text},
     fonts::{Properties, Weight},
     AppContext, Element, SingletonEntity,

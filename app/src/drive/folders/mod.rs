@@ -1,5 +1,5 @@
-use super::items::folder::WarpDriveFolder;
-use super::items::WarpDriveItem;
+use super::items::folder::ZapNGDriveFolder;
+use super::items::ZapNGDriveItem;
 use super::ObjectTypeAndId;
 use crate::{
     appearance::Appearance,
@@ -81,17 +81,17 @@ impl StoredObjectModel for FolderObjectModel {
         true
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         true
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         folder: &FolderObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveFolder::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveFolder::new(
             self.object_type_and_id(id),
             folder.clone(),
         )))

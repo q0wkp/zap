@@ -5,8 +5,8 @@ use ai::agent::{
     action_result::{AskUserQuestionAnswerItem, AskUserQuestionResult},
 };
 use itertools::Itertools;
-use warp_core::ui::theme::{color::internal_colors, WarpTheme};
-use warpui::{
+use zap_ng_core::ui::theme::{color::internal_colors, ZapNGTheme};
+use zap_ng_ui::{
     elements::{
         new_scrollable::SingleAxisConfig, Border, ChildView, Clipped, ClippedScrollStateHandle,
         ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Expanded, Fill, Flex,
@@ -116,7 +116,7 @@ fn ask_user_question_auto_advance_enabled(is_multiselect: bool, is_last_question
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     // Scope these shortcuts to the active ask-user-question block so arrow/submit keys don't leak
     // into surrounding views.
@@ -340,7 +340,7 @@ struct AskUserQuestionInteractiveViews {
 /// Header state for the collapsed/expanded completion summary.
 struct AskUserQuestionCompletionState {
     label: String,
-    status_icon: warpui::elements::Icon,
+    status_icon: zap_ng_ui::elements::Icon,
 }
 
 /// Local questionnaire state machine used by the view.
@@ -1305,7 +1305,7 @@ impl AskUserQuestionView {
         questions: &[AskUserQuestionItem],
         answers: Option<&[AskUserQuestionAnswerItem]>,
         label: String,
-        status_icon: warpui::elements::Icon,
+        status_icon: zap_ng_ui::elements::Icon,
         appearance: &Appearance,
         app: &AppContext,
     ) -> Box<dyn Element> {
@@ -1333,7 +1333,7 @@ impl AskUserQuestionView {
     fn render_question_text(
         question_text: &str,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
     ) -> Box<dyn Element> {
         let text_color = theme.foreground().into();
         Container::new(render_text_with_markdown_support(
@@ -1357,7 +1357,7 @@ impl AskUserQuestionView {
         &self,
         question_text: &str,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
     ) -> Box<dyn Element> {
         let body = Flex::column()
             .with_cross_axis_alignment(CrossAxisAlignment::Stretch)
@@ -1365,7 +1365,7 @@ impl AskUserQuestionView {
             .with_child(self.render_options_list())
             .finish();
 
-        let scrollable = warpui::elements::NewScrollable::vertical(
+        let scrollable = zap_ng_ui::elements::NewScrollable::vertical(
             SingleAxisConfig::Clipped {
                 handle: self.options_scroll_state.clone(),
                 child: body,
@@ -1385,7 +1385,7 @@ impl AskUserQuestionView {
     fn render_nav_footer(
         &self,
         appearance: &Appearance,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         app: &AppContext,
     ) -> Box<dyn Element> {
         let counter = format!(
@@ -1480,7 +1480,7 @@ impl View for AskUserQuestionView {
         }
     }
 
-    fn keymap_context(&self, app: &AppContext) -> warpui::keymap::Context {
+    fn keymap_context(&self, app: &AppContext) -> zap_ng_ui::keymap::Context {
         let mut context = Self::default_keymap_context();
         // These context flags are what activate the fixed bindings registered in init().
         if matches!(self.session.phase(), AskUserQuestionPhase::Editing)

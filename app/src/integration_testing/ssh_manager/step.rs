@@ -5,11 +5,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use warp_ssh_manager::{SshRepository, SshServerInfo};
-use warpui::SingletonEntity;
-use warpui::TypedActionView;
-use warpui::integration::TestStep;
-use warpui::windowing::WindowManager;
+use zap_ng_ssh_manager::{SshRepository, SshServerInfo};
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::TypedActionView;
+use zap_ng_ui::integration::TestStep;
+use zap_ng_ui::windowing::WindowManager;
 
 use crate::ssh_manager::server_view::SshServerAction;
 use crate::workspace::{Workspace, WorkspaceAction};
@@ -43,7 +43,7 @@ pub fn open_ssh_manager_panel() -> TestStep {
 /// 通过 DB 创建测试文件夹，返回文件夹节点 ID。
 pub fn create_folder_via_db(name: &str) -> String {
     let name = name.to_string();
-    warp_ssh_manager::with_conn(move |c| {
+    zap_ng_ssh_manager::with_conn(move |c| {
         let node = SshRepository::create_folder(c, None, &name)
             .unwrap_or_else(|e| panic!("create folder failed: {e:?}"));
         Ok(node.id)
@@ -55,13 +55,13 @@ pub fn create_folder_via_db(name: &str) -> String {
 pub fn create_server_via_db(name: &str, parent_id: Option<&str>) -> String {
     let name = name.to_string();
     let parent = parent_id.map(String::from);
-    warp_ssh_manager::with_conn(move |c| {
+    zap_ng_ssh_manager::with_conn(move |c| {
         let info = SshServerInfo {
             node_id: String::new(),
             host: format!("{name}.example.com"),
             port: 22,
             username: "root".into(),
-            auth_type: warp_ssh_manager::AuthType::Password,
+            auth_type: zap_ng_ssh_manager::AuthType::Password,
             key_path: None,
             credential_id: None,
             startup_command: None,

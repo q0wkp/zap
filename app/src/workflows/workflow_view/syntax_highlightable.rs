@@ -4,12 +4,12 @@ use std::time::Duration;
 
 use async_channel::Sender;
 use string_offset::ByteOffset;
-use warp_completer::completer::SuggestionTypeName;
-use warp_completer::signatures::CommandRegistry;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warpui::r#async::SpawnedFutureHandle;
-use warpui::ViewHandle;
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_completer::completer::SuggestionTypeName;
+use zap_ng_completer::signatures::CommandRegistry;
+use zap_ng_core::ui::theme::AnsiColorIdentifier;
+use zap_ng_ui::r#async::SpawnedFutureHandle;
+use zap_ng_ui::ViewHandle;
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use crate::appearance::Appearance;
 use crate::completer::SessionAgnosticContext;

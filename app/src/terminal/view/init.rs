@@ -30,10 +30,10 @@ use crate::{
     terminal::TerminalView,
     util::bindings::CustomAction,
 };
-use warpui::keymap::ContextPredicate;
-use warpui::keymap::{BindingDescription, PerPlatformKeystroke};
-use warpui::platform::OperatingSystem;
-use warpui::{
+use zap_ng_ui::keymap::ContextPredicate;
+use zap_ng_ui::keymap::{BindingDescription, PerPlatformKeystroke};
+use zap_ng_ui::platform::OperatingSystem;
+use zap_ng_ui::{
     keymap::{EditableBinding, FixedBinding},
     units::IntoLines,
     AppContext,
@@ -63,7 +63,7 @@ pub const ROOT_AMBIENT_AGENT_PANE_KEY: &str = "RootAmbientAgentPane";
 /// these into their own function to ensure we pay special attention to
 /// these overlaps, and ensure only 1 action is taken.
 fn init_overlapping_keybindings(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     let escape_key: &str = "escape";
     let cmd_or_ctrl_enter: &str = "cmdorctrl-enter";
@@ -83,12 +83,12 @@ fn init_overlapping_keybindings(app: &mut AppContext) {
     app.register_fixed_bindings([
         FixedBinding::new(
             escape_key,
-            TerminalAction::NotifySshErrorBlock(SshErrorBlockAction::ContinueWithoutWarpification),
+            TerminalAction::NotifySshErrorBlock(SshErrorBlockAction::ContinueWithoutZapNGification),
             id!(SSH_ERROR_BLOCK_VISIBLE_KEY) & block_action_context(),
         ),
         FixedBinding::new(
             cmd_or_ctrl_enter,
-            TerminalAction::NotifySshErrorBlock(SshErrorBlockAction::ContinueWithoutWarpification),
+            TerminalAction::NotifySshErrorBlock(SshErrorBlockAction::ContinueWithoutZapNGification),
             id!(SSH_ERROR_BLOCK_VISIBLE_KEY) & block_action_context(),
         ),
     ]);
@@ -96,13 +96,13 @@ fn init_overlapping_keybindings(app: &mut AppContext) {
 
 /// Register keybindings for [`TerminalView`] actions.
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_binding_validator::<TerminalView>(is_binding_pty_compliant);
 
     init_overlapping_keybindings(app);
-    // Register input mode bindings before warpify bindings so ctrl-i warpifies
-    // instead of opening inline agent when a warpify banner is visible.
+    // Register input mode bindings before zapngify bindings so ctrl-i zapngifies
+    // instead of opening inline agent when a zapngify banner is visible.
     register_input_mode_bindings(app);
 
     app.register_fixed_bindings([
@@ -199,7 +199,7 @@ pub fn init(app: &mut AppContext) {
         // On the web, we get pastes from system paste events.
         #[cfg(target_family = "wasm")]
         FixedBinding::standard(
-            warpui::actions::StandardAction::Paste,
+            zap_ng_ui::actions::StandardAction::Paste,
             TerminalAction::Paste,
             id!("Terminal") & !id!("IMEOpen"),
         ),
@@ -342,7 +342,7 @@ pub fn init(app: &mut AppContext) {
         EditableBinding::new(
             "terminal:warpify_ssh_session",
             crate::t!("keybinding-desc-terminal-warpify-ssh-session"),
-            TerminalAction::WarpifySSHSession,
+            TerminalAction::ZapNGifySSHSession,
         )
         .with_key_binding("ctrl-i")
         .with_context_predicate(
@@ -1036,7 +1036,7 @@ pub fn init(app: &mut AppContext) {
 
 /// Registers bindings related to input modes.
 fn register_input_mode_bindings(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     // A context predicate that matches when the input mode bindings are
     // available for use. Disabled when a CLI agent session is active — the

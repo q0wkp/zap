@@ -1,7 +1,7 @@
 use futures_util::stream::AbortHandle;
 use pathfinder_geometry::vector::vec2f;
 use std::path::PathBuf;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius,
@@ -390,7 +390,7 @@ impl ImportModalBody {
                 TextAndIcon::new(
                     TextAndIconAlignment::TextFirst,
                     crate::t!("drive-import-choose-files"),
-                    Icon::Import.to_warpui_icon(
+                    Icon::Import.to_zap_ng_ui_icon(
                         appearance
                             .theme()
                             .main_text_color(appearance.theme().accent_button_color()),

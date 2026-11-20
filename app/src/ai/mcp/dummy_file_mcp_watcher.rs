@@ -1,4 +1,4 @@
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 pub struct FileMCPWatcher {}
 

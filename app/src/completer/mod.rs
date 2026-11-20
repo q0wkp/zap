@@ -11,14 +11,14 @@ use async_trait::async_trait;
 use lazy_static::lazy_static;
 use smol_str::SmolStr;
 use typed_path::{TypedPath, TypedPathBuf};
-use warp_completer::completer::{
+use zap_ng_completer::completer::{
     CommandExitStatus, CommandOutput, CompletionContext, EngineDirEntry, EngineFileType,
     GeneratorContext, PathCompletionContext, PathSeparators, TopLevelCommandCaseSensitivity,
 };
-use warp_completer::signatures::CommandRegistry;
-use warp_core::features::FeatureFlag;
-use warp_util::path::{EscapeChar, ShellFamily};
-use warpui::{AppContext, SingletonEntity};
+use zap_ng_completer::signatures::CommandRegistry;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_util::path::{EscapeChar, ShellFamily};
+use zap_ng_ui::{AppContext, SingletonEntity};
 
 use crate::safe_warn;
 use crate::terminal::model::session::{Session, SessionType};
@@ -85,7 +85,7 @@ impl SessionContext {
                     .filter_map(|res| res.and_then(EngineDirEntry::try_from).ok())
                     .collect::<Vec<_>>()
             }
-            SessionType::WarpifiedRemote { .. } => {
+            SessionType::ZapNGifiedRemote { .. } => {
                 let env_vars = self
                     .session
                     .path()
@@ -193,7 +193,7 @@ impl PathCompletionContext for SessionContext {
         // connected yet, the command executor may be an InBand fallback that
         // sends escape sequences to a raw remote shell. Return empty without
         // caching so we retry after the remote server handshake finishes.
-        if let SessionType::WarpifiedRemote { host_id: None } = self.session.session_type() {
+        if let SessionType::ZapNGifiedRemote { host_id: None } = self.session.session_type() {
             if FeatureFlag::SshRemoteServer.is_enabled()
                 && !self.session.is_legacy_ssh_session()
             {
@@ -319,10 +319,10 @@ impl CompletionContext for SessionContext {
     }
 
     #[cfg(feature = "completions_v2")]
-    fn js_context(&self) -> Option<&dyn warp_completer::completer::JsExecutionContext> {
+    fn js_context(&self) -> Option<&dyn zap_ng_completer::completer::JsExecutionContext> {
         self.js_ctx
             .as_ref()
-            .map(|ctx| -> &dyn warp_completer::completer::JsExecutionContext { ctx })
+            .map(|ctx| -> &dyn zap_ng_completer::completer::JsExecutionContext { ctx })
     }
 
     fn shell_family(&self) -> Option<ShellFamily> {
@@ -458,7 +458,7 @@ fn ls_script_for_dir(directory: &TypedPath) -> Option<String> {
         log::warn!("Non-unicode character found in path: `{directory:?}`");
         return None;
     };
-    let escaped_dir = warp_util::path::ShellFamily::Posix.shell_escape(dir_str);
+    let escaped_dir = zap_ng_util::path::ShellFamily::Posix.shell_escape(dir_str);
 
     // Get all directories with -print0, which makes all items end in `\0` (null character)
     // Get all files with -print0, which makes all items end in `\0`

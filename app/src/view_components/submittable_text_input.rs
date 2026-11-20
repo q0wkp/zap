@@ -1,5 +1,5 @@
 use pathfinder_color::ColorU;
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Border, Container, CornerRadius, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize,
         MouseStateHandle, ParentElement, Radius, Shrinkable,

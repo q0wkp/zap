@@ -28,13 +28,13 @@ use crate::{
 };
 use chrono::{DateTime, Local};
 use itertools::Itertools;
-use warpui::r#async::Timer;
+use zap_ng_ui::r#async::Timer;
 
 use settings::Setting as _;
-use warp_core::semantic_selection::SemanticSelection;
-use warpui::units::IntoLines;
-use warpui::SingletonEntity;
-use warpui::{ModelHandle, ViewContext};
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_ui::units::IntoLines;
+use zap_ng_ui::SingletonEntity;
+use zap_ng_ui::{ModelHandle, ViewContext};
 
 use crate::terminal::shared_session::participant_avatar_view::ParticipantAvatarEvent;
 use crate::terminal::shared_session::participant_avatar_view::ParticipantAvatarView;
@@ -42,7 +42,7 @@ use crate::terminal::shared_session::participant_avatar_view::ParticipantAvatarV
 use crate::terminal::shared_session::protocol::ParticipantList;
 use crate::terminal::shared_session::protocol::ParticipantPresenceUpdate;
 
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 use super::adapter::{Adapter, Kind, Participant};
 use super::sharer::inactivity_modal::InactivityModalEvent;

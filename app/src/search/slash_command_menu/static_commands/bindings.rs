@@ -1,4 +1,4 @@
-use warpui::keymap::{BindingDescription, PerPlatformKeystroke};
+use zap_ng_ui::keymap::{BindingDescription, PerPlatformKeystroke};
 
 use super::StaticCommand;
 

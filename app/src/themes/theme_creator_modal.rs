@@ -7,14 +7,14 @@ use crate::view_components::DismissibleToast;
 use crate::workspace::ToastStack;
 use std::default::Default;
 use std::path::PathBuf;
-use warpui::fonts::Weight;
-use warpui::keymap::FixedBinding;
-use warpui::platform::{FilePickerConfiguration, FileType};
-use warpui::presenter::ChildView;
-use warpui::ui_components::components::{Coords, UiComponentStyles};
-use warpui::ViewHandle;
-use warpui::{AppContext, SingletonEntity as _};
-use warpui::{Element, Entity, TypedActionView, View, ViewContext};
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::platform::{FilePickerConfiguration, FileType};
+use zap_ng_ui::presenter::ChildView;
+use zap_ng_ui::ui_components::components::{Coords, UiComponentStyles};
+use zap_ng_ui::ViewHandle;
+use zap_ng_ui::{AppContext, SingletonEntity as _};
+use zap_ng_ui::{Element, Entity, TypedActionView, View, ViewContext};
 
 const THEME_CREATOR_MODAL_HEADER: &str = "Create new theme from image";
 
@@ -34,7 +34,7 @@ pub enum ThemeCreatorModalEvent {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([FixedBinding::new(
         "escape",

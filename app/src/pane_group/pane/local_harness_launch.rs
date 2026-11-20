@@ -2,8 +2,8 @@ use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use shell_words::quote as shell_quote;
 use uuid::Uuid;
-use warp_cli::agent::Harness;
-use warp_managed_secrets::ManagedSecretValue;
+use zap_ng_cli::agent::Harness;
+use zap_ng_managed_secrets::ManagedSecretValue;
 
 use crate::ai::{
     agent_sdk::{

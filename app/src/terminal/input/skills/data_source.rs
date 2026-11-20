@@ -3,16 +3,16 @@ use std::path::PathBuf;
 use ai::skills::{SkillProvider, SkillReference, SkillScope};
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use ordered_float::OrderedFloat;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Flex, Highlight, ParentElement, Shrinkable, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::Keystroke;
-use warpui::scene::{CornerRadius, Radius};
-use warpui::text_layout::ClipConfig;
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::scene::{CornerRadius, Radius};
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::{
     AppContext, Element, Entity, EntityId, ModelContext, ModelHandle, SingletonEntity as _,
 };
 
@@ -266,11 +266,11 @@ impl SearchItem for SkillSearchItem {
 
         // Use icon_override if set (e.g. Figma skills), otherwise derive from provider.
         let icon = if let Some(override_icon) = self.icon_override {
-            override_icon.to_warpui_icon(icon_color).finish()
+            override_icon.to_zap_ng_ui_icon(icon_color).finish()
         } else {
             self.provider
                 .icon()
-                .to_warpui_icon(self.provider.icon_fill(icon_color))
+                .to_zap_ng_ui_icon(self.provider.icon_fill(icon_color))
                 .finish()
         };
 

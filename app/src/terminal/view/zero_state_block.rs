@@ -1,6 +1,6 @@
 use settings::Setting;
-use warp_core::{report_if_error, ui::Icon};
-use warpui::{
+use zap_ng_core::{report_if_error, ui::Icon};
+use zap_ng_ui::{
     elements::{
         ChildAnchor, Container, CrossAxisAlignment, Flex, MainAxisSize, OffsetPositioning,
         ParentAnchor, ParentElement, ParentOffsetBounds, Shrinkable, Stack, Text,
@@ -152,7 +152,7 @@ impl View for TerminalViewZeroStateBlock {
                 Container::new(
                     ConstrainedBox::new(
                         Icon::Zap
-                            .to_warpui_icon(theme.main_text_color(theme.background()))
+                            .to_zap_ng_ui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_height(title_font_size)

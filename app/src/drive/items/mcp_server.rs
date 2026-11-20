@@ -1,4 +1,4 @@
-use super::{WarpDriveItem, WarpDriveItemId};
+use super::{ZapNGDriveItem, ZapNGDriveItemId};
 use crate::{
     ai::mcp::MCPServerObject,
     appearance::Appearance,
@@ -6,21 +6,21 @@ use crate::{
     drive::{index::DriveIndexAction, DriveObjectType, ObjectTypeAndId},
     themes::theme::Fill,
 };
-use warpui::{elements::MouseStateHandle, AppContext, Element};
+use zap_ng_ui::{elements::MouseStateHandle, AppContext, Element};
 
 #[derive(Clone)]
-pub struct WarpDriveMCPServer {
+pub struct ZapNGDriveMCPServer {
     id: ObjectTypeAndId,
     mcp_server: MCPServerObject,
 }
 
-impl WarpDriveMCPServer {
+impl ZapNGDriveMCPServer {
     pub fn new(id: ObjectTypeAndId, mcp_server: MCPServerObject) -> Self {
         Self { id, mcp_server }
     }
 }
 
-impl WarpDriveItem for WarpDriveMCPServer {
+impl ZapNGDriveItem for ZapNGDriveMCPServer {
     fn display_name(&self) -> Option<String> {
         Some(self.mcp_server.model().string_model.name.clone())
     }
@@ -45,8 +45,8 @@ impl WarpDriveItem for WarpDriveMCPServer {
         None
     }
 
-    fn warp_drive_id(&self) -> WarpDriveItemId {
-        WarpDriveItemId::Object(self.id)
+    fn zap_ng_drive_id(&self) -> ZapNGDriveItemId {
+        ZapNGDriveItemId::Object(self.id)
     }
 
     fn sync_status_icon(
@@ -65,7 +65,7 @@ impl WarpDriveItem for WarpDriveMCPServer {
         None
     }
 
-    fn clone_box(&self) -> Box<dyn WarpDriveItem> {
+    fn clone_box(&self) -> Box<dyn ZapNGDriveItem> {
         Box::new(self.clone())
     }
 }

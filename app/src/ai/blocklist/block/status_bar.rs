@@ -4,9 +4,9 @@ use super::{
     cli_controller::{CLISubagentController, CLISubagentEvent, UserTakeOverReason},
     model::{AIBlockModel, AIBlockModelImpl, AIBlockOutputStatus},
     view_impl::common::{
-        render_switch_control_to_user_button, render_warping_indicator,
-        render_warping_indicator_base, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
-        WarpingIndicatorProps, WarpingProps, LOAD_OUTPUT_MESSAGE, WAITING_FOR_USER_INPUT_MESSAGE,
+        render_switch_control_to_user_button, render_zapnging_indicator,
+        render_zapnging_indicator_base, ButtonProps, ForceRefreshButtonProps, MaybeShimmeringText,
+        ZapNGingIndicatorProps, ZapNGingProps, LOAD_OUTPUT_MESSAGE, WAITING_FOR_USER_INPUT_MESSAGE,
     },
 };
 use crate::{ai::agent_tips::AITipModel, terminal::input::buffer_model::InputBufferUpdateEvent};
@@ -51,7 +51,7 @@ use crate::{
         model::block::LONG_RUNNING_COMMAND_DURATION_MS,
         model_events::{ModelEvent, ModelEventDispatcher},
         view::ambient_agent::{AmbientAgentViewModel, AmbientAgentViewModelEvent},
-        warpify::render::LEFT_STRIPE_WIDTH,
+        zapngify::render::LEFT_STRIPE_WIDTH,
         TerminalModel, CANCEL_COMMAND_KEYBINDING, TOGGLE_AUTOEXECUTE_MODE_KEYBINDING,
         TOGGLE_HIDE_CLI_RESPONSES_KEYBINDING, TOGGLE_QUEUE_NEXT_PROMPT_KEYBINDING,
     },
@@ -61,12 +61,12 @@ use crate::{
 use instant::Instant;
 use parking_lot::FairMutex;
 use pathfinder_color::ColorU;
-use warp_core::{
+use zap_ng_core::{
     features::FeatureFlag,
     ui::{appearance::Appearance, theme::Fill},
 };
-use warpui::elements::shimmering_text::ShimmeringTextStateHandle;
-use warpui::{
+use zap_ng_ui::elements::shimmering_text::ShimmeringTextStateHandle;
+use zap_ng_ui::{
     elements::{Border, Container, Empty, Flex, MouseStateHandle, ParentElement, Text},
     keymap::Keystroke,
     presenter::ChildView,
@@ -74,7 +74,7 @@ use warpui::{
     AppContext, Element, Entity, EntityId, ModelHandle, SingletonEntity, View, ViewContext,
     ViewHandle,
 };
-use warpui::{r#async::Timer, TypedActionView};
+use zap_ng_ui::{r#async::Timer, TypedActionView};
 
 pub fn init(app: &mut AppContext) {
     summarization_cancel_dialog::init(app);
@@ -740,7 +740,7 @@ impl BlocklistAIStatusBar {
         }
     }
 
-    fn render_warping_indicator_for_latest_exchange(
+    fn render_zapnging_indicator_for_latest_exchange(
         &self,
         app: &AppContext,
     ) -> Option<Box<dyn Element>> {
@@ -755,12 +755,12 @@ impl BlocklistAIStatusBar {
                 .is_some_and(|metadata| {
                     !metadata.should_hide_block() && metadata.long_running_control_state().is_none()
                 });
-        let should_render_warping = !model.request_type(app).is_passive()
+        let should_render_zapnging = !model.request_type(app).is_passive()
             && !has_expanded_requested_command_with_no_subagent
             && (conversation.status().is_in_progress()
                 || (active_block.is_agent_in_control() && !active_block.is_agent_blocked()));
 
-        if !should_render_warping {
+        if !should_render_zapnging {
             return None;
         }
 
@@ -795,24 +795,24 @@ impl BlocklistAIStatusBar {
             })
             .unwrap_or((None, None));
 
-        let fallback_warping_text = resolve_fallback_warping_message(
+        let fallback_zapnging_text = resolve_fallback_zapnging_message(
             current_is_fallback,
             current_display_name,
             model.as_ref(),
             app,
         );
-        let default_warping_text = fallback_warping_text
+        let default_zapnging_text = fallback_zapnging_text
             .as_deref()
             .unwrap_or(LOAD_OUTPUT_MESSAGE)
             .to_owned();
-        let secondary_element = if fallback_warping_text.is_some() {
+        let secondary_element = if fallback_zapnging_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
             self.render_tip(app)
         };
 
-        Some(render_warping_indicator(
-            WarpingProps {
+        Some(render_zapnging_indicator(
+            ZapNGingProps {
                 model: model.as_ref(),
                 terminal_model: &terminal_model,
                 action_model: self.action_model.as_ref(app),
@@ -857,7 +857,7 @@ impl BlocklistAIStatusBar {
                     should_hide_responses,
                 )),
                 force_refresh_button,
-                default_warping_text,
+                default_zapnging_text,
                 secondary_element,
                 last_snapshot_at,
             },
@@ -892,7 +892,7 @@ fn latest_model_used_before_exchange<V: View>(
 fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     use crate::ai::agent_tips::AITip;
     use markdown_parser::{FormattedTextFragment, FormattedTextLine};
-    use warpui::text_layout::ClipConfig;
+    use zap_ng_ui::text_layout::ClipConfig;
 
     let appearance = Appearance::as_ref(app);
     let theme = appearance.theme();
@@ -915,7 +915,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
 
     let formatted_text =
         markdown_parser::FormattedText::new(vec![FormattedTextLine::Line(fragments)]);
-    warpui::elements::FormattedTextElement::new(
+    zap_ng_ui::elements::FormattedTextElement::new(
         formatted_text,
         appearance.monospace_font_size() - 3.,
         appearance.ui_font_family(),
@@ -928,7 +928,7 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
     .set_selectable(true)
     .with_clip(ClipConfig::ellipsis())
     .register_default_click_handlers_with_action_support(move |link, evt, app| {
-        use warpui::elements::HyperlinkLens;
+        use zap_ng_ui::elements::HyperlinkLens;
         match link {
             HyperlinkLens::Url(url) => {
                 send_telemetry_from_app_ctx!(
@@ -996,7 +996,7 @@ fn render_fallback_explanation<V: View>(
 /// We skip the lookback for new user queries because the underlying model may have recovered
 /// since the previous exchange. For agent-initiated follow-up exchanges (action results, etc.)
 /// the lookback is still applied.
-fn resolve_fallback_warping_message<V: View>(
+fn resolve_fallback_zapnging_message<V: View>(
     current_is_fallback: Option<bool>,
     current_display_name: Option<String>,
     model: &dyn AIBlockModel<View = V>,
@@ -1036,7 +1036,7 @@ impl View for BlocklistAIStatusBar {
         "BlocklistAIStatusBar"
     }
 
-    fn render(&self, app: &AppContext) -> Box<dyn warpui::Element> {
+    fn render(&self, app: &AppContext) -> Box<dyn zap_ng_ui::Element> {
         let appearance = Appearance::as_ref(app);
         let agent_view_controller = self.agent_view_controller.as_ref(app);
         let status_element = if self
@@ -1051,10 +1051,10 @@ impl View for BlocklistAIStatusBar {
                 .current_message()
                 .is_none()
         {
-            render_warping_indicator_base(
-                WarpingIndicatorProps {
+            render_zapnging_indicator_base(
+                ZapNGingIndicatorProps {
                     icon: Some(icons::gray_clock_icon(appearance).finish()),
-                    warping_indicator_text: MaybeShimmeringText::Static(
+                    zapnging_indicator_text: MaybeShimmeringText::Static(
                         WAITING_FOR_USER_INPUT_MESSAGE.into(),
                     ),
                     non_shimmering_text: None,
@@ -1074,14 +1074,14 @@ impl View for BlocklistAIStatusBar {
                 },
                 app,
             )
-        } else if let (Some(warping_indicator), true) = (
-            self.render_warping_indicator_for_latest_exchange(app),
+        } else if let (Some(zapnging_indicator), true) = (
+            self.render_zapnging_indicator_for_latest_exchange(app),
             self.ephemeral_message_model
                 .as_ref(app)
                 .current_message()
                 .is_none(),
         ) {
-            warping_indicator
+            zapnging_indicator
         } else if self
             .ambient_agent_view_model
             .as_ref(app)

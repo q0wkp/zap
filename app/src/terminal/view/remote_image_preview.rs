@@ -13,8 +13,8 @@ use std::{
 };
 
 use remote_server::proto::{read_image_thumbnail_response, ImageFileVersion};
-use warp_core::HostId;
-use warpui::{
+use zap_ng_core::HostId;
+use zap_ng_ui::{
     assets::asset_cache::{AssetCache, AssetSource},
     image_cache::ImageType,
     r#async::Timer,

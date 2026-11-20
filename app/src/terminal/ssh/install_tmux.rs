@@ -6,23 +6,23 @@ use crate::ai::blocklist::inline_action::requested_script::{RequestedScriptStatu
 use crate::appearance::Appearance;
 use crate::terminal::model::ansi::SystemDetails;
 use crate::terminal::model::escape_sequences;
-use crate::terminal::warpify::render;
-use crate::terminal::warpify::settings::WarpifySettings;
+use crate::terminal::zapngify::render;
+use crate::terminal::zapngify::settings::ZapNGifySettings;
 use crate::ui_components::blended_colors;
 use crate::ui_components::icons::Icon as UiIcon;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::ui::theme::WarpTheme;
-use warpui::elements::{
+use zap_ng_core::ui::theme::ZapNGTheme;
+use zap_ng_ui::elements::{
     FormattedTextElement, HighlightedHyperlink, Hoverable, Icon, MainAxisAlignment, MainAxisSize,
     MouseStateHandle,
 };
-use warpui::keymap::FixedBinding;
-use warpui::ui_components::toggle_menu::ToggleMenuStateHandle;
-use warpui::{
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::ui_components::toggle_menu::ToggleMenuStateHandle;
+use zap_ng_ui::{
     elements::{Border, Container, CrossAxisAlignment, Flex, ParentElement},
     AppContext, Element, Entity, SingletonEntity, TypedActionView, View, ViewContext,
 };
-use warpui::{BlurContext, FocusContext};
+use zap_ng_ui::{BlurContext, FocusContext};
 
 pub const WHY_INSTALL_TMUX_URL: &str =
     "";
@@ -35,7 +35,7 @@ pub struct TmuxInstallMethod {
 
 #[derive(Debug, Clone)]
 pub enum SshInstallTmuxBlockEvent {
-    InstallTmuxAndWarpify(TmuxInstallMethod),
+    InstallTmuxAndZapNGify(TmuxInstallMethod),
     ToggleScriptVisibility,
     Cancel,
     Interrupt,
@@ -89,7 +89,7 @@ impl SshKeyEvent {
 pub struct SshInstallTmuxBlock {
     requested_script_mouse_states: RequestedScriptMouseStates,
     why_install_tmux_highlight_index: HighlightedHyperlink,
-    never_warpify_mouse_state_handle: MouseStateHandle,
+    never_zapngify_mouse_state_handle: MouseStateHandle,
     block_mouse_state: MouseStateHandle,
     is_focused: bool,
     is_collapsed: bool,
@@ -113,7 +113,7 @@ pub struct SystemInstallState {
 }
 
 pub fn init(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     app.register_fixed_bindings([
         FixedBinding::new(
@@ -167,7 +167,7 @@ impl SshInstallTmuxBlock {
         Self {
             requested_script_mouse_states: Default::default(),
             why_install_tmux_highlight_index: Default::default(),
-            never_warpify_mouse_state_handle: Default::default(),
+            never_zapngify_mouse_state_handle: Default::default(),
             block_mouse_state: Default::default(),
             is_focused: false,
             is_collapsed: true,
@@ -220,7 +220,7 @@ impl SshInstallTmuxBlock {
         ctx: &mut ViewContext<Self>,
     ) {
         self.script_status = RequestedScriptStatus::Running;
-        ctx.emit(SshInstallTmuxBlockEvent::InstallTmuxAndWarpify(
+        ctx.emit(SshInstallTmuxBlockEvent::InstallTmuxAndZapNGify(
             install_method,
         ));
         ctx.notify()
@@ -315,7 +315,7 @@ impl SshInstallTmuxBlock {
     fn render_title_ui(
         &self,
         app: &AppContext,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         appearance: &Appearance,
     ) -> Box<dyn Element> {
         let header_contents = render::build_header_row(
@@ -331,11 +331,11 @@ impl SshInstallTmuxBlock {
 
         let right_hand_size = is_awaiting_action
             .then(|| {
-                render::render_never_warpify_ssh_link(
+                render::render_never_zapngify_ssh_link(
                     &self.ssh_host,
                     app,
                     appearance,
-                    self.never_warpify_mouse_state_handle.clone(),
+                    self.never_zapngify_mouse_state_handle.clone(),
                     move |ctx, ssh_host| {
                         ctx.dispatch_typed_action(SshInstallTmuxBlockAction::AddSshHostToDenylist(
                             ssh_host.to_owned(),
@@ -382,7 +382,7 @@ impl View for SshInstallTmuxBlock {
             "In order to Warpify your SSH session, tmux must be installed. "
         };
 
-        let warpify_description = vec![
+        let zapngify_description = vec![
             FormattedTextFragment::plain_text(explanation),
             FormattedTextFragment::hyperlink(
                 crate::t!("terminal-ssh-why-need-tmux"),
@@ -393,8 +393,8 @@ impl View for SshInstallTmuxBlock {
         let text_color =
             blended_colors::text_sub(appearance.theme(), appearance.theme().surface_1());
 
-        let warpify_description = FormattedTextElement::new(
-            FormattedText::new([FormattedTextLine::Line(warpify_description)]),
+        let zapngify_description = FormattedTextElement::new(
+            FormattedText::new([FormattedTextLine::Line(zapngify_description)]),
             appearance.monospace_font_size(),
             appearance.monospace_font_family(),
             appearance.monospace_font_family(),
@@ -409,7 +409,7 @@ impl View for SshInstallTmuxBlock {
         .finish();
 
         content
-            .add_child(render::apply_spacing_styles(Container::new(warpify_description)).finish());
+            .add_child(render::apply_spacing_styles(Container::new(zapngify_description)).finish());
 
         if let Some(root_install_state) = &self.system_install_state {
             content.add_child(self.render_system_install_ui(root_install_state, app));
@@ -494,9 +494,9 @@ impl TypedActionView for SshInstallTmuxBlock {
                 ctx.emit(SshInstallTmuxBlockEvent::Interrupt);
             }
             (SshInstallTmuxBlockAction::AddSshHostToDenylist(ssh_host), true) => {
-                let settings = WarpifySettings::handle(ctx);
-                settings.update(ctx, |warpify, ctx| {
-                    warpify.denylist_ssh_host(ssh_host, ctx);
+                let settings = ZapNGifySettings::handle(ctx);
+                settings.update(ctx, |zapngify, ctx| {
+                    zapngify.denylist_ssh_host(ssh_host, ctx);
                 });
                 ctx.emit(SshInstallTmuxBlockEvent::Cancel);
                 ctx.notify();
@@ -515,7 +515,7 @@ impl TypedActionView for SshInstallTmuxBlock {
 #[allow(unused_variables)]
 pub fn install_tmux_script(system: &SystemDetails, app: &AppContext) -> Option<String> {
     use asset_macro::bundled_asset;
-    use warpui::assets::asset_cache::{AssetCache, AssetState};
+    use zap_ng_ui::assets::asset_cache::{AssetCache, AssetState};
 
     let asset_source = match (
         system.operating_system.as_str(),
@@ -553,7 +553,7 @@ pub fn install_root_tmux_script(
     can_run_sudo: bool,
 ) -> Option<String> {
     use asset_macro::bundled_asset;
-    use warpui::assets::asset_cache::{AssetCache, AssetState};
+    use zap_ng_ui::assets::asset_cache::{AssetCache, AssetState};
 
     let asset_source = match (
         system.operating_system.as_str(),

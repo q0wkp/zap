@@ -1,5 +1,5 @@
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::{Border, CornerRadius, DropShadow, Radius, ScrollbarWidth};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::{Border, CornerRadius, DropShadow, Radius, ScrollbarWidth};
 
 use crate::search::result_renderer::QueryResultRendererStyles;
 

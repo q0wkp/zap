@@ -35,7 +35,7 @@ pub(crate) mod skills;
 pub(crate) mod voice;
 pub use agent_tips::*;
 pub use request_usage_model::*;
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 #[cfg(not(target_family = "wasm"))]
 pub mod agent_sdk;
 // Zap Wave 7-3:`ambient_agent_settings` 随 ambient-agent UI 子系统物理删。

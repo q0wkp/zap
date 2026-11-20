@@ -1,6 +1,6 @@
 //! Utilities for notebook keybindings.
 
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 use crate::{
     settings_view::keybindings::{KeybindingChangedEvent, KeybindingChangedNotifier},

@@ -4,8 +4,8 @@
 
 use std::path::Path;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         ChildView, ClippedScrollStateHandle, Container, CornerRadius, CrossAxisAlignment, Element,
         Flex, MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, Text,

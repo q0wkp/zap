@@ -53,10 +53,10 @@ use simple_logger::manager::LogManager;
 use simple_logger::SimpleLogger;
 use tokio::io::AsyncBufReadExt as _;
 use uuid::Uuid;
-use warp_core::safe_error;
-use warp_core::{execution_mode::AppExecutionMode, features::FeatureFlag, settings::Setting as _};
-use warpui::AppContext;
-use warpui::{windowing::WindowManager, ModelContext, SingletonEntity};
+use zap_ng_core::safe_error;
+use zap_ng_core::{execution_mode::AppExecutionMode, features::FeatureFlag, settings::Setting as _};
+use zap_ng_ui::AppContext;
+use zap_ng_ui::{windowing::WindowManager, ModelContext, SingletonEntity};
 
 use super::{
     oauth::{self, AuthContext, FileBasedPersistedCredentialsMap, PersistedCredentialsMap},
@@ -2066,8 +2066,8 @@ fn make_client_info() -> rmcp::model::ClientInfo {
         protocol_version: Default::default(),
         capabilities: Default::default(),
         client_info: rmcp::model::Implementation {
-            name: warp_core::channel::ChannelState::app_id().to_string(),
-            version: warp_core::channel::ChannelState::app_version()
+            name: zap_ng_core::channel::ChannelState::app_id().to_string(),
+            version: zap_ng_core::channel::ChannelState::app_version()
                 .map(|v| v.to_string())
                 .unwrap_or_default(),
             title: None,

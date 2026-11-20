@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use regex::Regex;
-use warp_core::features::FeatureFlag;
-use warp_core::report_if_error;
-use warp_core::user_preferences::GetUserPreferences as _;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::report_if_error;
+use zap_ng_core::user_preferences::GetUserPreferences as _;
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity, UpdateModel};
 
 use crate::ai::blocklist::telemetry_banner::should_collect_ai_ugc_telemetry;
 use crate::auth::AuthState;
@@ -93,10 +93,10 @@ impl PartialEq for CustomSecretRegex {
 
 impl settings_value::SettingsValue for CustomSecretRegex {}
 
-// openWarp 闭源遥测剥离:三个隐私开关默认值 true → false。原 Zap 默认开是商业产品的
+// ZapNG 闭源遥测剥离:三个隐私开关默认值 true → false。原 Zap 默认开是商业产品的
 // "选择退出"模式;Zap 已物理切断遥测、崩溃上报、云端对话存储三条外发链路,
 // 默认开关只会在新用户面前显示 ON 但实际不外发,造成认知割裂。改为默认 OFF。
-define_settings_group!(WarpDrivePrivacySettings, settings: [
+define_settings_group!(ZapNGDrivePrivacySettings, settings: [
     is_telemetry_enabled: IsTelemetryEnabled {
         type: bool,
         default: false,
@@ -232,7 +232,7 @@ impl PrivacySettings {
     fn new(ctx: &mut ModelContext<Self>) -> Self {
         let auth_state = AuthStateProvider::as_ref(ctx).get().clone();
 
-        // openWarp 闭源遥测剥离:user_preferences 缺值时也默认 false,与 setting macro 默认一致。
+        // ZapNG 闭源遥测剥离:user_preferences 缺值时也默认 false,与 setting macro 默认一致。
         let is_telemetry_enabled: bool = ctx
             .private_user_preferences()
             .read_value(TELEMETRY_ENABLED_DEFAULTS_KEY)
@@ -261,16 +261,16 @@ impl PrivacySettings {
         );
 
         // Listen for changes to the object store and update ourselves when they happen.
-        ctx.subscribe_to_model(&WarpDrivePrivacySettings::handle(ctx), |me, event, ctx| {
-            let privacy_settings = WarpDrivePrivacySettings::as_ref(ctx);
+        ctx.subscribe_to_model(&ZapNGDrivePrivacySettings::handle(ctx), |me, event, ctx| {
+            let privacy_settings = ZapNGDrivePrivacySettings::as_ref(ctx);
             match event {
-                WarpDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
+                ZapNGDrivePrivacySettingsChangedEvent::IsTelemetryEnabled { .. } => {
                     me.set_is_telemetry_enabled(
                         *privacy_settings.is_telemetry_enabled.value(),
                         ctx,
                     );
                 }
-                WarpDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
+                ZapNGDrivePrivacySettingsChangedEvent::IsCrashReportingEnabled { .. } => {
                     me.set_is_crash_reporting_enabled(
                         *privacy_settings.is_crash_reporting_enabled.value(),
                         ctx,
@@ -396,7 +396,7 @@ impl PrivacySettings {
             }
         }
 
-        self.maybe_sync_with_warp_drive_prefs(ctx);
+        self.maybe_sync_with_zap_ng_drive_prefs(ctx);
     }
 
     fn overwrite_local_settings_if_cloud_disabled(
@@ -470,7 +470,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_crash_reporting_enabled = new_value;
 
-            WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            ZapNGDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_crash_reporting_enabled to {new_value}");
                 let _ = settings
                     .is_crash_reporting_enabled
@@ -506,7 +506,7 @@ impl PrivacySettings {
         if new_value != old_value {
             self.is_telemetry_enabled = new_value;
 
-            WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+            ZapNGDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                 log::info!("Setting is_telemetry_enabled to {new_value}");
                 let _ = settings.is_telemetry_enabled.set_value(new_value, ctx);
             });
@@ -601,8 +601,8 @@ impl PrivacySettings {
         }
     }
 
-    /// openWarp 闭源遥测剥离 P3:隐私设置不再同步到上游云端 settings。
-    /// 剥离后纯本地落盘(调用方仍会写 settings.toml + warp_drive 本地缓存),无外发。
+    /// ZapNG 闭源遥测剥离 P3:隐私设置不再同步到上游云端 settings。
+    /// 剥离后纯本地落盘(调用方仍会写 settings.toml + zap_ng_drive 本地缓存),无外发。
     fn update_server_with_local_settings(&self, _ctx: &mut ModelContext<Self>) {}
 
     /// We wait until zap drive prefs have loaded and then either
@@ -610,16 +610,16 @@ impl PrivacySettings {
     ///    values are set in zap drive, or
     /// 2) update the zap drive prefs to match the values from the legacy user_settings endpoint so
     ///    that we can use zap drive prefs going forward.
-    pub fn maybe_sync_with_warp_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
+    pub fn maybe_sync_with_zap_ng_drive_prefs(&mut self, ctx: &mut ModelContext<Self>) {
         // Wait for cloud objects to load, and, if telemetry & crash reporting are synced to zap drive
         // initialize from the zap drive values.
         ctx.spawn(
             ObjectStoreModel::as_ref(ctx).initial_load_complete(),
-            Self::handle_warp_drive_objects_loaded,
+            Self::handle_zap_ng_drive_objects_loaded,
         );
     }
 
-    fn handle_warp_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
+    fn handle_zap_ng_drive_objects_loaded(&mut self, _: (), ctx: &mut ModelContext<Self>) {
         self.initialize_default_regexes_once(ctx);
         // Check if the zap drive preferences are set. If they are, and telemetry and crash reporting
         // are set as zap drive prefs, then use those.  Otherwise, update the zap drive prefs to match
@@ -662,7 +662,7 @@ impl PrivacySettings {
                     self.is_telemetry_enabled,
                     self.is_crash_reporting_enabled
                 );
-                WarpDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
+                ZapNGDrivePrivacySettings::handle(ctx).update(ctx, |settings, ctx| {
                     report_if_error!(settings
                         .is_telemetry_enabled
                         .set_value(self.is_telemetry_enabled, ctx));

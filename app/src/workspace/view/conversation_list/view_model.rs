@@ -6,7 +6,7 @@ use crate::ai::agent_conversations_model::{
 };
 use crate::ai::ambient_agents::AmbientAgentTaskId;
 use fuzzy_match::match_indices_case_insensitive;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ConversationOrTaskId {

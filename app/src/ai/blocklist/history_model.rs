@@ -11,7 +11,7 @@ use warp_multi_agent_api::{
     client_action::{Action, StartNewConversation},
     response_event::stream_finished::TokenUsage,
 };
-use warpui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, Entity, EntityId, ModelContext, SingletonEntity};
 
 #[cfg(feature = "local_fs")]
 use std::sync::{Arc, Mutex};

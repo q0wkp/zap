@@ -2,7 +2,7 @@
 
 use settings::Setting as _;
 use version_compare::Cmp;
-use warp::{
+use zap_ng::{
     cmd_or_ctrl_shift,
     integration_testing::{
         input::{
@@ -25,7 +25,7 @@ use warp::{
     terminal::shell::{self, ShellType},
     workspace::Workspace,
 };
-use warpui::{
+use zap_ng_ui::{
     async_assert, async_assert_eq,
     clipboard::ClipboardContent,
     integration::{AssertionCallback, TestStep},
@@ -441,7 +441,7 @@ zle -N zle-line-init
         .with_step(wait_until_bootstrapped_single_pane_for_tab(0))
         .with_step(clear_blocklist_to_remove_bootstrapped_blocks())
         // Leaves "LEFTOVER_RESIDUE" pending in the line editor's buffer for the *next* prompt,
-        // simulating genuine leftover bootstrap-paste bytes Warp has no visibility into.
+        // simulating genuine leftover bootstrap-paste bytes ZapNG has no visibility into.
         .with_step(execute_command_for_single_terminal_in_tab(
             0,
             "print -z LEFTOVER_RESIDUE".to_string(),

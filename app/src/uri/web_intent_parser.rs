@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use url::Url;
 
 #[cfg(target_family = "wasm")]
-use warp_core::context_flag::ContextFlag;
+use zap_ng_core::context_flag::ContextFlag;
 
 #[derive(Debug)]
 /// Represents an intent parsed from a web url
@@ -130,14 +130,14 @@ pub fn maybe_rewrite_web_url_to_intent(url: &Url) -> Option<Url> {
         .map(WebIntent::into_intent_url)
 }
 
-/// On WASM warp, fires an event to try and open the given link on the desktop app.
+/// On WASM zap-ng, fires an event to try and open the given link on the desktop app.
 #[cfg(target_family = "wasm")]
 pub fn open_url_on_desktop(url: &Url) {
     match WebIntent::try_from_url(url) {
         Ok(WebIntent::ConversationView(intent))
         | Ok(WebIntent::DriveObject(intent))
         | Ok(WebIntent::Action(intent)) => {
-            crate::platform::wasm::emit_event(crate::platform::wasm::WarpEvent::OpenOnNative {
+            crate::platform::wasm::emit_event(crate::platform::wasm::ZapNGEvent::OpenOnNative {
                 url: intent.into(),
             });
         }
@@ -151,9 +151,9 @@ pub fn open_url_on_desktop(url: &Url) {
 fn set_context_flags_from_url(url: Url) {
     match WebIntent::try_from_url(&url) {
         Ok(WebIntent::ConversationView(_)) => ContextFlag::set_conversation_only(),
-        Ok(WebIntent::DriveObject(_)) => ContextFlag::set_warp_drive_link_only(),
+        Ok(WebIntent::DriveObject(_)) => ContextFlag::set_zap_ng_drive_link_only(),
         Ok(WebIntent::SettingsView(_)) => ContextFlag::set_settings_link_only(),
-        Ok(WebIntent::Home(_)) => ContextFlag::set_warp_home_link_only(),
+        Ok(WebIntent::Home(_)) => ContextFlag::set_zap_ng_home_link_only(),
         Ok(WebIntent::Action(_)) => {} // No special context flag for actions
         _ => {}
     }

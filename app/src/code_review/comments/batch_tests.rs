@@ -1,6 +1,6 @@
 use chrono::Local;
-use warp_editor::render::model::LineCount;
-use warpui::App;
+use zap_ng_editor::render::model::LineCount;
+use zap_ng_ui::App;
 
 use crate::code::editor::line::EditorLineLocation;
 use crate::code_review::comments::{

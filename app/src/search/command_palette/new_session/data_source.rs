@@ -12,8 +12,8 @@ use crate::terminal::available_shells::AvailableShells;
 use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
-use warp_core::features::FeatureFlag;
-use warpui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{AppContext, Entity, ModelContext, ModelHandle, SingletonEntity};
 
 /// Controls which kinds of new sessions the data source should surface.
 #[derive(Copy, Clone, Debug)]
@@ -316,7 +316,7 @@ mod full_text_searcher {
     use fuzzy_match::FuzzyMatchResult;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use warpui::r#async::executor::Background;
+    use zap_ng_ui::r#async::executor::Background;
 
     define_search_schema!(
         schema_name: NEW_SESSION_SEARCH_SCHEMA,

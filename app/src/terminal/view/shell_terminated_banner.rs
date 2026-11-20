@@ -1,11 +1,11 @@
 use std::{borrow::Cow, cell::RefCell};
 
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::Appearance,
     builder::UiBuilder,
-    theme::{color::internal_colors, WarpTheme},
+    theme::{color::internal_colors, ZapNGTheme},
 };
-use warpui::{
+use zap_ng_ui::{
     clipboard::ClipboardContent,
     elements::*,
     text_layout::ClipConfig,
@@ -149,7 +149,7 @@ impl TerminationType {
         Container::new(
             ConstrainedBox::new(
                 icon_type
-                    .to_warpui_icon(appearance.theme().background())
+                    .to_zap_ng_ui_icon(appearance.theme().background())
                     .finish(),
             )
             .with_width(ICON_SIZE)
@@ -276,7 +276,7 @@ impl TerminationType {
 
 fn inverted_color_ui_builder(appearance: &Appearance) -> UiBuilder {
     let theme = appearance.theme();
-    let theme = WarpTheme::new(
+    let theme = ZapNGTheme::new(
         theme.foreground(),
         theme.background().into_solid(),
         theme.background(),

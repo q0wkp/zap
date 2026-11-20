@@ -9,8 +9,8 @@ use sha2::Digest;
 use std::path::Path;
 use std::{env, fs, process::Command};
 use walkdir::WalkDir;
-use warp_util::assets::{ASSETS_DIR, ASYNC_ASSETS_DIR, REMOTE_ASSETS_DIR};
-use warp_util::path::app_target_dir;
+use zap_ng_util::assets::{ASSETS_DIR, ASYNC_ASSETS_DIR, REMOTE_ASSETS_DIR};
+use zap_ng_util::path::app_target_dir;
 
 fn main() -> Result<()> {
     cfg_aliases! {
@@ -230,7 +230,7 @@ fn copy_async_assets() {
                 let mut hasher = sha2::Sha256::new();
                 hasher.update(&contents);
                 let hash: [u8; 32] = hasher.finalize().into();
-                let new_relative_path = warp_util::assets::hashed_asset_path(
+                let new_relative_path = zap_ng_util::assets::hashed_asset_path(
                     asset_path
                         .strip_prefix(&asset_dir)
                         .expect("asset in unexpected location"),

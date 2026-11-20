@@ -1,20 +1,20 @@
 use std::sync::Arc;
 
 use pathfinder_color::ColorU;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::{Fill, WarpTheme};
-use warpui::clipboard::ClipboardContent;
-use warpui::elements::{
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::{Fill, ZapNGTheme};
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::elements::{
     ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     Element, EventHandler, Flex, MainAxisAlignment, MainAxisSize, ParentElement, Radius, Rect,
     Shrinkable,
 };
-use warpui::fonts::Weight;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_ui::fonts::Weight;
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::{SingletonEntity, View, ViewContext, ViewHandle};
 
-use warp_core::ui::appearance::Appearance as CoreAppearance;
-use warp_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::appearance::Appearance as CoreAppearance;
+use zap_ng_core::ui::theme::color::internal_colors;
 
 use crate::ai::agent::conversation::ConversationStatus;
 use crate::ai::artifacts::{Artifact, ArtifactButtonsRow, ArtifactButtonsRowEvent};
@@ -83,7 +83,7 @@ impl ActionButtonTheme for NotificationArtifactButtonTheme {
 }
 
 /// 用户在被截断的消息上点击展开/折叠时回调。
-pub(crate) type OnExpandClick = Box<dyn Fn(&mut warpui::EventContext)>;
+pub(crate) type OnExpandClick = Box<dyn Fn(&mut zap_ng_ui::EventContext)>;
 
 /// 渲染通知项的内层内容。
 /// 根据 `item.branch` 是否存在分发到 rich(带 branch 行) 或 simple 布局。
@@ -256,7 +256,7 @@ fn render_branch_label(branch: &str, appearance: &Appearance) -> Box<dyn Element
             .with_cross_axis_alignment(CrossAxisAlignment::Center)
             .with_spacing(2.)
             .with_child(
-                ConstrainedBox::new(Icon::GitBranch.to_warpui_icon(color).finish())
+                ConstrainedBox::new(Icon::GitBranch.to_zap_ng_ui_icon(color).finish())
                     .with_width(10.)
                     .with_height(10.)
                     .finish(),
@@ -329,7 +329,7 @@ fn render_timestamp_with_dot(item: &NotificationItem, appearance: &Appearance) -
 fn render_expand_chevron(
     expanded: bool,
     on_click: OnExpandClick,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
 ) -> Box<dyn Element> {
     let icon = if expanded {
         Icon::ChevronDown
@@ -337,7 +337,7 @@ fn render_expand_chevron(
         Icon::ChevronRight
     };
     let chevron = ConstrainedBox::new(
-        icon.to_warpui_icon(theme.disabled_text_color(theme.surface_1()))
+        icon.to_zap_ng_ui_icon(theme.disabled_text_color(theme.surface_1()))
             .finish(),
     )
     .with_width(12.)
@@ -409,7 +409,7 @@ const NOTIFICATION_AVATAR_SIZING: IconWithStatusSizing = IconWithStatusSizing {
 fn render_agent_avatar(
     agent: NotificationSourceAgent,
     category: NotificationCategory,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
 ) -> Box<dyn Element> {
     let status = notification_category_to_conversation_status(category);
     let variant = match agent {
@@ -468,7 +468,7 @@ pub(crate) fn handle_notification_artifact_buttons_event(
                 },
                 ctx
             );
-            // openWarp 本地化:点击 plan 按钮打开本地 AIDocument pane,
+            // ZapNG 本地化:点击 plan 按钮打开本地 AIDocument pane,
             // 不再跳到云 notebook 镜像。
             let document_version =
                 crate::ai::document::ai_document_model::AIDocumentModel::as_ref(ctx)

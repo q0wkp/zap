@@ -28,28 +28,28 @@ use num_traits::Float as _;
 use parking_lot::FairMutex;
 use pathfinder_geometry::vector::vec2f;
 use vec1::Vec1;
-use warp_core::features::FeatureFlag;
-use warp_util::user_input::UserInput;
-use warpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use warpui::event::{KeyState, ModifiersState};
-use warpui::platform::keyboard::KeyCode;
-use warpui::text::SelectionType;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use zap_ng_ui::event::{KeyState, ModifiersState};
+use zap_ng_ui::platform::keyboard::KeyCode;
+use zap_ng_ui::text::SelectionType;
 
 use super::{should_intercept_mouse, should_intercept_scroll};
 use std::ops::{Deref as _, Range};
 use std::sync::Arc;
-use warpui::elements::{Axis, Point as UiPoint, ScrollData, ScrollableElement};
-use warpui::fonts::Properties;
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::Vector2F;
-use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use warpui::{
+use zap_ng_ui::elements::{Axis, Point as UiPoint, ScrollData, ScrollableElement};
+use zap_ng_ui::fonts::Properties;
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::Vector2F;
+use zap_ng_ui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use zap_ng_ui::{
     end_trace,
     event::{DispatchedEvent, InBoundsExt},
     record_trace_event, start_trace, AfterLayoutContext, AppContext, Element, Event, EventContext,
     LayoutContext, PaintContext, SizeConstraint,
 };
-use warpui::{ClipBounds, EntityId, ModelHandle};
+use zap_ng_ui::{ClipBounds, EntityId, ModelHandle};
 
 const CLI_SUBAGENT_HORIZONTAL_MARGIN: f32 = 8.;
 const CLI_SUBAGENT_VERTICAL_MARGIN: f32 = 8.;
@@ -131,7 +131,7 @@ impl AltScreenElement {
             pane_state: terminal_view_render_context.pane_state,
             active_session_state: terminal_view_render_context.active_session_state,
             grid_render_params: GridRenderParams {
-                warp_theme: appearance.theme().clone(),
+                zap_ng_theme: appearance.theme().clone(),
                 font_family: appearance.monospace_font_family(),
                 font_size: appearance.monospace_font_size(),
                 font_weight: appearance.monospace_font_weight(),
@@ -260,7 +260,7 @@ impl AltScreenElement {
         ctx.dispatch_typed_action(TerminalAction::Focus);
 
         // On mobile, request soft keyboard so users can input.
-        if warpui::platform::is_mobile_device() {
+        if zap_ng_ui::platform::is_mobile_device() {
             ctx.request_soft_keyboard();
         }
 
@@ -520,7 +520,7 @@ impl AltScreenElement {
     fn render_selections(&self, size_info: &SizeInfo, origin: Vector2F, ctx: &mut PaintContext) {
         let text_selection_color = self
             .grid_render_params
-            .warp_theme
+            .zap_ng_theme
             .text_selection_color()
             .into_solid();
 
@@ -741,7 +741,7 @@ impl Element for AltScreenElement {
             end_row.ceil() as usize,
             &model.colors(),
             &override_colors,
-            &self.grid_render_params.warp_theme,
+            &self.grid_render_params.zap_ng_theme,
             properties,
             self.grid_render_params.font_family,
             self.grid_render_params.font_size,
@@ -779,7 +779,7 @@ impl Element for AltScreenElement {
                 model.alt_screen().cursor_style(),
                 padding_x,
                 adjusted_grid_origin,
-                self.grid_render_params.warp_theme.cursor().into(),
+                self.grid_render_params.zap_ng_theme.cursor().into(),
                 ctx,
                 self.terminal_view_id,
                 self.cursor_hint_text.as_mut(),

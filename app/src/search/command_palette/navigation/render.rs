@@ -17,14 +17,14 @@ use crate::terminal::model::grid::Dimensions;
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::SizeInfo;
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     Align, Border, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Highlight,
     ParentElement, Radius, Shrinkable, Wrap,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::units::IntoPixels;
-use warpui::{AppContext, Element, SingletonEntity};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::units::IntoPixels;
+use zap_ng_ui::{AppContext, Element, SingletonEntity};
 
 /// Renders a navigation session.
 pub fn render_navigation_session(

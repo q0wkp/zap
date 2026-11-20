@@ -1,7 +1,7 @@
 //! The pane holding the BYOP request inspector. Not persisted: the calls it shows are those it
 //! captured while open.
 
-use warpui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, View, ViewContext, ViewHandle};
 
 use crate::ai::agent_providers::request_inspector::view::{
     RequestInspectorEvent, RequestInspectorView,

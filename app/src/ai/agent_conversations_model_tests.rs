@@ -7,8 +7,8 @@ use std::{
         Arc,
     },
 };
-use warp_core::features::FeatureFlag;
-use warpui::{App, EntityId};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_ui::{App, EntityId};
 
 use crate::ai::agent::conversation::{AIConversation, AIConversationId, ConversationStatus};
 use crate::ai::ambient_agents::task::{TaskCreatorInfo, TaskStatusMessage};
@@ -27,7 +27,7 @@ use super::{
     EnvironmentFilter, HarnessFilter, OwnerFilter, StatusFilter,
 };
 use crate::ai::ambient_agents::task::HarnessConfig;
-use warp_cli::agent::Harness;
+use zap_ng_cli::agent::Harness;
 
 /// Creates a test task with specified creator UID and updated_at time
 fn create_test_task(

@@ -4,8 +4,8 @@ use crate::slides::{
 use crate::telemetry::OnboardingEvent;
 use crate::OnboardingIntention;
 use ai::LLMId;
-use warp_core::send_telemetry_from_ctx;
-use warpui::{Entity, ModelContext};
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_ui::{Entity, ModelContext};
 
 /// UI customization settings chosen during the "Customize your UI" onboarding slide.
 #[derive(Clone, Debug)]
@@ -14,7 +14,7 @@ pub struct UICustomizationSettings {
     pub show_conversation_history: bool,
     pub show_project_explorer: bool,
     pub show_global_search: bool,
-    pub show_warp_drive: bool,
+    pub show_zap_ng_drive: bool,
     pub show_code_review_button: bool,
 }
 
@@ -26,7 +26,7 @@ impl UICustomizationSettings {
             show_conversation_history: true,
             show_project_explorer: true,
             show_global_search: true,
-            show_warp_drive: true,
+            show_zap_ng_drive: true,
             show_code_review_button: true,
         }
     }
@@ -38,7 +38,7 @@ impl UICustomizationSettings {
             show_conversation_history: false,
             show_project_explorer: false,
             show_global_search: false,
-            show_warp_drive: false,
+            show_zap_ng_drive: false,
             show_code_review_button: false,
         }
     }
@@ -51,7 +51,7 @@ impl UICustomizationSettings {
         (conversation_visible && self.show_conversation_history)
             || self.show_project_explorer
             || self.show_global_search
-            || self.show_warp_drive
+            || self.show_zap_ng_drive
     }
 }
 
@@ -71,7 +71,7 @@ pub enum SelectedSettings {
 
 impl SelectedSettings {
     pub fn is_ai_enabled(&self) -> bool {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
         match self {
             SelectedSettings::AgentDrivenDevelopment { agent_settings, .. } => {
                 !agent_settings.disable_oz
@@ -85,19 +85,19 @@ impl SelectedSettings {
         }
     }
 
-    pub fn is_warp_drive_enabled(&self) -> bool {
+    pub fn is_zap_ng_drive_enabled(&self) -> bool {
         match self {
             SelectedSettings::AgentDrivenDevelopment {
                 ui_customization, ..
             } => ui_customization
                 .as_ref()
-                .map(|ui| ui.show_warp_drive)
+                .map(|ui| ui.show_zap_ng_drive)
                 .unwrap_or(true),
             SelectedSettings::Terminal {
                 ui_customization, ..
             } => ui_customization
                 .as_ref()
-                .map(|ui| ui.show_warp_drive)
+                .map(|ui| ui.show_zap_ng_drive)
                 .unwrap_or(false),
         }
     }
@@ -157,7 +157,7 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn settings(&self) -> SelectedSettings {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
         let ui_customization = if FeatureFlag::ZapNewSettingsModes.is_enabled() {
             Some(self.ui_customization.clone())
         } else {
@@ -246,7 +246,7 @@ impl OnboardingStateModel {
         self.ui_customization.show_conversation_history = enabled;
         self.ui_customization.show_project_explorer = enabled;
         self.ui_customization.show_global_search = enabled;
-        self.ui_customization.show_warp_drive = enabled;
+        self.ui_customization.show_zap_ng_drive = enabled;
         ctx.notify();
     }
 
@@ -299,8 +299,8 @@ impl OnboardingStateModel {
         ctx.notify();
     }
 
-    pub(crate) fn set_show_warp_drive(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
-        if self.ui_customization.show_warp_drive == value {
+    pub(crate) fn set_show_zap_ng_drive(&mut self, value: bool, ctx: &mut ModelContext<Self>) {
+        if self.ui_customization.show_zap_ng_drive == value {
             return;
         }
         send_telemetry_from_ctx!(
@@ -310,7 +310,7 @@ impl OnboardingStateModel {
             },
             ctx
         );
-        self.ui_customization.show_warp_drive = value;
+        self.ui_customization.show_zap_ng_drive = value;
         ctx.notify();
     }
 
@@ -462,7 +462,7 @@ impl OnboardingStateModel {
         default_model_id: LLMId,
         ctx: &mut ModelContext<Self>,
     ) {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
 
         // If the user is past the agent slide, don't change the agent model from underneath them.
         // When the new settings modes flag is on, ThemePicker comes after the agent slides
@@ -574,7 +574,7 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn back(&mut self, ctx: &mut ModelContext<Self>) {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
         let theme_picker_last = FeatureFlag::ZapNewSettingsModes.is_enabled();
 
         let prev = if theme_picker_last {
@@ -609,7 +609,7 @@ impl OnboardingStateModel {
     }
 
     pub(crate) fn next(&mut self, ctx: &mut ModelContext<Self>) {
-        use warp_core::features::FeatureFlag;
+        use zap_ng_core::features::FeatureFlag;
         let theme_picker_last = FeatureFlag::ZapNewSettingsModes.is_enabled();
 
         let is_last_step = if theme_picker_last {

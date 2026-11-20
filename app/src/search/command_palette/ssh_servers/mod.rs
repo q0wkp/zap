@@ -1,4 +1,4 @@
-//! Command palette 数据源:SSH 服务器(openWarp 独有)。
+//! Command palette 数据源:SSH 服务器(ZapNG 独有)。
 //!
 //! 用户在 Ctrl+Shift+P 中按服务器名 / host 模糊匹配,选中 → emit
 //! `WorkspaceAction::OpenSshTerminal` 开新 tab 连接(走 SecretInjector 自动

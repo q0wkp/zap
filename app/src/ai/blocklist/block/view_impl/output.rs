@@ -38,14 +38,14 @@ use ai::agent::action::SuggestPromptRequest;
 use ai::skills::SkillReference;
 use pathfinder_color::ColorU;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::color::internal_colors;
 #[allow(unused_imports)]
-use warp_util::path::{common_path, CleanPathResult};
-use warpui::elements::new_scrollable::SingleAxisConfig;
-use warpui::elements::{
+use zap_ng_util::path::{common_path, CleanPathResult};
+use zap_ng_ui::elements::new_scrollable::SingleAxisConfig;
+use zap_ng_ui::elements::{
     ChildAnchor, NewScrollable, OffsetPositioning, ParentAnchor, ParentOffsetBounds, Stack,
 };
-use warpui::EntityId;
+use zap_ng_ui::EntityId;
 
 use crate::ai::blocklist::block::{
     CollapsibleElementState, CollapsibleExpansionState, FinishReason, ImportedCommentGroup,
@@ -105,7 +105,7 @@ use crate::{
 };
 use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
-use warp_core::channel::ChannelState;
+use zap_ng_core::channel::ChannelState;
 
 use super::common::{
     format_elapsed_seconds, render_debug_footer, render_failed_output, render_informational_footer,
@@ -121,7 +121,7 @@ use super::{
     render_citation_chips, todos::render_completed_todo_items, WithContentItemSpacing,
     CONTENT_ITEM_VERTICAL_MARGIN,
 };
-use warpui::{
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment,
         Empty, Expanded, Fill, Flex, FormattedTextElement, Hoverable, MainAxisAlignment,
@@ -269,7 +269,7 @@ pub(super) fn render(props: Props, app: &AppContext) -> Box<dyn Element> {
                 let mut action_index = 0;
 
                 fn open_code_block_action(source: CodeSource) -> AIBlockAction {
-                    AIBlockAction::OpenCodeInWarp { source }
+                    AIBlockAction::OpenCodeInZapNG { source }
                 }
 
                 fn copy_code_action(snippet: String) -> AIBlockAction {
@@ -1430,7 +1430,7 @@ fn render_read_skill(
                 skill.provider,
                 skill_icon_override,
                 move |ctx| {
-                    ctx.dispatch_typed_action(AIBlockAction::OpenCodeInWarp {
+                    ctx.dispatch_typed_action(AIBlockAction::OpenCodeInZapNG {
                         source: source.clone(),
                     });
                 },
@@ -1534,7 +1534,7 @@ fn render_read_files(
             skill.provider,
             skill_icon_override,
             move |ctx| {
-                ctx.dispatch_typed_action(AIBlockAction::OpenCodeInWarp {
+                ctx.dispatch_typed_action(AIBlockAction::OpenCodeInZapNG {
                     source: source.clone(),
                 });
             },
@@ -1686,7 +1686,7 @@ fn render_stopped_output(props: Props, app: &AppContext) -> Box<dyn Element> {
         let ui_builder = appearance.ui_builder().clone();
 
         let play_icon = Container::new(
-            ConstrainedBox::new(Icon::Play.to_warpui_icon(theme.foreground()).finish())
+            ConstrainedBox::new(Icon::Play.to_zap_ng_ui_icon(theme.foreground()).finish())
                 .with_height(appearance.ui_font_size() + 1.)
                 .with_width(appearance.ui_font_size() + 1.)
                 .finish(),
@@ -1738,7 +1738,7 @@ fn render_stopped_output(props: Props, app: &AppContext) -> Box<dyn Element> {
                 .set_background(internal_colors::fg_overlay_3(theme).into()),
         );
 
-        let resume_button = warpui::ui_components::button::Button::new(
+        let resume_button = zap_ng_ui::ui_components::button::Button::new(
             props.state_handles.resume_conversation_handle.clone(),
             button_styles,
             Some(hovered_styles),
@@ -1925,7 +1925,7 @@ fn render_suggest_new_conversation(
             ),
             SuggestNewConversationResult::Rejected => (
                 "Continuing current conversation",
-                warpui::elements::Icon::new(
+                zap_ng_ui::elements::Icon::new(
                     Icon::FlipForward.into(),
                     internal_colors::neutral_6(theme),
                 )
@@ -2415,7 +2415,7 @@ fn render_references_footer(
                 .finish(),
         )
         .with_child(
-            ConstrainedBox::new(chevron.to_warpui_icon(title_row_color).finish())
+            ConstrainedBox::new(chevron.to_zap_ng_ui_icon(title_row_color).finish())
                 .with_height(icon_size(app) - 2.)
                 .with_width(icon_size(app) - 2.)
                 .finish(),
@@ -2734,7 +2734,7 @@ fn render_usage_button(props: Props, app: &AppContext) -> Box<dyn Element> {
                 // Expansion icon
                 ConstrainedBox::new(
                     expansion_icon
-                        .to_warpui_icon(
+                        .to_zap_ng_ui_icon(
                             appearance
                                 .theme()
                                 .sub_text_color(appearance.theme().background()),
@@ -2799,7 +2799,7 @@ pub fn action_icon<V: View>(
     action_model: &ModelHandle<BlocklistAIActionModel>,
     ai_block_model: &dyn AIBlockModel<View = V>,
     app: &AppContext,
-) -> warpui::elements::Icon {
+) -> zap_ng_ui::elements::Icon {
     let appearance = Appearance::as_ref(app);
     let status = action_model.as_ref(app).get_action_status(action_id);
     match status {
@@ -2899,7 +2899,7 @@ fn render_collapsible_header(
             )
             .with_child(
                 Container::new(
-                    ConstrainedBox::new(chevron_icon.to_warpui_icon(text_color.into()).finish())
+                    ConstrainedBox::new(chevron_icon.to_zap_ng_ui_icon(text_color.into()).finish())
                         .with_width(icon_size - 2.)
                         .with_height(icon_size - 2.)
                         .finish(),
@@ -3115,7 +3115,7 @@ fn render_collapsible_debug_output(
         // Chevron icon
         row.add_child(
             Container::new(
-                ConstrainedBox::new(chevron_icon.to_warpui_icon(text_color.into()).finish())
+                ConstrainedBox::new(chevron_icon.to_zap_ng_ui_icon(text_color.into()).finish())
                     .with_width(icon_size - 2.)
                     .with_height(icon_size - 2.)
                     .finish(),

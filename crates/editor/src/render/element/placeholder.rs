@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use warpui::{
+use zap_ng_ui::{
     AppContext, LayoutContext,
     geometry::vector::{Vector2F, vec2f},
     text_layout::Line,

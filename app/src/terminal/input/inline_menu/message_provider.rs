@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::LazyLock;
 
-use warpui::{keymap::Keystroke, AppContext};
+use zap_ng_ui::{keymap::Keystroke, AppContext};
 
 use crate::editor::{SELECT_DOWN_ACTION_NAME, SELECT_UP_ACTION_NAME};
 use crate::terminal::input::inline_menu::{

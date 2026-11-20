@@ -1,7 +1,7 @@
 use chrono::Utc;
 use lazy_static::lazy_static;
 use settings::{RespectUserSyncSetting, SyncToCloud};
-use warpui::{App, ModelHandle};
+use zap_ng_ui::{App, ModelHandle};
 
 use crate::auth::AuthManager;
 use crate::auth::AuthStateProvider;

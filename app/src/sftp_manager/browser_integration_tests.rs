@@ -8,9 +8,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::platform::WindowStyle;
-use warpui::TypedActionView;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::TypedActionView;
 
 use crate::settings_view::keybindings::KeybindingChangedNotifier;
 use crate::test_util::settings::initialize_settings_for_tests;
@@ -22,7 +22,7 @@ use super::sftp_backend::{InMemorySftpBackend, SftpBackend};
 use super::types::{ConnectionState, Dialog, FileEntryType, TransferDirection, TransferState};
 
 /// 初始化测试所需的最小单例集合
-fn initialize_app(app: &mut warpui::App) {
+fn initialize_app(app: &mut zap_ng_ui::App) {
     use crate::workspace::ToastStack;
 
     initialize_settings_for_tests(app);
@@ -31,13 +31,13 @@ fn initialize_app(app: &mut warpui::App) {
     app.add_singleton_model(|_| ToastStack);
 
     let temp_db = std::env::temp_dir().join("warp_sftp_integration_test.sqlite");
-    let _ = warp_ssh_manager::set_database_path(temp_db);
+    let _ = zap_ng_ssh_manager::set_database_path(temp_db);
 }
 
 /// 创建 SftpBrowserView 并放入窗口（Disconnected 状态）
 fn create_view(
-    app: &mut warpui::App,
-) -> (warpui::WindowId, warpui::ViewHandle<SftpBrowserView>) {
+    app: &mut zap_ng_ui::App,
+) -> (zap_ng_ui::WindowId, zap_ng_ui::ViewHandle<SftpBrowserView>) {
     app.add_window(WindowStyle::NotStealFocus, |ctx| {
         SftpBrowserView::new("test-node".to_string(), ctx)
     })
@@ -62,11 +62,11 @@ fn create_temp_dir_with_files(files: &[(&str, &[u8])]) -> tempfile::TempDir {
 ///
 /// 返回 (window_id, view_handle, temp_dir)，temp_dir 需要在测试期间保持存活
 fn create_connected_view(
-    app: &mut warpui::App,
+    app: &mut zap_ng_ui::App,
     files: &[(&str, &[u8])],
 ) -> (
-    warpui::WindowId,
-    warpui::ViewHandle<SftpBrowserView>,
+    zap_ng_ui::WindowId,
+    zap_ng_ui::ViewHandle<SftpBrowserView>,
     tempfile::TempDir,
 ) {
     let temp_dir = create_temp_dir_with_files(files);
@@ -85,10 +85,10 @@ fn create_connected_view(
 ///
 /// 根目录下包含: docs/ 子目录, readme.txt, config.yaml
 fn create_standard_view(
-    app: &mut warpui::App,
+    app: &mut zap_ng_ui::App,
 ) -> (
-    warpui::WindowId,
-    warpui::ViewHandle<SftpBrowserView>,
+    zap_ng_ui::WindowId,
+    zap_ng_ui::ViewHandle<SftpBrowserView>,
     tempfile::TempDir,
 ) {
     create_connected_view(app, &[
@@ -106,7 +106,7 @@ fn create_standard_view(
 /// 验证注入 InMemorySftpBackend 后 Connected 状态和条目填充
 #[test]
 fn test_connected_state_with_mock_backend() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file1.txt", b"content1"),
@@ -127,7 +127,7 @@ fn test_connected_state_with_mock_backend() {
 /// 验证未连接时状态为非 Connected 且无条目
 #[test]
 fn test_connection_failure_shows_error_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -145,7 +145,7 @@ fn test_connection_failure_shows_error_state() {
 /// 验证从 Failed 状态重新连接
 #[test]
 fn test_reconnect_after_failure() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("reconnect.txt", b"data"),
@@ -185,7 +185,7 @@ fn test_reconnect_after_failure() {
 /// 验证断开连接后清空条目和路径
 #[test]
 fn test_disconnect_clears_entries_and_path() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"content"),
@@ -215,7 +215,7 @@ fn test_disconnect_clears_entries_and_path() {
 /// 验证非 Connected 状态 render 不 panic
 #[test]
 fn test_render_disconnected_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -229,7 +229,7 @@ fn test_render_disconnected_state() {
 /// 验证 Failed 状态 render 不 panic
 #[test]
 fn test_render_failed_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -251,7 +251,7 @@ fn test_render_failed_state() {
 /// 验证目录列表正确填充并按 目录优先+字母排序
 #[test]
 fn test_list_dir_populates_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("banana.txt", b"b"),
@@ -276,7 +276,7 @@ fn test_list_dir_populates_entries() {
 /// 验证双击目录进入并更新历史
 #[test]
 fn test_open_directory_navigates_and_updates_history() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("docs/readme.txt", b"readme"),
@@ -306,7 +306,7 @@ fn test_open_directory_navigates_and_updates_history() {
 /// 验证 GoUp 返回上级目录
 #[test]
 fn test_go_up_from_subdirectory() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("subdir/file.txt", b"content"),
@@ -337,7 +337,7 @@ fn test_go_up_from_subdirectory() {
 /// 验证 GoBack/GoForward 还原路径
 #[test]
 fn test_go_back_forward_restores_path() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("alpha/file.txt", b"a"),
@@ -377,7 +377,7 @@ fn test_go_back_forward_restores_path() {
 /// 验证面包屑点击跳转到指定路径段
 #[test]
 fn test_breadcrumb_click_navigates_to_segment() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("level1/level2/file.txt", b"deep"),
@@ -425,7 +425,7 @@ fn test_breadcrumb_click_navigates_to_segment() {
 /// 验证搜索过滤缩小可见条目
 #[test]
 fn test_search_filter_narrows_visible_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("readme.txt", b"r"),
@@ -450,7 +450,7 @@ fn test_search_filter_narrows_visible_entries() {
 /// 验证清除搜索恢复全部条目
 #[test]
 fn test_clear_search_restores_all_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("a.txt", b"a"),
@@ -479,7 +479,7 @@ fn test_clear_search_restores_all_entries() {
 /// 验证文件系统变更后刷新重新加载
 #[test]
 fn test_refresh_dir_reloads_entries() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[
             ("original.txt", b"original"),
         ]);
@@ -512,7 +512,7 @@ fn test_refresh_dir_reloads_entries() {
 /// 验证导航到当前路径不重复历史
 #[test]
 fn test_navigate_to_same_path_is_noop() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"f"),
@@ -537,7 +537,7 @@ fn test_navigate_to_same_path_is_noop() {
 /// 验证 Windows 反斜杠路径标准化
 #[test]
 fn test_navigate_normalizes_backslashes() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("target/file.txt", b"t"),
@@ -565,7 +565,7 @@ fn test_navigate_normalizes_backslashes() {
 /// 验证 SelectEntry 选中单个条目
 #[test]
 fn test_select_entry_highlights_item() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file_a.txt", b"a"),
@@ -606,7 +606,7 @@ fn test_select_entry_highlights_item() {
 /// 验证 SelectEntry 边界安全（越界索引不 panic）
 #[test]
 fn test_select_entry_out_of_bounds_safe() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("only_file.txt", b"x"),
@@ -630,7 +630,7 @@ fn test_select_entry_out_of_bounds_safe() {
 /// 验证 UploadFile（工具栏上传按钮）在未连接时安全处理
 #[test]
 fn test_upload_file_action_without_connection_safe() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -649,7 +649,7 @@ fn test_upload_file_action_without_connection_safe() {
 /// 验证 DownloadEntry（右键菜单下载）在未连接时安全处理
 #[test]
 fn test_download_entry_action_without_connection_safe() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view) = create_view(&mut app);
 
@@ -670,7 +670,7 @@ fn test_download_entry_action_without_connection_safe() {
 /// 验证 OpenEntry 对文件类型条目的安全处理
 #[test]
 fn test_open_entry_on_file_triggers_download() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("readme.txt", b"hello"),
@@ -699,7 +699,7 @@ fn test_open_entry_on_file_triggers_download() {
 /// 验证确认删除后文件从列表移除
 #[test]
 fn test_delete_file_confirmed_removes_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("to_delete.txt", b"delete me"),
@@ -736,7 +736,7 @@ fn test_delete_file_confirmed_removes_entry() {
 /// 验证递归删除目录
 #[test]
 fn test_delete_directory_confirmed_removes_recursively() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("mydir/inner.txt", b"inner file"),
@@ -764,7 +764,7 @@ fn test_delete_directory_confirmed_removes_recursively() {
 /// 验证重命名更新文件名
 #[test]
 fn test_rename_entry_updates_name() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("old_name.txt", b"content"),
@@ -804,7 +804,7 @@ fn test_rename_entry_updates_name() {
 /// 验证重命名空名称保留对话框
 #[test]
 fn test_rename_empty_name_shows_error() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"content"),
@@ -841,7 +841,7 @@ fn test_rename_empty_name_shows_error() {
 /// 验证新建文件夹后目录存在
 #[test]
 fn test_new_folder_creates_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[]);
         initialize_app(&mut app);
         let backend = Arc::new(InMemorySftpBackend::new(temp.path().to_path_buf()))
@@ -891,7 +891,7 @@ fn test_new_folder_creates_entry() {
 /// 验证新建文件夹空名称保留对话框
 #[test]
 fn test_new_folder_empty_name_shows_error() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -921,7 +921,7 @@ fn test_new_folder_empty_name_shows_error() {
 /// 验证文件详情对话框展示正确信息
 #[test]
 fn test_file_details_dialog_shows_metadata() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("details.txt", b"file content here"),
@@ -950,7 +950,7 @@ fn test_file_details_dialog_shows_metadata() {
 /// 验证取消删除保留条目
 #[test]
 fn test_delete_cancel_preserves_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("keep_me.txt", b"keep"),
@@ -983,7 +983,7 @@ fn test_delete_cancel_preserves_entry() {
 /// 验证右键菜单打开并选中条目
 #[test]
 fn test_right_click_opens_menu_and_selects_entry() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("menu_file.txt", b"content"),
@@ -1006,7 +1006,7 @@ fn test_right_click_opens_menu_and_selects_entry() {
 /// 验证右键菜单删除项触发删除确认
 #[test]
 fn test_context_menu_delete_item_triggers_delete() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("ctx_delete.txt", b"x"),
@@ -1037,7 +1037,7 @@ fn test_context_menu_delete_item_triggers_delete() {
 /// 验证右键菜单重命名项触发重命名
 #[test]
 fn test_context_menu_rename_item_triggers_rename() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("ctx_rename.txt", b"x"),
@@ -1066,7 +1066,7 @@ fn test_context_menu_rename_item_triggers_rename() {
 /// 验证右键菜单详情项触发详情
 #[test]
 fn test_context_menu_details_item_triggers_details() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("ctx_details.txt", b"x"),
@@ -1095,7 +1095,7 @@ fn test_context_menu_details_item_triggers_details() {
 /// 验证关闭右键菜单
 #[test]
 fn test_dismiss_click_closes_menu() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("menu_close.txt", b"x"),
@@ -1129,7 +1129,7 @@ fn test_dismiss_click_closes_menu() {
 /// 验证多选删除显示多项信息
 #[test]
 fn test_delete_confirm_dialog_multiple_paths() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file_a.txt", b"a"),
@@ -1162,7 +1162,7 @@ fn test_delete_confirm_dialog_multiple_paths() {
 /// 验证重命名编辑器回车确认
 #[test]
 fn test_rename_editor_enter_confirms() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("rename_enter.txt", b"x"),
@@ -1196,7 +1196,7 @@ fn test_rename_editor_enter_confirms() {
 /// 验证重命名编辑器 Escape 取消
 #[test]
 fn test_rename_editor_escape_cancels() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("rename_esc.txt", b"x"),
@@ -1233,7 +1233,7 @@ fn test_rename_editor_escape_cancels() {
 /// 验证新建文件夹编辑器回车确认
 #[test]
 fn test_new_folder_editor_enter_confirms() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1264,7 +1264,7 @@ fn test_new_folder_editor_enter_confirms() {
 /// 验证覆盖确认对话框
 #[test]
 fn test_overwrite_confirm_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"x"),
@@ -1294,7 +1294,7 @@ fn test_overwrite_confirm_dialog() {
 /// 验证移动确认对话框
 #[test]
 fn test_move_confirm_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[
             ("move_src.txt", b"move me"),
             ("dest_dir/.keep", b""),
@@ -1333,7 +1333,7 @@ fn test_move_confirm_dialog() {
 /// 验证上传创建传输任务
 #[test]
 fn test_upload_creates_transfer_task() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[]);
         // 本地文件放在独立临时目录中，避免被 InMemorySftpBackend 的 list_dir 列出
         let local_dir = tempfile::tempdir().expect("创建本地临时目录失败");
@@ -1370,7 +1370,7 @@ fn test_upload_creates_transfer_task() {
 /// 验证上传不存在文件失败
 #[test]
 fn test_upload_nonexistent_file_fails() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1394,7 +1394,7 @@ fn test_upload_nonexistent_file_fails() {
 /// 验证下载创建传输任务
 #[test]
 fn test_download_creates_transfer_task() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[
             ("download_me.txt", b"download content"),
         ]);
@@ -1432,7 +1432,7 @@ fn test_download_creates_transfer_task() {
 /// 验证取消传输设置取消标志
 #[test]
 fn test_cancel_transfer_sets_cancelled_flag() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1464,7 +1464,7 @@ fn test_cancel_transfer_sets_cancelled_flag() {
 /// 验证传输面板 render 不 panic
 #[test]
 fn test_transfer_panel_renders_with_tasks() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1495,7 +1495,7 @@ fn test_transfer_panel_renders_with_tasks() {
 /// 验证拖入显示覆盖层
 #[test]
 fn test_drag_enter_shows_overlay() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"x"),
@@ -1514,7 +1514,7 @@ fn test_drag_enter_shows_overlay() {
 /// 验证拖出隐藏覆盖层
 #[test]
 fn test_drag_leave_hides_overlay() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"x"),
@@ -1536,7 +1536,7 @@ fn test_drag_leave_hides_overlay() {
 /// 验证拖放文件创建上传任务
 #[test]
 fn test_drop_files_creates_upload_tasks() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[]);
         // 本地文件放在独立临时目录中，避免被 InMemorySftpBackend 的 list_dir 列出
         let local_dir = tempfile::tempdir().expect("创建本地临时目录失败");
@@ -1568,7 +1568,7 @@ fn test_drop_files_creates_upload_tasks() {
 /// 验证空路径拖放被忽略
 #[test]
 fn test_drop_empty_paths_ignored() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1589,7 +1589,7 @@ fn test_drop_empty_paths_ignored() {
 /// 验证 NavigateUp (Backspace) 返回上级目录
 #[test]
 fn test_keyboard_navigate_up() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("subdir/file.txt", b"x"),
@@ -1620,7 +1620,7 @@ fn test_keyboard_navigate_up() {
 /// 验证 DeleteSelected 触发删除确认
 #[test]
 fn test_keyboard_delete_selected() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("del_target.txt", b"x"),
@@ -1649,7 +1649,7 @@ fn test_keyboard_delete_selected() {
 /// 验证 CreateFolder (Ctrl+Shift+N) 打开新建文件夹对话框
 #[test]
 fn test_keyboard_create_folder() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1669,7 +1669,7 @@ fn test_keyboard_create_folder() {
 /// 验证无选中时 DeleteSelected 安全处理
 #[test]
 fn test_keyboard_shortcuts_without_selection() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("file.txt", b"x"),
@@ -1698,7 +1698,7 @@ fn test_keyboard_shortcuts_without_selection() {
 /// 验证 Escape 关闭对话框
 #[test]
 fn test_keyboard_escape_closes_dialog() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("esc_file.txt", b"x"),
@@ -1735,7 +1735,7 @@ fn test_keyboard_escape_closes_dialog() {
 /// 验证连接+右键+对话框+传输+拖拽叠加状态安全
 #[test]
 fn test_render_with_all_overlays_connected() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[
             ("overlay.txt", b"x"),
@@ -1774,7 +1774,7 @@ fn test_render_with_all_overlays_connected() {
 /// 验证加载状态指示
 #[test]
 fn test_render_loading_state() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1802,7 +1802,7 @@ fn test_render_loading_state() {
 /// 验证空目录显示
 #[test]
 fn test_render_empty_directory() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         initialize_app(&mut app);
         let (_, view, _temp) = create_connected_view(&mut app, &[]);
 
@@ -1816,7 +1816,7 @@ fn test_render_empty_directory() {
 /// 验证多步操作后渲染安全
 #[test]
 fn test_render_after_multiple_operations() {
-    warpui::App::test((), |mut app| async move {
+    zap_ng_ui::App::test((), |mut app| async move {
         let temp = create_temp_dir_with_files(&[
             ("op_dir/file1.txt", b"1"),
             ("op_dir/file2.txt", b"2"),

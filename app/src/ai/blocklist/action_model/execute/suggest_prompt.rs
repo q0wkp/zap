@@ -1,5 +1,5 @@
 use futures::{channel::oneshot, future::BoxFuture, FutureExt};
-use warpui::{Entity, ModelContext};
+use zap_ng_ui::{Entity, ModelContext};
 
 use crate::{
     ai::{

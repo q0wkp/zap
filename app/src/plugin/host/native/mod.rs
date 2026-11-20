@@ -14,7 +14,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Result};
-use warpui::r#async::executor::Background;
+use zap_ng_ui::r#async::executor::Background;
 
 use crate::plugin::host::runners::PluginRunners;
 
@@ -31,10 +31,10 @@ use super::{
 use logging::initialize_logging;
 
 pub fn run() -> Result<()> {
-    warpui::r#async::block_on(async move {
+    zap_ng_ui::r#async::block_on(async move {
         let executor = Arc::new(Background::default());
 
-        // Initialize a client connection to the warp app process.
+        // Initialize a client connection to the zap-ng app process.
         let connection_address: ipc::ConnectionAddress = std::env::var(PLUGIN_HOST_ADDRESS_ENV_VAR)
             .context("Failed to retrieve connection key from env var.")?
             .into();
@@ -44,7 +44,7 @@ pub fn run() -> Result<()> {
                 .context("Failed to instantiate LocalSocketClient.")?,
         );
 
-        // Initialize logging, which internally transmits logs from this process to the warp app
+        // Initialize logging, which internally transmits logs from this process to the zap-ng app
         // process via `LogService`.
         initialize_logging(&client, &executor);
 
@@ -70,7 +70,7 @@ pub fn run() -> Result<()> {
             .build_and_run(executor.clone())
             .expect("Failed to instantiate Plugin Host server ");
 
-        // Send the connection address for the plugin host server back to the warp app.
+        // Send the connection address for the plugin host server back to the zap-ng app.
         let bootstrap_service = ipc::service_caller::<PluginHostBootstrapService>(client.clone());
         if !matches!(
             bootstrap_service

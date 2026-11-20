@@ -7,7 +7,7 @@ mod aws_bedrock_login;
 mod aws_cli_not_installed;
 mod notifications_discovery;
 mod notifications_error;
-mod open_in_warp;
+mod open_in_zap_ng;
 mod passive_code_diff;
 pub(crate) mod prompt_suggestions;
 mod session_state;
@@ -23,7 +23,7 @@ pub use aws_bedrock_login::*;
 pub use aws_cli_not_installed::*;
 pub use notifications_discovery::*;
 pub use notifications_error::*;
-pub use open_in_warp::*;
+pub use open_in_zap_ng::*;
 pub use passive_code_diff::*;
 pub use session_state::*;
 pub use shared_sessions::*;
@@ -32,8 +32,8 @@ pub use ssh::*;
 pub use vim_mode::*;
 
 use pathfinder_color::ColorU;
-use warpui::elements::Clipped;
-use warpui::{
+use zap_ng_ui::elements::Clipped;
+use zap_ng_ui::{
     elements::{
         Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Icon,
         MainAxisAlignment, MainAxisSize, MouseStateHandle, ParentElement, Radius, SavePosition,
@@ -185,7 +185,7 @@ fn render_inline_block_list_banner(
     let theme = appearance.theme();
     let title_font_size = appearance.ui_font_body_large();
     let button_text_size = title_font_size;
-    let hover_background_fill = warpui::elements::Fill::from(
+    let hover_background_fill = zap_ng_ui::elements::Fill::from(
         theme
             .active_ui_text_color()
             .with_opacity(INLINE_BANNER_BUTTON_HOVER_OPACITY),
@@ -411,7 +411,7 @@ fn render_inline_banner_text_button(
             font_color: Some(coloru_with_opacity(button_info.text_color, text_opacity)),
             font_family_id: button_info.font.family,
             font_weight: button_info.font.weight,
-            border_color: Some(warpui::elements::Fill::Solid(coloru_with_opacity(
+            border_color: Some(zap_ng_ui::elements::Fill::Solid(coloru_with_opacity(
                 button_info.text_color,
                 text_opacity,
             ))),

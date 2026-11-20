@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::RepoMetadataModel;
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::*;
 use crate::code::opened_files::OpenedFilesModel;

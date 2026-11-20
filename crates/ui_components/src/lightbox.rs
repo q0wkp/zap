@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use pathfinder_geometry::vector::{Vector2F, vec2f};
-use warp_core::ui::{Icon, appearance::Appearance};
-use warpui::{
+use zap_ng_core::ui::{Icon, appearance::Appearance};
+use zap_ng_ui::{
     assets::asset_cache::AssetSource,
     elements::{CacheOption, Dismiss, DispatchEventResult, EventHandler, Image, Shrinkable},
     keymap::Keystroke,

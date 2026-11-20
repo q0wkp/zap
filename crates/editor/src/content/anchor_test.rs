@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use sum_tree::SumTree;
-use warpui::App;
+use zap_ng_ui::App;
 
 use super::{AnchorSide, Anchors};
 

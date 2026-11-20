@@ -1047,7 +1047,7 @@ pub fn token_usage_category_display_name(category: &str) -> String {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ModelTokenUsage {
     pub model_id: String,
-    /// Alias for backward compat: old persisted data used `total_tokens` for warp usage.
+    /// Alias for backward compat: old persisted data used `total_tokens` for zap-ng usage.
     #[serde(default, alias = "total_tokens")]
     pub warp_tokens: u32,
     #[serde(default)]
@@ -1081,7 +1081,7 @@ impl ModelTokenUsage {
         ))
     }
 
-    pub fn to_proto_warp_usage(&self) -> Option<(String, stream_finished::ModelTokenUsage)> {
+    pub fn to_proto_zap_ng_usage(&self) -> Option<(String, stream_finished::ModelTokenUsage)> {
         self.to_proto_usage(self.warp_tokens, &self.warp_token_usage_by_category)
     }
 

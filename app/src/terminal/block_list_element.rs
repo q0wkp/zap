@@ -3,7 +3,7 @@ use crate::ai::blocklist::block::cli::CLI_SUBAGENT_MIN_RESIZABLE_WIDTH;
 use crate::ai::blocklist::{ai_brand_color, ATTACH_AS_AGENT_MODE_CONTEXT_TEXT};
 use crate::ai_assistant::{AI_ASSISTANT_SVG_PATH, ASK_AI_ASSISTANT_TEXT};
 use crate::appearance::Appearance;
-use crate::drive::settings::WarpDriveSettings;
+use crate::drive::settings::ZapNGDriveSettings;
 use crate::features::FeatureFlag;
 use crate::pane_group::SplitPaneState;
 use crate::settings::{
@@ -21,19 +21,19 @@ use crate::terminal::model::selection::{SelectAction, SelectionPoint};
 use crate::terminal::safe_mode_settings::get_secret_obfuscation_mode;
 use crate::terminal::view::TerminalAction;
 use crate::terminal::{grid_renderer, SizeInfo};
-use crate::themes::theme::{Fill, WarpTheme};
+use crate::themes::theme::{Fill, ZapNGTheme};
 use crate::ui_components::{self, icons as UIIcon};
 use crate::util::color::Opacity;
 use enum_iterator::Sequence;
 use itertools::Itertools;
 use parking_lot::FairMutex;
 use vec1::Vec1;
-use warp_core::semantic_selection::SemanticSelection;
-use warp_core::ui::builder::UiBuilder;
-use warp_core::ui::theme::AnsiColorIdentifier;
-use warp_util::user_input::UserInput;
-use warpui::platform::Cursor;
-use warpui::text::SelectionType;
+use zap_ng_core::semantic_selection::SemanticSelection;
+use zap_ng_core::ui::builder::UiBuilder;
+use zap_ng_core::ui::theme::AnsiColorIdentifier;
+use zap_ng_util::user_input::UserInput;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text::SelectionType;
 
 use crate::terminal::shared_session::protocol::{ParticipantId, Selection};
 use pathfinder_color::ColorU;
@@ -44,25 +44,25 @@ use std::ops::{Deref, Range, RangeInclusive};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use warpui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
-use warpui::elements::{
+use zap_ng_ui::elements::new_scrollable::{NewScrollableElement, ScrollableAxis};
+use zap_ng_ui::elements::{
     Axis, Border, ChildAnchor, ClippedScrollStateHandle, ConstrainedBox, Container, CornerRadius,
     Hoverable, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Point, Radius, ScrollData, ScrollableElement, Stack, Text, ZIndex,
 };
-use warpui::event::{KeyState, ModifiersState};
-use warpui::fonts::{FamilyId, Properties, Weight};
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::platform::keyboard::KeyCode;
-use warpui::ui_components::components::UiComponent;
-use warpui::units::{IntoLines, IntoPixels, Lines, Pixels};
-use warpui::{elements::Icon, ClipBounds};
-use warpui::{
+use zap_ng_ui::event::{KeyState, ModifiersState};
+use zap_ng_ui::fonts::{FamilyId, Properties, Weight};
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::{vec2f, Vector2F};
+use zap_ng_ui::platform::keyboard::KeyCode;
+use zap_ng_ui::ui_components::components::UiComponent;
+use zap_ng_ui::units::{IntoLines, IntoPixels, Lines, Pixels};
+use zap_ng_ui::{elements::Icon, ClipBounds};
+use zap_ng_ui::{
     elements::SavePosition, event::DispatchedEvent, AfterLayoutContext, AppContext, Element, Event,
     EventContext, LayoutContext, PaintContext, SizeConstraint,
 };
-use warpui::{EntityId, ModelHandle, SingletonEntity as _};
+use zap_ng_ui::{EntityId, ModelHandle, SingletonEntity as _};
 
 use super::block_list_viewport::{ClampingMode, InputMode, ScrollPosition, ViewportState};
 use super::blockgrid_renderer::GridRenderParams;
@@ -86,12 +86,12 @@ use super::view::{
     BlocklistAIRenderContext, InlineBannerId, RichContentMetadata, SeparatorId,
     SharedSessionBanners, TerminalEditor, TerminalViewRenderContext, BLOCK_BANNER_HEIGHT,
 };
-use super::warpify::render::{draw_flag_pole, render_subshell_flag};
+use super::zapngify::render::{draw_flag_pole, render_subshell_flag};
 use super::TerminalModel;
 use super::{heights_approx_eq, HEIGHT_FUDGE_FACTOR_LINES};
 use crate::terminal::blockgrid_renderer::BlockGridParams;
 use crate::terminal::model::terminal_model::BlockIndex;
-use crate::terminal::warpify::SubshellSource;
+use crate::terminal::zapngify::SubshellSource;
 
 use crate::terminal::model::escape_sequences::{
     maybe_kitty_keyboard_escape_sequence, KeystrokeWithDetails, ToEscapeSequence,
@@ -654,7 +654,7 @@ pub struct BlockListElement {
     font_size: f32,
     font_weight: Weight,
     line_height_ratio: f32,
-    warp_theme: WarpTheme,
+    zap_ng_theme: ZapNGTheme,
     ui_builder: UiBuilder,
     block_borders_enabled: bool,
     overflow_offset: f32,
@@ -977,7 +977,7 @@ impl BlockListElement {
             font_size: appearance.monospace_font_size(),
             font_weight: appearance.monospace_font_weight(),
             line_height_ratio: appearance.ui_builder().line_height_ratio(),
-            warp_theme: appearance.theme().clone(),
+            zap_ng_theme: appearance.theme().clone(),
             ui_builder: appearance.ui_builder().clone(),
             block_borders_enabled: terminal_spacing.block_borders_enabled,
             overflow_offset: terminal_spacing.overflow_offset,
@@ -1119,8 +1119,8 @@ impl BlockListElement {
     ) -> Self {
         self.hovered_block_index = Some(block_index);
         let icon_color = self
-            .warp_theme
-            .sub_text_color(self.warp_theme.surface_2())
+            .zap_ng_theme
+            .sub_text_color(self.zap_ng_theme.surface_2())
             .into_solid();
 
         let icon = Container::new(
@@ -1138,7 +1138,7 @@ impl BlockListElement {
                     false,
                     true,
                     self.mouse_states.overflow_menu_button_mouse_state.clone(),
-                    &self.warp_theme,
+                    &self.zap_ng_theme,
                     &self.ui_builder,
                     move |ctx, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::BlockListContextMenu(
@@ -1174,9 +1174,9 @@ impl BlockListElement {
                 self.mouse_states.snackbar_toggle_button_mouse_state.clone(),
                 |state| {
                     let background = if state.is_clicked() || state.is_hovered() {
-                        self.warp_theme.surface_2()
+                        self.zap_ng_theme.surface_2()
                     } else {
-                        self.warp_theme.surface_1()
+                        self.zap_ng_theme.surface_1()
                     };
                     icon.with_corner_radius(rounded_corners)
                         .with_background(background)
@@ -1193,11 +1193,11 @@ impl BlockListElement {
             let icon = Container::new(
                 ConstrainedBox::new(if FeatureFlag::AgentView.is_enabled() {
                     UIIcon::Icon::Paperclip
-                        .to_warpui_icon(icon_color.into())
+                        .to_zap_ng_ui_icon(icon_color.into())
                         .finish()
                 } else if FeatureFlag::AgentMode.is_enabled() {
                     UIIcon::Icon::Stars
-                        .to_warpui_icon(icon_color.into())
+                        .to_zap_ng_ui_icon(icon_color.into())
                         .finish()
                 } else {
                     Icon::new(AI_ASSISTANT_SVG_PATH, icon_color).finish()
@@ -1243,7 +1243,7 @@ impl BlockListElement {
                 false,
                 true,
                 self.mouse_states.ai_assistant_button_mouse_state.clone(),
-                &self.warp_theme,
+                &self.zap_ng_theme,
                 &self.ui_builder,
                 move |ctx: &mut EventContext, _, _| {
                     if let Some(action) = ai_button_action.clone() {
@@ -1255,12 +1255,12 @@ impl BlockListElement {
         }
 
         if FeatureFlag::BlockToolbeltSaveAsWorkflow.is_enabled()
-            && WarpDriveSettings::is_warp_drive_enabled(app)
+            && ZapNGDriveSettings::is_zap_ng_drive_enabled(app)
         {
             let icon = Container::new(
                 ConstrainedBox::new(
                     ui_components::icons::Icon::Save
-                        .to_warpui_icon(icon_color.into())
+                        .to_zap_ng_ui_icon(icon_color.into())
                         .finish(),
                 )
                 .with_height(16.)
@@ -1288,7 +1288,7 @@ impl BlockListElement {
                     self.mouse_states
                         .save_as_workflow_button_mouse_state
                         .clone(),
-                    &self.warp_theme,
+                    &self.zap_ng_theme,
                     &self.ui_builder,
                     move |ctx: &mut EventContext, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::OpenWorkflowModalForBlock(
@@ -1308,7 +1308,7 @@ impl BlockListElement {
                     self.mouse_states
                         .save_as_workflow_button_mouse_state
                         .clone(),
-                    &self.warp_theme,
+                    &self.zap_ng_theme,
                     &self.ui_builder,
                     move |ctx: &mut EventContext, _, _| {
                         ctx.dispatch_typed_action(TerminalAction::OpenWorkflowModalForBlock(
@@ -1335,7 +1335,7 @@ impl BlockListElement {
     }
 
     /// We only want to process control characters here and return `false` for everything else.
-    /// That way, we'll receive a `warpui::Event::TypedCharacters` event for printable characters.
+    /// That way, we'll receive a `zap_ng_ui::Event::TypedCharacters` event for printable characters.
     /// So `TerminalAction::KeyDown` is for control characters only while
     /// `TerminalAction::TypedCharacters` is for characters that can go into the editor.
     fn key_down(&mut self, chars: &str, ctx: &mut EventContext) -> bool {
@@ -1629,7 +1629,7 @@ impl BlockListElement {
                                 .is_some_and(|block| block.is_active_and_long_running());
 
                             // On mobile, request soft keyboard so users can input
-                            if warpui::platform::is_mobile_device() && on_long_running_block {
+                            if zap_ng_ui::platform::is_mobile_device() && on_long_running_block {
                                 ctx.request_soft_keyboard();
                             }
 
@@ -2414,7 +2414,7 @@ impl BlockListElement {
         block: &Block,
         is_selected_by_anyone: bool,
         bounds: RectF,
-        warp_theme: &WarpTheme,
+        zap_ng_theme: &ZapNGTheme,
         block_borders_enabled: bool,
         snackbar_header: &Option<SnackbarHeader>,
         ai_render_context: &BlocklistAIRenderContext,
@@ -2431,7 +2431,7 @@ impl BlockListElement {
                     grid_origin,
                     Vector2F::new(bounds.width(), block_height),
                 ))
-                .with_background(warp_theme.restored_blocks_overlay());
+                .with_background(zap_ng_theme.restored_blocks_overlay());
         }
 
         // Update the background for the current active long running command when the inline agent view is active.
@@ -2447,7 +2447,7 @@ impl BlockListElement {
         let mut did_render_ai_stripe = false;
         if !FeatureFlag::AgentView.is_enabled() {
             if let Some(ai_context_stripe_color) =
-                ai_render_context.context_color_for_block(block, warp_theme)
+                ai_render_context.context_color_for_block(block, zap_ng_theme)
             {
                 draw_flag_pole(grid_origin, block_height, ai_context_stripe_color, ctx);
                 did_render_ai_stripe = true;
@@ -2460,13 +2460,13 @@ impl BlockListElement {
                     grid_origin,
                     Vector2F::new(bounds.width(), block_height),
                 ))
-                .with_background(warp_theme.failed_block_color().with_opacity(10));
+                .with_background(zap_ng_theme.failed_block_color().with_opacity(10));
 
             if !is_selected_by_anyone && !did_render_ai_stripe {
                 draw_flag_pole(
                     grid_origin,
                     block_height,
-                    warp_theme.failed_block_color(),
+                    zap_ng_theme.failed_block_color(),
                     ctx,
                 );
             }
@@ -2480,7 +2480,7 @@ impl BlockListElement {
                 ctx.scene
                     .draw_rect_with_hit_recording(header_rect)
                     .with_background(
-                        warp_theme
+                        zap_ng_theme
                             .accent_overlay()
                             .with_opacity(SNACKBAR_HOVER_OPACITY),
                     );
@@ -2494,7 +2494,7 @@ impl BlockListElement {
                         vec2f(header_rect.min_x(), header_rect.max_y() - 1.0),
                         vec2f(header_rect.width(), 1.0),
                     ))
-                    .with_background(warp_theme.outline());
+                    .with_background(zap_ng_theme.outline());
             }
         }
     }
@@ -2509,7 +2509,7 @@ impl BlockListElement {
             vec2f(block_grid_params.bounds.width(), 1.),
         ));
 
-        rect.with_background(block_grid_params.grid_render_params.warp_theme.outline());
+        rect.with_background(block_grid_params.grid_render_params.zap_ng_theme.outline());
     }
 
     // TODO(alokedesai): Clean this up even more by pulling out parameters into various structs.
@@ -2545,7 +2545,7 @@ impl BlockListElement {
             block,
             is_current_block_selected_by_anyone,
             block_grid_params.bounds,
-            &block_grid_params.grid_render_params.warp_theme,
+            &block_grid_params.grid_render_params.zap_ng_theme,
             block_borders_enabled,
             snackbar_header,
             ai_render_context,
@@ -2674,7 +2674,7 @@ impl BlockListElement {
                 None,
                 block_grid_params
                     .grid_render_params
-                    .warp_theme
+                    .zap_ng_theme
                     .cursor()
                     .into(),
                 app,
@@ -2777,17 +2777,17 @@ impl BlockListElement {
                             .to_ansi_color(
                                 &block_grid_params
                                     .grid_render_params
-                                    .warp_theme
+                                    .zap_ng_theme
                                     .terminal_colors()
                                     .normal,
                             )
                             .into()
                     } else if block.is_agent_in_control() {
-                        ai_brand_color(&block_grid_params.grid_render_params.warp_theme)
+                        ai_brand_color(&block_grid_params.grid_render_params.zap_ng_theme)
                     } else {
                         block_grid_params
                             .grid_render_params
-                            .warp_theme
+                            .zap_ng_theme
                             .cursor()
                             .into()
                     },
@@ -3386,7 +3386,7 @@ impl Element for BlockListElement {
                                             command,
                                             self.font_family,
                                             self.font_size,
-                                            &self.warp_theme,
+                                            &self.zap_ng_theme,
                                         );
                                         flag_element.layout(constraint, ctx, app);
                                         subshell_flags.insert(block_index, flag_element);
@@ -3470,8 +3470,8 @@ impl Element for BlockListElement {
                         )
                         .with_style(Properties::default().weight(self.font_weight))
                         .with_color(
-                            self.warp_theme
-                                .main_text_color(self.warp_theme.background())
+                            self.zap_ng_theme
+                                .main_text_color(self.zap_ng_theme.background())
                                 .into_solid(),
                         )
                         .finish(),
@@ -3622,8 +3622,8 @@ impl Element for BlockListElement {
                     let mut element = Text::new_inline(text, self.ui_font_family, self.font_size)
                         .with_style(Properties::default().weight(self.font_weight))
                         .with_color(
-                            self.warp_theme
-                                .sub_text_color(self.warp_theme.background())
+                            self.zap_ng_theme
+                                .sub_text_color(self.zap_ng_theme.background())
                                 .into(),
                         )
                         .finish();
@@ -3770,7 +3770,7 @@ impl Element for BlockListElement {
         let obfuscate_secrets = get_secret_obfuscation_mode(app);
 
         let grid_render_params = GridRenderParams {
-            warp_theme: self.warp_theme.clone(),
+            zap_ng_theme: self.zap_ng_theme.clone(),
             font_family: self.font_family,
             font_size: self.font_size,
             font_weight: self.font_weight,
@@ -3914,10 +3914,10 @@ impl Element for BlockListElement {
                                 ),
                             ))
                             .with_background(if can_be_ai_context {
-                                self.warp_theme
+                                self.zap_ng_theme
                                     .block_selection_as_context_background_color()
                             } else {
-                                self.warp_theme.block_selection_color()
+                                self.zap_ng_theme.block_selection_color()
                             })
                             .with_border(
                                 Border::new(border_info.border_width)
@@ -3928,9 +3928,9 @@ impl Element for BlockListElement {
                                         true,
                                     )
                                     .with_border_fill(if can_be_ai_context {
-                                        self.warp_theme.block_selection_as_context_border_color()
+                                        self.zap_ng_theme.block_selection_as_context_border_color()
                                     } else {
-                                        self.warp_theme.accent()
+                                        self.zap_ng_theme.accent()
                                     }),
                             );
                     }
@@ -4028,7 +4028,7 @@ impl Element for BlockListElement {
                         draw_flag_pole(
                             header_origin.min(grid_origin),
                             block_pixel_height,
-                            self.warp_theme.subshell_background(),
+                            self.zap_ng_theme.subshell_background(),
                             ctx,
                         );
                     }
@@ -4154,7 +4154,7 @@ impl Element for BlockListElement {
                                 None => 0.,
                             },
                             // Otherwise, we need to measure the prompt grid(s). Grids
-                            // aren't warpui::Elements, and hence their width isn't
+                            // aren't zap_ng_ui::Elements, and hence their width isn't
                             // straightforward to measure. We'll use the column index of the
                             // right-most non-empty cell as a proxy for width.
                             None => {
@@ -4181,7 +4181,7 @@ impl Element for BlockListElement {
                                     block_menu_rect_origin,
                                     block_menu_rect_size,
                                 ))
-                                .with_background(self.warp_theme.surface_1())
+                                .with_background(self.zap_ng_theme.surface_1())
                                 .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
                         } else if prompt_max_x > bookmark_button_origin.x()
                             || prompt_max_x > filter_button_origin.x()
@@ -4208,7 +4208,7 @@ impl Element for BlockListElement {
                                     background_origin,
                                     background_rect_size,
                                 ))
-                                .with_background(self.warp_theme.surface_1())
+                                .with_background(self.zap_ng_theme.surface_1())
                                 .with_corner_radius(CornerRadius::with_all(Radius::Pixels(4.)));
                         }
                     }
@@ -4285,7 +4285,7 @@ impl Element for BlockListElement {
                         vec2f(self.bounds.unwrap().width(), 1.),
                     ));
                     if self.block_borders_enabled {
-                        rect.with_background(self.warp_theme.outline());
+                        rect.with_background(self.zap_ng_theme.outline());
                     }
 
                     draw_border_above_block = true;
@@ -4302,13 +4302,13 @@ impl Element for BlockListElement {
                         grid_origin,
                         vec2f(bounds.width(), 1.),
                     ));
-                    border.with_background(self.warp_theme.outline());
+                    border.with_background(self.zap_ng_theme.outline());
 
                     let rect = ctx.scene.draw_rect_with_hit_recording(RectF::new(
                         grid_origin,
                         vec2f(bounds.width(), *height),
                     ));
-                    rect.with_background(self.warp_theme.restored_blocks_overlay());
+                    rect.with_background(self.zap_ng_theme.restored_blocks_overlay());
 
                     // Offset the text by the half of the remaining space between the separator height
                     // and the font line height to center it vertically.
@@ -4378,7 +4378,7 @@ impl Element for BlockListElement {
                             .get(view_id)
                             .and_then(|metadata| {
                                 ai_render_context
-                                    .context_color_for_rich_content(metadata, &self.warp_theme)
+                                    .context_color_for_rich_content(metadata, &self.zap_ng_theme)
                             })
                         {
                             ctx.scene.start_layer(ClipBounds::ActiveLayer);
@@ -4412,11 +4412,11 @@ impl Element for BlockListElement {
                 .borrow()
                 .has_pending_context_selected_text
             {
-                self.warp_theme
+                self.zap_ng_theme
                     .text_selection_as_context_color()
                     .into_solid()
             } else {
-                self.warp_theme.text_selection_color().into_solid()
+                self.zap_ng_theme.text_selection_color().into_solid()
             };
 
             for current_range in selection_ranges {
@@ -4837,7 +4837,7 @@ pub fn render_hoverable_block_button<F>(
     should_ignore_mouse_events: bool,
     should_allow_action: bool,
     mouse_state: MouseStateHandle,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
     ui_builder: &UiBuilder,
     on_click: F,
 ) -> Box<dyn Element>

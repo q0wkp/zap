@@ -1,4 +1,4 @@
-use warpui::{platform::WindowStyle, App};
+use zap_ng_ui::{platform::WindowStyle, App};
 
 use crate::{
     auth::AuthManager, cloud_object::model::persistence::ObjectStoreModel,

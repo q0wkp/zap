@@ -1,7 +1,7 @@
 use byte_unit::Byte;
 use instant::Duration;
 use serde::{Deserialize, Serialize};
-use warpui::{id, keymap::ContextPredicate, AppContext};
+use zap_ng_ui::{id, keymap::ContextPredicate, AppContext};
 
 use crate::editor::{InteractionState, ReplicaId};
 
@@ -241,7 +241,7 @@ impl SharedSessionScrollbackType {
 #[cfg(not(test))]
 pub fn max_session_size(ctx: &AppContext) -> Byte {
     use crate::workspaces::user_workspaces::UserWorkspaces;
-    use warpui::SingletonEntity;
+    use zap_ng_ui::SingletonEntity;
 
     UserWorkspaces::as_ref(ctx)
         .current_team()

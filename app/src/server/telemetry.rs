@@ -6,11 +6,11 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use warp_completer::completer::MatchType;
-use warp_core::command::ExitCode;
-use warpui::keymap::Keystroke;
-use warpui::notification::{NotificationSendError, RequestPermissionsOutcome};
-use warpui::rendering::ThinStrokes;
+use zap_ng_completer::completer::MatchType;
+use zap_ng_core::command::ExitCode;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::notification::{NotificationSendError, RequestPermissionsOutcome};
+use zap_ng_ui::rendering::ThinStrokes;
 
 use crate::ai::agent::api::ServerConversationToken;
 use crate::ai::agent::conversation::AIConversationId;
@@ -59,7 +59,7 @@ use crate::terminal::block_list_viewport::InputMode;
 use crate::terminal::cli_agent_sessions::CLIAgentInputEntrypoint;
 use crate::terminal::cli_agent_sessions::CLIAgentRichInputCloseReason;
 use crate::terminal::input::TelemetryInputSuggestionsMode;
-use crate::terminal::model::ansi::WarpificationUnavailableReason;
+use crate::terminal::model::ansi::ZapNGificationUnavailableReason;
 use crate::terminal::model::block::BlockId;
 use crate::terminal::model::session::SessionId;
 use crate::terminal::model::terminal_model::BlockSelectionCardinality;
@@ -89,7 +89,7 @@ use crate::workflows::WorkflowSource;
 use crate::workspace::tab_settings::TabCloseButtonPosition;
 use crate::workspace::tab_settings::WorkspaceDecorationVisibility;
 use crate::workspace::TabMovement;
-use warp_core::interval_timer::TimingDataPoint;
+use zap_ng_core::interval_timer::TimingDataPoint;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BootstrappingInfo {
@@ -493,7 +493,7 @@ pub enum PluginChipTelemetryAction {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpDriveSource {
+pub enum ZapNGDriveSource {
     Legacy,
     LeftPanelToolbelt,
     ForceOpened,
@@ -569,7 +569,7 @@ pub enum PtySpawnMode {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum OpenedWarpAISource {
+pub enum OpenedZapNGAISource {
     GlobalEntryButton,
     HelpWithBlock,
     HelpWithTextSelection,
@@ -578,14 +578,14 @@ pub enum OpenedWarpAISource {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpAIRequestResult {
+pub enum ZapNGAIRequestResult {
     Succeeded { latency_ms: i64, truncated: bool },
     OutOfRequests,
     Failed,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum WarpAIActionType {
+pub enum ZapNGAIActionType {
     CopyTranscript,
     Restart,
     CopyAnswer,
@@ -1477,24 +1477,24 @@ pub enum TelemetryEvent {
         advanced_mode_enabled: bool,
     },
     /// Opened legacy Zap AI.
-    OpenedWarpAI {
-        source: OpenedWarpAISource,
+    OpenedZapNGAI {
+        source: OpenedZapNGAISource,
     },
     /// Issued legacy Zap AI request.
-    WarpAIRequestIssued {
-        result: WarpAIRequestResult,
+    ZapNGAIRequestIssued {
+        result: ZapNGAIRequestResult,
     },
-    WarpAIAction {
-        action_type: WarpAIActionType,
+    ZapNGAIAction {
+        action_type: ZapNGAIActionType,
     },
     /// This is purely for static prompts! Do not send user-written prompts with this event.
-    UsedWarpAIPreparedPrompt {
+    UsedZapNGAIPreparedPrompt {
         prompt: &'static str,
     },
     ToggleFocusPaneOnHover {
         enabled: bool,
     },
-    WarpAICharacterLimitExceeded,
+    ZapNGAICharacterLimitExceeded,
     OpenInputContextMenu,
     InputCutSelectedText,
     InputCopySelectedText,
@@ -1502,7 +1502,7 @@ pub enum TelemetryEvent {
     InputPaste,
     InputCommandSearch,
     InputAICommandSearch,
-    InputAskWarpAI,
+    InputAskZapNGAI,
     SaveAsWorkflowModal {
         source: SaveAsWorkflowModalSource,
     },
@@ -1549,7 +1549,7 @@ pub enum TelemetryEvent {
     ToggleSshTmuxWrapper {
         enabled: bool,
     },
-    ToggleSshWarpification {
+    ToggleSshZapNGification {
         enabled: bool,
     },
     /// User changed the SSH extension install mode.
@@ -1563,26 +1563,26 @@ pub enum TelemetryEvent {
     },
     /// An ssh interactive session was detected.
     SshInteractiveSessionDetected(SshInteractiveSessionDetected),
-    SshTmuxWarpifyBannerDisplayed,
-    /// A SSH Warpify Block was accepted
-    SshTmuxWarpifyBlockAccepted,
-    /// A SSH Warpify Block was dismissed
-    SshTmuxWarpifyBlockDismissed,
-    WarpifyFooterShown {
+    SshTmuxZapNGifyBannerDisplayed,
+    /// A SSH ZapNGify Block was accepted
+    SshTmuxZapNGifyBlockAccepted,
+    /// A SSH ZapNGify Block was dismissed
+    SshTmuxZapNGifyBlockDismissed,
+    ZapNGifyFooterShown {
         is_ssh: bool,
     },
     AgentToolbarDismissed,
-    WarpifyFooterAcceptedWarpify {
+    ZapNGifyFooterAcceptedZapNGify {
         is_ssh: bool,
     },
-    /// How long until the warpify process succeeded
-    SshTmuxWarpificationSuccess {
+    /// How long until the zapngify process succeeded
+    SshTmuxZapNGificationSuccess {
         tmux_installation: Option<TmuxInstallationState>,
         duration_ms: u64,
     },
     /// An SSH Error block was displayed to the user.
-    SshTmuxWarpificationErrorBlock {
-        error: WarpificationUnavailableReason,
+    SshTmuxZapNGificationErrorBlock {
+        error: ZapNGificationUnavailableReason,
         tmux_installation: Option<TmuxInstallationState>,
     },
     /// A SSH Install Tmux Block was displayed.
@@ -1608,12 +1608,12 @@ pub enum TelemetryEvent {
     },
     AnonymousUserHitObjectLimit,
     NeedsReauth,
-    WarpDriveOpened {
-        source: WarpDriveSource,
+    ZapNGDriveOpened {
+        source: ZapNGDriveSource,
         is_code_mode_v2: bool,
     },
     // Toggled the legacy Zap AI side panel.
-    ToggleWarpAI {
+    ToggleZapNGAI {
         opened: bool,
     },
     ToggleSecretRedaction {
@@ -1659,7 +1659,7 @@ pub enum TelemetryEvent {
     LogOut,
     SettingsImportInitiated,
     CopyObjectToClipboard(TelemetryObjectType),
-    OpenAndWarpifyDockerSubshell {
+    OpenAndZapNGifyDockerSubshell {
         /// Some variant if we support this shell type, and None otherwise.
         shell_type: Option<ShellType>,
     },
@@ -2111,7 +2111,7 @@ pub enum TelemetryEvent {
         /// Whether or not Universal Developer Input mode is enabled
         is_udi_enabled: bool,
     },
-    ExecutedWarpDrivePrompt {
+    ExecutedZapNGDrivePrompt {
         id: Option<WorkflowId>,
         selection_source: WorkflowSelectionSource,
     },
@@ -2352,7 +2352,7 @@ pub enum TelemetryEvent {
     },
     /// Detected that Zap is running in an isolated sandbox.
     DetectedIsolationPlatform {
-        platform: warp_isolation_platform::IsolationPlatformType,
+        platform: zap_ng_isolation_platform::IsolationPlatformType,
     },
 
     AgentTipShown {
@@ -2852,9 +2852,9 @@ impl TelemetryEvent {
             TelemetryEvent::InitialWorkingDirectoryConfigurationChanged {
                 advanced_mode_enabled,
             } => Some(json!({ "advanced_mode_enabled": advanced_mode_enabled })),
-            TelemetryEvent::OpenedWarpAI { source } => Some(json!({ "source": source })),
-            TelemetryEvent::WarpAIRequestIssued { result } => Some(json!({ "result": result })),
-            TelemetryEvent::WarpAIAction { action_type } => {
+            TelemetryEvent::OpenedZapNGAI { source } => Some(json!({ "source": source })),
+            TelemetryEvent::ZapNGAIRequestIssued { result } => Some(json!({ "result": result })),
+            TelemetryEvent::ZapNGAIAction { action_type } => {
                 Some(json!({ "action_type": action_type }))
             }
             TelemetryEvent::MCPServerCollectionPaneOpened { entrypoint } => {
@@ -2941,7 +2941,7 @@ impl TelemetryEvent {
             TelemetryEvent::AISuggestedRuleContentChanged { rule_id, is_saved } => {
                 Some(json!({ "rule_id": rule_id, "is_saved": is_saved }))
             }
-            TelemetryEvent::UsedWarpAIPreparedPrompt { prompt } => {
+            TelemetryEvent::UsedZapNGAIPreparedPrompt { prompt } => {
                 Some(json!({ "prompt": prompt }))
             }
             TelemetryEvent::ExperimentTriggered {
@@ -2965,8 +2965,8 @@ impl TelemetryEvent {
                 Some(json!({ "remember": remember }))
             }
             TelemetryEvent::AgentToolbarDismissed => None,
-            TelemetryEvent::WarpifyFooterShown { is_ssh }
-            | TelemetryEvent::WarpifyFooterAcceptedWarpify { is_ssh } => {
+            TelemetryEvent::ZapNGifyFooterShown { is_ssh }
+            | TelemetryEvent::ZapNGifyFooterAcceptedZapNGify { is_ssh } => {
                 Some(json!({ "is_ssh": is_ssh }))
             }
             TelemetryEvent::ToggleSameLinePrompt { enabled } => Some(json!({ "enabled": enabled })),
@@ -2981,7 +2981,7 @@ impl TelemetryEvent {
             } => Some(
                 json!({ "ui_location": ui_location, "open_in_active_window": open_in_active_window }),
             ),
-            TelemetryEvent::ToggleWarpAI { opened } => Some(json!({ "opened": opened })),
+            TelemetryEvent::ToggleZapNGAI { opened } => Some(json!({ "opened": opened })),
             TelemetryEvent::ToggleSecretRedaction { enabled } => {
                 Some(json!({ "enabled": enabled }))
             }
@@ -3021,7 +3021,7 @@ impl TelemetryEvent {
             TelemetryEvent::CopyObjectToClipboard(object_type) => {
                 Some(json!({ "object_type": object_type }))
             }
-            TelemetryEvent::OpenAndWarpifyDockerSubshell { shell_type } => {
+            TelemetryEvent::OpenAndZapNGifyDockerSubshell { shell_type } => {
                 Some(json!({ "shell_type": shell_type }))
             }
             TelemetryEvent::ToggleBlockFilterQuery { enabled, source } => {
@@ -3046,7 +3046,7 @@ impl TelemetryEvent {
                 Some(json!({"enabled": enabled}))
             }
             TelemetryEvent::ToggleSshTmuxWrapper { enabled } => Some(json!({"enabled": enabled})),
-            TelemetryEvent::ToggleSshWarpification { enabled } => Some(json!({"enabled": enabled})),
+            TelemetryEvent::ToggleSshZapNGification { enabled } => Some(json!({"enabled": enabled})),
             TelemetryEvent::SetSshExtensionInstallMode { mode } => Some(json!({"mode": mode})),
             TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { checked } => {
                 Some(json!({"checked": checked}))
@@ -3054,14 +3054,14 @@ impl TelemetryEvent {
             TelemetryEvent::SshInteractiveSessionDetected(ssh_interactive_session_detected) => {
                 Some(json!({"ssh_interactive_session": ssh_interactive_session_detected}))
             }
-            TelemetryEvent::SshTmuxWarpificationSuccess {
+            TelemetryEvent::SshTmuxZapNGificationSuccess {
                 duration_ms,
                 tmux_installation,
             } => Some(json!({
                 "duration_ms": duration_ms,
                 "tmux_installation": *tmux_installation,
             })),
-            TelemetryEvent::SshTmuxWarpificationErrorBlock {
+            TelemetryEvent::SshTmuxZapNGificationErrorBlock {
                 error,
                 tmux_installation,
             } => Some(json!({
@@ -3456,7 +3456,7 @@ impl TelemetryEvent {
                 "num_images": num_images,
                 "is_udi_enabled": is_udi_enabled,
             })),
-            TelemetryEvent::ExecutedWarpDrivePrompt {
+            TelemetryEvent::ExecutedZapNGDrivePrompt {
                 id,
                 selection_source,
             } => Some(json!({
@@ -3626,7 +3626,7 @@ impl TelemetryEvent {
             | TelemetryEvent::QuitModalDisabled
             | TelemetryEvent::UserInitiatedLogOut
             | TelemetryEvent::LogOutModalShown
-            | TelemetryEvent::WarpAICharacterLimitExceeded
+            | TelemetryEvent::ZapNGAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -3634,11 +3634,11 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskWarpAI
+            | TelemetryEvent::InputAskZapNGAI
             | TelemetryEvent::SetNewWindowsAtCustomSize
             | TelemetryEvent::DisableInputSync
             | TelemetryEvent::ShowSubshellBanner
-            | TelemetryEvent::SshTmuxWarpifyBannerDisplayed
+            | TelemetryEvent::SshTmuxZapNGifyBannerDisplayed
             | TelemetryEvent::AddDenylistedSubshellCommand
             | TelemetryEvent::RemoveDenylistedSubshellCommand
             | TelemetryEvent::AddAddedSubshellCommand
@@ -3646,8 +3646,8 @@ impl TelemetryEvent {
             | TelemetryEvent::ReceivedSubshellRcFileDcs
             | TelemetryEvent::AddDenylistedSshTmuxWrapperHost
             | TelemetryEvent::RemoveDenylistedSshTmuxWrapperHost
-            | TelemetryEvent::SshTmuxWarpifyBlockAccepted
-            | TelemetryEvent::SshTmuxWarpifyBlockDismissed
+            | TelemetryEvent::SshTmuxZapNGifyBlockAccepted
+            | TelemetryEvent::SshTmuxZapNGifyBlockDismissed
             | TelemetryEvent::SshInstallTmuxBlockDisplayed
             | TelemetryEvent::SshInstallTmuxBlockAccepted
             | TelemetryEvent::SshInstallTmuxBlockDismissed
@@ -3876,7 +3876,7 @@ impl TelemetryEvent {
             TelemetryEvent::OpenRepoFolderSubmitted { is_ftux } => Some(json!({
                 "is_ftux": is_ftux,
             })),
-            TelemetryEvent::WarpDriveOpened {
+            TelemetryEvent::ZapNGDriveOpened {
                 source,
                 is_code_mode_v2,
             } => Some(json!({
@@ -4231,12 +4231,12 @@ impl TelemetryEvent {
             | TelemetryEvent::InputModeChanged { .. }
             | TelemetryEvent::PtySpawned { .. }
             | TelemetryEvent::InitialWorkingDirectoryConfigurationChanged { .. }
-            | TelemetryEvent::OpenedWarpAI { .. }
-            | TelemetryEvent::WarpAIRequestIssued { .. }
-            | TelemetryEvent::WarpAIAction { .. }
-            | TelemetryEvent::UsedWarpAIPreparedPrompt { .. }
+            | TelemetryEvent::OpenedZapNGAI { .. }
+            | TelemetryEvent::ZapNGAIRequestIssued { .. }
+            | TelemetryEvent::ZapNGAIAction { .. }
+            | TelemetryEvent::UsedZapNGAIPreparedPrompt { .. }
             | TelemetryEvent::ToggleFocusPaneOnHover { .. }
-            | TelemetryEvent::WarpAICharacterLimitExceeded
+            | TelemetryEvent::ZapNGAICharacterLimitExceeded
             | TelemetryEvent::OpenInputContextMenu
             | TelemetryEvent::InputCutSelectedText
             | TelemetryEvent::InputCopySelectedText
@@ -4244,7 +4244,7 @@ impl TelemetryEvent {
             | TelemetryEvent::InputPaste
             | TelemetryEvent::InputCommandSearch
             | TelemetryEvent::InputAICommandSearch
-            | TelemetryEvent::InputAskWarpAI
+            | TelemetryEvent::InputAskZapNGAI
             | TelemetryEvent::SaveAsWorkflowModal { .. }
             | TelemetryEvent::ExperimentTriggered { .. }
             | TelemetryEvent::ToggleSyncAllPanesInAllTabs { .. }
@@ -4267,14 +4267,14 @@ impl TelemetryEvent {
             | TelemetryEvent::RemoveDenylistedSshTmuxWrapperHost
             | TelemetryEvent::ToggleSshTmuxWrapper { .. }
             | TelemetryEvent::SshInteractiveSessionDetected(_)
-            | TelemetryEvent::SshTmuxWarpifyBannerDisplayed
-            | TelemetryEvent::SshTmuxWarpifyBlockAccepted
-            | TelemetryEvent::SshTmuxWarpifyBlockDismissed
-            | TelemetryEvent::WarpifyFooterShown { .. }
+            | TelemetryEvent::SshTmuxZapNGifyBannerDisplayed
+            | TelemetryEvent::SshTmuxZapNGifyBlockAccepted
+            | TelemetryEvent::SshTmuxZapNGifyBlockDismissed
+            | TelemetryEvent::ZapNGifyFooterShown { .. }
             | TelemetryEvent::AgentToolbarDismissed
-            | TelemetryEvent::WarpifyFooterAcceptedWarpify { .. }
-            | TelemetryEvent::SshTmuxWarpificationSuccess { .. }
-            | TelemetryEvent::SshTmuxWarpificationErrorBlock { .. }
+            | TelemetryEvent::ZapNGifyFooterAcceptedZapNGify { .. }
+            | TelemetryEvent::SshTmuxZapNGificationSuccess { .. }
+            | TelemetryEvent::SshTmuxZapNGificationErrorBlock { .. }
             | TelemetryEvent::SshInstallTmuxBlockDisplayed
             | TelemetryEvent::SshInstallTmuxBlockAccepted
             | TelemetryEvent::SshInstallTmuxBlockDismissed
@@ -4291,8 +4291,8 @@ impl TelemetryEvent {
             | TelemetryEvent::AnonymousUserAttemptLoginGatedFeature { .. }
             | TelemetryEvent::AnonymousUserHitObjectLimit
             | TelemetryEvent::NeedsReauth
-            | TelemetryEvent::WarpDriveOpened { .. }
-            | TelemetryEvent::ToggleWarpAI { .. }
+            | TelemetryEvent::ZapNGDriveOpened { .. }
+            | TelemetryEvent::ToggleZapNGAI { .. }
             | TelemetryEvent::ToggleSecretRedaction { .. }
             | TelemetryEvent::CustomSecretRegexAdded
             | TelemetryEvent::ToggleObfuscateSecret { .. }
@@ -4311,7 +4311,7 @@ impl TelemetryEvent {
             | TelemetryEvent::UnsupportedShell { .. }
             | TelemetryEvent::LogOut
             | TelemetryEvent::CopyObjectToClipboard(_)
-            | TelemetryEvent::OpenAndWarpifyDockerSubshell { .. }
+            | TelemetryEvent::OpenAndZapNGifyDockerSubshell { .. }
             | TelemetryEvent::UpdateBlockFilterQuery
             | TelemetryEvent::UpdateBlockFilterQueryContextLines { .. }
             | TelemetryEvent::ToggleBlockFilterQuery { .. }
@@ -4376,8 +4376,8 @@ impl TelemetryEvent {
             | TelemetryEvent::MCPTemplateShared
             | TelemetryEvent::MCPServerSpawned { .. }
             | TelemetryEvent::MCPToolCallAccepted { .. }
-            | TelemetryEvent::ExecutedWarpDrivePrompt { .. }
-            | TelemetryEvent::ToggleSshWarpification { .. }
+            | TelemetryEvent::ExecutedZapNGDrivePrompt { .. }
+            | TelemetryEvent::ToggleSshZapNGification { .. }
             | TelemetryEvent::SetSshExtensionInstallMode { .. }
             | TelemetryEvent::SshRemoteServerChoiceDoNotAskAgainToggled { .. }
             | TelemetryEvent::SettingsImportInitiated

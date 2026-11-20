@@ -9,20 +9,20 @@ use crate::util::truncation::truncate_from_end;
 use crate::workspace::view::conversation_list::view::ConversationListViewAction;
 use crate::workspace::view::conversation_list::view_model::ConversationOrTaskId;
 use pathfinder_geometry::vector::vec2f;
-use warp_core::ui::color::coloru_with_opacity;
-use warp_core::ui::theme::color::internal_colors;
-use warp_util::path::user_friendly_path;
-use warpui::elements::{
+use zap_ng_core::ui::color::coloru_with_opacity;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_util::path::user_friendly_path;
+use zap_ng_ui::elements::{
     ChildAnchor, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, DispatchEventResult,
     Element, EventHandler, Flex, Highlight, Hoverable, MainAxisAlignment, MainAxisSize,
     MouseInBehavior, MouseStateHandle, OffsetPositioning, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, Shrinkable, Stack, Text,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::platform::Cursor;
-use warpui::text_layout::TextStyle;
-use warpui::ui_components::components::{UiComponent, UiComponentStyles};
-use warpui::{AppContext, SingletonEntity, ViewHandle};
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text_layout::TextStyle;
+use zap_ng_ui::ui_components::components::{UiComponent, UiComponentStyles};
+use zap_ng_ui::{AppContext, SingletonEntity, ViewHandle};
 
 /// Maximum length for tooltip text before truncation
 const MAX_TOOLTIP_LENGTH: usize = 80;
@@ -93,7 +93,7 @@ pub fn render_static_item(props: StaticItemProps<'_>, app: &AppContext) -> Box<d
 
     let icon_color = theme.main_text_color(theme.background());
     let icon = Container::new(
-        ConstrainedBox::new(Icon::Plus.to_warpui_icon(icon_color).finish())
+        ConstrainedBox::new(Icon::Plus.to_zap_ng_ui_icon(icon_color).finish())
             .with_width(appearance.ui_font_size())
             .with_height(appearance.ui_font_size())
             .finish(),
@@ -191,7 +191,7 @@ pub fn render_item(props: ItemProps<'_>, app: &AppContext) -> Box<dyn Element> {
     let icon_element: Box<dyn Element> = if conversation.is_ambient_agent_conversation() {
         ConstrainedBox::new(
             Icon::Cloud
-                .to_warpui_icon(theme.sub_text_color(theme.background()))
+                .to_zap_ng_ui_icon(theme.sub_text_color(theme.background()))
                 .finish(),
         )
         .with_width(status_element_size)

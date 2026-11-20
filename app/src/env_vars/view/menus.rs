@@ -1,6 +1,6 @@
 use pathfinder_geometry::vector::Vector2F;
-use warp_core::context_flag::ContextFlag;
-use warpui::{keymap::Trigger, SingletonEntity, ViewContext, ViewHandle};
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_ui::{keymap::Trigger, SingletonEntity, ViewContext, ViewHandle};
 
 use crate::{
     cloud_object::update_manager::UpdateManager,

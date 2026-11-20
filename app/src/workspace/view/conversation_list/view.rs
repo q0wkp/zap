@@ -23,23 +23,23 @@ use crate::workspace::view::conversation_list::item::{
 use crate::workspace::view::conversation_list::view_model::ConversationOrTaskId;
 use crate::workspace::ToastStack;
 use crate::workspace::WorkspaceAction;
-use warp_core::ui::Icon;
+use zap_ng_core::ui::Icon;
 
 use super::view_model::{ConversationEntry, ConversationListViewModel};
-use warp_editor::editor::NavigationKey;
-use warpui::elements::{
+use zap_ng_editor::editor::NavigationKey;
+use zap_ng_ui::elements::{
     Border, ChildAnchor, ChildView, Clipped, ConstrainedBox, Container, CornerRadius,
     CrossAxisAlignment, Element, Fill, Flex, FormattedTextElement, Hoverable, MainAxisAlignment,
     MainAxisSize, MouseStateHandle, OffsetPositioning, Padding, ParentAnchor, ParentElement,
     ParentOffsetBounds, Radius, SavePosition, ScrollStateHandle, Scrollable, ScrollableElement,
     ScrollbarWidth, Shrinkable, Stack, Text, UniformList, UniformListState,
 };
-use warpui::fonts::{Properties, Weight};
-use warpui::keymap::macros::*;
-use warpui::keymap::FixedBinding;
-use warpui::platform::Cursor;
-use warpui::text_layout::TextAlignment;
-use warpui::{
+use zap_ng_ui::fonts::{Properties, Weight};
+use zap_ng_ui::keymap::macros::*;
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text_layout::TextAlignment;
+use zap_ng_ui::{
     AppContext, BlurContext, Entity, EntityId, ModelHandle, SingletonEntity, TypedActionView, View,
     ViewContext, ViewHandle, WindowId,
 };
@@ -561,7 +561,7 @@ fn render_zero_state(
 
     let chat_icon = ConstrainedBox::new(
         Icon::ChatDashed
-            .to_warpui_icon(theme.sub_text_color(theme.background()))
+            .to_zap_ng_ui_icon(theme.sub_text_color(theme.background()))
             .finish(),
     )
     .with_width(24.)
@@ -613,7 +613,7 @@ fn render_zero_state(
                 .with_child(
                     ConstrainedBox::new(
                         Icon::Plus
-                            .to_warpui_icon(theme.main_text_color(theme.background()))
+                            .to_zap_ng_ui_icon(theme.main_text_color(theme.background()))
                             .finish(),
                     )
                     .with_width(14.)
@@ -696,7 +696,7 @@ fn render_section_header(
     };
     let chevron = ConstrainedBox::new(
         chevron_icon
-            .to_warpui_icon(theme.sub_text_color(theme.background()))
+            .to_zap_ng_ui_icon(theme.sub_text_color(theme.background()))
             .finish(),
     )
     .with_width(12.)

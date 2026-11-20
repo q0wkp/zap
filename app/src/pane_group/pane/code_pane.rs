@@ -1,5 +1,5 @@
-use warp_util::path::LineAndColumnArg;
-use warpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::{
     app_state::{CodePaneSnapShot, CodePaneTabSnapshot, LeafContents},

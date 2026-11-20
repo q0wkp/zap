@@ -1,14 +1,14 @@
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::platform::Cursor;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::{elements::Element, AppContext, View};
-use warpui::{Entity, SingletonEntity, TypedActionView, ViewContext};
+use zap_ng_ui::fonts::{Properties, Style, Weight};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::{elements::Element, AppContext, View};
+use zap_ng_ui::{Entity, SingletonEntity, TypedActionView, ViewContext};
 
 use crate::appearance::Appearance;
 use crate::ui_components::buttons::close_button;
 use crate::ui_components::dialog::{dialog_styles, Dialog};
-use warpui::elements::{Container, MouseStateHandle, Text};
-use warpui::ui_components::components::UiComponent;
+use zap_ng_ui::elements::{Container, MouseStateHandle, Text};
+use zap_ng_ui::ui_components::components::UiComponent;
 
 const EDIT_ANYWAY_CTA_LABEL: &str = "Edit anyway";
 const EDIT_ANYWAY_TEXT: &str =

@@ -1,4 +1,4 @@
-use warpui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
+use zap_ng_ui::{AppContext, ModelHandle, SingletonEntity, View, ViewContext, ViewHandle};
 
 use crate::{
     ai::facts::{AIFactManager, AIFactView, AIFactViewEvent},

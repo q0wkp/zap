@@ -77,11 +77,11 @@ use crate::workspace::view::{tab_bar_rects_for_window, TransferredTab, TAB_BAR_P
 use crate::workspace::WorkspaceRegistry;
 use pathfinder_geometry::rect::RectF;
 use std::collections::HashSet;
-use warpui::elements::DraggableState;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::platform::TerminationMode;
-use warpui::windowing::WindowManager;
-use warpui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
+use zap_ng_ui::elements::DraggableState;
+use zap_ng_ui::geometry::vector::{vec2f, Vector2F};
+use zap_ng_ui::platform::TerminationMode;
+use zap_ng_ui::windowing::WindowManager;
+use zap_ng_ui::{AppContext, Entity, ModelContext, SingletonEntity, WindowId};
 
 /// Identifies a window and tab-bar index where a dragged tab can be attached.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

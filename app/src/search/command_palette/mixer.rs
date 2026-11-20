@@ -8,9 +8,9 @@ use crate::util::bindings::CommandBinding;
 use crate::workspace::PaneViewLocator;
 use std::sync::Arc;
 use strum_macros::IntoStaticStr;
-use warp_util::path::LineAndColumnArg;
-use warpui::keymap::BindingId;
-use warpui::{EntityId, WindowId};
+use zap_ng_util::path::LineAndColumnArg;
+use zap_ng_ui::keymap::BindingId;
+use zap_ng_ui::{EntityId, WindowId};
 
 pub type CommandPaletteMixer = SearchMixer<CommandPaletteItemAction>;
 
@@ -74,11 +74,11 @@ pub enum CommandPaletteItemAction {
     },
     /// Start a new AI conversation
     NewConversation,
-    /// 打开 SSH 服务器(openWarp 独有)→ 路由到 WorkspaceAction::OpenSshTerminal
+    /// 打开 SSH 服务器(ZapNG 独有)→ 路由到 WorkspaceAction::OpenSshTerminal
     /// 走 SecretInjector + 新 tab。
     OpenSshServer {
         node_id: String,
-        server: warp_ssh_manager::SshServerInfo,
+        server: zap_ng_ssh_manager::SshServerInfo,
     },
     /// No-op action (used for non-interactable separator items that don't do anything on click).
     NoOp,
@@ -203,7 +203,7 @@ pub enum ItemSummary {
     },
     ForkConversation,
     NewConversation,
-    /// SSH 服务器(openWarp 独有)。`node_id` 是 ssh_nodes 表的 UUID。
+    /// SSH 服务器(ZapNG 独有)。`node_id` 是 ssh_nodes 表的 UUID。
     SshServer {
         node_id: String,
     },

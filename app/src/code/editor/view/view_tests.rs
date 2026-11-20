@@ -1,6 +1,6 @@
-use warp_core::ui::appearance::Appearance;
-use warp_editor::render::element::VerticalExpansionBehavior;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_editor::render::element::VerticalExpansionBehavior;
+use zap_ng_ui::{
     elements::{new_scrollable::ScrollableAppearance, ScrollbarWidth},
     platform::WindowStyle,
     App, TypedActionView, ViewHandle, WindowId,
@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::{CodeEditorRenderOptions, CodeEditorView, CodeEditorViewAction};
-use warp_util::user_input::UserInput;
+use zap_ng_util::user_input::UserInput;
 
 fn initialize_editor(app: &mut App) -> (WindowId, ViewHandle<CodeEditorView>) {
     initialize_settings_for_tests(app);

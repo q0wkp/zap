@@ -10,25 +10,25 @@ use crate::settings::InputSettings;
 use crate::terminal::view::passive_suggestions::PromptSuggestionResolution;
 use crate::util::bindings::keybinding_name_to_keystroke;
 use pathfinder_geometry::vector::vec2f;
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ChildAnchor, ChildView, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty,
     Fill, Flex, HighlightedHyperlink, Hoverable, Icon, MainAxisAlignment, MainAxisSize,
     OffsetPositioning, ParentAnchor, ParentElement, ParentOffsetBounds, Radius, Shrinkable, Stack,
     Text,
 };
-use warpui::keymap::Keystroke;
-use warpui::platform::Cursor;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{elements::MouseStateHandle, Element};
-use warpui::{AppContext, Entity, EventContext, ModelHandle, ViewContext, ViewHandle};
-use warpui::{SingletonEntity, View};
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{elements::MouseStateHandle, Element};
+use zap_ng_ui::{AppContext, Entity, EventContext, ModelHandle, ViewContext, ViewHandle};
+use zap_ng_ui::{SingletonEntity, View};
 
 use crate::terminal::view::{InputType, PromptSuggestion};
 use crate::ui_components::blended_colors;
 use crate::{appearance::Appearance, terminal::view::TerminalAction};
-use warp_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
+use zap_ng_core::ui::theme::color::internal_colors::{neutral_2, neutral_3};
 
-use crate::ui_components::icons::Icon as WarpUIIcon;
+use crate::ui_components::icons::Icon as ZapNGUIIcon;
 
 use crate::ai::agent::{PassiveSuggestionTrigger, StaticQueryType};
 const INLINE_BANNER_SPACING: f32 = 8.;
@@ -120,7 +120,7 @@ pub struct PromptSuggestionBannerState {
 #[allow(clippy::too_many_arguments)]
 fn render_button(
     text: String,
-    icon: WarpUIIcon,
+    icon: ZapNGUIIcon,
     button_index: usize,
     keystroke: Option<Keystroke>,
     mouse_state: MouseStateHandle,
@@ -345,11 +345,11 @@ impl View for PromptSuggestionsView {
                 1.0,
                 render_button(
                     prompt_suggestion.label().clone(),
-                    WarpUIIcon::Oz,
+                    ZapNGUIIcon::Oz,
                     0,
                     keybinding_name_to_keystroke(ACCEPT_PROMPT_SUGGESTION_KEYBINDING, app),
                     banner_state.accept_button_mouse_state.clone(),
-                    Rc::new(move |ctx: &mut warpui::EventContext<'_>| {
+                    Rc::new(move |ctx: &mut zap_ng_ui::EventContext<'_>| {
                         ctx.dispatch_typed_action(TerminalAction::ResolvePromptSuggestion(
                             PromptSuggestionResolution::Accept {
                                 interaction_source: InteractionSource::Button,

@@ -1,6 +1,6 @@
 use regex::Regex;
 use std::time::Duration;
-use warpui::{
+use zap_ng_ui::{
     async_assert, async_assert_eq,
     integration::{AssertionOutcome, TestStep},
 };
@@ -88,7 +88,7 @@ pub fn assert_subshell_banner_is_showing() -> TestStep {
                         .block_list_mut()
                         .active_block()
                         .block_banner(),
-                    Some(WithinBlockBanner::WarpifyBanner(..))
+                    Some(WithinBlockBanner::ZapNGifyBanner(..))
                 ))
             })
         })
@@ -118,7 +118,7 @@ pub fn assert_subshell_is_bootstrapped(tab_index: usize, pane_index: usize) -> T
                 };
 
                 match rich_content_type {
-                    Some(RichContentType::WarpifySuccessBlock) => {}
+                    Some(RichContentType::ZapNGifySuccessBlock) => {}
                     _ => {
                         return AssertionOutcome::failure(
                             "Warpify success block wasn't added to the blocklist".to_owned(),

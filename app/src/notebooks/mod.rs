@@ -11,14 +11,14 @@ pub mod telemetry;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use warpui::AppContext;
+use zap_ng_ui::AppContext;
 
 use crate::{
     ai::document::ai_document_model::AIDocumentId,
     appearance::Appearance,
     cloud_object::{GenericStoredObject, ObjectType, Owner, StoredObjectModel},
     drive::{
-        items::{notebook::WarpDriveNotebook, WarpDriveItem},
+        items::{notebook::ZapNGDriveNotebook, ZapNGDriveItem},
         ObjectTypeAndId,
     },
     persistence::ModelEvent,
@@ -100,7 +100,7 @@ impl StoredObjectModel for NotebookObjectModel {
         SerializedModel::new(json)
     }
 
-    fn renders_in_warp_drive(&self) -> bool {
+    fn renders_in_zap_ng_drive(&self) -> bool {
         true
     }
 
@@ -108,13 +108,13 @@ impl StoredObjectModel for NotebookObjectModel {
         true
     }
 
-    fn to_warp_drive_item(
+    fn to_zap_ng_drive_item(
         &self,
         id: SyncId,
         _appearance: &Appearance,
         notebook: &NotebookObject,
-    ) -> Option<Box<dyn WarpDriveItem>> {
-        Some(Box::new(WarpDriveNotebook::new(
+    ) -> Option<Box<dyn ZapNGDriveItem>> {
+        Some(Box::new(ZapNGDriveNotebook::new(
             self.object_type_and_id(id),
             notebook.clone(),
             notebook.model().ai_document_id.is_some(),
@@ -179,7 +179,7 @@ pub fn post_process_notebook(data: &str) -> String {
 /// * Includes extra context for embedded objects.
 #[cfg_attr(not(feature = "local_fs"), allow(dead_code))]
 pub fn export_notebook(data: &str, ctx: &AppContext) -> anyhow::Result<String> {
-    use warp_editor::content::{buffer::Buffer, markdown::MarkdownStyle};
+    use zap_ng_editor::content::{buffer::Buffer, markdown::MarkdownStyle};
 
     // Parse the Markdown directly rather than using [`Buffer::from_markdown`] so that we can
     // report errors to the exporter.

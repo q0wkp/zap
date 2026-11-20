@@ -10,8 +10,8 @@ use std::{
 
 use futures_util::future::Either;
 use url::Url;
-use warp_util::path::{CleanPathResult, LineAndColumnArg};
-use warpui::{
+use zap_ng_util::path::{CleanPathResult, LineAndColumnArg};
+use zap_ng_ui::{
     r#async::SpawnedFutureHandle, AppContext, Entity, ModelContext, ModelHandle, SingletonEntity,
     WindowId,
 };
@@ -23,7 +23,7 @@ use crate::util::openable_file_type::{is_supported_image_file, resolve_file_targ
 use crate::{
     drive::ZapDriveObjectArgs,
     terminal::model::session::Session,
-    uri::parse_url_paths::{get_item_data_from_warp_link, WarpWebLink},
+    uri::parse_url_paths::{get_item_data_from_zap_ng_link, ZapNGWebLink},
     workspace::ActiveSession,
 };
 
@@ -266,9 +266,9 @@ impl NotebookLinks {
     pub fn open(&self, link: LinkTarget, ctx: &mut ModelContext<Self>) {
         match link {
             LinkTarget::Url(url) => {
-                if let Some(WarpWebLink::DriveObject(args)) = get_item_data_from_warp_link(&url) {
+                if let Some(ZapNGWebLink::DriveObject(args)) = get_item_data_from_zap_ng_link(&url) {
                     return ctx.emit(LinkEvent::ZapDriveLink {
-                        open_warp_drive_args: *args,
+                        open_zap_ng_drive_args: *args,
                     });
                 }
 
@@ -411,7 +411,7 @@ pub enum LinkEvent {
         session: Arc<Session>,
     },
     ZapDriveLink {
-        open_warp_drive_args: ZapDriveObjectArgs,
+        open_zap_ng_drive_args: ZapDriveObjectArgs,
     },
     /// This event tells the parent pane group to open a new terminal session in the given
     /// directory.

@@ -6,14 +6,14 @@
 
 use std::collections::HashSet;
 
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::theme::color::internal_colors;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CrossAxisAlignment, Fill, Flex, Hoverable,
     MouseStateHandle, ParentElement, SavePosition, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::Element;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::Element;
 
 use crate::sftp_manager::browser::SftpBrowserAction;
 use crate::sftp_manager::types::{format_size, FileEntry, FileEntryType};
@@ -65,7 +65,7 @@ pub fn render_file_row(
     Hoverable::new(mouse_handle, move |_| {
         // 图标
         let icon_el = ConstrainedBox::new(
-            file_icon(&file_type).to_warpui_icon(icon_color.into()).finish(),
+            file_icon(&file_type).to_zap_ng_ui_icon(icon_color.into()).finish(),
         )
         .with_width(16.0)
         .with_height(16.0)

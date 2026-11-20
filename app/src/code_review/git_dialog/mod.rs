@@ -12,9 +12,9 @@
 use std::path::PathBuf;
 
 use pathfinder_geometry::vector::vec2f;
-use warp_core::features::FeatureFlag;
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     elements::{
         Align, Border, ChildAnchor, ChildView, ClippedScrollStateHandle, ClippedScrollable,
         ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Element, Flex, Hoverable,
@@ -68,7 +68,7 @@ pub fn init(ctx: &mut AppContext) {
     ctx.register_fixed_bindings(vec![FixedBinding::new(
         "escape",
         GitDialogAction::Cancel,
-        warpui::id!("GitDialog"),
+        zap_ng_ui::id!("GitDialog"),
     )]);
 }
 
@@ -370,7 +370,7 @@ fn render_file_changes_box(
                 ScrollbarWidth::Auto,
                 theme.nonactive_ui_detail().into(),
                 theme.active_ui_detail().into(),
-                warpui::elements::Fill::None,
+                zap_ng_ui::elements::Fill::None,
             )
             .finish(),
         )

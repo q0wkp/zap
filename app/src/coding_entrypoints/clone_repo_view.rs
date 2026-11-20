@@ -1,7 +1,7 @@
 use crate::coding_entrypoints::glowing_editor::{GlowingEditor, GlowingEditorEvent};
 use crate::TelemetryEvent;
-use warp_core::send_telemetry_from_ctx;
-use warpui::{
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_ui::{
     elements::{ChildView, Flex, ParentElement as _},
     AppContext, Element, Entity, FocusContext, TypedActionView, View, ViewContext, ViewHandle,
 };

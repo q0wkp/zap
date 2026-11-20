@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::io;
 
-use warp_terminal::model::ansi::control_sequence_parameters::*;
-use warp_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
-use warpui::color::ColorU;
+use zap_ng_terminal::model::ansi::control_sequence_parameters::*;
+use zap_ng_terminal::model::{KeyboardModes, KeyboardModesApplyBehavior};
+use zap_ng_ui::color::ColorU;
 
 use super::dcs_hooks::*;
 use super::ProcessorInput;
@@ -286,7 +286,7 @@ pub trait Handler {
     /// Callback emitted when executing the user's RC file, which signals a new session is being
     /// created. If the session is for a subshell, this should triggers Zap's bootstrap process.
     /// Otherwise, it's ignored.
-    fn sourced_rc_file(&mut self, _data: SourcedRcFileForWarpValue) {}
+    fn sourced_rc_file(&mut self, _data: SourcedRcFileForZapNGValue) {}
 
     /// Callback emitted during the initialization process for ssh sessions
     fn init_ssh(&mut self, _data: InitSshValue) {}
@@ -295,9 +295,9 @@ pub trait Handler {
     /// assisted auto-update.
     fn finish_update(&mut self, _data: FinishUpdateValue) {}
 
-    /// Callback emitted from the warpify_ssh_session script if it's discovered
-    /// that we can't warpify the remote session.
-    fn remote_warpification_is_unavailable(&mut self, _data: WarpificationUnavailableReason) {}
+    /// Callback emitted from the zapngify_ssh_session script if it's discovered
+    /// that we can't zapngify the remote session.
+    fn remote_zapngification_is_unavailable(&mut self, _data: ZapNGificationUnavailableReason) {}
 
     /// How tmux was installed.
     fn notify_ssh_tmux_is_installed(&mut self, _tmux_installation: TmuxInstallationState) {}

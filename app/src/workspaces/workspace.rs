@@ -223,7 +223,7 @@ pub enum DelinquencyStatus {
 
 /// Local representation of feature policy data restored from persisted workspace metadata.
 #[derive(Clone, Debug, Copy, Serialize, Deserialize)]
-pub struct WarpAiPolicy {
+pub struct ZapNGAiPolicy {
     pub limit: i64,
     pub is_code_suggestions_toggleable: bool,
     pub is_prompt_suggestions_toggleable: bool,
@@ -325,7 +325,7 @@ pub enum HostEnablementSetting {
 pub struct Tier {
     pub name: String,
     pub description: String,
-    pub warp_ai_policy: Option<WarpAiPolicy>,
+    pub warp_ai_policy: Option<ZapNGAiPolicy>,
     pub workspace_size_policy: Option<WorkspaceSizePolicy>,
     pub shared_notebooks_policy: Option<SharedNotebooksPolicy>,
     pub shared_workflows_policy: Option<SharedWorkflowsPolicy>,
@@ -552,8 +552,8 @@ impl BillingMetadata {
             || self.delinquency_status == DelinquencyStatus::Unpaid
     }
 
-    // Whether the enterprise customer is our Stable Zap Enterprise team (internal team of Warpers).
-    pub fn is_warp_plan(&self) -> bool {
+    // Whether the enterprise customer is our Stable Zap Enterprise team (internal team of ZapNGers).
+    pub fn is_zap_ng_plan(&self) -> bool {
         self.tier.name == "Zap Plan"
     }
 

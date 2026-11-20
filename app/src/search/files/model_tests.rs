@@ -5,7 +5,7 @@ use fuzzy_match::FuzzyMatchResult;
 use repo_metadata::local_model::GetContentsArgs;
 use repo_metadata::repositories::DetectedRepositories;
 use repo_metadata::RepoMetadataModel;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 #[cfg(test)]
 mod file_search_model_tests {

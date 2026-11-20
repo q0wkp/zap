@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use warpui::{
+use zap_ng_ui::{
     elements::MouseStateHandle, AppContext, EntityId, SingletonEntity, ViewContext, ViewHandle,
     WindowId,
 };
@@ -47,7 +47,7 @@ pub(super) struct WorkspaceMouseStates {
     /// Per-agent titlebar button hover states, keyed by CLIAgent serialized name.
     pub(super) cli_agent_titlebar_button_states: RefCell<HashMap<String, MouseStateHandle>>,
     #[cfg(target_family = "wasm")]
-    pub(super) warp_logo: MouseStateHandle,
+    pub(super) zap_ng_logo: MouseStateHandle,
 }
 
 #[derive(Debug)]
@@ -101,7 +101,7 @@ pub struct WorkspaceState {
     pub is_launch_config_save_modal_open: bool,
     pub is_resource_center_open: bool,
     pub is_command_search_open: bool,
-    pub is_warp_drive_open: bool,
+    pub is_zap_ng_drive_open: bool,
     pub is_ai_assistant_panel_open: bool,
     pub is_agent_management_popup_open: bool,
     pub is_auth_override_modal_open: bool,
@@ -137,7 +137,7 @@ impl WorkspaceState {
             || self.is_theme_chooser_open
             || self.is_ai_assistant_panel_open
             || self.is_workflow_modal_open
-            || self.is_warp_drive_open
+            || self.is_zap_ng_drive_open
     }
 
     pub fn is_any_non_palette_modal_open(&self, app: &AppContext) -> bool {
@@ -208,7 +208,7 @@ impl WorkspaceState {
     }
 
     pub fn close_all_left_panels(&mut self) {
-        self.is_warp_drive_open = false;
+        self.is_zap_ng_drive_open = false;
         self.is_theme_chooser_open = false;
     }
 
@@ -350,7 +350,7 @@ pub fn get_context_target_terminal_view(
         })
 }
 
-pub fn get_terminal_background_fill(app: &AppContext) -> warpui::elements::Fill {
+pub fn get_terminal_background_fill(app: &AppContext) -> zap_ng_ui::elements::Fill {
     let theme = Appearance::as_ref(app).theme();
     let terminal_opacity = get_terminal_background_opacity(app);
     theme.background().with_opacity(terminal_opacity).into()

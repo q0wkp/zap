@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use warpui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
 
 /// 默认规则文件列表。顺序 = 优先级(靠前者优先);同目录多个文件
 /// 同时存在时 `RuleAtPath::respected_rule()` 只取优先级最高的一个。
@@ -75,13 +75,13 @@ pub struct ProjectRule {
 #[derive(Debug, Default)]
 struct RuleAtPath {
     parent_path: PathBuf,
-    warp_md: Option<ProjectRule>,
+    zap_ng_md: Option<ProjectRule>,
     agents_md: Option<ProjectRule>,
 }
 
 impl RuleAtPath {
     fn respected_rule(&self) -> Option<&ProjectRule> {
-        self.warp_md.as_ref().or(self.agents_md.as_ref())
+        self.zap_ng_md.as_ref().or(self.agents_md.as_ref())
     }
 }
 
@@ -157,7 +157,7 @@ impl ProjectRules {
             .find(|rule| rule.parent_path == parent)?;
 
         if file_name.to_lowercase() == "warp.md" {
-            rule.warp_md.take()
+            rule.zap_ng_md.take()
         } else if file_name.to_lowercase() == "agents.md" {
             rule.agents_md.take()
         } else {
@@ -189,7 +189,7 @@ impl ProjectRules {
         match existing_rule {
             Some(rule) => {
                 if file_name.to_lowercase() == "warp.md" {
-                    rule.warp_md = rule_file;
+                    rule.zap_ng_md = rule_file;
                 } else if file_name.to_lowercase() == "agents.md" {
                     rule.agents_md = rule_file;
                 }
@@ -200,7 +200,7 @@ impl ProjectRules {
                     ..Default::default()
                 };
                 if file_name.to_lowercase() == "warp.md" {
-                    rule.warp_md = rule_file;
+                    rule.zap_ng_md = rule_file;
                 } else if file_name.to_lowercase() == "agents.md" {
                     rule.agents_md = rule_file;
                 }
@@ -300,7 +300,7 @@ impl ProjectContextModel {
                                 .rules
                                 .iter()
                                 .filter_map(|rule| {
-                                    rule.warp_md.as_ref().map(|rule| ProjectRulePath {
+                                    rule.zap_ng_md.as_ref().map(|rule| ProjectRulePath {
                                         project_root: root_clone.clone(),
                                         path: rule.path.clone(),
                                     })

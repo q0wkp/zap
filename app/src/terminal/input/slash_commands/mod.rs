@@ -9,13 +9,13 @@ pub use view::*;
 use std::path::PathBuf;
 
 use ai::skills::SkillReference;
-use warp_core::features::FeatureFlag;
-use warp_core::send_telemetry_from_ctx;
-use warp_core::ui::appearance::Appearance;
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_core::send_telemetry_from_ctx;
+use zap_ng_core::ui::appearance::Appearance;
 #[cfg(feature = "local_fs")]
-use warp_util::path::{CleanPathResult, LineAndColumnArg};
-use warpui::clipboard::ClipboardContent;
-use warpui::{SingletonEntity, ViewContext};
+use zap_ng_util::path::{CleanPathResult, LineAndColumnArg};
+use zap_ng_ui::clipboard::ClipboardContent;
+use zap_ng_ui::{SingletonEntity, ViewContext};
 
 use crate::ai::blocklist::agent_view::{
     AgentViewEntryOrigin, DismissalStrategy, EphemeralMessage, ENTER_OR_EXIT_CONFIRMATION_WINDOW,
@@ -513,7 +513,7 @@ impl Input {
                             Ok(metadata) if metadata.is_file() => {
                                 use crate::util::file::external_editor;
 
-                                ctx.dispatch_typed_action(&TerminalAction::OpenCodeInWarp {
+                                ctx.dispatch_typed_action(&TerminalAction::OpenCodeInZapNG {
                                     path: file_path,
                                     layout: external_editor::settings::EditorLayout::SplitPane,
                                     line_col,

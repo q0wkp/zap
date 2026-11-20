@@ -1,7 +1,7 @@
 use crate::terminal::view::TerminalView;
 
 use crate::terminal::shared_session::protocol::WindowSize;
-use warpui::{elements::MouseStateHandle, ViewContext};
+use zap_ng_ui::{elements::MouseStateHandle, ViewContext};
 
 use super::adapter::Participant;
 

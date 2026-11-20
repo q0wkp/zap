@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use warpui::{Entity, ModelContext, SingletonEntity};
-use warpui_extras::secure_storage::{self, AppContextExt};
+use zap_ng_ui::{Entity, ModelContext, SingletonEntity};
+use zap_ng_ui_extras::secure_storage::{self, AppContextExt};
 
 const SECURE_STORAGE_KEY: &str = "AgentProviderSecrets";
 

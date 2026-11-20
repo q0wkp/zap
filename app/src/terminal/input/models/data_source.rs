@@ -2,20 +2,20 @@ use fuzzy_match::{match_indices_case_insensitive, FuzzyMatchResult};
 use itertools::Itertools;
 use markdown_parser::{FormattedText, FormattedTextFragment, FormattedTextLine};
 use ordered_float::OrderedFloat;
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::color::internal_colors;
-use warp_core::ui::theme::Fill;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::color::internal_colors;
+use zap_ng_core::ui::theme::Fill;
+use zap_ng_ui::elements::{
     ConstrainedBox, Container, CornerRadius, FormattedTextElement, Highlight, HighlightedHyperlink,
     MouseStateHandle, Radius, Text,
 };
-use warpui::fonts::{Properties, Style, Weight};
-use warpui::platform::Cursor;
-use warpui::text_layout::ClipConfig;
-use warpui::ui_components::button::ButtonVariant;
-use warpui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
-use warpui::{AppContext, Element, Entity, EntityId, SingletonEntity as _};
+use zap_ng_ui::fonts::{Properties, Style, Weight};
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::text_layout::ClipConfig;
+use zap_ng_ui::ui_components::button::ButtonVariant;
+use zap_ng_ui::ui_components::components::{Coords, UiComponent, UiComponentStyles};
+use zap_ng_ui::{AppContext, Element, Entity, EntityId, SingletonEntity as _};
 
 use crate::ai::agent_providers::{llm_id as byop_llm_id, lookup_byop};
 use crate::ai::llms::{
@@ -35,8 +35,8 @@ use crate::terminal::input::inline_menu::{styles as inline_styles, DetailsRender
 use crate::terminal::input::message_bar::{Message, MessageItem};
 use crate::workspace::WorkspaceAction;
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use warpui::keymap::Keystroke;
-use warpui::platform::OperatingSystem;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::OperatingSystem;
 
 use super::model_spec_scores::{
     render_byop_spec_scores, render_model_spec_header, render_model_spec_scores, CostRow,
@@ -275,7 +275,7 @@ impl SearchItem for ModelSearchItem {
         let icon = self
             .provider_icon
             .unwrap_or(Icon::Oz)
-            .to_warpui_icon(icon_color)
+            .to_zap_ng_ui_icon(icon_color)
             .finish();
 
         Container::new(
@@ -293,8 +293,8 @@ impl SearchItem for ModelSearchItem {
         _highlight_state: ItemHighlightState,
         app: &AppContext,
     ) -> Box<dyn Element> {
-        use warpui::elements::{Flex, ParentElement as _};
-        use warpui::prelude::CrossAxisAlignment;
+        use zap_ng_ui::elements::{Flex, ParentElement as _};
+        use zap_ng_ui::prelude::CrossAxisAlignment;
 
         let appearance = crate::appearance::Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -334,7 +334,7 @@ impl SearchItem for ModelSearchItem {
 
         if is_using_api_key_for_provider(&self.provider, app) {
             let key_icon =
-                ConstrainedBox::new(Icon::Key.to_warpui_icon(secondary_text_color).finish())
+                ConstrainedBox::new(Icon::Key.to_zap_ng_ui_icon(secondary_text_color).finish())
                     .with_width(font_size)
                     .with_height(font_size)
                     .finish();
@@ -414,7 +414,7 @@ impl SearchItem for ModelSearchItem {
     }
 
     fn render_details(&self, app: &AppContext) -> Option<Box<dyn Element>> {
-        use warpui::elements::{Flex, ParentElement as _};
+        use zap_ng_ui::elements::{Flex, ParentElement as _};
 
         let appearance = crate::appearance::Appearance::as_ref(app);
         let theme = appearance.theme();
@@ -462,7 +462,7 @@ impl SearchItem for ModelSearchItem {
                     .on_click(|ctx, _, _| {
                         ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "agent provider".to_string(),
-                            section: Some(SettingsSection::WarpAgent),
+                            section: Some(SettingsSection::ZapNGAgent),
                         });
                     })
                     .finish();
@@ -513,7 +513,7 @@ impl SearchItem for ModelSearchItem {
                 .on_click(|ctx, _, _| {
                     ctx.dispatch_typed_action(WorkspaceAction::ShowSettingsPageWithSearch {
                         search_query: "api".to_string(),
-                        section: Some(SettingsSection::WarpAgent),
+                        section: Some(SettingsSection::ZapNGAgent),
                     });
                 })
                 .finish();
@@ -563,7 +563,7 @@ impl SearchItem for ModelSearchItem {
                         "Bring your own key",
                         WorkspaceAction::ShowSettingsPageWithSearch {
                             search_query: "api".to_string(),
-                            section: Some(SettingsSection::WarpAgent),
+                            section: Some(SettingsSection::ZapNGAgent),
                         },
                     ),
                 ]
@@ -585,10 +585,10 @@ impl SearchItem for ModelSearchItem {
             .with_hyperlink_font_color(theme.accent().into_solid())
             .register_default_click_handlers_with_action_support(|hyperlink_lens, event, ctx| {
                 match hyperlink_lens {
-                    warpui::elements::HyperlinkLens::Url(url) => {
+                    zap_ng_ui::elements::HyperlinkLens::Url(url) => {
                         ctx.open_url(url);
                     }
-                    warpui::elements::HyperlinkLens::Action(action_ref) => {
+                    zap_ng_ui::elements::HyperlinkLens::Action(action_ref) => {
                         if let Some(action) = action_ref.as_any().downcast_ref::<WorkspaceAction>()
                         {
                             event.dispatch_typed_action(action.clone());

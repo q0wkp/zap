@@ -18,7 +18,7 @@ use crate::terminal::ClipboardType;
 use crate::util::AsciiDebug;
 
 use super::history::HistoryEntry;
-use super::model::ansi::{FinishUpdateValue, WarpificationUnavailableReason};
+use super::model::ansi::{FinishUpdateValue, ZapNGificationUnavailableReason};
 use super::model::block::BlockId;
 use super::model::session::{SessionId, SessionInfo};
 use super::model::terminal_model::{BlockIndex, ExitReason, TmuxInstallationState};
@@ -82,7 +82,7 @@ pub enum Event {
     },
     /// See comment above [crate::terminal::ModelEvent::DetectedEndOfSshLogin].
     DetectedEndOfSshLogin(SshLoginStatus),
-    RemoteWarpificationIsUnavailable(WarpificationUnavailableReason),
+    RemoteWarpificationIsUnavailable(ZapNGificationUnavailableReason),
     SshTmuxInstaller(TmuxInstallationState),
     TmuxInstallFailed {
         line: String,
@@ -183,9 +183,9 @@ pub enum TerminalMode {
 #[derive(Clone, Debug)]
 pub enum SshLoginStatus {
     /// We have some evidence login is complete but should check again.
-    RecheckBeforeWarpifying,
+    RecheckBeforeZapNGifying,
     /// We have high confidence login is complete.
-    ReadyToWarpify,
+    ReadyToZapNGify,
 }
 
 #[derive(Clone, Debug)]
@@ -263,7 +263,7 @@ pub enum BlockType {
     /// This is a block containing background process output.
     Background(Arc<SerializedBlock>),
 
-    /// This is a block containing static/hardcoded content (e.g. the subshell Warpification
+    /// This is a block containing static/hardcoded content (e.g. the subshell ZapNGification
     /// welcome block).
     Static,
 }

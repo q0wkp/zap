@@ -10,7 +10,7 @@ use crate::ai::agent::AIAgentActionId;
 use crate::ai::blocklist::agent_view::AgentViewEntryOrigin;
 use crate::ai::blocklist::history_model::BlocklistAIHistoryModel;
 use crate::terminal::shared_session::ParticipantId;
-use warpui::{AppContext, ModelContext, SingletonEntity};
+use zap_ng_ui::{AppContext, ModelContext, SingletonEntity};
 
 #[derive(Default)]
 pub(super) struct SharedSessionState {

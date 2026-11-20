@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Flex, Hoverable,
         MouseStateHandle, ParentElement, Radius, Text,
@@ -76,7 +76,7 @@ impl FeaturePopup {
             FeaturePopupBadge::AlertIcon => Container::new(
                 ConstrainedBox::new(
                     Icon::AlertCircle
-                        .to_warpui_icon(appearance.theme().main_text_color(
+                        .to_zap_ng_ui_icon(appearance.theme().main_text_color(
                             appearance.theme().terminal_colors().normal.green.into(),
                         ))
                         .finish(),
@@ -126,7 +126,7 @@ impl View for FeaturePopup {
                         Hoverable::new(self.dismiss_mouse_state.clone(), |_| {
                             ConstrainedBox::new(
                                 Icon::X
-                                    .to_warpui_icon(appearance.theme().sub_text_color(
+                                    .to_zap_ng_ui_icon(appearance.theme().sub_text_color(
                                         appearance.theme().main_text_color(background),
                                     ))
                                     .finish(),

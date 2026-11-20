@@ -37,7 +37,7 @@ use crate::settings::AISettings;
 use crate::settings_view::{self, flags, SettingsSection};
 use crate::tab::uses_vertical_tabs;
 use crate::tab_configs;
-use warpui::SingletonEntity;
+use zap_ng_ui::SingletonEntity;
 
 use crate::channel::ChannelState;
 
@@ -45,12 +45,12 @@ use crate::util::bindings::{self, cmd_or_ctrl_shift, is_binding_pty_compliant, C
 
 use crate::palette::PaletteMode;
 use serde::{Deserialize, Serialize};
-use warp_core::context_flag::ContextFlag;
-use warpui::accessibility::AccessibilityVerbosity;
-use warpui::elements::DropTargetData;
-use warpui::keymap::FixedBinding;
-use warpui::keymap::{BindingDescription, EditableBinding};
-use warpui::AppContext;
+use zap_ng_core::context_flag::ContextFlag;
+use zap_ng_ui::accessibility::AccessibilityVerbosity;
+use zap_ng_ui::elements::DropTargetData;
+use zap_ng_ui::keymap::FixedBinding;
+use zap_ng_ui::keymap::{BindingDescription, EditableBinding};
+use zap_ng_ui::AppContext;
 
 pub use action::{
     CommandSearchOptions, InitContent, RestoreConversationLayout, TabContextMenuAnchor,
@@ -67,8 +67,8 @@ pub use view::{
 };
 
 // Helper function to access panel header corner radius from other modules
-pub fn panel_header_corner_radius() -> warpui::elements::CornerRadius {
-    warpui::elements::CornerRadius::with_top(warpui::elements::Radius::Pixels(8.))
+pub fn panel_header_corner_radius() -> zap_ng_ui::elements::CornerRadius {
+    zap_ng_ui::elements::CornerRadius::with_top(zap_ng_ui::elements::Radius::Pixels(8.))
 }
 
 /// Returns `true` when `WorkspaceAction::SendFeedback` will launch the guided
@@ -103,7 +103,7 @@ pub use toast_stack::ToastStack;
 pub fn init(app: &mut AppContext) {
     app.add_singleton_model(|_| WorkspaceRegistry::new());
     app.add_singleton_model(|_| cross_window_tab_drag::CrossWindowTabDrag::new());
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
     app.register_binding_validator::<Workspace>(is_binding_pty_compliant);
 
     modal::init(app);
@@ -206,13 +206,13 @@ pub fn init(app: &mut AppContext) {
                 EditableBinding::new(
                     "workspace:install_opencode_warp_plugin",
                     crate::t!("keybinding-desc-workspace-install-opencode-warp-plugin"),
-                    WorkspaceAction::InstallOpenCodeWarpPlugin,
+                    WorkspaceAction::InstallOpenCodeZapNGPlugin,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
                     "workspace:use_local_opencode_warp_plugin",
                     crate::t!("keybinding-desc-workspace-use-local-opencode-warp-plugin"),
-                    WorkspaceAction::UseLocalOpenCodeWarpPlugin,
+                    WorkspaceAction::UseLocalOpenCodeZapNGPlugin,
                 )
                 .with_context_predicate(id!("Workspace")),
                 EditableBinding::new(
@@ -1073,7 +1073,7 @@ pub fn init(app: &mut AppContext) {
         app.register_editable_bindings([EditableBinding::new(
             "workspace:export_all_warp_drive_objects",
             crate::t!("keybinding-desc-workspace-export-all-warp-drive-objects"),
-            WorkspaceAction::ExportAllWarpDriveObjects,
+            WorkspaceAction::ExportAllZapNGDriveObjects,
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace") & id!(flags::ENABLE_WARP_DRIVE))]);
@@ -1298,7 +1298,7 @@ pub fn init(app: &mut AppContext) {
 }
 
 fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     // Add the ability to open setting modals to the command palette.
     app.register_editable_bindings([
@@ -1370,14 +1370,14 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
                     bindings::MAC_MENUS_CONTEXT,
                     crate::t!("keybinding-desc-workspace-show-settings-warpify-menu"),
                 ),
-            WorkspaceAction::ShowSettingsPage(SettingsSection::Warpify),
+            WorkspaceAction::ShowSettingsPage(SettingsSection::ZapNGify),
         )
         .with_group(bindings::BindingGroup::Settings.as_str())
         .with_context_predicate(id!("Workspace")),
         EditableBinding::new(
             "workspace:show_ai_settings_page",
             BindingDescription::new(crate::t!("keybinding-desc-workspace-show-settings-ai")),
-            WorkspaceAction::ShowSettingsPage(SettingsSection::WarpAgent),
+            WorkspaceAction::ShowSettingsPage(SettingsSection::ZapNGAgent),
         )
         .with_enabled(|| FeatureFlag::AgentMode.is_enabled())
         .with_group(bindings::BindingGroup::Settings.as_str())
@@ -1414,7 +1414,7 @@ fn add_open_setting_pages_as_editable_binding(app: &mut AppContext) {
 }
 
 fn add_overflow_menu_items_as_editable_binding(app: &mut AppContext) {
-    use warpui::keymap::macros::*;
+    use zap_ng_ui::keymap::macros::*;
 
     // Add the ability to open all overflow menu items to the command palette.
     // 去中心化分支:"Invite People..." 命令对应 ShowReferralSettingsPage,已删除。

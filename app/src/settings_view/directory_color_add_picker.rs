@@ -2,8 +2,8 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use settings::Setting;
-use warp_util::path::user_friendly_path;
-use warpui::{
+use zap_ng_util::path::user_friendly_path;
+use zap_ng_ui::{
     elements::{
         Border, ChildView, ConstrainedBox, Container, CrossAxisAlignment, Flex, Hoverable,
         MainAxisSize, MouseStateHandle, ParentElement, Text,

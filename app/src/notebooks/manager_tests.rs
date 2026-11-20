@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{
     platform::WindowStyle, AddSingletonModel, App, EntityId, ModelHandle, ViewContext, ViewHandle,
 };
 

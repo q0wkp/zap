@@ -6,15 +6,15 @@
 
 use std::path::PathBuf;
 
-use warp_core::ui::appearance::Appearance;
-use warp_core::ui::icons::Icon;
-use warpui::elements::{
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_ui::elements::{
     Border, ChildView, Clipped, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Dismiss, Flex,
     Hoverable, MainAxisSize, MainAxisAlignment, MouseStateHandle, ParentElement, Radius, SavePosition, Shrinkable, Text,
 };
-use warpui::platform::Cursor;
-use warpui::Element;
-use warpui::ViewHandle;
+use zap_ng_ui::platform::Cursor;
+use zap_ng_ui::Element;
+use zap_ng_ui::ViewHandle;
 
 use crate::editor::EditorView;
 use crate::sftp_manager::browser::SftpBrowserAction;
@@ -76,7 +76,7 @@ fn render_title_bar(title: &str, appearance: &Appearance, close_btn_state: Mouse
 fn render_icon_close_button(appearance: &Appearance, mouse_state: MouseStateHandle) -> Box<dyn Element> {
     let theme = appearance.theme();
     let icon_color = theme.sub_text_color(theme.background());
-    let icon_el = ConstrainedBox::new(Icon::X.to_warpui_icon(icon_color).finish())
+    let icon_el = ConstrainedBox::new(Icon::X.to_zap_ng_ui_icon(icon_color).finish())
         .with_width(12.0)
         .with_height(12.0)
         .finish();

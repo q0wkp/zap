@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
-use warp_core::ui::Icon;
-use warp_core::ui::appearance::Appearance;
-use warpui::{fonts, keymap::Keystroke, prelude::stack};
+use zap_ng_core::ui::Icon;
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::{fonts, keymap::Keystroke, prelude::stack};
 
 use crate::{keyboard_shortcut, tooltip};
 

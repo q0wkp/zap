@@ -1,10 +1,10 @@
 use pathfinder_color::ColorU;
-use warp_core::ui::Icon;
-use warpui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
-use warpui::geometry::rect::RectF;
-use warpui::geometry::vector::{vec2f, Vector2F};
-use warpui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
-use warpui::{
+use zap_ng_core::ui::Icon;
+use zap_ng_ui::assets::asset_cache::{AssetCache, AssetSource, AssetState};
+use zap_ng_ui::geometry::rect::RectF;
+use zap_ng_ui::geometry::vector::{vec2f, Vector2F};
+use zap_ng_ui::image_cache::{AnimatedImageBehavior, CacheOption, FitType, Image, ImageCache};
+use zap_ng_ui::{
     elements::{CornerRadius, Fill, Point, Radius},
     event::DispatchedEvent,
     AfterLayoutContext, AppContext, Element, EventContext, LayoutContext, PaintContext,

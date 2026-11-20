@@ -1,4 +1,4 @@
-use warpui::{
+use zap_ng_ui::{
     AppContext, Element, SizeConstraint,
     elements::{
         Align, ConstrainedBox, Container, CornerRadius, CrossAxisAlignment, Empty, Flex, Icon,
@@ -79,8 +79,8 @@ impl RenderableBlock for RenderableBrokenEmbedding {
     fn layout(
         &mut self,
         model: &crate::render::model::RenderState,
-        ctx: &mut warpui::LayoutContext,
-        app: &warpui::AppContext,
+        ctx: &mut zap_ng_ui::LayoutContext,
+        app: &zap_ng_ui::AppContext,
     ) {
         self.row.layout(
             SizeConstraint::strict(vec2f(
@@ -104,7 +104,7 @@ impl RenderableBlock for RenderableBrokenEmbedding {
         &mut self,
         model: &crate::render::model::RenderState,
         ctx: &mut super::RenderContext,
-        app: &warpui::AppContext,
+        app: &zap_ng_ui::AppContext,
     ) {
         let content = model.content();
         let broken_link = extract_block!(self.viewport_item, content, (block, BlockItem::Embedded(item)) => block.embedded(item));
@@ -154,21 +154,21 @@ impl RenderableBlock for RenderableBrokenEmbedding {
             );
         }
 
-        ctx.paint.scene.start_layer(warpui::ClipBounds::ActiveLayer);
+        ctx.paint.scene.start_layer(zap_ng_ui::ClipBounds::ActiveLayer);
         self.row
             .paint(ctx.content_to_screen(content_origin), ctx.paint, app);
         ctx.paint.scene.stop_layer();
     }
 
-    fn after_layout(&mut self, ctx: &mut warpui::AfterLayoutContext, app: &warpui::AppContext) {
+    fn after_layout(&mut self, ctx: &mut zap_ng_ui::AfterLayoutContext, app: &zap_ng_ui::AppContext) {
         self.row.after_layout(ctx, app);
     }
 
     fn dispatch_event(
         &mut self,
         _model: &crate::render::model::RenderState,
-        event: &warpui::event::DispatchedEvent,
-        ctx: &mut warpui::EventContext,
+        event: &zap_ng_ui::event::DispatchedEvent,
+        ctx: &mut zap_ng_ui::EventContext,
         app: &AppContext,
     ) -> bool {
         self.row.dispatch_event(event, ctx, app)

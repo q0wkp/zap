@@ -7,12 +7,12 @@ use onboarding::{AgentOnboardingEvent, AgentOnboardingView, SelectedSettings};
 use pathfinder_color::ColorU;
 use rust_embed::RustEmbed;
 use std::borrow::Cow;
-use warp_core::ui::icons::Icon;
-use warp_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, Image, TerminalColors};
-use warp_core::ui::{appearance::Appearance, theme::WarpTheme};
-use warpui::assets::asset_cache::AssetSource;
-use warpui::platform;
-use warpui::{
+use zap_ng_core::ui::icons::Icon;
+use zap_ng_core::ui::theme::{AnsiColor, AnsiColors, Details, Fill, Image, TerminalColors};
+use zap_ng_core::ui::{appearance::Appearance, theme::ZapNGTheme};
+use zap_ng_ui::assets::asset_cache::AssetSource;
+use zap_ng_ui::platform;
+use zap_ng_ui::{
     elements::{
         Container, CrossAxisAlignment, Flex, MainAxisAlignment, MainAxisSize, ParentElement,
     },
@@ -39,7 +39,7 @@ impl AssetProvider for Assets {
 
 fn main() -> Result<()> {
     // Initialize logging for the onboarding binary.
-    warp_logging::init(warp_logging::LogConfig {
+    zap_ng_logging::init(zap_ng_logging::LogConfig {
         is_cli: false,
         log_destination: None,
     })?;
@@ -249,7 +249,7 @@ impl View for OnboardingMainView {
         }
     }
 
-    fn on_focus(&mut self, focus_ctx: &warpui::FocusContext, ctx: &mut ViewContext<Self>) {
+    fn on_focus(&mut self, focus_ctx: &zap_ng_ui::FocusContext, ctx: &mut ViewContext<Self>) {
         if let OnboardingMainState::Onboarding(view) = &self.state {
             if focus_ctx.is_self_focused() {
                 ctx.focus(view);
@@ -368,8 +368,8 @@ fn adeberry_colors() -> TerminalColors {
     TerminalColors::new(ADEBERRY_NORMAL_COLORS, ADEBERRY_BRIGHT_COLORS)
 }
 
-fn dark_theme() -> WarpTheme {
-    WarpTheme::new(
+fn dark_theme() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x000000FF)),
         ColorU::from_u32(0xffffffff),
         Fill::Solid(ColorU::from_u32(0x19AAD8FF)),
@@ -382,8 +382,8 @@ fn dark_theme() -> WarpTheme {
     )
 }
 
-fn light_theme() -> WarpTheme {
-    WarpTheme::new(
+fn light_theme() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::white()),
         ColorU::new(17, 17, 17, 0xFF),
         Fill::Solid(ColorU::from_u32(0x00c2ffff)),
@@ -396,8 +396,8 @@ fn light_theme() -> WarpTheme {
     )
 }
 
-fn phenomenon() -> WarpTheme {
-    WarpTheme::new(
+fn phenomenon() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x121212FF)),
         ColorU::from_u32(0xFAF9F6FF),
         Fill::Solid(ColorU::from_u32(0x2E5D9EFF)),
@@ -416,8 +416,8 @@ fn phenomenon() -> WarpTheme {
     )
 }
 
-fn adeberry() -> WarpTheme {
-    WarpTheme::new(
+fn adeberry() -> ZapNGTheme {
+    ZapNGTheme::new(
         Fill::Solid(ColorU::from_u32(0x1D2022FF)),
         ColorU::from_u32(0xE4EEF5FF),
         Fill::Solid(ColorU::from_u32(0x6C96B4FF)),
@@ -430,7 +430,7 @@ fn adeberry() -> WarpTheme {
     )
 }
 
-fn build_appearance(theme: WarpTheme, ctx: &mut AppContext) -> Appearance {
+fn build_appearance(theme: ZapNGTheme, ctx: &mut AppContext) -> Appearance {
     let ui_font_family =
         load_default_ui_font_family(ctx).expect("unable to load default ui font family");
 

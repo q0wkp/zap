@@ -15,8 +15,8 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-use warp_util::path::CleanPathResult;
-use warpui::{AppContext, Entity, SingletonEntity};
+use zap_ng_util::path::CleanPathResult;
+use zap_ng_ui::{AppContext, Entity, SingletonEntity};
 
 const MAX_RESULTS: usize = 100;
 
@@ -24,7 +24,7 @@ const MAX_RESULTS: usize = 100;
 enum FileRanking {
     None,
     ChangedInGit,
-    OpenedInWarp { timestamp: Instant },
+    OpenedInZapNG { timestamp: Instant },
 }
 
 pub struct FileDataSource {
@@ -149,7 +149,7 @@ impl FileDataSource {
             if let Some(last_opened_timestamp) =
                 opened_files.and_then(|opened_files| opened_files.get(&PathBuf::from(&item.path)))
             {
-                file_ranking = FileRanking::OpenedInWarp {
+                file_ranking = FileRanking::OpenedInZapNG {
                     timestamp: *last_opened_timestamp,
                 };
             }

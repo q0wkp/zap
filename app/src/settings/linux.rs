@@ -1,5 +1,5 @@
 use settings::{macros::define_settings_group, SupportedPlatforms, SyncToCloud};
-use warpui::platform::linux;
+use zap_ng_ui::platform::linux;
 
 define_settings_group!(LinuxAppConfiguration,
     settings: [

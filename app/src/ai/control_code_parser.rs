@@ -1,6 +1,6 @@
 use regex::Regex;
 use std::ops::Range;
-use warpui::keymap::Keystroke;
+use zap_ng_ui::keymap::Keystroke;
 
 use crate::terminal::model::escape_sequences::C0;
 

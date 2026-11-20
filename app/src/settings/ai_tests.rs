@@ -5,7 +5,7 @@ use crate::{
     test_util::settings::initialize_settings_for_tests,
 };
 use chrono::Utc;
-use warpui::{App, SingletonEntity};
+use zap_ng_ui::{App, SingletonEntity};
 
 fn create_test_request_limit_info(
     limit: usize,

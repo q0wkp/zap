@@ -1,5 +1,5 @@
 use pathfinder_color::ColorU;
-use warp_core::ui::{
+use zap_ng_core::ui::{
     appearance::Appearance,
     color::{contrast::MinimumAllowedContrast, ContrastingColor},
     theme::Fill,
@@ -8,7 +8,7 @@ use warp_core::ui::{
 use super::DriveObjectType;
 use crate::ui_components::blended_colors;
 
-pub fn warp_drive_icon_color(
+pub fn zap_ng_drive_icon_color(
     appearance: &Appearance,
     cloud_object_type: DriveObjectType,
 ) -> ColorU {

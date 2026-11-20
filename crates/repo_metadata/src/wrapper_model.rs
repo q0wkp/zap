@@ -8,9 +8,9 @@
 #[cfg(feature = "local_fs")]
 use std::path::Path;
 
-use warp_core::HostId;
-use warp_util::standardized_path::StandardizedPath;
-use warpui::{AppContext, ModelContext, ModelHandle, SingletonEntity};
+use zap_ng_core::HostId;
+use zap_ng_util::standardized_path::StandardizedPath;
+use zap_ng_ui::{AppContext, ModelContext, ModelHandle, SingletonEntity};
 
 use crate::file_tree_store::FileTreeState;
 use crate::file_tree_update::RepoMetadataUpdate;
@@ -356,7 +356,7 @@ impl RepoMetadataModel {
     }
 }
 
-impl warpui::Entity for RepoMetadataModel {
+impl zap_ng_ui::Entity for RepoMetadataModel {
     type Event = RepoMetadataEvent;
 }
 

@@ -3,9 +3,9 @@ use super::{
 };
 use crate::{code::editor::EditorReviewComment, code_review::diff_state::DiffMode};
 use std::{collections::HashMap, path::Path};
-use warp_core::features::FeatureFlag;
-use warp_editor::render::model::LineCount;
-use warpui::{Entity, ModelContext};
+use zap_ng_core::features::FeatureFlag;
+use zap_ng_editor::render::model::LineCount;
+use zap_ng_ui::{Entity, ModelContext};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReviewCommentBatchEvent {

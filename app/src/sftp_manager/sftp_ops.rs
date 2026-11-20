@@ -10,9 +10,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use warp_ssh_manager::SshRepository;
-use warp_ssh_manager::secrets::SshSecretStore;
-use warp_ssh_manager::types::{AuthType, ResolvedSshAuth, SshServerInfo};
+use zap_ng_ssh_manager::SshRepository;
+use zap_ng_ssh_manager::secrets::SshSecretStore;
+use zap_ng_ssh_manager::types::{AuthType, ResolvedSshAuth, SshServerInfo};
 use zap_sftp::Sftp;
 use zap_sftp::session::{AuthMethod, SftpSession};
 use zap_sftp::types::OpenOptions;
@@ -108,7 +108,7 @@ pub fn connect_from_server(
 }
 
 fn resolve_sftp_auth(server: &SshServerInfo) -> Result<ResolvedSshAuth, SftpOpsError> {
-    warp_ssh_manager::with_conn(|conn| Ok(SshRepository::resolve_server_auth(conn, server)?))
+    zap_ng_ssh_manager::with_conn(|conn| Ok(SshRepository::resolve_server_auth(conn, server)?))
         .map_err(|e| SftpOpsError::NoCredentials(format!("Failed to resolve credentials: {e}")))
 }
 

@@ -1,10 +1,10 @@
 //! [`TerminalView`]-specific implementation for ambient agent functionality.
 
-use warp_cli::agent::Harness;
+use zap_ng_cli::agent::Harness;
 
 use crate::ai::agent::conversation::{AIConversationId, ConversationStatus};
 use crate::ai::AIRequestUsageModel;
-use warpui::prelude::Empty;
+use zap_ng_ui::prelude::Empty;
 
 use crate::ai::blocklist::{agent_view::AgentViewEntryOrigin, BlocklistAIHistoryModel};
 use crate::terminal::view::ambient_agent::AmbientAgentInitialUserQuery;
@@ -12,9 +12,9 @@ use crate::terminal::view::rich_content::RichContentInsertionPosition;
 use crate::terminal::view::TerminalView;
 use crate::terminal::CLIAgent;
 use crate::workspaces::user_workspaces::UserWorkspaces;
-use warp_core::ui::appearance::Appearance;
-use warpui::elements::Align;
-use warpui::{AppContext, Element, EntityId, SingletonEntity, ViewContext};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::elements::Align;
+use zap_ng_ui::{AppContext, Element, EntityId, SingletonEntity, ViewContext};
 
 use super::loading_screen::{
     render_ambient_agent_cancelled_screen, render_ambient_agent_error_screen,

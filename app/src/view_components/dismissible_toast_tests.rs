@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use warp_core::ui::appearance::Appearance;
-use warpui::keymap::Keystroke;
-use warpui::platform::WindowStyle;
-use warpui::{App, TypedActionView, ViewHandle};
+use zap_ng_core::ui::appearance::Appearance;
+use zap_ng_ui::keymap::Keystroke;
+use zap_ng_ui::platform::WindowStyle;
+use zap_ng_ui::{App, TypedActionView, ViewHandle};
 
 use super::{
     is_expand_toggle_keystroke, toast_message_is_truncated, truncate_toast_message,

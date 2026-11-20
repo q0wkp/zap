@@ -3,13 +3,13 @@ use pathfinder_geometry::rect::RectF;
 use pathfinder_geometry::vector::Vector2F;
 use std::collections::HashSet;
 use std::{fmt, iter, mem};
-use warpui::elements::{
+use zap_ng_ui::elements::{
     ChildAnchor, Container, DispatchEventResult, Empty, OffsetPositioning, ParentAnchor,
     ParentOffsetBounds, PositionedElementAnchor, PositionedElementOffsetBounds, SavePosition,
     Stack,
 };
-use warpui::AppContext;
-use warpui::{
+use zap_ng_ui::AppContext;
+use zap_ng_ui::{
     elements::{
         ConstrainedBox, Element, EventHandler, Flex, Hoverable, MouseStateHandle, ParentElement,
         Rect, Shrinkable,
@@ -20,8 +20,8 @@ use warpui::{
 
 use super::{ActivationReason, PaneGroup, PaneId};
 use crate::pane_group::{get_minimum_pane_size, DraggedBorder, PaneGroupAction};
-use crate::themes::theme::WarpTheme;
-use warp_core::features::FeatureFlag;
+use crate::themes::theme::ZapNGTheme;
+use zap_ng_core::features::FeatureFlag;
 
 #[cfg(test)]
 #[path = "tree_tests.rs"]
@@ -492,7 +492,7 @@ impl PaneData {
         self.len == 0
     }
 
-    pub fn render(&self, theme: &WarpTheme, app: &AppContext) -> Box<dyn Element> {
+    pub fn render(&self, theme: &ZapNGTheme, app: &AppContext) -> Box<dyn Element> {
         match &self.root {
             PaneNode::Leaf(pane) => pane.render(app),
             PaneNode::Branch(node) => node.render(theme, &self.hidden_panes, app),
@@ -694,7 +694,7 @@ impl PaneNode {
 
     fn render(
         &self,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         hidden_panes: &Vec<HiddenPane>,
         app: &AppContext,
     ) -> Box<dyn Element> {
@@ -1023,7 +1023,7 @@ impl PaneBranch {
 
     fn render(
         &self,
-        theme: &WarpTheme,
+        theme: &ZapNGTheme,
         hidden_panes: &Vec<HiddenPane>,
         app: &AppContext,
     ) -> Box<dyn Element> {
@@ -1355,7 +1355,7 @@ fn create_divider_placeholder(direction: SplitDirection, position_id: &str) -> B
 fn create_divider(
     direction: SplitDirection,
     item: &Divider,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
 ) -> Box<dyn Element> {
     let divider = ConstrainedBox::new(
         Rect::new()
@@ -1393,7 +1393,7 @@ fn create_divider(
 fn create_minimalist_divider(
     direction: SplitDirection,
     item: &Divider,
-    theme: &WarpTheme,
+    theme: &ZapNGTheme,
 ) -> Box<dyn Element> {
     let divider = ConstrainedBox::new(
         Rect::new()

@@ -2,8 +2,8 @@
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use warp_cli::agent::OutputFormat;
-use warpui::{platform::TerminationMode, AppContext, SingletonEntity};
+use zap_ng_cli::agent::OutputFormat;
+use zap_ng_ui::{platform::TerminationMode, AppContext, SingletonEntity};
 
 use crate::auth::AuthStateProvider;
 use crate::auth::PrincipalType;
@@ -27,7 +27,7 @@ struct WhoamiOutput {
 /// Singleton model that provides a `ModelContext` for the `whoami` command's async work.
 struct WhoamiRunner;
 
-impl warpui::Entity for WhoamiRunner {
+impl zap_ng_ui::Entity for WhoamiRunner {
     type Event = ();
 }
 
