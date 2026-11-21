@@ -8,7 +8,7 @@
     <strong>English</strong> | <a href="./README/README_CN.md">中文</a>
 </p>
 
-[![License](https://img.shields.io/badge/License-AGPL%20v3%20AND%20MIT%20AND%20Apache%202.0%20AND%20BSD--2--Clause%20AND%20OFL--1.1%20AND%20Bitstream--Vera-blue.svg)](#license)
+[![License](https://img.shields.io/badge/License-AGPL%20v3%20AND%20Apache%202.0%20AND%20OFL--1.1%20AND%20Bitstream--Vera-blue.svg)](#license)
 [![Release](https://img.shields.io/github/v/release/q0wkp/zap-ng)](https://github.com/q0wkp/zap-ng/releases/latest)
 
 ZapNG is a local-first agentic terminal for Linux and macOS, forked from [Warp](https://github.com/warpdotdev/warp).

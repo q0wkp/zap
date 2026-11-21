@@ -8,7 +8,7 @@
     <a href="../README.md">English</a> | <strong>中文</strong>
 </p>
 
-[![License](https://img.shields.io/badge/License-AGPL%20v3%20AND%20MIT%20AND%20Apache%202.0%20AND%20BSD--2--Clause%20AND%20OFL--1.1%20AND%20Bitstream--Vera-blue.svg)](#许可证)
+[![License](https://img.shields.io/badge/License-AGPL%20v3%20AND%20Apache%202.0%20AND%20OFL--1.1%20AND%20Bitstream--Vera-blue.svg)](#许可证)
 [![Release](https://img.shields.io/github/v/release/q0wkp/zap-ng)](https://github.com/q0wkp/zap-ng/releases/latest)
 
 ZapNG 是一个本地优先的智能体终端，支持 Linux 和 macOS，由 [Warp](https://github.com/warpdotdev/warp) 分支而来。
